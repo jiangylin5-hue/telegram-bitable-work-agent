@@ -76,8 +76,8 @@ These commands are planned for the later implementation batch. They are not expe
 
 | Requirement | Status | Evidence |
 | --- | --- | --- |
-| Stage 03 code development approved by user | pending | User confirmation required after docs review |
-| Runtime config contract | pending | config tests |
+| Stage 03 code development approved by user | passed | User goal on 2026-07-06: "开始实施，严格执行阶段开发和真源文档..." |
+| Runtime config contract | passed | `pytest tests/unit/test_stage03_config.py -v` => 8 passed; `pytest tests -q` => 93 passed, 17 skipped |
 | Tencent Cloud compose files or deploy docs | pending | deployment rehearsal |
 | Caddy HTTPS endpoint | pending | staging smoke evidence |
 | Telegram webhook route | pending | `test_stage03_telegram_webhook.py` |

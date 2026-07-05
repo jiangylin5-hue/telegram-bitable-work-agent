@@ -463,11 +463,11 @@ These tasks are for the later code phase. The current user-approved batch remain
 - Test: `backend/tests/unit/test_stage03_config.py`
 - Docs: `STAGE_03_SECURITY_AND_PERMISSION_DESIGN.md`
 
-- [ ] Step 1: Write config tests proving staging requires `TELEGRAM_WEBHOOK_SECRET`, `DATABASE_URL` and `REDIS_URL`.
-- [ ] Step 2: Write tests proving `TELEGRAM_SEND_MODE=dry_run`, `LLM_ENABLED=false` and `PROVIDER_MODE=disabled` are Stage 03 defaults.
-- [ ] Step 3: Implement minimal config fields without storing secrets in code.
-- [ ] Step 4: Run `pytest tests/unit/test_stage03_config.py -v`.
-- [ ] Step 5: Update `STAGE_03_PROGRESS.md` with changed files and result.
+- [x] Step 1: Write config tests proving staging requires `TELEGRAM_WEBHOOK_SECRET`, `DATABASE_URL` and `REDIS_URL`.
+- [x] Step 2: Write tests proving `TELEGRAM_SEND_MODE=dry_run`, `LLM_ENABLED=false` and `PROVIDER_MODE=disabled` are Stage 03 defaults.
+- [x] Step 3: Implement minimal config fields without storing secrets in code.
+- [x] Step 4: Run `pytest tests/unit/test_stage03_config.py -v`.
+- [x] Step 5: Update `STAGE_03_PROGRESS.md` with changed files and result.
 
 ### Task 2: Telegram Update Parser
 

@@ -4,7 +4,7 @@
 
 - Document status: active progress log (confirmed by user 2026-07-06)
 - Scope: Stage 03 子阶段进度、测试记录、风险和后续项。
-- Current Progress: 2026-07-06 已按正式阶段标准补齐 Stage 03 文档包：真源、执行计划、SDD、BDD、模块索引、API 合约、数据库/迁移、安全权限、测试计划、腾讯云 staging 部署、运维手册、风险登记和复杂模块设计。当前仍未开始 Stage 03 代码开发。
+- Current Progress: 2026-07-06 已开始 Stage 03 代码实施。完成 03.0 Runtime Config And Safety Defaults：新增 Stage03 配置字段、安全默认值、staging/production runtime validation，并接入 `create_app()` fail-fast；focused config tests 8 passed，全量 93 passed / 17 skipped。
 
 ## 1. Progress Protocol
 
@@ -27,8 +27,8 @@ Next subphase:
 
 | Subphase | Status | Evidence |
 | --- | --- | --- |
-| 03.0 Documentation and stage gate | completed for docs-only batch | Stage 03 docs rewritten and indexed; no code started |
-| 03.1 Tencent Cloud staging runtime design | documentation planned | Deployment doc added/updated before code |
+| 03.0 Documentation and runtime config gate | completed | Docs finalized; runtime config contract implemented and tested (`test_stage03_config.py` 8 passed; full suite 93 passed, 17 skipped) |
+| 03.1 Tencent Cloud staging runtime design | documentation completed, code/deploy pending | Deployment doc exists; no server action yet |
 | 03.2 Real Telegram receive-only webhook | pending code approval | No Stage 03 code yet |
 | 03.3 Minimal customer binding and Telegram Inbox | pending code approval | No Stage 03 code yet |
 | 03.4 PostgreSQL Outbox to Redis Streams worker | pending code approval | No Stage 03 code yet |
@@ -73,4 +73,17 @@ Test result: stale-direction check returned no matches for `本地 docker compos
 Not done: No Stage 03 backend code, dependencies, server deployment, DNS changes or Telegram webhook setup.
 Risks / follow-up: Stage 03 implementation still requires explicit user confirmation before code, server, DNS or Telegram webhook actions.
 Next subphase: User review and approval to start Stage 03 implementation.
+```
+
+```text
+Date: 2026-07-06
+Subphase: 03.0 Runtime Config And Safety Defaults
+Status: completed
+Completed: Added Stage 03 runtime settings for Telegram bot token, webhook secret, Telegram send mode, provider mode and LLM enablement. Added `validate_runtime_settings()` so staging/production require explicit `DATABASE_URL`, `REDIS_URL` and `TELEGRAM_WEBHOOK_SECRET` without requiring Bot Token for receive-only runtime. Wired validation into `create_app()` so staging fails fast before serving. Added safety validation rejecting real Telegram send mode, enabled LLM and enabled provider mode in production-like environments. Wrote TDD tests first and observed RED failures before implementation.
+Changed files: backend/app/core/config.py; backend/app/main.py; backend/tests/unit/test_stage03_config.py; project-docs/08-implementation/STAGE_03_BACKEND_INTEGRATION_PLAN.md; project-docs/08-implementation/STAGE_03_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_03_PROGRESS.md.
+Tests run: cd backend; pytest tests/unit/test_stage03_config.py::test_create_app_validates_staging_runtime_settings -v; cd backend; pytest tests/unit/test_stage03_config.py::test_staging_runtime_rejects_external_action_modes -v; cd backend; pytest tests/unit/test_stage03_config.py -v; cd backend; pytest tests -q.
+Test result: TDD RED first failed because `validate_runtime_settings` was missing, then `create_app()` did not raise in staging, then unsafe external-action modes were not rejected. After implementation, focused tests passed, config suite 8 passed, full suite 93 passed and 17 skipped. Skips are existing Stage 02 online PostgreSQL smoke tests gated by `STAGE02_ONLINE_DATABASE_URL`.
+Not done: No Telegram webhook route, no parser, no customer binding, no Redis Streams worker, no Tencent Cloud deployment, no DNS changes, no Telegram webhook setup, no real Telegram send, no LLM, no provider execution.
+Risks / follow-up: The API runtime intentionally does not require `TELEGRAM_BOT_TOKEN` because Stage 03 is receive-only; webhook setup tooling may still need a Bot Token outside app runtime. Next code task should be Telegram update parser before route implementation.
+Next subphase: Task 2 Telegram Update Parser.
 ```
