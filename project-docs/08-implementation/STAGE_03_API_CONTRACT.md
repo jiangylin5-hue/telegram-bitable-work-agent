@@ -4,7 +4,7 @@
 
 - Document status: active API contract
 - Scope: Stage 03 receive-only Telegram webhook and related read/view contracts.
-- Current Progress: 2026-07-06 `POST /telegram/webhook` receive-only contract 已按 Stage 03 范围落地并通过 focused route tests；`/views/telegram_inbox/records` 的 Stage 03 完整投影仍待 Task 4。
+- Current Progress: 2026-07-06 `POST /telegram/webhook` receive-only contract 和 `/views/telegram_inbox/records` Stage03 projection 已按 Stage 03 范围落地并通过 focused tests；Redis Streams/worker 状态推进仍待 Task 5/6。
 
 ## 1. Contract Boundary
 
@@ -135,8 +135,10 @@ Expected record fields:
 {
   "record_id": "<message-id>",
   "fields": {
+    "message_id": "<message-id>",
     "telegram_update_id": 123456789,
     "telegram_chat_id": "-1001234567890",
+    "telegram_message_id": "10",
     "telegram_user_id": "998877",
     "customer_id": "<customer-id-or-null>",
     "binding_status": "bound",
@@ -145,8 +147,11 @@ Expected record fields:
     "processing_status": "processed",
     "outbox_status": "processed",
     "last_error_code": null,
+    "intent_status": "unclassified",
+    "intent_type": null,
     "received_at": "2026-07-06T00:00:00Z",
-    "processed_at": "2026-07-06T00:00:02Z"
+    "processed_at": "2026-07-06T00:00:02Z",
+    "trace_id": "tg:123456789"
   }
 }
 ```

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Protocol
 
 from sqlalchemy import select
@@ -25,6 +26,8 @@ class ViewDefinition:
     fields: tuple[str, ...]
     field_aliases: dict[str, str] | None = None
     sensitive_fields: frozenset[str] = frozenset()
+    default_limit: int | None = None
+    max_limit: int | None = None
 
 
 class BitableViewDataSource(Protocol):
@@ -73,16 +76,27 @@ STAGE_02_VIEW_REGISTRY: dict[str, ViewDefinition] = {
         view_key="telegram_inbox",
         table_name="messages",
         fields=(
+            "message_id",
+            "telegram_update_id",
             "telegram_chat_id",
             "telegram_message_id",
+            "telegram_user_id",
+            "customer_id",
+            "binding_status",
             "message_type",
+            "text_preview",
+            "processing_status",
+            "outbox_status",
+            "last_error_code",
             "intent_status",
             "intent_type",
             "received_at",
+            "processed_at",
             "trace_id",
-            "raw_text",
         ),
-        sensitive_fields=frozenset({"raw_text"}),
+        field_aliases={"message_id": "id", "text_preview": "normalized_text"},
+        default_limit=100,
+        max_limit=200,
     ),
     "ai_draft_queue": ViewDefinition(
         view_key="ai_draft_queue",
@@ -201,14 +215,20 @@ def get_view_records(
     data_source: BitableViewDataSource | None = None,
     allowed_fields: set[str] | None = None,
     actor: Actor | None = None,
+    limit: int | None = None,
 ) -> ViewResponse:
     view = get_view_definition(view_key)
     data_source = data_source or EmptyBitableViewDataSource()
     allowed_fields = allowed_fields or _allowed_fields_for_view(view, actor)
-    records = [
-        to_view_record(mask_record_fields(_project_record(record, view), allowed_fields))
+    raw_records = [
+        record
         for record in data_source.list_records(view.table_name)
         if _can_actor_view_record(actor, record)
+    ]
+    raw_records = _apply_view_order_and_limit(raw_records, view, limit)
+    records = [
+        to_view_record(mask_record_fields(_project_record(record, view), allowed_fields))
+        for record in raw_records
     ]
     return ViewResponse(
         view_key=view.view_key,
@@ -230,9 +250,14 @@ def _project_record(
     return {
         "id": record["id"],
         "fields": {
-            field_name: fields[_source_field_name(field_name, fields, aliases)]
+            field_name: _project_field_value(
+                record,
+                fields,
+                _source_field_name(field_name, fields, aliases),
+            )
             for field_name in view.fields
             if _source_field_name(field_name, fields, aliases) in fields
+            or _source_field_name(field_name, fields, aliases) == "id"
         },
     }
 
@@ -253,9 +278,59 @@ def _source_field_name(
     aliases: dict[str, str],
 ) -> str:
     source_field = aliases.get(field_name, field_name)
+    if source_field == "id":
+        return source_field
     if source_field in fields:
         return source_field
     return field_name
+
+
+def _project_field_value(
+    record: dict[str, Any],
+    fields: dict[str, Any],
+    source_field: str,
+) -> Any:
+    if source_field == "id":
+        return record["id"]
+    return fields[source_field]
+
+
+def _apply_view_order_and_limit(
+    records: list[dict[str, Any]],
+    view: ViewDefinition,
+    limit: int | None,
+) -> list[dict[str, Any]]:
+    if view.view_key == "telegram_inbox":
+        records = sorted(records, key=_telegram_inbox_sort_key)
+    effective_limit = _effective_limit(view, limit)
+    if effective_limit is None:
+        return records
+    return records[:effective_limit]
+
+
+def _effective_limit(view: ViewDefinition, limit: int | None) -> int | None:
+    effective = view.default_limit if limit is None else limit
+    if effective is None:
+        return None
+    if view.max_limit is not None:
+        return min(effective, view.max_limit)
+    return effective
+
+
+def _telegram_inbox_sort_key(record: dict[str, Any]) -> tuple[float, str]:
+    fields = record.get("fields", {})
+    return (-_timestamp(fields.get("received_at")), str(record["id"]))
+
+
+def _timestamp(value: Any) -> float:
+    if isinstance(value, datetime):
+        return value.timestamp()
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            return 0.0
+    return 0.0
 
 
 def _can_actor_view_record(actor: Actor | None, record: dict[str, Any]) -> bool:

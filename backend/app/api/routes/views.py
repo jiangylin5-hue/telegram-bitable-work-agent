@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_system_actor
@@ -25,11 +25,17 @@ def get_bitable_view_data_source(
 @router.get("/{view_key}/records", response_model=ViewResponse)
 def read_view_records(
     view_key: str,
+    limit: int | None = Query(default=None, ge=1),
     data_source: BitableViewDataSource = Depends(get_bitable_view_data_source),
     actor: Actor = Depends(get_system_actor),
 ) -> ViewResponse:
     try:
-        return get_view_records(view_key, data_source=data_source, actor=actor)
+        return get_view_records(
+            view_key,
+            data_source=data_source,
+            actor=actor,
+            limit=limit,
+        )
     except UnknownViewError as exc:
         raise HTTPException(
             status_code=404,

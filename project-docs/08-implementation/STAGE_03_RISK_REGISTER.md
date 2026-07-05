@@ -4,7 +4,7 @@
 
 - Document status: active risk register
 - Scope: Stage 03 主要风险、影响、缓解措施、验收检查和退出条件。
-- Current Progress: 2026-07-06 风险登记已建立并随代码实施继续跟踪；Task 3 已验证 invalid secret、allowlist blocked、malformed payload 不产生业务行，真实服务器/DNS/webhook、Redis worker 和 `telegram_inbox` 风险仍待后续验收。
+- Current Progress: 2026-07-06 风险登记已建立并随代码实施继续跟踪；Task 3 已验证 invalid secret、allowlist blocked、malformed payload 不产生业务行，Task 4 已验证 binding conflict 不猜客户、`telegram_inbox` scope filtering/order/limit/redaction，真实服务器/DNS/webhook 和 Redis worker 风险仍待后续验收。
 
 ## 1. Risk Table
 

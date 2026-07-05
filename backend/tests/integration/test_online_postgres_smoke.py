@@ -107,11 +107,12 @@ def test_online_alembic_upgrade_creates_stage02_fact_tables(
         "account_inventory",
         "customer_daily_reports",
         "company_daily_reports",
+        "telegram_customer_bindings",
     }.issubset(set(inspector.get_table_names()))
 
     with online_db.engine.connect() as connection:
         assert connection.scalar(text("select version_num from alembic_version")) == (
-            "20260705_0009"
+            "20260706_0010"
         )
 
 
@@ -151,14 +152,23 @@ def test_online_postgres_api_write_is_visible_in_bitable_view(
         {
             "id": message_id,
             "fields": {
+                "message_id": message_id,
+                "telegram_update_id": "stage02-online-update-1",
                 "telegram_chat_id": "stage02-online-chat",
                 "telegram_message_id": "stage02-online-message-1",
+                "telegram_user_id": "customer-online-user",
+                "customer_id": str(customer_id),
+                "binding_status": "bound",
                 "message_type": "text",
+                "text_preview": "recharge act_online_1001 100 USD",
+                "processing_status": "queued",
+                "outbox_status": "pending",
+                "last_error_code": None,
                 "intent_status": "unclassified",
                 "intent_type": None,
                 "received_at": matching_records[0]["fields"]["received_at"],
+                "processed_at": None,
                 "trace_id": "tg:stage02-online-update-1",
-                "raw_text": "[masked]",
             },
         }
     ]
@@ -168,7 +178,7 @@ def test_online_postgres_api_write_is_visible_in_bitable_view(
         assert stored_message is not None
         assert stored_message.customer_id == customer_id
         assert _count(session, OutboxEvent) == 1
-        assert _count(session, OpsAuditEvent) == 1
+        assert _count(session, OpsAuditEvent) == 2
 
 
 def test_online_audit_view_reads_real_audit_events(
@@ -259,7 +269,7 @@ def test_online_mock_telegram_duplicate_update_is_idempotent_across_sessions(
     with online_db.session_factory() as session:
         assert _count(session, Message) == 1
         assert _count(session, OutboxEvent) == 1
-        assert _count(session, OpsAuditEvent) == 1
+        assert _count(session, OpsAuditEvent) == 2
 
 
 def test_online_agent_intent_extract_uses_database_uow_and_updates_draft_view(
@@ -333,7 +343,7 @@ def test_online_agent_intent_extract_uses_database_uow_and_updates_draft_view(
             "amount": "200",
             "currency": "USD",
         }
-        assert _count(session, OpsAuditEvent) == 2
+        assert _count(session, OpsAuditEvent) == 3
 
 
 def test_online_confirmation_route_commits_service_record_ticket_and_view_state(

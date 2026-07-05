@@ -2,13 +2,18 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models.customers import CustomerGroup
-from app.models.telegram import Message
+from app.models.telegram import Message, TelegramCustomerBinding
 from app.schemas.telegram import MockTelegramUpdate
 from app.services.audit import record_audit_event
+from app.services.customer_binding import (
+    CustomerBindingResolution,
+    TelegramCustomerBindingRecord,
+    resolve_customer_binding,
+)
 from app.services.outbox import enqueue_outbox_event
 
 
@@ -34,6 +39,12 @@ class IngestedMessage:
     intent_type: str | None
     ingestion_status: str
     trace_id: str
+    telegram_user_id: str | None = None
+    binding_status: str = "needs_manual_binding"
+    processing_status: str = "queued"
+    outbox_status: str = "pending"
+    last_error_code: str | None = None
+    processed_at: Any | None = None
 
 
 @dataclass(frozen=True)
@@ -51,6 +62,14 @@ class TelegramIngestionUnitOfWork(Protocol):
         self,
         telegram_chat_id: str,
     ) -> BoundCustomerGroup | None:
+        pass
+
+    def list_customer_bindings(
+        self,
+        *,
+        telegram_chat_id: str,
+        telegram_user_id: str | None,
+    ) -> list[TelegramCustomerBindingRecord]:
         pass
 
     def add_message(self, message: IngestedMessage) -> None:
@@ -78,6 +97,7 @@ class InMemoryTelegramIngestionUnitOfWork:
         self.messages: list[IngestedMessage] = []
         self.outbox_events: list[Any] = []
         self.customer_groups: dict[str, BoundCustomerGroup] = {}
+        self.customer_bindings: list[TelegramCustomerBindingRecord] = []
         self.audit_events: list[object] = []
         self.committed = False
 
@@ -92,6 +112,9 @@ class InMemoryTelegramIngestionUnitOfWork:
             customer_group_id=customer_group_id,
             customer_id=customer_id,
         )
+
+    def add_customer_binding(self, binding: TelegramCustomerBindingRecord) -> None:
+        self.customer_bindings.append(binding)
 
     def get_message_by_update_id(self, update_id: str) -> IngestedMessage | None:
         return next(
@@ -108,6 +131,22 @@ class InMemoryTelegramIngestionUnitOfWork:
         telegram_chat_id: str,
     ) -> BoundCustomerGroup | None:
         return self.customer_groups.get(telegram_chat_id)
+
+    def list_customer_bindings(
+        self,
+        *,
+        telegram_chat_id: str,
+        telegram_user_id: str | None,
+    ) -> list[TelegramCustomerBindingRecord]:
+        return [
+            binding
+            for binding in self.customer_bindings
+            if binding.telegram_chat_id == telegram_chat_id
+            or (
+                telegram_user_id is not None
+                and binding.telegram_user_id == telegram_user_id
+            )
+        ]
 
     def add_message(self, message: IngestedMessage) -> None:
         self.messages.append(message)
@@ -166,6 +205,32 @@ class SqlAlchemyTelegramIngestionUnitOfWork:
             customer_id=group.customer_id,
         )
 
+    def list_customer_bindings(
+        self,
+        *,
+        telegram_chat_id: str,
+        telegram_user_id: str | None,
+    ) -> list[TelegramCustomerBindingRecord]:
+        conditions = [TelegramCustomerBinding.telegram_chat_id == telegram_chat_id]
+        if telegram_user_id is not None:
+            conditions.append(TelegramCustomerBinding.telegram_user_id == telegram_user_id)
+        bindings = self.session.scalars(
+            select(TelegramCustomerBinding).where(or_(*conditions))
+        )
+        return [
+            TelegramCustomerBindingRecord(
+                id=binding.id,
+                customer_id=binding.customer_id,
+                telegram_chat_id=binding.telegram_chat_id,
+                telegram_user_id=binding.telegram_user_id,
+                binding_scope=binding.binding_scope,
+                status=binding.status,
+                label=binding.label,
+                created_by=binding.created_by,
+            )
+            for binding in bindings
+        ]
+
     def add_message(self, message: IngestedMessage) -> None:
         self.session.add(
             Message(
@@ -173,6 +238,7 @@ class SqlAlchemyTelegramIngestionUnitOfWork:
                 telegram_update_id=message.telegram_update_id,
                 telegram_chat_id=message.telegram_chat_id,
                 telegram_message_id=message.telegram_message_id,
+                telegram_user_id=message.telegram_user_id,
                 customer_group_id=message.customer_group_id,
                 customer_id=message.customer_id,
                 raw_text=message.raw_text,
@@ -183,6 +249,11 @@ class SqlAlchemyTelegramIngestionUnitOfWork:
                 intent_type=message.intent_type,
                 received_at=message_received_at(message),
                 ingestion_status=message.ingestion_status,
+                binding_status=message.binding_status,
+                processing_status=message.processing_status,
+                outbox_status=message.outbox_status,
+                last_error_code=message.last_error_code,
+                processed_at=message.processed_at,
                 trace_id=message.trace_id,
             )
         )
@@ -225,23 +296,44 @@ def ingest_mock_telegram_update(
             trace_id=existing_message.trace_id,
         )
 
-    bound_group = uow.find_customer_group_by_chat_id(update.chat_id)
+    binding = resolve_customer_binding(
+        uow,
+        telegram_chat_id=update.chat_id,
+        telegram_user_id=update.sender_user_id,
+    )
+    bound_group = None
+    if binding.binding_status == "needs_manual_binding":
+        bound_group = uow.find_customer_group_by_chat_id(update.chat_id)
+        if bound_group is not None:
+            binding = CustomerBindingResolution(
+                binding_status="bound",
+                customer_id=bound_group.customer_id,
+                binding_scope="legacy_customer_group",
+            )
     message = IngestedMessage(
         id=uuid4(),
         telegram_update_id=update.update_id,
         telegram_chat_id=update.chat_id,
         telegram_message_id=update.message_id,
+        telegram_user_id=update.sender_user_id,
         customer_group_id=(
             None if bound_group is None else bound_group.customer_group_id
         ),
-        customer_id=None if bound_group is None else bound_group.customer_id,
+        customer_id=binding.customer_id,
         raw_text=update.text,
         raw_caption=update.caption,
         normalized_text=normalize_message_text(update.text or update.caption),
         message_type=update.message_type,
-        intent_status="needs_review" if bound_group is None else "unclassified",
+        intent_status=(
+            "unclassified"
+            if binding.binding_status == "bound"
+            else "needs_review"
+        ),
         intent_type=None,
         ingestion_status="stored",
+        binding_status=binding.binding_status,
+        processing_status="queued",
+        outbox_status="pending",
         trace_id=trace_id,
     )
     message.received_at = update.received_at
@@ -272,8 +364,27 @@ def ingest_mock_telegram_update(
             "telegram_chat_id": update.chat_id,
             "telegram_message_id": update.message_id,
             "customer_id": None if message.customer_id is None else str(message.customer_id),
+            "binding_status": message.binding_status,
             "intent_status": message.intent_status,
             "ingestion_status": message.ingestion_status,
+            "processing_status": message.processing_status,
+            "outbox_status": message.outbox_status,
+        },
+    )
+    record_audit_event(
+        uow,
+        trace_id=trace_id,
+        actor_type="system",
+        actor_id="customer_binding",
+        event_type=_binding_audit_event_type(message.binding_status),
+        entity_type="message",
+        entity_id=message.id,
+        after_state={
+            "telegram_chat_id": update.chat_id,
+            "telegram_user_id": update.sender_user_id,
+            "customer_id": None if message.customer_id is None else str(message.customer_id),
+            "binding_status": message.binding_status,
+            "binding_scope": binding.binding_scope,
         },
     )
     return TelegramIngestionResult(
@@ -293,12 +404,21 @@ def message_received_at(message: IngestedMessage):
     return getattr(message, "received_at")
 
 
+def _binding_audit_event_type(binding_status: str) -> str:
+    if binding_status == "bound":
+        return "telegram.binding.resolved"
+    if binding_status == "binding_conflict":
+        return "telegram.binding.conflict"
+    return "telegram.binding.unbound"
+
+
 def _to_ingested_message(message: Message) -> IngestedMessage:
     ingested = IngestedMessage(
         id=message.id,
         telegram_update_id=message.telegram_update_id,
         telegram_chat_id=message.telegram_chat_id,
         telegram_message_id=message.telegram_message_id,
+        telegram_user_id=message.telegram_user_id,
         customer_group_id=message.customer_group_id,
         customer_id=message.customer_id,
         raw_text=message.raw_text,
@@ -308,6 +428,11 @@ def _to_ingested_message(message: Message) -> IngestedMessage:
         intent_status=message.intent_status,
         intent_type=message.intent_type,
         ingestion_status=message.ingestion_status,
+        binding_status=message.binding_status,
+        processing_status=message.processing_status,
+        outbox_status=message.outbox_status,
+        last_error_code=message.last_error_code,
+        processed_at=message.processed_at,
         trace_id=message.trace_id,
     )
     ingested.received_at = message.received_at

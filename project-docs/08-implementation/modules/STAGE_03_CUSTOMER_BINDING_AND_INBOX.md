@@ -4,7 +4,7 @@
 
 - Document status: active module design
 - Scope: Stage 03 最小 Telegram 客户绑定和多维表格 Telegram Inbox 视图。
-- Current Progress: 2026-07-06 模块设计已建立；Stage 03 已进入代码实施，但本模块的 customer binding model/service、migration 和 `telegram_inbox` projection 尚未实现，下一任务按 Task 4 推进。
+- Current Progress: 2026-07-06 本模块 local/backend slice 已实现：新增 `telegram_customer_bindings` model/migration、customer binding service、ingestion binding status/audit、Stage03 `telegram_inbox` projection、scope filtering、stable order、limit 和 redaction tests。真实 staging PostgreSQL 和 Telegram webhook 联调仍待 Stage 03 后续验收。
 
 ## 1. Scope
 

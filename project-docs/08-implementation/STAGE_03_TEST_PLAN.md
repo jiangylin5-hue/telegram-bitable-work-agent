@@ -4,7 +4,7 @@
 
 - Document status: active test plan
 - Scope: Stage 03 automated tests、manual staging verification、验收证据和不可测试项说明。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。`test_stage03_config.py`、`test_stage03_telegram_update_parser.py` 和 `test_stage03_telegram_webhook.py` 已通过 focused verification；binding、inbox view、Redis Streams、worker、migration rehearsal 和 staging manual verification 仍待后续任务完成。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。`test_stage03_config.py`、`test_stage03_telegram_update_parser.py`、`test_stage03_telegram_webhook.py`、`test_stage03_customer_binding.py` 和 `test_stage03_telegram_inbox_view.py` 已通过 focused verification；Redis Streams、worker、online migration rehearsal 和 staging manual verification 仍待后续任务完成。
 
 ## 1. Test Strategy
 

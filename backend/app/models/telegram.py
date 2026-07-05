@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Uuid
 
@@ -37,6 +37,52 @@ class TelegramIdentity(UuidPrimaryKeyMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="active")
 
 
+class TelegramCustomerBinding(UuidPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "telegram_customer_bindings"
+    __table_args__ = (
+        Index(
+            "uq_telegram_customer_bindings_active_chat",
+            "binding_scope",
+            "telegram_chat_id",
+            unique=True,
+            postgresql_where=text(
+                "status = 'active' AND binding_scope = 'chat'"
+            ),
+        ),
+        Index(
+            "uq_telegram_customer_bindings_active_user",
+            "binding_scope",
+            "telegram_user_id",
+            unique=True,
+            postgresql_where=text(
+                "status = 'active' AND binding_scope = 'user'"
+            ),
+        ),
+        Index(
+            "uq_telegram_customer_bindings_active_chat_user",
+            "binding_scope",
+            "telegram_chat_id",
+            "telegram_user_id",
+            unique=True,
+            postgresql_where=text(
+                "status = 'active' AND binding_scope = 'chat_user'"
+            ),
+        ),
+    )
+
+    customer_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("customers.id"),
+        nullable=False,
+    )
+    telegram_chat_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    telegram_user_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    binding_scope: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="active")
+    label: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    created_by: Mapped[str | None] = mapped_column(String(120), nullable=True)
+
+
 class Message(UuidPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "messages"
     __table_args__ = (
@@ -51,6 +97,7 @@ class Message(UuidPrimaryKeyMixin, TimestampMixin, Base):
     telegram_update_id: Mapped[str] = mapped_column(String(80), nullable=False)
     telegram_chat_id: Mapped[str] = mapped_column(String(80), nullable=False)
     telegram_message_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    telegram_user_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
     sender_identity_id: Mapped[UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("telegram_identities.id"),
@@ -84,5 +131,25 @@ class Message(UuidPrimaryKeyMixin, TimestampMixin, Base):
         String(40),
         nullable=False,
         default="stored",
+    )
+    binding_status: Mapped[str] = mapped_column(
+        String(40),
+        nullable=False,
+        default="needs_manual_binding",
+    )
+    processing_status: Mapped[str] = mapped_column(
+        String(40),
+        nullable=False,
+        default="queued",
+    )
+    outbox_status: Mapped[str] = mapped_column(
+        String(40),
+        nullable=False,
+        default="pending",
+    )
+    last_error_code: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    processed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )
     trace_id: Mapped[str] = mapped_column(String(120), nullable=False)

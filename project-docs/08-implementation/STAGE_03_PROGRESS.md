@@ -4,7 +4,7 @@
 
 - Document status: active progress log (confirmed by user 2026-07-06)
 - Scope: Stage 03 子阶段进度、测试记录、风险和后续项。
-- Current Progress: 2026-07-06 已开始 Stage 03 代码实施。完成 03.0 Runtime Config And Safety Defaults、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route：新增 Stage03 配置安全门、真实 Telegram update parser、安全 view DTO、receive-only webhook route、secret/allowlist validation 和 `telegram.message_received` outbox event；Stage03 focused tests 18 passed，全量 backend suite 103 passed / 17 skipped。
+- Current Progress: 2026-07-06 已开始 Stage 03 代码实施。完成 03.0 Runtime Config And Safety Defaults、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox：新增 Stage03 配置安全门、真实 Telegram update parser、安全 view DTO、receive-only webhook route、secret/allowlist validation、`telegram.message_received` outbox event、最小 Telegram customer binding、Stage03 `telegram_inbox` projection 和 migration `20260706_0010`；Task4 focused tests 8 passed，全量 backend suite 111 passed / 17 skipped。
 
 ## 1. Progress Protocol
 
@@ -30,9 +30,9 @@ Next subphase:
 | 03.0 Documentation and runtime config gate | completed | Docs finalized; runtime config contract implemented and tested (`test_stage03_config.py` 8 passed; full suite 93 passed, 17 skipped) |
 | 03.1 Tencent Cloud staging runtime design | documentation completed, code/deploy pending | Deployment doc exists; no server action yet |
 | 03.2 Real Telegram receive-only webhook | parser and route completed, inbox projection pending under 03.3 | `test_stage03_telegram_update_parser.py` 5 passed; `test_stage03_telegram_webhook.py` 5 passed |
-| 03.3 Minimal customer binding and Telegram Inbox | pending implementation | Customer binding model/service and `telegram_inbox` projection not implemented yet |
+| 03.3 Minimal customer binding and Telegram Inbox | completed for local/backend slice | `test_stage03_customer_binding.py` 5 passed; `test_stage03_telegram_inbox_view.py` 3 passed; Alembic offline SQL reaches `20260706_0010` |
 | 03.4 PostgreSQL Outbox to Redis Streams worker | pending implementation | Redis Streams bridge and durable worker not implemented yet |
-| 03.5 Acceptance, rehearsal and stage close | pending | Local focused Stage 03 tests started; no Tencent Cloud staging rehearsal yet |
+| 03.5 Acceptance, rehearsal and stage close | pending | Local focused Stage 03 tests pass for Tasks 1-4; no Tencent Cloud staging rehearsal yet |
 
 ## 3. Progress Records
 
@@ -110,6 +110,19 @@ Changed files: backend/app/api/routes/telegram_webhook.py; backend/app/core/conf
 Tests run: cd backend; pytest tests/integration/test_stage03_telegram_webhook.py -v; cd backend; pytest tests/unit/test_telegram_ingestion.py::test_ingest_known_group_message_creates_message_and_outbox_event -v; cd backend; pytest tests/unit/test_stage03_config.py tests/unit/test_stage03_telegram_update_parser.py tests/integration/test_stage03_telegram_webhook.py -v; cd backend; pytest tests -q.
 Test result: Webhook route suite 5 passed. Initial full regression exposed a Stage 02 compatibility failure in default outbox idempotency key format; after root-cause fix, the specific regression test passed, Stage03 focused tests passed with 18 passed, and full backend suite passed with 103 passed / 17 skipped. Skips are existing online PostgreSQL smoke tests gated by `STAGE02_ONLINE_DATABASE_URL`.
 Not done: No customer binding model/migration, no `telegram_inbox` view projection, no Redis Streams bridge, no durable worker runtime, no Tencent Cloud deployment, no DNS changes, no real Telegram webhook setup, no real Telegram send, no LLM, no provider execution.
-Risks / follow-up: Route currently reuses the existing ingestion service and in-memory/SQLAlchemy UOW boundary; full Bitable `telegram_inbox` evidence remains Task 4, and Redis delivery remains Task 5/6. Need run combined/full verification before committing.
-Next subphase: Task 4 Minimal Customer Binding And Telegram Inbox.
+Risks / follow-up: At Task 3 completion, route still reused the existing ingestion service and full Bitable `telegram_inbox` evidence remained Task 4. Task 4 later completed the customer binding and inbox projection local/backend slice; Redis delivery remains Task 5/6.
+Next subphase: Task 4 Minimal Customer Binding And Telegram Inbox (completed after this record).
+```
+
+```text
+Date: 2026-07-06
+Subphase: Task 4 Customer Binding And Telegram Inbox
+Status: completed for local/backend slice
+Completed: Added minimal Telegram customer binding resolution and Stage03 Telegram Inbox projection. Binding resolution follows the documented order `chat_user -> chat -> user -> needs_manual_binding`, ignores inactive bindings, avoids silent customer guessing on conflicts, keeps Stage02 `customer_groups` as a fallback when no Stage03 binding exists, and writes independent binding audit events (`telegram.binding.resolved`, `telegram.binding.unbound`, `telegram.binding.conflict`). Added `telegram_customer_bindings` model/migration and Stage03 message fields (`telegram_user_id`, `binding_status`, `processing_status`, `outbox_status`, `last_error_code`, `processed_at`). Updated `telegram_inbox` view to expose Stage03 fields, preserve non-sensitive Stage02 compatibility fields, hide raw text/raw update/secrets, enforce stable received_at-desc ordering, default limit 100 and max limit 200, and apply existing customer-scope filtering.
+Changed files: backend/alembic/versions/20260706_0010_stage03_customer_bindings.py; backend/app/api/routes/views.py; backend/app/models/__init__.py; backend/app/models/telegram.py; backend/app/services/bitable_views.py; backend/app/services/customer_binding.py; backend/app/services/service_drafts.py; backend/app/services/telegram_ingestion.py; backend/tests/integration/test_online_postgres_smoke.py; backend/tests/integration/test_stage03_customer_binding.py; backend/tests/unit/test_bitable_views.py; backend/tests/unit/test_stage03_telegram_inbox_view.py; project-docs/08-implementation/STAGE_03_BACKEND_INTEGRATION_PLAN.md; project-docs/08-implementation/STAGE_03_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_03_PROGRESS.md.
+Tests run: cd backend; pytest tests/integration/test_stage03_customer_binding.py tests/unit/test_stage03_telegram_inbox_view.py -v; cd backend; pytest tests/integration/test_stage03_customer_binding.py tests/unit/test_stage03_telegram_inbox_view.py tests/unit/test_bitable_views.py tests/integration/test_stage03_telegram_webhook.py tests/unit/test_telegram_ingestion.py -v; cd backend; alembic upgrade head --sql; cd backend; pytest tests -q.
+Test result: TDD RED first failed because `app.services.customer_binding` did not exist and inbox view lacked Stage03 fields/limit. After implementation, Task4 focused tests passed with 8 passed; affected regression tests passed with 26 passed; Alembic offline SQL reached `20260706_0010`; full backend suite passed with 111 passed / 17 skipped. Skips are existing online PostgreSQL smoke tests gated by `STAGE02_ONLINE_DATABASE_URL`.
+Not done: No Redis Streams bridge, no durable worker runtime, no worker retry/dead letter, no Tencent Cloud deployment, no DNS changes, no real Telegram webhook setup, no real Telegram send, no LLM, no provider execution.
+Risks / follow-up: Online PostgreSQL verification remains skipped until `STAGE02_ONLINE_DATABASE_URL` or a Stage03 staging database is provided. Next implementation task must preserve PostgreSQL outbox as source of truth while adding Redis Streams delivery.
+Next subphase: Task 5 Outbox To Redis Streams Bridge.
 ```

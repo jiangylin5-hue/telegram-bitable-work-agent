@@ -89,20 +89,25 @@ def test_mask_record_fields_masks_not_allowed_fields() -> None:
     }
 
 
-def test_view_api_projects_business_rows_and_masks_sensitive_fields() -> None:
+def test_view_api_projects_telegram_inbox_stage03_fields() -> None:
     app = create_app()
     data_source = InMemoryBitableViewDataSource()
     data_source.add_record(
         "messages",
         record_id="message-1",
         fields={
+            "telegram_update_id": "update-1",
             "telegram_chat_id": "chat-1",
-            "telegram_message_id": "message-1",
+            "telegram_user_id": "user-1",
+            "customer_id": "customer-1",
+            "binding_status": "bound",
             "message_type": "text",
-            "intent_status": "routed",
-            "intent_type": "recharge",
+            "normalized_text": "customer preview",
+            "processing_status": "queued",
+            "outbox_status": "pending",
+            "last_error_code": None,
             "received_at": "2026-07-04T09:00:00+00:00",
-            "trace_id": "tg:update-1",
+            "processed_at": None,
             "raw_text": "customer secret recharge request",
             "ignored_field": "not part of this view",
         },
@@ -114,20 +119,25 @@ def test_view_api_projects_business_rows_and_masks_sensitive_fields() -> None:
 
     assert response.status_code == 200
     assert response.json()["records"] == [
-        {
-            "id": "message-1",
-            "fields": {
-                "telegram_chat_id": "chat-1",
-                "telegram_message_id": "message-1",
-                "message_type": "text",
-                "intent_status": "routed",
-                "intent_type": "recharge",
-                "received_at": "2026-07-04T09:00:00+00:00",
-                "trace_id": "tg:update-1",
-                "raw_text": "[masked]",
-            },
-        }
-    ]
+            {
+                "id": "message-1",
+                "fields": {
+                    "message_id": "message-1",
+                    "telegram_update_id": "update-1",
+                    "telegram_chat_id": "chat-1",
+                    "telegram_user_id": "user-1",
+                    "customer_id": "customer-1",
+                    "binding_status": "bound",
+                    "message_type": "text",
+                    "text_preview": "customer preview",
+                    "processing_status": "queued",
+                    "outbox_status": "pending",
+                    "last_error_code": None,
+                    "received_at": "2026-07-04T09:00:00+00:00",
+                    "processed_at": None,
+                },
+            }
+        ]
 
 
 def test_account_inventory_view_projects_assignment_and_status_fields() -> None:

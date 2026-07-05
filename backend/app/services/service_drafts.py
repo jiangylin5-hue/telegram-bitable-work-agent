@@ -85,6 +85,7 @@ class SqlAlchemyServiceDraftUnitOfWork:
             telegram_update_id=message.telegram_update_id,
             telegram_chat_id=message.telegram_chat_id,
             telegram_message_id=message.telegram_message_id,
+            telegram_user_id=message.telegram_user_id,
             customer_group_id=message.customer_group_id,
             customer_id=message.customer_id,
             raw_text=message.raw_text,
@@ -94,6 +95,11 @@ class SqlAlchemyServiceDraftUnitOfWork:
             intent_status=message.intent_status,
             intent_type=message.intent_type,
             ingestion_status=message.ingestion_status,
+            binding_status=message.binding_status,
+            processing_status=message.processing_status,
+            outbox_status=message.outbox_status,
+            last_error_code=message.last_error_code,
+            processed_at=message.processed_at,
             trace_id=message.trace_id,
         )
         ingested.received_at = message.received_at

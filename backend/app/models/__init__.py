@@ -26,7 +26,7 @@ from app.models.reporting import (
 )
 from app.models.service import ExecutionLog, ExecutionTicket, ServiceRecord
 from app.models.service_drafts import ServiceDraft
-from app.models.telegram import Message, TelegramIdentity
+from app.models.telegram import Message, TelegramCustomerBinding, TelegramIdentity
 from app.models.users import User
 
 metadata = Base.metadata
@@ -58,6 +58,7 @@ __all__ = [
     "ServiceRecord",
     "ServiceDraft",
     "TableView",
+    "TelegramCustomerBinding",
     "TelegramIdentity",
     "User",
     "ViewColumn",

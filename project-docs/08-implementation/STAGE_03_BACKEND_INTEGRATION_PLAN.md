@@ -13,7 +13,7 @@
 
 - Document status: active implementation plan (confirmed by user 2026-07-06)
 - Scope: Stage 03 真实 Telegram 收件入口、PostgreSQL Outbox、Redis Streams worker、最小客户绑定、多维表格 Telegram Inbox、腾讯云 CVM staging、Caddy HTTPS。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route 已按 TDD 完成并进入验收记录；下一步为 Task 4 Minimal Customer Binding And Telegram Inbox。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox 已按 TDD 完成并进入验收记录；下一步为 Task 5 Outbox To Redis Streams Bridge。
 
 ## 1. Delivery Shape
 
@@ -510,14 +510,14 @@ These tasks are the active Stage 03 implementation checklist after user approval
 - Test: `backend/tests/integration/test_stage03_customer_binding.py`
 - Test: `backend/tests/unit/test_stage03_telegram_inbox_view.py`
 
-- [ ] Step 1: Write binding tests for bound, unbound, inactive and conflict cases.
-- [ ] Step 2: Write inbox view tests for fields, redaction, permission scope, stable order and limit.
-- [ ] Step 3: Implement model/migration.
-- [ ] Step 4: Implement binding service.
-- [ ] Step 5: Implement inbox projection.
-- [ ] Step 6: Run binding and view tests.
-- [ ] Step 7: Run Alembic offline SQL.
-- [ ] Step 8: Update progress.
+- [x] Step 1: Write binding tests for bound, unbound, inactive and conflict cases.
+- [x] Step 2: Write inbox view tests for fields, redaction, permission scope, stable order and limit.
+- [x] Step 3: Implement model/migration.
+- [x] Step 4: Implement binding service.
+- [x] Step 5: Implement inbox projection.
+- [x] Step 6: Run binding and view tests.
+- [x] Step 7: Run Alembic offline SQL.
+- [x] Step 8: Update progress.
 
 ### Task 5: Outbox To Redis Streams Bridge
 

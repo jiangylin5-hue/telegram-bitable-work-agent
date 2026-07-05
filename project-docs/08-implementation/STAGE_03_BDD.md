@@ -4,7 +4,7 @@
 
 - Document status: active BDD (confirmed by user 2026-07-06)
 - Scope: Stage 03 可验收行为、测试映射和业务证据。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Runtime config、Telegram update parser 和 receive-only webhook route 已有自动化测试证据；customer binding、`telegram_inbox` view、Redis Streams worker 和 staging rehearsal 仍待实现。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Runtime config、Telegram update parser、receive-only webhook route、customer binding 和 `telegram_inbox` view 已有自动化测试证据；Redis Streams worker 和 staging rehearsal 仍待实现。
 
 ## 1. Feature: Receive-Only Telegram Webhook
 
@@ -27,7 +27,7 @@ Then:
 - One `outbox_events` row exists for message processing.
 - `ops_audit_events` includes message received evidence.
 - The outbox event type is `telegram.message_received`, not the Stage 02 `agent.intent_extract`.
-- `telegram_inbox` view projection is verified in the Customer Binding And Telegram Inbox feature after Task 4 lands.
+- `telegram_inbox` view projection is verified in the Customer Binding And Telegram Inbox feature.
 - No Telegram reply is sent.
 
 Test mapping:
@@ -180,6 +180,27 @@ Then:
 Test mapping:
 
 - `tests/integration/test_stage03_customer_binding.py::test_inactive_binding_is_ignored`
+
+### Scenario 2.4: Conflicting binding does not guess customer
+
+Given:
+
+- Multiple active bindings match the same incoming chat/user at the same resolution scope.
+
+When:
+
+- A valid Telegram update arrives.
+
+Then:
+
+- The message is still recorded.
+- `customer_id` remains empty.
+- `binding_status = binding_conflict`.
+- Audit records conflict evidence for manual review.
+
+Test mapping:
+
+- `tests/integration/test_stage03_customer_binding.py::test_conflicting_binding_enters_manual_review_without_customer_guess`
 
 ## 3. Feature: Outbox To Redis Streams
 
