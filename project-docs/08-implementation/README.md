@@ -1,14 +1,14 @@
-# Stage 02 Implementation Docs
+# Stage Implementation Docs
 
 ## Status
 
 - Document status: active implementation index
-- Scope: Stage 02 后端内核与垂直切片开发入口
-- Current Progress: 2026-07-05 Stage 02 实施文档仍为当前已开发阶段入口；新增 Stage 03 candidate 文档入口，用于下一阶段真实集成与运行时基础，等待用户确认后转 active。
+- Scope: Stage 02 历史入口与 Stage 03 当前阶段入口
+- Current Progress: 2026-07-06 Stage 02 已冻结关闭；Stage 03 已确认转为 active。当前 Stage 03 先完整补齐文档包，不写代码，方向为真实 Telegram 收件入口 + PostgreSQL Outbox + Redis Streams worker + Telegram Inbox 多维表格闭环 + 腾讯云 CVM staging + Caddy HTTPS。
 
 ## 1. Read Order
 
-Stage 02 开发只需要按这个顺序阅读：
+Stage 02 已关闭，复盘或查历史时按这个顺序阅读：
 
 1. [Stage 02 Source Of Truth](STAGE_02_SOURCE_OF_TRUTH.md)
 2. [Stage 02 Backend Kernel And Vertical Slices Implementation Plan](STAGE_02_BACKEND_KERNEL_AND_VERTICAL_SLICES_PLAN.md)
@@ -20,16 +20,31 @@ Stage 02 开发只需要按这个顺序阅读：
 
 其他产品、架构、Agent、数据库文档只作为引用，不作为日常执行入口。
 
-Stage 03 进入前按这个顺序阅读：
+Stage 03 开发前按这个顺序阅读：
 
-1. [Stage 03 Source Of Truth](STAGE_03_SOURCE_OF_TRUTH.md)
-2. [Stage 03 Backend Integration Plan](STAGE_03_BACKEND_INTEGRATION_PLAN.md)
-3. [Stage 03 SDD](STAGE_03_SDD.md)
-4. [Stage 03 BDD](STAGE_03_BDD.md)
-5. [Stage 03 Acceptance Checklist](STAGE_03_ACCEPTANCE_CHECKLIST.md)
-6. [Stage 03 Progress](STAGE_03_PROGRESS.md)
+1. [Stage 03 Direction Proposal](STAGE_03_DIRECTION_PROPOSAL.md)
+2. [Stage 03 Source Of Truth](STAGE_03_SOURCE_OF_TRUTH.md)
+3. [Stage 03 Backend Integration Plan](STAGE_03_BACKEND_INTEGRATION_PLAN.md)
+4. [Stage 03 SDD](STAGE_03_SDD.md)
+5. [Stage 03 BDD](STAGE_03_BDD.md)
+6. [Stage 03 Acceptance Checklist](STAGE_03_ACCEPTANCE_CHECKLIST.md)
+7. [Stage 03 Module Index](STAGE_03_MODULE_INDEX.md)
+8. [Stage 03 API Contract](STAGE_03_API_CONTRACT.md)
+9. [Stage 03 Database And Migration Design](STAGE_03_DATABASE_AND_MIGRATION_DESIGN.md)
+10. [Stage 03 Security And Permission Design](STAGE_03_SECURITY_AND_PERMISSION_DESIGN.md)
+11. [Stage 03 Test Plan](STAGE_03_TEST_PLAN.md)
+12. [Stage 03 Tencent Cloud Staging Deployment](STAGE_03_TENCENT_CLOUD_STAGING_DEPLOYMENT.md)
+13. [Stage 03 Operations Runbook](STAGE_03_OPERATIONS_RUNBOOK.md)
+14. [Stage 03 Risk Register](STAGE_03_RISK_REGISTER.md)
+15. [Stage 03 Progress](STAGE_03_PROGRESS.md)
 
-Stage 03 当前是 candidate，需要用户确认后才能开始代码实现。
+Stage 03 complex module docs:
+
+1. [Stage 03 Telegram Webhook Ingress Module](modules/STAGE_03_TELEGRAM_WEBHOOK_INGRESS.md)
+2. [Stage 03 Customer Binding And Telegram Inbox Module](modules/STAGE_03_CUSTOMER_BINDING_AND_INBOX.md)
+3. [Stage 03 Redis Streams Worker Module](modules/STAGE_03_REDIS_STREAMS_WORKER.md)
+
+Stage 02 已于 2026-07-06 冻结关闭。Stage 03 已由用户于 2026-07-06 确认转为 active，补充决策：Telegram 只收不发、Worker 使用 PostgreSQL Outbox + Redis Streams、Stage 03 暂不调用 LLM、第一批业务场景为 Telegram 收件箱 / 客户消息登记、Webhook 使用 secret token + optional allowlist、做最小客户绑定、部署到腾讯云 CVM staging、HTTPS 使用 Caddy、当前先完整写文档不写代码。
 
 ## 2. Stage 02 Scope
 
@@ -55,6 +70,7 @@ Stage 02 范围已经确认：
 
 进入 Stage 03 代码开发前必须：
 
-- 先提交或明确保留 Stage 02 hardening batch，避免两个阶段混在同一批未提交变更里。
-- 用户确认 [Stage 03 Source Of Truth](STAGE_03_SOURCE_OF_TRUTH.md) 从 candidate 转 active。
-- 第一批只选择一个主线，推荐 Real Telegram ingress + durable worker runtime。
+- Stage 03 文档包通过一致性检查。
+- 用户确认从文档阶段进入代码开发。
+- 不把真实 Bot Token、webhook secret、数据库密码或 Redis 密码写入仓库。
+- 任何腾讯云服务器操作、DNS 修改或 Telegram webhook 设置都必须先单独确认。

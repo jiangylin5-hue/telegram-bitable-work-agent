@@ -2,9 +2,9 @@
 
 ## Status
 
-- Document status: active progress log
+- Document status: frozen progress log (Stage 02 closed)
 - Scope: Stage 02 子阶段完成记录、测试记录、风险和后续项
-- Current Progress: 2026-07-05 完成 Stage 02 最终收束审计：新增 `STAGE_02_FINAL_ACCEPTANCE_REPORT.md`，补齐 BDD scenario `Test mapping`，并用 fresh online smoke 17 passed、full suite 102 passed 作为切阶段前证据。后续只做提交/确认/Stage 03 激活，不再扩展 Stage 02 scope。
+- Current Progress: 2026-07-06 Stage 02 正式关闭：全部成果已提交（`dba21de`、`a709f2c`），最终验收见 `STAGE_02_FINAL_ACCEPTANCE_REPORT.md`。本日志冻结，不再追加 Stage 02 记录；后续工作转入 Stage 03 文档。
 
 ## 1. Progress Protocol
 
@@ -570,4 +570,17 @@ Test result: New route-level commit tests failed first with missing `committed` 
 Not done: No online PostgreSQL transaction was executed; this proves route/UOW commit behavior with in-memory UOWs and session doubles, not a real database commit against a provisioned PostgreSQL instance.
 Risks / follow-up: Later environment verification should run these write APIs against a disposable PostgreSQL database and assert persisted rows after request completion.
 Next subphase: Continue strict Stage 02 plan/SDD/BDD audit; likely next hardening is online database smoke setup or remaining API transaction boundaries for service drafts/inventory if write endpoints expand.
+```
+
+```text
+Date: 2026-07-06
+Subphase: Stage 02 closure
+Status: closed
+Completed: Stage 02 formally closed. All Stage 02 work is committed on branch stage-02-backend (dba21de, a709f2c). Final acceptance evidence is recorded in STAGE_02_FINAL_ACCEPTANCE_REPORT.md: fresh online PostgreSQL smoke 17 passed, full backend suite 102 passed, Alembic revisions through 20260705_0009, AST parse check passed. Stage 02 source of truth and this progress log are frozen.
+Changed files: project-docs/08-implementation/STAGE_02_SOURCE_OF_TRUTH.md; project-docs/08-implementation/STAGE_02_PROGRESS.md; project-docs/08-implementation/STAGE_03_DIRECTION_PROPOSAL.md.
+Tests run: cd backend; python -m pytest tests -q (without STAGE02_ONLINE_DATABASE_URL, online smoke auto-skips).
+Test result: 85 passed, 17 skipped in 3.95s on 2026-07-06 (skips are online smoke tests gated by STAGE02_ONLINE_DATABASE_URL); last full run with online smoke recorded 102 passed per STAGE_02_FINAL_ACCEPTANCE_REPORT.md.
+Not done: Stage 03 direction is not yet confirmed by the user; Stage 03 docs remain candidate.
+Risks / follow-up: Next stage direction must be chosen from STAGE_03_DIRECTION_PROPOSAL.md and confirmed before any Stage 03 code.
+Next subphase: Stage 03 direction confirmation.
 ```

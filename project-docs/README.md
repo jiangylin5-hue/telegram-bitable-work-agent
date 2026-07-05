@@ -3,8 +3,8 @@
 ## Status
 
 - Document status: initial project document index
-- Current project mode: new project exploration
-- Current Progress: 2026-07-04 已初始化 Git，并补齐 Stage 02 阶段真源、执行计划、SDD、BDD、模块索引和进度日志；下一步从 Stage 02 Phase 1.1 开始后端骨架开发。
+- Current project mode: Stage 03 documentation finalization
+- Current Progress: 2026-07-06 Stage 02 已冻结关闭；Stage 03 已确认方向为真实 Telegram 收件入口 + PostgreSQL Outbox + Redis Streams worker + Telegram Inbox 多维表格闭环 + 腾讯云 CVM staging + Caddy HTTPS。当前先补齐 Stage 03 完整文档包，不写代码。
 
 ## Document Map
 
@@ -76,6 +76,14 @@
 - [Stage 03 Backend Integration Plan](08-implementation/STAGE_03_BACKEND_INTEGRATION_PLAN.md)
 - [Stage 03 SDD](08-implementation/STAGE_03_SDD.md)
 - [Stage 03 BDD](08-implementation/STAGE_03_BDD.md)
+- [Stage 03 Module Index](08-implementation/STAGE_03_MODULE_INDEX.md)
+- [Stage 03 API Contract](08-implementation/STAGE_03_API_CONTRACT.md)
+- [Stage 03 Database And Migration Design](08-implementation/STAGE_03_DATABASE_AND_MIGRATION_DESIGN.md)
+- [Stage 03 Security And Permission Design](08-implementation/STAGE_03_SECURITY_AND_PERMISSION_DESIGN.md)
+- [Stage 03 Test Plan](08-implementation/STAGE_03_TEST_PLAN.md)
+- [Stage 03 Tencent Cloud Staging Deployment](08-implementation/STAGE_03_TENCENT_CLOUD_STAGING_DEPLOYMENT.md)
+- [Stage 03 Operations Runbook](08-implementation/STAGE_03_OPERATIONS_RUNBOOK.md)
+- [Stage 03 Risk Register](08-implementation/STAGE_03_RISK_REGISTER.md)
 - [Stage 03 Acceptance Checklist](08-implementation/STAGE_03_ACCEPTANCE_CHECKLIST.md)
 - [Stage 03 Progress](08-implementation/STAGE_03_PROGRESS.md)
 

@@ -2,9 +2,9 @@
 
 ## Status
 
-- Document status: active stage source of truth
+- Document status: frozen stage source of truth (Stage 02 closed)
 - Scope: Stage 02 后端内核、充值闭环、账户库存、客户/公司日报的阶段边界、执行规则和验收原则
-- Current Progress: 2026-07-05 完成 Stage 02 最终收束审计：`STAGE_02_FINAL_ACCEPTANCE_REPORT.md` 汇总真源、计划、SDD、BDD 和验收清单证据；`STAGE_02_BDD.md` 已补齐每个 scenario 的 `Test mapping`；fresh online smoke 为 17 passed，全量 `pytest tests -v` 为 102 passed。Stage 02 可冻结提交；真实 Telegram/provider/OpenRouter、生产 worker、托管数据库演练和视图分页 hardening 继续保持 Stage 02 out of scope，并进入 Stage 03 candidate 文档。
+- Current Progress: 2026-07-06 Stage 02 正式关闭。验收证据以 `STAGE_02_FINAL_ACCEPTANCE_REPORT.md` 为准（fresh online smoke 17 passed、全量 102 passed、迁移至 `20260705_0009`），成果已提交至 `stage-02-backend`（`a709f2c`）。本文件转为历史真源，不再扩展 scope；后续方向见 `STAGE_03_DIRECTION_PROPOSAL.md`。2026-07-05 完成 Stage 02 最终收束审计：`STAGE_02_FINAL_ACCEPTANCE_REPORT.md` 汇总真源、计划、SDD、BDD 和验收清单证据；`STAGE_02_BDD.md` 已补齐每个 scenario 的 `Test mapping`；fresh online smoke 为 17 passed，全量 `pytest tests -v` 为 102 passed。Stage 02 可冻结提交；真实 Telegram/provider/OpenRouter、生产 worker、托管数据库演练和视图分页 hardening 继续保持 Stage 02 out of scope，并进入 Stage 03 candidate 文档。
 
 ## 1. Stage Goal
 
