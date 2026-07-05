@@ -4,7 +4,7 @@
 
 - Document status: active database design
 - Scope: Stage 03 数据库增量、迁移边界、唯一约束、敏感字段和验收。
-- Current Progress: 2026-07-06 数据库/迁移设计已建立并部分落地。已新增 migration `20260706_0010_stage03_customer_bindings.py`，包含 `telegram_customer_bindings`、messages Stage03 inbox fields 和 partial unique indexes；Redis delivery state 仍待 Task 5/6。
+- Current Progress: 2026-07-06 数据库/迁移设计已建立并部分落地。已新增 migration `20260706_0010_stage03_customer_bindings.py`，包含 `telegram_customer_bindings`、messages Stage03 inbox fields 和 partial unique indexes；Task5 Redis bridge 复用既有 `outbox_events.status/dispatched_at/idempotency_key/trace_id` 字段，无新增迁移；worker processing/dead-letter 细化仍待 Task 6。
 
 ## 1. Design Boundary
 

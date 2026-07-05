@@ -4,7 +4,7 @@
 
 - Document status: active module index
 - Scope: Stage 03 复杂模块索引、模块边界、对应设计文档、预计实现文件和验收入口。
-- Current Progress: 2026-07-06 Stage 03 已进入代码实施。Stage Gate And Config、Telegram Parser、Telegram Webhook Ingress route slice、Customer Binding And Telegram Inbox 已有测试证据；Outbox To Redis Streams Worker、Tencent Cloud Staging 仍待后续任务。
+- Current Progress: 2026-07-06 Stage 03 已进入代码实施。Stage Gate And Config、Telegram Parser、Telegram Webhook Ingress route slice、Customer Binding And Telegram Inbox、Outbox To Redis Streams Bridge 已有测试证据；Durable Worker Runtime、真实 Redis wiring 和 Tencent Cloud Staging 仍待后续任务。
 
 ## 1. Module Reading Rule
 

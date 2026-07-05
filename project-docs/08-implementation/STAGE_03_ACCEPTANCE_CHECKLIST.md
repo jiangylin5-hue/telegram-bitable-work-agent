@@ -4,7 +4,7 @@
 
 - Document status: active acceptance checklist (confirmed by user 2026-07-06)
 - Scope: Stage 03 文档、真实 Telegram 收件入口、Redis Streams worker、多维表格 Telegram Inbox 和腾讯云 staging 验收。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox 已通过 focused tests；Task 4 后全量 backend suite 为 111 passed / 17 skipped，Alembic offline SQL 到 `20260706_0010`。Redis Streams bridge、worker 和腾讯云 staging rehearsal 仍 pending。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge 已通过 focused tests；Task5 affected regression 为 16 passed，全量 backend suite 为 114 passed / 17 skipped。Durable worker、真实 Redis runtime 和腾讯云 staging rehearsal 仍 pending。
 
 ## 1. Acceptance Boundary
 
@@ -90,7 +90,9 @@ These commands are the Stage 03 implementation verification commands. Rows move 
 | `telegram_inbox` view | passed | `pytest tests/unit/test_stage03_telegram_inbox_view.py -v` => 3 passed; covers fields/scope, order/limit and redaction |
 | Stage 03 migration offline SQL | passed | `alembic upgrade head --sql` reaches `20260706_0010` and includes `telegram_customer_bindings` plus message inbox fields |
 | Full backend regression after Task 4 | passed | `pytest tests -q` => 111 passed, 17 skipped; skips are existing online PostgreSQL smoke tests gated by `STAGE02_ONLINE_DATABASE_URL` |
-| Outbox to Redis Streams bridge | pending | bridge tests |
+| Outbox to Redis Streams bridge | passed | `pytest tests/integration/test_stage03_redis_streams_bridge.py -v` => 3 passed; proves committed event enqueues once, absent/rolled-back event does not enqueue, and bridge rerun is idempotent |
+| Affected backend regression after Task 5 | passed | `pytest tests/unit/test_outbox.py tests/integration/test_stage03_redis_streams_bridge.py tests/integration/test_stage03_telegram_webhook.py tests/integration/test_stage03_customer_binding.py -v` => 16 passed |
+| Full backend regression after Task 5 | passed | `pytest tests -q` => 114 passed, 17 skipped; skips are existing online PostgreSQL smoke tests gated by `STAGE02_ONLINE_DATABASE_URL` |
 | Durable worker runtime | pending | worker runtime tests |
 | Worker retry/dead letter | pending | dead letter tests |
 | Staging real Telegram webhook rehearsal | pending | manual evidence |

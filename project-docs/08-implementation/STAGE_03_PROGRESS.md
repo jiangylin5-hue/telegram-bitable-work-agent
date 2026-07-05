@@ -4,7 +4,7 @@
 
 - Document status: active progress log (confirmed by user 2026-07-06)
 - Scope: Stage 03 子阶段进度、测试记录、风险和后续项。
-- Current Progress: 2026-07-06 已开始 Stage 03 代码实施。完成 03.0 Runtime Config And Safety Defaults、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox：新增 Stage03 配置安全门、真实 Telegram update parser、安全 view DTO、receive-only webhook route、secret/allowlist validation、`telegram.message_received` outbox event、最小 Telegram customer binding、Stage03 `telegram_inbox` projection 和 migration `20260706_0010`；Task4 focused tests 8 passed，全量 backend suite 111 passed / 17 skipped。
+- Current Progress: 2026-07-06 已开始 Stage 03 代码实施。完成 03.0 Runtime Config And Safety Defaults、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge：新增 Stage03 配置安全门、真实 Telegram update parser、安全 view DTO、receive-only webhook route、secret/allowlist validation、`telegram.message_received` outbox event、最小 Telegram customer binding、Stage03 `telegram_inbox` projection、migration `20260706_0010`、Redis Streams adapter interface 和 outbox bridge；Task5 bridge focused tests 3 passed，Task5 affected regression 16 passed，全量 backend suite 114 passed / 17 skipped。
 
 ## 1. Progress Protocol
 
@@ -31,8 +31,8 @@ Next subphase:
 | 03.1 Tencent Cloud staging runtime design | documentation completed, code/deploy pending | Deployment doc exists; no server action yet |
 | 03.2 Real Telegram receive-only webhook | parser and route completed, inbox projection pending under 03.3 | `test_stage03_telegram_update_parser.py` 5 passed; `test_stage03_telegram_webhook.py` 5 passed |
 | 03.3 Minimal customer binding and Telegram Inbox | completed for local/backend slice | `test_stage03_customer_binding.py` 5 passed; `test_stage03_telegram_inbox_view.py` 3 passed; Alembic offline SQL reaches `20260706_0010` |
-| 03.4 PostgreSQL Outbox to Redis Streams worker | pending implementation | Redis Streams bridge and durable worker not implemented yet |
-| 03.5 Acceptance, rehearsal and stage close | pending | Local focused Stage 03 tests pass for Tasks 1-4; no Tencent Cloud staging rehearsal yet |
+| 03.4 PostgreSQL Outbox to Redis Streams worker | bridge completed, durable worker pending | `test_stage03_redis_streams_bridge.py` 3 passed; affected outbox/webhook/binding regression 16 passed; full backend suite 114 passed / 17 skipped |
+| 03.5 Acceptance, rehearsal and stage close | pending | Local focused Stage 03 tests pass for Tasks 1-5; no Tencent Cloud staging rehearsal yet |
 
 ## 3. Progress Records
 
@@ -125,4 +125,17 @@ Test result: TDD RED first failed because `app.services.customer_binding` did no
 Not done: No Redis Streams bridge, no durable worker runtime, no worker retry/dead letter, no Tencent Cloud deployment, no DNS changes, no real Telegram webhook setup, no real Telegram send, no LLM, no provider execution.
 Risks / follow-up: Online PostgreSQL verification remains skipped until `STAGE02_ONLINE_DATABASE_URL` or a Stage03 staging database is provided. Next implementation task must preserve PostgreSQL outbox as source of truth while adding Redis Streams delivery.
 Next subphase: Task 5 Outbox To Redis Streams Bridge.
+```
+
+```text
+Date: 2026-07-06
+Subphase: Task 5 Outbox To Redis Streams Bridge
+Status: completed for local/backend bridge slice
+Completed: Added Redis Streams queue adapter interface and in-memory adapter for deterministic tests. Added `OutboxToRedisStreamsBridge` that reads committed-ready PostgreSQL outbox repository rows, builds a safe stream envelope with `event_id`, `event_type`, `trace_id`, `idempotency_key`, `message_id` and `created_at`, uses idempotent stream insertion, then marks outbox events `enqueued`. Verified rolled-back/nonexistent events do not enqueue and bridge reruns do not duplicate stream jobs.
+Changed files: backend/app/queues/__init__.py; backend/app/queues/redis_streams.py; backend/app/services/outbox.py; backend/tests/integration/test_stage03_redis_streams_bridge.py; project-docs/08-implementation/STAGE_03_BACKEND_INTEGRATION_PLAN.md; project-docs/08-implementation/STAGE_03_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_03_PROGRESS.md; project-docs/08-implementation/STAGE_03_SOURCE_OF_TRUTH.md; project-docs/08-implementation/STAGE_03_SDD.md; project-docs/08-implementation/STAGE_03_TEST_PLAN.md; project-docs/08-implementation/STAGE_03_MODULE_INDEX.md; project-docs/08-implementation/STAGE_03_DATABASE_AND_MIGRATION_DESIGN.md; project-docs/08-implementation/STAGE_03_RISK_REGISTER.md; project-docs/08-implementation/modules/STAGE_03_REDIS_STREAMS_WORKER.md.
+Tests run: cd backend; pytest tests/integration/test_stage03_redis_streams_bridge.py -v; cd backend; pytest tests/unit/test_outbox.py tests/integration/test_stage03_redis_streams_bridge.py tests/integration/test_stage03_telegram_webhook.py tests/integration/test_stage03_customer_binding.py -v; cd backend; pytest tests -q.
+Test result: TDD RED first failed with `ModuleNotFoundError: No module named 'app.queues'`. After implementation, bridge focused tests passed with 3 passed; affected regression passed with 16 passed; full backend suite passed with 114 passed / 17 skipped. Skips are existing online PostgreSQL smoke tests gated by `STAGE02_ONLINE_DATABASE_URL`.
+Not done: No real redis-py dependency or live Redis connection, no Redis consumer group runtime, no worker bounded/continuous loop, no worker retry/dead letter, no Tencent Cloud deployment, no DNS changes, no real Telegram webhook setup, no real Telegram send, no LLM, no provider execution.
+Risks / follow-up: This slice intentionally uses a small queue interface plus in-memory Redis Streams adapter for tests to avoid adding a new dependency without confirmation. Task 6 must connect the durable worker runtime and decide whether to add `redis`/`redis.asyncio` as the real Redis client before staging deployment.
+Next subphase: Task 6 Durable Worker Runtime.
 ```

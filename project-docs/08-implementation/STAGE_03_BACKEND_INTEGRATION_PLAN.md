@@ -13,7 +13,7 @@
 
 - Document status: active implementation plan (confirmed by user 2026-07-06)
 - Scope: Stage 03 真实 Telegram 收件入口、PostgreSQL Outbox、Redis Streams worker、最小客户绑定、多维表格 Telegram Inbox、腾讯云 CVM staging、Caddy HTTPS。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox 已按 TDD 完成并进入验收记录；下一步为 Task 5 Outbox To Redis Streams Bridge。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge 已按 TDD 完成并进入验收记录；下一步为 Task 6 Durable Worker Runtime。
 
 ## 1. Delivery Shape
 
@@ -529,11 +529,11 @@ These tasks are the active Stage 03 implementation checklist after user approval
 - Modify: `backend/app/repositories/outbox.py`
 - Test: `backend/tests/integration/test_stage03_redis_streams_bridge.py`
 
-- [ ] Step 1: Write tests for committed event enqueue, rolled-back event not enqueued and bridge idempotency.
-- [ ] Step 2: Implement Redis Streams adapter behind a small interface.
-- [ ] Step 3: Implement outbox bridge preserving `event_id`, `trace_id` and `idempotency_key`.
-- [ ] Step 4: Run queue bridge tests.
-- [ ] Step 5: Update progress.
+- [x] Step 1: Write tests for committed event enqueue, rolled-back event not enqueued and bridge idempotency.
+- [x] Step 2: Implement Redis Streams adapter behind a small interface.
+- [x] Step 3: Implement outbox bridge preserving `event_id`, `trace_id` and `idempotency_key`.
+- [x] Step 4: Run queue bridge tests.
+- [x] Step 5: Update progress.
 
 ### Task 6: Durable Worker Runtime
 

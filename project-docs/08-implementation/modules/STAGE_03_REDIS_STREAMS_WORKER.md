@@ -4,7 +4,7 @@
 
 - Document status: active module design
 - Scope: Stage 03 PostgreSQL Outbox 到 Redis Streams 的投递桥接、worker runtime、retry/dead letter 和审计。
-- Current Progress: 2026-07-06 模块设计已建立；Stage 03 已进入代码实施，但 Redis Streams bridge、worker runtime、retry/dead letter 和 worker audit 仍待 Task 5/6。
+- Current Progress: 2026-07-06 Redis Streams bridge local/backend slice 已完成：新增 queue adapter interface、in-memory Redis Streams adapter、outbox bridge 和 bridge tests。Worker runtime、真实 Redis client wiring、consumer group、retry/dead letter 和 worker audit 仍待 Task 6/7。
 
 ## 1. Scope
 
@@ -148,26 +148,26 @@ handler error
 | `processing` | retryable failure | `queued` or `retrying` |
 | `processing` | exhausted/non-retryable | `dead_letter` |
 
-## 8. Future Files
+## 8. Implementation Files
 
 | Purpose | File |
 | --- | --- |
-| Redis Streams adapter | `backend/app/queues/redis_streams.py` |
-| Queue package init | `backend/app/queues/__init__.py` |
-| Worker runner | `backend/app/workers/runner.py` |
+| Redis Streams adapter | `backend/app/queues/redis_streams.py` implemented for interface + in-memory test adapter |
+| Queue package init | `backend/app/queues/__init__.py` implemented |
+| Worker runner | `backend/app/workers/runner.py` pending Task 6 |
 | Stage 03 handlers | `backend/app/workers/stage03_handlers.py` or extend `backend/app/workers/handlers.py` |
 | Outbox repository extension | `backend/app/repositories/outbox.py` |
-| Outbox service extension | `backend/app/services/outbox.py` |
-| Bridge tests | `backend/tests/integration/test_stage03_redis_streams_bridge.py` |
-| Worker tests | `backend/tests/integration/test_stage03_worker_runtime.py` |
+| Outbox service extension | `backend/app/services/outbox.py` implemented bridge service |
+| Bridge tests | `backend/tests/integration/test_stage03_redis_streams_bridge.py` implemented |
+| Worker tests | `backend/tests/integration/test_stage03_worker_runtime.py` pending Task 6 |
 
 ## 9. Tests
 
 Required tests:
 
-- Committed outbox event becomes Redis Streams job.
-- Rolled-back event is not enqueued.
-- Re-running bridge is idempotent.
+- Committed outbox event becomes Redis Streams job. Passed in `test_stage03_redis_streams_bridge.py`.
+- Rolled-back event is not enqueued. Passed in `test_stage03_redis_streams_bridge.py`.
+- Re-running bridge is idempotent. Passed in `test_stage03_redis_streams_bridge.py`.
 - Worker processes one bounded iteration.
 - Worker rerun does not duplicate effects.
 - Retryable error increments attempt count.
