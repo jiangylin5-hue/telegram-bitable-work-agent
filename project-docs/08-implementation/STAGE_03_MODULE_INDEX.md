@@ -4,7 +4,7 @@
 
 - Document status: active module index
 - Scope: Stage 03 复杂模块索引、模块边界、对应设计文档、预计实现文件和验收入口。
-- Current Progress: 2026-07-06 根据用户要求补齐 Stage 03 阶段级模块索引。当前只写文档，不进入代码实现。
+- Current Progress: 2026-07-06 Stage 03 已进入代码实施。Stage Gate And Config、Telegram Parser 和 Telegram Webhook Ingress route slice 已有测试证据；Customer Binding And Telegram Inbox、Outbox To Redis Streams Worker、Tencent Cloud Staging 仍待后续任务。
 
 ## 1. Module Reading Rule
 
@@ -21,7 +21,7 @@ Stage 03 开发前先看本索引，确认要改的内容属于哪个模块边�
 | --- | --- | --- | --- | --- | --- |
 | Stage Gate And Config | medium | `STAGE_03_BACKEND_INTEGRATION_PLAN.md#3-phase-030-documentation-and-stage-gate` | `backend/app/core/config.py`, env docs | config unit tests | 03.0 |
 | Tencent Cloud Staging | high | `STAGE_03_TENCENT_CLOUD_STAGING_DEPLOYMENT.md`, `STAGE_03_OPERATIONS_RUNBOOK.md` | compose/caddy docs or deployment files | manual staging rehearsal | 03.1 |
-| Telegram Webhook Ingress | high | `modules/STAGE_03_TELEGRAM_WEBHOOK_INGRESS.md` | `backend/app/api/routes/telegram_webhook.py`, `backend/app/schemas/telegram_webhook.py`, `backend/app/services/telegram_ingestion.py` | webhook integration tests | 03.2 |
+| Telegram Webhook Ingress | high | `modules/STAGE_03_TELEGRAM_WEBHOOK_INGRESS.md` | `backend/app/api/routes/telegram_webhook.py`, `backend/app/schemas/telegram_webhook.py`, `backend/app/services/telegram_ingestion.py` | webhook integration tests passed for route slice | 03.2 |
 | Customer Binding And Telegram Inbox | high | `modules/STAGE_03_CUSTOMER_BINDING_AND_INBOX.md` | `backend/app/models/telegram.py`, `backend/app/services/customer_binding.py`, `backend/app/services/bitable_views.py` | binding and inbox view tests | 03.3 |
 | Outbox To Redis Streams Worker | high | `modules/STAGE_03_REDIS_STREAMS_WORKER.md` | `backend/app/queues/redis_streams.py`, `backend/app/workers/runner.py`, `backend/app/workers/handlers.py` | queue bridge and worker tests | 03.4 |
 | API Contract | medium | `STAGE_03_API_CONTRACT.md` | API route/schema files | route contract tests | 03.2 |

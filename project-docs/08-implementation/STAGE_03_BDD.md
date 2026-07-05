@@ -4,11 +4,11 @@
 
 - Document status: active BDD (confirmed by user 2026-07-06)
 - Scope: Stage 03 可验收行为、测试映射和业务证据。
-- Current Progress: 2026-07-06 根据用户确认的 Stage 03 方向重写 BDD。本批只写文档，不写代码。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Runtime config、Telegram update parser 和 receive-only webhook route 已有自动化测试证据；customer binding、`telegram_inbox` view、Redis Streams worker 和 staging rehearsal 仍待实现。
 
 ## 1. Feature: Receive-Only Telegram Webhook
 
-### Scenario 1.1: Valid Telegram update creates inbox record
+### Scenario 1.1: Valid Telegram update creates inbound business evidence
 
 Given:
 
@@ -26,12 +26,13 @@ Then:
 - One `messages` row exists.
 - One `outbox_events` row exists for message processing.
 - `ops_audit_events` includes message received evidence.
-- `/views/telegram_inbox/records` shows the message.
+- The outbox event type is `telegram.message_received`, not the Stage 02 `agent.intent_extract`.
+- `telegram_inbox` view projection is verified in the Customer Binding And Telegram Inbox feature after Task 4 lands.
 - No Telegram reply is sent.
 
 Test mapping:
 
-- `tests/integration/test_stage03_telegram_webhook.py::test_valid_telegram_update_creates_inbox_record`
+- `tests/integration/test_stage03_telegram_webhook.py::test_receive_only_webhook_accepts_valid_update_and_enqueues_message_event`
 
 ### Scenario 1.2: Duplicate Telegram update is idempotent
 
@@ -52,7 +53,7 @@ Then:
 
 Test mapping:
 
-- `tests/integration/test_stage03_telegram_webhook.py::test_duplicate_update_is_idempotent`
+- `tests/integration/test_stage03_telegram_webhook.py::test_receive_only_webhook_duplicate_update_is_idempotent`
 
 ### Scenario 1.3: Invalid webhook secret is rejected
 
@@ -73,7 +74,7 @@ Then:
 
 Test mapping:
 
-- `tests/integration/test_stage03_telegram_webhook.py::test_invalid_secret_is_rejected_without_business_rows`
+- `tests/integration/test_stage03_telegram_webhook.py::test_receive_only_webhook_rejects_invalid_secret_without_business_rows`
 
 ### Scenario 1.4: Blocked chat/user is not ingested as normal business message
 
@@ -94,7 +95,29 @@ Then:
 
 Test mapping:
 
-- `tests/integration/test_stage03_telegram_webhook.py::test_allowlist_blocks_untrusted_chat_or_user`
+- `tests/integration/test_stage03_telegram_webhook.py::test_receive_only_webhook_allowlist_blocks_untrusted_chat`
+
+### Scenario 1.5: Malformed Telegram update is rejected without leaking raw payload
+
+Given:
+
+- The request has a valid webhook secret.
+- The body is JSON but does not contain a supported Telegram message shape.
+
+When:
+
+- The backend receives the update.
+
+Then:
+
+- API returns a stable invalid-update error.
+- No business `messages` row exists.
+- No outbox job exists.
+- Response does not echo raw payload fields or secret-like values.
+
+Test mapping:
+
+- `tests/integration/test_stage03_telegram_webhook.py::test_receive_only_webhook_rejects_malformed_update_without_raw_leak`
 
 ## 2. Feature: Minimal Customer Binding
 

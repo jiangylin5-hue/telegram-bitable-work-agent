@@ -1,6 +1,6 @@
 # Stage 03 Backend Integration Plan
 
-> Required workflow skill for implementation: use `superpowers:executing-plans` or `superpowers:subagent-driven-development` after the user explicitly confirms code development may start. The current confirmed batch is documentation only.
+> Required workflow skill for implementation: use `superpowers:executing-plans` or `superpowers:subagent-driven-development` after the user explicitly confirms code development may start. Code development has been confirmed and must follow this plan task-by-task.
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build the first deployable Stage 03 backend integration loop: real receive-only Telegram webhook on Tencent Cloud staging, PostgreSQL Outbox, Redis Streams worker, minimal customer binding, and Bitable `telegram_inbox` evidence.
@@ -13,7 +13,7 @@
 
 - Document status: active implementation plan (confirmed by user 2026-07-06)
 - Scope: Stage 03 真实 Telegram 收件入口、PostgreSQL Outbox、Redis Streams worker、最小客户绑定、多维表格 Telegram Inbox、腾讯云 CVM staging、Caddy HTTPS。
-- Current Progress: 2026-07-06 根据用户 11 项选择重写 Stage 03 计划。本批只完善文档，不写代码；代码开发需要用户后续确认。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route 已按 TDD 完成并进入验收记录；下一步为 Task 4 Minimal Customer Binding And Telegram Inbox。
 
 ## 1. Delivery Shape
 
@@ -453,7 +453,7 @@ Stage 03 can be accepted only when:
 
 ## 10. Code Phase Task Breakdown
 
-These tasks are for the later code phase. The current user-approved batch remains documentation-only.
+These tasks are the active Stage 03 implementation checklist after user approval. Each task must update `STAGE_03_PROGRESS.md` and `STAGE_03_ACCEPTANCE_CHECKLIST.md` with evidence before moving on.
 
 ### Task 1: Runtime Config And Safety Defaults
 
@@ -492,12 +492,12 @@ These tasks are for the later code phase. The current user-approved batch remain
 - Modify: `backend/app/services/telegram_ingestion.py`
 - Test: `backend/tests/integration/test_stage03_telegram_webhook.py`
 
-- [ ] Step 1: Write failing tests for valid update, duplicate update, invalid secret and allowlist blocked source.
-- [ ] Step 2: Implement route-level secret and allowlist validation.
-- [ ] Step 3: Call ingestion service only after validation passes.
-- [ ] Step 4: Ensure valid update creates message, audit and outbox event.
-- [ ] Step 5: Run `pytest tests/integration/test_stage03_telegram_webhook.py -v`.
-- [ ] Step 6: Update progress.
+- [x] Step 1: Write failing tests for valid update, duplicate update, invalid secret and allowlist blocked source.
+- [x] Step 2: Implement route-level secret and allowlist validation.
+- [x] Step 3: Call ingestion service only after validation passes.
+- [x] Step 4: Ensure valid update creates message, audit and outbox event.
+- [x] Step 5: Run `pytest tests/integration/test_stage03_telegram_webhook.py -v`.
+- [x] Step 6: Update progress.
 
 ### Task 4: Customer Binding And Telegram Inbox
 

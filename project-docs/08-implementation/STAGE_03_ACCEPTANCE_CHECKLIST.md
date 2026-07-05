@@ -4,7 +4,7 @@
 
 - Document status: active acceptance checklist (confirmed by user 2026-07-06)
 - Scope: Stage 03 文档、真实 Telegram 收件入口、Redis Streams worker、多维表格 Telegram Inbox 和腾讯云 staging 验收。
-- Current Progress: 2026-07-06 根据用户确认的 Stage 03 方向重写验收清单。本批只验收文档一致性，不运行 Stage 03 代码测试。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route 已通过 focused tests；Task 3 后全量 backend suite 为 103 passed / 17 skipped。Minimal Customer Binding、Telegram Inbox view、Redis Streams bridge、worker 和腾讯云 staging rehearsal 仍 pending。
 
 ## 1. Acceptance Boundary
 
@@ -34,9 +34,9 @@ Stage 03 不验收：
 - Production cutover。
 - Kubernetes。
 
-## 2. Documentation Acceptance For Current Batch
+## 2. Documentation Acceptance For Initial Docs Batch
 
-当前用户选择的是“先只写完整 Stage 03 文档，不写代码”。因此本批验收只看文档，不要求 Stage 03 代码测试通过。
+初始文档批次已经完成并提交；当前 Stage 03 已转入代码实施。以下表格保留初始文档批次的验收证据，后续代码验收以第 4 节为准。
 
 | Requirement | Status | Evidence |
 | --- | --- | --- |
@@ -58,9 +58,9 @@ Stage 03 不验收：
 | No backend code changed in docs-only batch | passed | `git status --short` shows only `project-docs/` changes |
 | Old local-only / pending-choice active-scope contradictions removed | passed | `rg -n "本地 docker compose|本地长生命周期|收发都真实|03\\.6|pending user decision" project-docs/08-implementation -g "STAGE_03*" -g "modules/**"` returned no matches |
 
-## 3. Planned Verification Commands For Code Phase
+## 3. Verification Commands For Code Phase
 
-These commands are planned for the later implementation batch. They are not expected to pass before code is written.
+These commands are the Stage 03 implementation verification commands. Rows move from planned to evidence-backed as each task lands.
 
 | Command | Expected result | Purpose |
 | --- | --- | --- |
@@ -81,10 +81,11 @@ These commands are planned for the later implementation batch. They are not expe
 | Tencent Cloud compose files or deploy docs | pending | deployment rehearsal |
 | Caddy HTTPS endpoint | pending | staging smoke evidence |
 | Telegram update parser | passed | `pytest tests/unit/test_stage03_telegram_update_parser.py -v` => 5 passed; combined config/parser tests 13 passed; full suite 98 passed, 17 skipped |
-| Telegram webhook route | pending | `test_stage03_telegram_webhook.py` |
-| Webhook secret validation | pending | invalid secret test |
-| Allowlist behavior | pending | blocked chat/user test |
-| Telegram update idempotency | pending | duplicate update test |
+| Telegram webhook route | passed | `pytest tests/integration/test_stage03_telegram_webhook.py -v` => 5 passed |
+| Webhook secret validation | passed | `test_receive_only_webhook_rejects_invalid_secret_without_business_rows` passed; no secret echoed in response |
+| Allowlist behavior | passed | `test_receive_only_webhook_allowlist_blocks_untrusted_chat` passed; no business rows/outbox |
+| Telegram update idempotency | passed | `test_receive_only_webhook_duplicate_update_is_idempotent` passed; one message and one outbox event |
+| Full backend regression after Task 3 | passed | `pytest tests -q` => 103 passed, 17 skipped; skips are existing online PostgreSQL smoke tests gated by `STAGE02_ONLINE_DATABASE_URL` |
 | Minimal customer binding | pending | customer binding tests |
 | `telegram_inbox` view | pending | inbox view tests |
 | Outbox to Redis Streams bridge | pending | bridge tests |

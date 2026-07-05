@@ -4,7 +4,7 @@
 
 - Document status: active operations runbook
 - Scope: Stage 03 staging 启停、配置、联调、排障、回滚和证据记录。
-- Current Progress: 2026-07-06 建立运维手册。当前只写文档，不执行服务器操作。
+- Current Progress: 2026-07-06 运维手册已建立；Stage 03 代码实施已开始，但尚未执行腾讯云服务器、DNS、Caddy 或 Telegram webhook 设置，任何真实外部操作仍需单独确认。
 
 ## 1. Purpose
 

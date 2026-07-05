@@ -24,6 +24,8 @@ class Settings:
     )
     telegram_bot_token: str | None = None
     telegram_webhook_secret: str | None = None
+    telegram_allowed_chat_ids: tuple[str, ...] = ()
+    telegram_allowed_user_ids: tuple[str, ...] = ()
     telegram_send_mode: str = "dry_run"
     provider_mode: str = "disabled"
     llm_enabled: bool = False
@@ -43,6 +45,8 @@ def get_settings() -> Settings:
         database_url=os.getenv("DATABASE_URL", Settings.database_url),
         telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN"),
         telegram_webhook_secret=os.getenv("TELEGRAM_WEBHOOK_SECRET"),
+        telegram_allowed_chat_ids=_env_csv_tuple("TELEGRAM_ALLOWED_CHAT_IDS"),
+        telegram_allowed_user_ids=_env_csv_tuple("TELEGRAM_ALLOWED_USER_IDS"),
         telegram_send_mode=os.getenv(
             "TELEGRAM_SEND_MODE",
             Settings.telegram_send_mode,
@@ -87,3 +91,10 @@ def _env_bool(name: str, default: bool) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_csv_tuple(name: str) -> tuple[str, ...]:
+    value = os.getenv(name)
+    if not value:
+        return ()
+    return tuple(part.strip() for part in value.split(",") if part.strip())

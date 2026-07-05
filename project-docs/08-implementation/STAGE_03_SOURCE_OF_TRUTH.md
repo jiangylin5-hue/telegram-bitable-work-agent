@@ -4,7 +4,7 @@
 
 - Document status: active stage source of truth (confirmed by user 2026-07-06)
 - Scope: Stage 03 以真实 Telegram 收件入口、PostgreSQL Outbox、Redis Streams worker、最小客户绑定、多维表格 Telegram Inbox 视图、腾讯云 CVM staging 部署和 Caddy HTTPS 入口为主线。
-- Current Progress: 2026-07-06 已按正式阶段标准补齐 Stage 03 文档包，并完成文档一致性检查。Stage 03 方向为真实 Telegram 入口 + 持久 Worker + 多维表格落表闭环；Telegram 只收不发；worker 使用 PostgreSQL Outbox + Redis Streams；Stage 03 暂不调用 LLM；第一批业务场景只做 Telegram 收件箱 / 客户消息登记；安全入口使用 Telegram secret token + allowlist；做最小客户绑定；验收环境为腾讯云服务器；HTTPS 使用 Caddy；当前未开始代码开发。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。已完成 runtime config safety gate、Telegram update parser、receive-only webhook route、secret/allowlist validation 和 `telegram.message_received` outbox event；下一步按阶段计划进入 Minimal Customer Binding And Telegram Inbox。Stage 03 仍保持真实 Telegram 只收不发、不调用 LLM、不执行 provider、不移动资金，腾讯云 staging/DNS/真实 webhook 设置仍需单独确认。
 
 ## 1. Stage Goal
 
@@ -48,7 +48,7 @@ Telegram Bot webhook
 | 验收环境 | C. 云服务器 / staging 环境真实 webhook 联调 | Stage 03 需要部署到腾讯云 staging，而不只做本地模拟 |
 | 部署方式 | 腾讯云服务器部署 | 使用腾讯云 CVM 单机 staging 承载 Stage 03 验收 |
 | HTTPS 入口 | A. 域名子域名 + Caddy 自动 HTTPS 反代 | Caddy 负责 TLS 和反向代理到 FastAPI |
-| 开发节奏 | C. 先只写完整 Stage 03 文档，不写代码 | 本批只完成文档真源、设计、验收和部署方案；代码开发需后续确认开始 |
+| 开发节奏 | 已从 docs-first 转入代码实施 | 用户已确认开始实施；每个 Task 必须按阶段真源、TDD、验收清单和进度日志推进 |
 
 ## 2. In Scope
 
@@ -129,11 +129,11 @@ Stage 03 执行优先级：
 
 ## 6. Entry Gate
 
-进入 Stage 03 代码开发前必须满足：
+进入 Stage 03 代码开发前必须满足；截至 2026-07-06 代码实施已开始，以下 gate 继续作为执行约束：
 
 - Stage 02 已冻结关闭，最终验收以 `STAGE_02_FINAL_ACCEPTANCE_REPORT.md` 为准。
 - Stage 03 文档包已更新为本轮用户选择后的 active 真源。
-- 用户确认可以从“只写文档”转入代码开发。
+- 用户已确认可以从“只写文档”转入代码开发。
 - 部署敏感信息不写入仓库，包括 Telegram Bot Token、webhook secret、数据库密码、Redis 密码、域名证书材料。
 - 若需要真实腾讯云服务器操作、DNS 修改、设置 Telegram webhook 或外部系统写入，必须先由用户单独确认。
 

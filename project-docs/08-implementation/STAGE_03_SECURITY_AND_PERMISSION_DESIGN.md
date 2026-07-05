@@ -4,7 +4,7 @@
 
 - Document status: active security design
 - Scope: Stage 03 webhook security、allowlist、secret handling、view masking、audit 和真实外部写入边界。
-- Current Progress: 2026-07-06 建立 Stage 03 安全权限设计。当前只写文档，不写代码。
+- Current Progress: 2026-07-06 Stage 03 runtime safety defaults、staging fail-fast env validation、webhook secret validation 和 optional chat/user allowlist 已落地并有自动化测试证据；view masking、binding permission 和 worker audit 仍待后续任务。
 
 ## 1. Security Goal
 

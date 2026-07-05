@@ -4,7 +4,7 @@
 
 - Document status: active module design
 - Scope: Stage 03 PostgreSQL Outbox 到 Redis Streams 的投递桥接、worker runtime、retry/dead letter 和审计。
-- Current Progress: 2026-07-06 建立模块设计。当前只写文档，不写代码。
+- Current Progress: 2026-07-06 模块设计已建立；Stage 03 已进入代码实施，但 Redis Streams bridge、worker runtime、retry/dead letter 和 worker audit 仍待 Task 5/6。
 
 ## 1. Scope
 

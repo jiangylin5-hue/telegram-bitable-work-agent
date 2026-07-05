@@ -4,7 +4,7 @@
 
 - Document status: active progress log (confirmed by user 2026-07-06)
 - Scope: Stage 03 子阶段进度、测试记录、风险和后续项。
-- Current Progress: 2026-07-06 已开始 Stage 03 代码实施。完成 03.0 Runtime Config And Safety Defaults 和 Task 2 Telegram Update Parser：新增 Stage03 配置安全门、真实 Telegram update parser 与安全 view DTO；combined focused tests 13 passed，全量 98 passed / 17 skipped。
+- Current Progress: 2026-07-06 已开始 Stage 03 代码实施。完成 03.0 Runtime Config And Safety Defaults、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route：新增 Stage03 配置安全门、真实 Telegram update parser、安全 view DTO、receive-only webhook route、secret/allowlist validation 和 `telegram.message_received` outbox event；Stage03 focused tests 18 passed，全量 backend suite 103 passed / 17 skipped。
 
 ## 1. Progress Protocol
 
@@ -29,10 +29,10 @@ Next subphase:
 | --- | --- | --- |
 | 03.0 Documentation and runtime config gate | completed | Docs finalized; runtime config contract implemented and tested (`test_stage03_config.py` 8 passed; full suite 93 passed, 17 skipped) |
 | 03.1 Tencent Cloud staging runtime design | documentation completed, code/deploy pending | Deployment doc exists; no server action yet |
-| 03.2 Real Telegram receive-only webhook | parser completed, route pending | `test_stage03_telegram_update_parser.py` 5 passed; webhook route not implemented yet |
-| 03.3 Minimal customer binding and Telegram Inbox | pending code approval | No Stage 03 code yet |
-| 03.4 PostgreSQL Outbox to Redis Streams worker | pending code approval | No Stage 03 code yet |
-| 03.5 Acceptance, rehearsal and stage close | pending | No Stage 03 tests or staging rehearsal yet |
+| 03.2 Real Telegram receive-only webhook | parser and route completed, inbox projection pending under 03.3 | `test_stage03_telegram_update_parser.py` 5 passed; `test_stage03_telegram_webhook.py` 5 passed |
+| 03.3 Minimal customer binding and Telegram Inbox | pending implementation | Customer binding model/service and `telegram_inbox` projection not implemented yet |
+| 03.4 PostgreSQL Outbox to Redis Streams worker | pending implementation | Redis Streams bridge and durable worker not implemented yet |
+| 03.5 Acceptance, rehearsal and stage close | pending | Local focused Stage 03 tests started; no Tencent Cloud staging rehearsal yet |
 
 ## 3. Progress Records
 
@@ -99,4 +99,17 @@ Test result: Parser RED first failed with `ModuleNotFoundError: No module named 
 Not done: No `/telegram/webhook` route, no secret header validation, no allowlist, no database writes, no outbox event, no customer binding, no Redis Streams worker, no Tencent Cloud deployment, no real Telegram webhook setup.
 Risks / follow-up: Parser currently supports `message` updates first, as required by Stage 03 module doc; non-message update types remain route-level unsupported/malformed handling for Task 3. Next task is receive-only webhook route.
 Next subphase: Task 3 Receive-Only Webhook Route.
+```
+
+```text
+Date: 2026-07-06
+Subphase: Task 3 Receive-Only Webhook Route
+Status: completed for route slice
+Completed: Added `POST /telegram/webhook` receive-only route. The route validates `X-Telegram-Bot-Api-Secret-Token` with constant-time comparison, applies optional `TELEGRAM_ALLOWED_CHAT_IDS` / `TELEGRAM_ALLOWED_USER_IDS` allowlists before business writes, parses Telegram-shaped message updates through the Stage 03 parser, converts accepted payloads into the existing ingestion service, and emits `telegram.message_received` outbox events instead of `agent.intent_extract`. Duplicate updates return idempotent success without duplicate messages/outbox events. Invalid secret, malformed payload and blocked allowlist paths return stable redacted errors without business rows. During full regression, restored Stage 02 default outbox idempotency key compatibility (`intent:<message_id>`) while keeping Stage 03 event-specific idempotency keys.
+Changed files: backend/app/api/routes/telegram_webhook.py; backend/app/core/config.py; backend/app/main.py; backend/app/services/telegram_ingestion.py; backend/tests/integration/test_stage03_telegram_webhook.py; project-docs/08-implementation/STAGE_03_SOURCE_OF_TRUTH.md; project-docs/08-implementation/STAGE_03_BACKEND_INTEGRATION_PLAN.md; project-docs/08-implementation/STAGE_03_SDD.md; project-docs/08-implementation/STAGE_03_BDD.md; project-docs/08-implementation/STAGE_03_API_CONTRACT.md; project-docs/08-implementation/STAGE_03_SECURITY_AND_PERMISSION_DESIGN.md; project-docs/08-implementation/STAGE_03_TEST_PLAN.md; project-docs/08-implementation/STAGE_03_MODULE_INDEX.md; project-docs/08-implementation/STAGE_03_DATABASE_AND_MIGRATION_DESIGN.md; project-docs/08-implementation/STAGE_03_OPERATIONS_RUNBOOK.md; project-docs/08-implementation/STAGE_03_RISK_REGISTER.md; project-docs/08-implementation/STAGE_03_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_03_PROGRESS.md; project-docs/08-implementation/modules/STAGE_03_TELEGRAM_WEBHOOK_INGRESS.md; project-docs/08-implementation/modules/STAGE_03_CUSTOMER_BINDING_AND_INBOX.md; project-docs/08-implementation/modules/STAGE_03_REDIS_STREAMS_WORKER.md.
+Tests run: cd backend; pytest tests/integration/test_stage03_telegram_webhook.py -v; cd backend; pytest tests/unit/test_telegram_ingestion.py::test_ingest_known_group_message_creates_message_and_outbox_event -v; cd backend; pytest tests/unit/test_stage03_config.py tests/unit/test_stage03_telegram_update_parser.py tests/integration/test_stage03_telegram_webhook.py -v; cd backend; pytest tests -q.
+Test result: Webhook route suite 5 passed. Initial full regression exposed a Stage 02 compatibility failure in default outbox idempotency key format; after root-cause fix, the specific regression test passed, Stage03 focused tests passed with 18 passed, and full backend suite passed with 103 passed / 17 skipped. Skips are existing online PostgreSQL smoke tests gated by `STAGE02_ONLINE_DATABASE_URL`.
+Not done: No customer binding model/migration, no `telegram_inbox` view projection, no Redis Streams bridge, no durable worker runtime, no Tencent Cloud deployment, no DNS changes, no real Telegram webhook setup, no real Telegram send, no LLM, no provider execution.
+Risks / follow-up: Route currently reuses the existing ingestion service and in-memory/SQLAlchemy UOW boundary; full Bitable `telegram_inbox` evidence remains Task 4, and Redis delivery remains Task 5/6. Need run combined/full verification before committing.
+Next subphase: Task 4 Minimal Customer Binding And Telegram Inbox.
 ```

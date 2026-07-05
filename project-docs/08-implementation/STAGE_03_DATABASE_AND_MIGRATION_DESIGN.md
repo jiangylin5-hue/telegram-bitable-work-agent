@@ -4,7 +4,7 @@
 
 - Document status: active database design
 - Scope: Stage 03 数据库增量、迁移边界、唯一约束、敏感字段和验收。
-- Current Progress: 2026-07-06 建立 Stage 03 数据库/迁移设计。当前只写文档，不写代码。
+- Current Progress: 2026-07-06 数据库/迁移设计已建立。当前 Stage 03 已完成 webhook route slice 并复用既有 messages/outbox/audit UOW；customer binding migration、inbox projection schema 加固、Redis delivery state 仍待后续 Task。
 
 ## 1. Design Boundary
 

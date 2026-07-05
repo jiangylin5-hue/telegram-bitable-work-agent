@@ -4,7 +4,7 @@
 
 - Document status: active module design
 - Scope: Stage 03 最小 Telegram 客户绑定和多维表格 Telegram Inbox 视图。
-- Current Progress: 2026-07-06 建立模块设计。当前只写文档，不写代码。
+- Current Progress: 2026-07-06 模块设计已建立；Stage 03 已进入代码实施，但本模块的 customer binding model/service、migration 和 `telegram_inbox` projection 尚未实现，下一任务按 Task 4 推进。
 
 ## 1. Scope
 

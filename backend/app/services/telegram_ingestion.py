@@ -213,6 +213,8 @@ class SqlAlchemyTelegramIngestionUnitOfWork:
 def ingest_mock_telegram_update(
     update: MockTelegramUpdate,
     uow: TelegramIngestionUnitOfWork,
+    *,
+    outbox_event_type: str = "agent.intent_extract",
 ) -> TelegramIngestionResult:
     existing_message = uow.get_message_by_update_id(update.update_id)
     trace_id = f"tg:{update.update_id}"
@@ -245,14 +247,17 @@ def ingest_mock_telegram_update(
     message.received_at = update.received_at
 
     uow.add_message(message)
+    idempotency_prefix = (
+        "intent" if outbox_event_type == "agent.intent_extract" else outbox_event_type
+    )
     uow.add_outbox_event(
-        event_type="agent.intent_extract",
+        event_type=outbox_event_type,
         payload={
             "message_id": str(message.id),
             "telegram_update_id": update.update_id,
             "customer_id": None if message.customer_id is None else str(message.customer_id),
         },
-        idempotency_key=f"intent:{message.id}",
+        idempotency_key=f"{idempotency_prefix}:{message.id}",
         trace_id=trace_id,
     )
     record_audit_event(

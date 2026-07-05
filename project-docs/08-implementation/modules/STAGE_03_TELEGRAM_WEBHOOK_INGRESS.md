@@ -4,7 +4,7 @@
 
 - Document status: active module design
 - Scope: Stage 03 真实 Telegram receive-only webhook 入口。
-- Current Progress: 2026-07-06 建立模块设计。当前只写文档，不写代码。
+- Current Progress: 2026-07-06 已完成 Stage 03 receive-only webhook route slice：parser、secret validation、optional allowlist、idempotent ingestion、`telegram.message_received` outbox event 和 redacted error tests 已通过；customer binding 和 `telegram_inbox` projection 仍归 Task 4 完成。
 
 ## 1. Scope
 

@@ -4,7 +4,7 @@
 
 - Document status: active API contract
 - Scope: Stage 03 receive-only Telegram webhook and related read/view contracts.
-- Current Progress: 2026-07-06 建立 API 合约文档。当前只写文档，不写代码。
+- Current Progress: 2026-07-06 `POST /telegram/webhook` receive-only contract 已按 Stage 03 范围落地并通过 focused route tests；`/views/telegram_inbox/records` 的 Stage 03 完整投影仍待 Task 4。
 
 ## 1. Contract Boundary
 
