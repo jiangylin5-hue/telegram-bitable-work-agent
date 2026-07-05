@@ -4,7 +4,7 @@
 
 - Document status: active acceptance checklist (confirmed by user 2026-07-06)
 - Scope: Stage 03 文档、真实 Telegram 收件入口、Redis Streams worker、多维表格 Telegram Inbox 和腾讯云 staging 验收。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge 已通过 focused tests；Task5 affected regression 为 16 passed，全量 backend suite 为 114 passed / 17 skipped。Durable worker、真实 Redis runtime 和腾讯云 staging rehearsal 仍 pending。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge、Task 6 Durable Worker Runtime 已通过 focused tests；Task6 affected regression 为 14 passed，全量 backend suite 为 119 passed / 17 skipped。真实 Redis client wiring 和腾讯云 staging rehearsal 仍 pending。
 
 ## 1. Acceptance Boundary
 
@@ -93,8 +93,11 @@ These commands are the Stage 03 implementation verification commands. Rows move 
 | Outbox to Redis Streams bridge | passed | `pytest tests/integration/test_stage03_redis_streams_bridge.py -v` => 3 passed; proves committed event enqueues once, absent/rolled-back event does not enqueue, and bridge rerun is idempotent |
 | Affected backend regression after Task 5 | passed | `pytest tests/unit/test_outbox.py tests/integration/test_stage03_redis_streams_bridge.py tests/integration/test_stage03_telegram_webhook.py tests/integration/test_stage03_customer_binding.py -v` => 16 passed |
 | Full backend regression after Task 5 | passed | `pytest tests -q` => 114 passed, 17 skipped; skips are existing online PostgreSQL smoke tests gated by `STAGE02_ONLINE_DATABASE_URL` |
-| Durable worker runtime | pending | worker runtime tests |
-| Worker retry/dead letter | pending | dead letter tests |
+| Durable worker runtime | passed | `pytest tests/integration/test_stage03_worker_runtime.py -v` => 5 passed; covers bounded `run_once`, bounded continuous loop, success processing and idempotent rerun |
+| Worker retry/dead letter | passed | `pytest tests/integration/test_stage03_worker_runtime.py -v` => 5 passed; covers retryable failure to `retry`, exhausted retry to `dead_letter`, audit evidence and `telegram_inbox` field visibility |
+| Affected backend regression after Task 6 | passed | `pytest tests/integration/test_stage03_worker_runtime.py tests/integration/test_stage03_redis_streams_bridge.py tests/unit/test_outbox.py tests/unit/test_stage03_telegram_inbox_view.py -v` => 14 passed |
+| Full backend regression after Task 6 | passed | `pytest tests -q` => 119 passed, 17 skipped; skips are existing online PostgreSQL smoke tests gated by `STAGE02_ONLINE_DATABASE_URL` |
+| Real Redis client / live Redis runtime | pending | `redis` / `redis.asyncio` dependency and live Redis adapter require explicit confirmation before staging |
 | Staging real Telegram webhook rehearsal | pending | manual evidence |
 
 ## 5. Staging Manual Verification Template

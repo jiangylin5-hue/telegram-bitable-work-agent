@@ -4,7 +4,7 @@
 
 - Document status: active BDD (confirmed by user 2026-07-06)
 - Scope: Stage 03 可验收行为、测试映射和业务证据。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Runtime config、Telegram update parser、receive-only webhook route、customer binding 和 `telegram_inbox` view 已有自动化测试证据；Redis Streams worker 和 staging rehearsal 仍待实现。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Runtime config、Telegram update parser、receive-only webhook route、customer binding、`telegram_inbox` view、Outbox To Redis Streams bridge 和 dependency-neutral worker runtime 已有自动化测试证据；真实 Redis client wiring 和 staging rehearsal 仍待确认与执行。
 
 ## 1. Feature: Receive-Only Telegram Webhook
 
@@ -222,7 +222,7 @@ Then:
 
 Test mapping:
 
-- `tests/integration/test_stage03_redis_streams_bridge.py::test_committed_outbox_event_becomes_stream_job`
+- `tests/integration/test_stage03_redis_streams_bridge.py::test_committed_outbox_event_becomes_redis_stream_job`
 
 ### Scenario 3.2: Rolled back outbox event is not enqueued
 
@@ -258,7 +258,7 @@ Then:
 
 Test mapping:
 
-- `tests/integration/test_stage03_redis_streams_bridge.py::test_rebridge_is_idempotent`
+- `tests/integration/test_stage03_redis_streams_bridge.py::test_bridge_rerun_is_idempotent`
 
 ## 4. Feature: Durable Redis Streams Worker
 
@@ -282,6 +282,7 @@ Then:
 Test mapping:
 
 - `tests/integration/test_stage03_worker_runtime.py::test_worker_processes_message_registration_job`
+- `tests/integration/test_stage03_worker_runtime.py::test_worker_continuous_loop_can_be_bounded_for_staging_smoke`
 
 ### Scenario 4.2: Worker rerun is idempotent
 
@@ -321,6 +322,7 @@ Then:
 Test mapping:
 
 - `tests/integration/test_stage03_worker_runtime.py::test_worker_failure_becomes_dead_letter`
+- `tests/integration/test_stage03_worker_runtime.py::test_worker_retryable_failure_moves_event_back_to_retry`
 
 ## 5. Feature: Bitable Telegram Inbox View
 

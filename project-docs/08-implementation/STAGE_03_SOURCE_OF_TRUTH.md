@@ -4,7 +4,7 @@
 
 - Document status: active stage source of truth (confirmed by user 2026-07-06)
 - Scope: Stage 03 以真实 Telegram 收件入口、PostgreSQL Outbox、Redis Streams worker、最小客户绑定、多维表格 Telegram Inbox 视图、腾讯云 CVM staging 部署和 Caddy HTTPS 入口为主线。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。已完成 runtime config safety gate、Telegram update parser、receive-only webhook route、secret/allowlist validation、`telegram.message_received` outbox event、Minimal Customer Binding、Stage03 `telegram_inbox` projection 和 Outbox To Redis Streams Bridge local/backend slice；下一步按阶段计划进入 Durable Worker Runtime。Stage 03 仍保持真实 Telegram 只收不发、不调用 LLM、不执行 provider、不移动资金，腾讯云 staging/DNS/真实 webhook 设置仍需单独确认。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。已完成 runtime config safety gate、Telegram update parser、receive-only webhook route、secret/allowlist validation、`telegram.message_received` outbox event、Minimal Customer Binding、Stage03 `telegram_inbox` projection、Outbox To Redis Streams Bridge 和 dependency-neutral Durable Worker Runtime local/backend slice；下一步进入真实 Redis client 确认与腾讯云 staging rehearsal。Stage 03 仍保持真实 Telegram 只收不发、不调用 LLM、不执行 provider、不移动资金，腾讯云 staging/DNS/真实 webhook 设置仍需单独确认。
 
 ## 1. Stage Goal
 

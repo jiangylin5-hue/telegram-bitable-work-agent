@@ -4,7 +4,7 @@
 
 - Document status: active SDD (confirmed by user 2026-07-06)
 - Scope: Stage 03 真实 Telegram 收件入口、最小客户绑定、Redis Streams worker、多维表格 Telegram Inbox 和腾讯云 staging 运行时的软件设计。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Runtime config、Telegram parser、receive-only webhook route、customer binding、Stage03 `telegram_inbox` projection 和 Redis Streams bridge local/backend slice 已按本设计落地；worker runtime、真实 Redis client wiring 和腾讯云 staging rehearsal 仍待后续任务。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Runtime config、Telegram parser、receive-only webhook route、customer binding、Stage03 `telegram_inbox` projection、Redis Streams bridge 和 dependency-neutral worker runtime local/backend slice 已按本设计落地；真实 Redis client wiring 和腾讯云 staging rehearsal 仍待后续确认与执行。
 
 ## 1. Design Goal
 

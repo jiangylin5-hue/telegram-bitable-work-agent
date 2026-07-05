@@ -4,7 +4,7 @@
 
 - Document status: active module design
 - Scope: Stage 03 PostgreSQL Outbox 到 Redis Streams 的投递桥接、worker runtime、retry/dead letter 和审计。
-- Current Progress: 2026-07-06 Redis Streams bridge local/backend slice 已完成：新增 queue adapter interface、in-memory Redis Streams adapter、outbox bridge 和 bridge tests。Worker runtime、真实 Redis client wiring、consumer group、retry/dead letter 和 worker audit 仍待 Task 6/7。
+- Current Progress: 2026-07-06 Redis Streams bridge 和 dependency-neutral worker runtime local/backend slice 已完成：新增 queue adapter interface、in-memory Redis Streams adapter、outbox bridge、consumer-group-like read/ack/pending semantics、worker runner、Stage03 message handler、worker UOW、retry/dead letter 和 worker audit tests。真实 Redis client wiring、live Redis consumer group 和腾讯云 staging rehearsal 仍待后续确认与执行。
 
 ## 1. Scope
 
@@ -152,14 +152,14 @@ handler error
 
 | Purpose | File |
 | --- | --- |
-| Redis Streams adapter | `backend/app/queues/redis_streams.py` implemented for interface + in-memory test adapter |
+| Redis Streams adapter | `backend/app/queues/redis_streams.py` implemented for interface + in-memory test adapter + read/ack/pending semantics |
 | Queue package init | `backend/app/queues/__init__.py` implemented |
-| Worker runner | `backend/app/workers/runner.py` pending Task 6 |
-| Stage 03 handlers | `backend/app/workers/stage03_handlers.py` or extend `backend/app/workers/handlers.py` |
+| Worker runner | `backend/app/workers/runner.py` implemented |
+| Stage 03 handlers | `backend/app/workers/stage03_handlers.py` implemented |
 | Outbox repository extension | `backend/app/repositories/outbox.py` |
 | Outbox service extension | `backend/app/services/outbox.py` implemented bridge service |
 | Bridge tests | `backend/tests/integration/test_stage03_redis_streams_bridge.py` implemented |
-| Worker tests | `backend/tests/integration/test_stage03_worker_runtime.py` pending Task 6 |
+| Worker tests | `backend/tests/integration/test_stage03_worker_runtime.py` implemented |
 
 ## 9. Tests
 
@@ -168,16 +168,17 @@ Required tests:
 - Committed outbox event becomes Redis Streams job. Passed in `test_stage03_redis_streams_bridge.py`.
 - Rolled-back event is not enqueued. Passed in `test_stage03_redis_streams_bridge.py`.
 - Re-running bridge is idempotent. Passed in `test_stage03_redis_streams_bridge.py`.
-- Worker processes one bounded iteration.
-- Worker rerun does not duplicate effects.
-- Retryable error increments attempt count.
-- Exhausted retry becomes dead letter.
-- Dead letter is visible in Bitable inbox and audit.
+- Worker processes one bounded iteration. Passed in `test_stage03_worker_runtime.py`.
+- Worker continuous loop can be bounded for staging smoke. Passed in `test_stage03_worker_runtime.py`.
+- Worker rerun does not duplicate effects. Passed in `test_stage03_worker_runtime.py`.
+- Retryable error increments attempt count. Passed in `test_stage03_worker_runtime.py`.
+- Exhausted retry becomes dead letter. Passed in `test_stage03_worker_runtime.py`.
+- Dead letter is visible in Bitable inbox and audit. Passed in `test_stage03_worker_runtime.py`.
 
 ## 10. Acceptance Criteria
 
 - PostgreSQL outbox remains consistency anchor.
-- Redis Streams worker can run in staging.
+- Redis Streams worker can run through the queue protocol; live Redis adapter remains pending before staging.
 - Worker can be tested in bounded mode.
 - Duplicate Redis delivery does not duplicate business rows.
 - Failures are visible, retryable or dead-lettered with audit.

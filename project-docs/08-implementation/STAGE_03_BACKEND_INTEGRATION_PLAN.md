@@ -13,7 +13,7 @@
 
 - Document status: active implementation plan (confirmed by user 2026-07-06)
 - Scope: Stage 03 真实 Telegram 收件入口、PostgreSQL Outbox、Redis Streams worker、最小客户绑定、多维表格 Telegram Inbox、腾讯云 CVM staging、Caddy HTTPS。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge 已按 TDD 完成并进入验收记录；下一步为 Task 6 Durable Worker Runtime。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge、Task 6 Durable Worker Runtime 已按 TDD 完成并进入验收记录；真实 Redis client wiring 和腾讯云 staging rehearsal 仍待后续确认与执行。
 
 ## 1. Delivery Shape
 
@@ -544,12 +544,14 @@ These tasks are the active Stage 03 implementation checklist after user approval
 - Modify: `backend/app/workers/handlers.py` if reusing existing dispatcher
 - Test: `backend/tests/integration/test_stage03_worker_runtime.py`
 
-- [ ] Step 1: Write tests for bounded worker processing, idempotent rerun and dead letter.
-- [ ] Step 2: Implement bounded loop for tests and continuous loop for staging.
-- [ ] Step 3: Implement message registration handler through service/UOW.
-- [ ] Step 4: Implement retry/dead letter status and audit.
-- [ ] Step 5: Run worker tests.
-- [ ] Step 6: Update progress.
+- [x] Step 1: Write tests for bounded worker processing, idempotent rerun and dead letter.
+- [x] Step 2: Implement bounded loop for tests and continuous loop for staging.
+- [x] Step 3: Implement message registration handler through service/UOW.
+- [x] Step 4: Implement retry/dead letter status and audit.
+- [x] Step 5: Run worker tests.
+- [x] Step 6: Update progress.
+
+Task 6 note: implementation uses the existing queue protocol and in-memory Redis Streams adapter for deterministic tests. A real `redis` / `redis.asyncio` adapter remains pending explicit dependency confirmation before Tencent Cloud staging.
 
 ### Task 7: Tencent Cloud Staging Rehearsal
 
