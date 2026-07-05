@@ -4,7 +4,7 @@
 
 - Document status: active progress log (confirmed by user 2026-07-06)
 - Scope: Stage 03 子阶段进度、测试记录、风险和后续项。
-- Current Progress: 2026-07-06 已开始 Stage 03 代码实施。完成 03.0 Runtime Config And Safety Defaults、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge、Task 6 Durable Worker Runtime：新增 Stage03 配置安全门、真实 Telegram update parser、安全 view DTO、receive-only webhook route、secret/allowlist validation、`telegram.message_received` outbox event、最小 Telegram customer binding、Stage03 `telegram_inbox` projection、migration `20260706_0010`、Redis Streams adapter interface、outbox bridge、worker runner、Stage03 message handler、worker UOW、retry/dead letter/audit；Task6 worker focused tests 5 passed，Task6 affected regression 14 passed，全量 backend suite 119 passed / 17 skipped。
+- Current Progress: 2026-07-06 已开始 Stage 03 代码实施。完成 03.0 Runtime Config And Safety Defaults、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge、Task 6 Durable Worker Runtime，并新增 Task 7 readiness audit：本地后端闭环已有自动化测试证据；真实 Redis client/live Redis runtime、Stage03 compose/Caddy 文件、腾讯云服务器、DNS 和 Telegram webhook 外部写入仍等待用户确认。
 
 ## 1. Progress Protocol
 
@@ -32,7 +32,7 @@ Next subphase:
 | 03.2 Real Telegram receive-only webhook | parser and route completed, inbox projection pending under 03.3 | `test_stage03_telegram_update_parser.py` 5 passed; `test_stage03_telegram_webhook.py` 5 passed |
 | 03.3 Minimal customer binding and Telegram Inbox | completed for local/backend slice | `test_stage03_customer_binding.py` 5 passed; `test_stage03_telegram_inbox_view.py` 3 passed; Alembic offline SQL reaches `20260706_0010` |
 | 03.4 PostgreSQL Outbox to Redis Streams worker | local/backend worker runtime completed, real Redis wiring pending | `test_stage03_redis_streams_bridge.py` 3 passed; `test_stage03_worker_runtime.py` 5 passed; affected outbox/worker/inbox regression 14 passed; full backend suite 119 passed / 17 skipped |
-| 03.5 Acceptance, rehearsal and stage close | pending | Local focused Stage 03 tests pass for Tasks 1-6; no Tencent Cloud staging rehearsal yet |
+| 03.5 Acceptance, rehearsal and stage close | readiness audit completed, rehearsal pending | `STAGE_03_TASK7_READINESS_AUDIT.md` created; local focused Stage 03 tests pass for Tasks 1-6; no Tencent Cloud staging rehearsal yet |
 
 ## 3. Progress Records
 
@@ -151,4 +151,17 @@ Test result: TDD RED first failed with `ModuleNotFoundError: No module named 'ap
 Not done: No real `redis` / `redis.asyncio` dependency, no live Redis connection, no actual Tencent Cloud Redis/Caddy/API/worker deployment, no DNS changes, no real Telegram webhook setup, no real Telegram send, no LLM, no provider execution, no funds movement.
 Risks / follow-up: Real Redis client wiring remains a technical decision awaiting explicit confirmation. Before Task7 staging, either add a production Redis adapter using an approved dependency or record a deliberate staging limitation; current runtime proves worker semantics through the queue protocol and in-memory adapter only.
 Next subphase: Task 7 Tencent Cloud Staging Rehearsal, after confirming server/DNS/Telegram webhook operations and Redis client dependency.
+```
+
+```text
+Date: 2026-07-06
+Subphase: Task 7 Readiness Audit
+Status: completed for documentation/readiness audit only
+Completed: Added a Task 7 readiness audit that separates current local evidence, missing staging prerequisites, required user confirmations, allowed pre-external work, forbidden external writes, and proposed next implementation slices. Updated Stage 03 implementation index so it no longer states the active stage is docs-only/no-code.
+Changed files: project-docs/08-implementation/STAGE_03_TASK7_READINESS_AUDIT.md; project-docs/08-implementation/README.md; project-docs/08-implementation/STAGE_03_PROGRESS.md.
+Tests run: rg `STAGE_03_TASK7_READINESS_AUDIT|docs-only/no-code|先完整补齐文档包，不写代码|当前先完整写文档不写代码|Task 7 Readiness Audit` project-docs/08-implementation project-docs/README.md; rg `Real Redis client / live Redis runtime|Staging real Telegram webhook rehearsal|Task 7 Readiness Audit|A \| Approve|B \| Do not add Redis|C \| Pause` project-docs/08-implementation/STAGE_03_TASK7_READINESS_AUDIT.md project-docs/08-implementation/STAGE_03_ACCEPTANCE_CHECKLIST.md; git diff --check; git status --short.
+Test result: Readiness audit is indexed from `project-docs/08-implementation/README.md`; no stale active `docs-only/no-code` phrasing remains in Stage 03 implementation docs; acceptance checklist still marks real Redis and staging webhook rehearsal as pending; `git diff --check` reported only CRLF warnings and no whitespace errors; git status shows only the readiness audit documentation changes.
+Not done: No `redis` / `redis.asyncio` dependency, no live Redis adapter, no Stage03 Dockerfile/compose/Caddyfile, no Tencent Cloud server operation, no DNS change, no Telegram webhook setup, no real Telegram send, no LLM, no provider execution, no funds movement.
+Risks / follow-up: Task 7 real staging remains gated by explicit user choice. Recommended next choice is A if the user wants to move toward live Redis and deployment files.
+Next subphase: Await user choice for Task 7A / Task 7B / pause.
 ```
