@@ -1,0 +1,31 @@
+from pydantic import BaseModel, Field
+
+
+class ConfirmationActionRequest(BaseModel):
+    action: str
+    actor_type: str
+    actor_id: str
+    role: str
+    reason: str | None = None
+    missing_fields: list[str] = Field(default_factory=list)
+
+
+class ConfirmationActionResponse(BaseModel):
+    draft_id: str
+    draft_status: str
+    service_record_id: str | None = None
+    execution_ticket_id: str | None = None
+
+
+class ServiceDraftRecord(BaseModel):
+    id: str
+    draft_type: str
+    status: str
+    customer_id: str | None
+    trace_id: str
+    payload: dict[str, object]
+    missing_fields: list[str]
+
+
+class ServiceDraftListResponse(BaseModel):
+    records: list[ServiceDraftRecord]
