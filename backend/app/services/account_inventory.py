@@ -88,12 +88,15 @@ class SqlAlchemyAccountInventoryUnitOfWork:
 
     def add_inventory_account(self, account: AccountInventory) -> None:
         self.session.add(account)
+        self.session.flush()
 
     def add_status_event(self, event: AccountStatusEvent) -> None:
         self.session.add(event)
+        self.session.flush()
 
     def add_assignment(self, assignment: AccountAssignment) -> None:
         self.session.add(assignment)
+        self.session.flush()
 
     def get_inventory_account(self, account_id: UUID) -> AccountInventory | None:
         return self.session.get(AccountInventory, account_id)

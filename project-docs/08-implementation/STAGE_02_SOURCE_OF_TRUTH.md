@@ -4,7 +4,7 @@
 
 - Document status: active stage source of truth
 - Scope: Stage 02 后端内核、充值闭环、账户库存、客户/公司日报的阶段边界、执行规则和验收原则
-- Current Progress: 2026-07-05 Stage 02 严格审计继续推进；本轮补齐 confirmation/report 写入型 API 的 UOW commit 边界：成功确认草稿和成功生成日报后必须提交 UOW，测试仍可 dependency override。最新验证为全量测试 83 passed、Alembic offline SQL 到 `0009`、AST_OK 92 files。继续按 Stage 02 plan、SDD、BDD 核对剩余未证明项，不把离线 session-double 验证说成真实 PostgreSQL 在线验证。
+- Current Progress: 2026-07-05 完成 Stage 02 最终收束审计：`STAGE_02_FINAL_ACCEPTANCE_REPORT.md` 汇总真源、计划、SDD、BDD 和验收清单证据；`STAGE_02_BDD.md` 已补齐每个 scenario 的 `Test mapping`；fresh online smoke 为 17 passed，全量 `pytest tests -v` 为 102 passed。Stage 02 可冻结提交；真实 Telegram/provider/OpenRouter、生产 worker、托管数据库演练和视图分页 hardening 继续保持 Stage 02 out of scope，并进入 Stage 03 candidate 文档。
 
 ## 1. Stage Goal
 

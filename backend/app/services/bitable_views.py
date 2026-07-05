@@ -23,6 +23,7 @@ class ViewDefinition:
     view_key: str
     table_name: str
     fields: tuple[str, ...]
+    field_aliases: dict[str, str] | None = None
     sensitive_fields: frozenset[str] = frozenset()
 
 
@@ -87,6 +88,7 @@ STAGE_02_VIEW_REGISTRY: dict[str, ViewDefinition] = {
         view_key="ai_draft_queue",
         table_name="service_drafts",
         fields=("status", "intent_type", "customer_id", "trace_id"),
+        field_aliases={"intent_type": "draft_type"},
     ),
     "recharge_view": ViewDefinition(
         view_key="recharge_view",
@@ -224,12 +226,13 @@ def _project_record(
     view: ViewDefinition,
 ) -> dict[str, Any]:
     fields = record.get("fields", {})
+    aliases = view.field_aliases or {}
     return {
         "id": record["id"],
         "fields": {
-            field_name: fields[field_name]
+            field_name: fields[_source_field_name(field_name, fields, aliases)]
             for field_name in view.fields
-            if field_name in fields
+            if _source_field_name(field_name, fields, aliases) in fields
         },
     }
 
@@ -242,6 +245,17 @@ def _allowed_fields_for_view(
     if actor is None:
         return view_allowed_fields
     return view_allowed_fields & allowed_fields_for_actor(actor, set(view.fields))
+
+
+def _source_field_name(
+    field_name: str,
+    fields: dict[str, Any],
+    aliases: dict[str, str],
+) -> str:
+    source_field = aliases.get(field_name, field_name)
+    if source_field in fields:
+        return source_field
+    return field_name
 
 
 def _can_actor_view_record(actor: Actor | None, record: dict[str, Any]) -> bool:

@@ -14,7 +14,7 @@
 
 - Document status: active implementation plan draft
 - Scope: Stage 02 backend kernel, mock Telegram ingestion, Bitable view API, service draft confirmation, outbox, recharge vertical slice, account inventory vertical slice, daily reporting vertical slice
-- Current Progress: 2026-07-05 Stage 02 严格审计继续推进；本轮补齐 confirmation/report 写入型 API 的 UOW commit 边界：成功确认草稿和成功生成日报后必须提交 UOW，测试仍可 dependency override。最新验证为全量测试 83 passed、Alembic offline SQL 到 `0009`、AST_OK 92 files。继续按本文档、SDD、BDD 核对剩余未证明项，不宣称整个 Stage 02 已彻底完成，也不把离线 session-double 验证说成真实 PostgreSQL 在线验证。
+- Current Progress: 2026-07-05 扩展 Stage 02 bounded online PostgreSQL smoke：`tests/integration/test_online_postgres_smoke.py` 使用 disposable PostgreSQL 验证 Alembic online `upgrade head` 到 `20260705_0009`、mock Telegram API 真实落库与跨 session 幂等、DB-backed `agent.intent_extract` 生成 draft、Bitable view 从真实 rows 回读、`audit_view` 从真实 `ops_audit_events` 投影、`recharge_view` sales actor scoped/masked readback、customer report stale_data/risk_event persistence、confirmation success、Agent confirmation denial、customer report sales scoped-denial 和 company report sales denial 的 API/DB 事务边界、reporting API 提交、business write + outbox event rollback 原子性、inventory/recharge service 状态跃迁、readback failure 的 `customer.reply` mock outbox、database-backed outbox dispatcher success/retry/dead_letter；最新 online smoke 为 17 passed、全量 `pytest tests -v` 102 passed、Alembic offline SQL 到 `20260705_0009`、AST_OK 93 files。继续按本文档、SDD、BDD 核对剩余未证明项；该 smoke 不等于生产数据库认证，真实 Telegram/provider/OpenRouter 仍不在 Stage 02 范围。
 
 ## 1. Confirmed Stage 02 Decisions
 
@@ -214,10 +214,13 @@ backend/
 - [x] Implement `SqlAlchemyBitableViewDataSource` that reads registered SQLAlchemy metadata tables into Bitable-shaped records.
 - [x] Wire default `/views` dependency to SQLAlchemy session while preserving dependency overrides for offline tests.
 - [x] Write tests for SQLAlchemy-backed row reads, unknown physical table no-op, and default dependency wiring.
+- [x] Add bounded online PostgreSQL smoke for Alembic online migration, mock Telegram API persistence, SQLAlchemy-backed Bitable view readback, and confirmation transaction persistence.
+- [x] Preserve `ai_draft_queue.intent_type` view output while mapping real `service_drafts.draft_type` from PostgreSQL rows.
 - [x] Wire route actor context into view response building.
 - [x] Filter customer-scoped records by actor `customer_ids`.
 - [x] Apply role-based field permission masking on top of view sensitive fields.
 - [x] Align `recharge_view` projection with real `recharge_records` status columns: `collection_status`, `execution_status`, `readback_status`.
+- [x] Add online PostgreSQL smoke proving sales actor scope/masking over real `recharge_view` rows.
 - [x] Acceptance: every Stage 02 business result can be retrieved through a view-shaped response.
 
 ### Task 4: Permission And Audit Kernel
@@ -249,7 +252,10 @@ backend/
 
 - [x] Implement `enqueue_outbox_event` inside DB transaction.
 - [x] Implement dispatcher that reads pending events and calls in-process handlers for Stage 02.
+- [x] Implement `SqlAlchemyOutboxRepository` for database-backed ready-event reads and dispatcher status persistence.
+- [x] Add online PostgreSQL rollback smoke proving business row and outbox event disappear together when the transaction rolls back.
 - [x] Implement retry counters and dead-letter status.
+- [x] Add online PostgreSQL smoke for DB-backed retry -> dead_letter and `outbox_dead_letter` audit persistence.
 - [x] Test event creation, successful dispatch, retryable failure, dead letter.
 - [x] Acceptance: DB commit and async intent are represented by outbox rows before any worker action.
 
@@ -268,6 +274,7 @@ backend/
 - [x] Link known `customer_groups`.
 - [x] Create outbox event `agent.intent_extract`.
 - [x] Test duplicate update does not create duplicate message or event.
+- [x] Add online PostgreSQL smoke proving duplicate update idempotency across separate API requests and DB sessions.
 - [x] Acceptance: mock Telegram message appears in `telegram_inbox` view and queues intent extraction.
 
 ### Task 7: Mock Message Router Agent
@@ -283,6 +290,7 @@ backend/
 - [x] Return structured result with `intent_type`, `customer_id`, `amount`, `currency`, `account_hint`, `missing_fields`, `confidence`.
 - [x] Update message `intent_status`.
 - [x] Create draft through service layer, not directly from worker.
+- [x] Add online PostgreSQL smoke proving DB-backed `agent.intent_extract` creates draft, updates message intent fields, writes audit and appears in `ai_draft_queue`.
 - [x] Test recharge phrase creates recharge draft.
 - [x] Test ambiguous phrase enters `needs_review`.
 - [x] Acceptance: Agent starts from `messages` and lands on `service_drafts` / message status.
@@ -325,8 +333,11 @@ backend/
 - [x] Implement `collection_records`, `recharge_records`, `execution_logs`.
 - [x] Implement finance confirmation as separate state from recharge execution.
 - [x] Implement mock recharge execution adapter.
+- [x] Implement `SqlAlchemyRechargeUnitOfWork` for database-backed recharge, collection, execution log, outbox and audit writes.
 - [x] Implement readback status separately from execution status.
 - [x] Add outbox handlers for `execution.recharge` and `readback.balance`.
+- [x] Add `customer.reply` mock outbox for readback failure wording without sending real Telegram messages.
+- [x] Reject readback failure marking before execution has succeeded to avoid misleading customer replies.
 - [x] Test collection confirmed does not mean recharge succeeded.
 - [x] Test confirmed recharge creates execution log through mock adapter.
 - [x] Acceptance: mock Telegram recharge request can reach execution log and readback state through APIs and views.
@@ -370,6 +381,7 @@ backend/
 - [x] Generate company report from all customers.
 - [x] Include `freshness_at` and source references for every metric.
 - [x] Mark stale data explicitly.
+- [x] Add online PostgreSQL smoke proving stale spend remains unknown and creates persisted risk/audit evidence.
 - [x] Wire report API default UOW to SQLAlchemy session while keeping tests dependency-overridable.
 - [x] Commit report API successful write actions through the UOW before returning.
 - [x] Acceptance: can generate per-customer and company daily reports without leaking other customer data.

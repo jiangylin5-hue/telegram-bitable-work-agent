@@ -1,14 +1,14 @@
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_system_actor
 from app.core.database import get_session
 from app.models.reporting import CompanyDailyReport, CustomerDailyReport
 from app.schemas.reports import CompanyDailyReportResponse, CustomerDailyReportResponse
-from app.services.permissions import Actor
+from app.services.permissions import Actor, PermissionDenied
 from app.services.reporting import (
     ReportingUnitOfWork,
     SqlAlchemyReportingUnitOfWork,
@@ -35,12 +35,16 @@ def create_customer_daily_report(
     actor: Actor = Depends(get_system_actor),
     uow: ReportingUnitOfWork = Depends(get_reporting_uow),
 ) -> CustomerDailyReportResponse:
-    report = generate_customer_daily_report(
-        uow,
-        actor=actor,
-        customer_id=customer_id,
-        report_date=report_date,
-    )
+    try:
+        report = generate_customer_daily_report(
+            uow,
+            actor=actor,
+            customer_id=customer_id,
+            report_date=report_date,
+        )
+    except PermissionDenied as exc:
+        uow.commit()
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     uow.commit()
     return _customer_report_response(report)
 
@@ -51,7 +55,15 @@ def create_company_daily_report(
     actor: Actor = Depends(get_system_actor),
     uow: ReportingUnitOfWork = Depends(get_reporting_uow),
 ) -> CompanyDailyReportResponse:
-    report = generate_company_daily_report(uow, actor=actor, report_date=report_date)
+    try:
+        report = generate_company_daily_report(
+            uow,
+            actor=actor,
+            report_date=report_date,
+        )
+    except PermissionDenied as exc:
+        uow.commit()
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     uow.commit()
     return _company_report_response(report)
 

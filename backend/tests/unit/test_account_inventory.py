@@ -31,10 +31,14 @@ class FakeSqlAlchemySession:
         self.rows = list(rows or [])
         self.added: list[object] = []
         self.statements: list[object] = []
+        self.flush_count = 0
         self.objects_by_key: dict[tuple[type, object], object] = {}
 
     def add(self, value: object) -> None:
         self.added.append(value)
+
+    def flush(self) -> None:
+        self.flush_count += 1
 
     def get(self, model: type, object_id: object) -> object | None:
         return self.objects_by_key.get((model, object_id))
@@ -67,6 +71,7 @@ def test_sqlalchemy_inventory_uow_uses_session_for_reads_and_writes() -> None:
     assert uow.get_inventory_account(account.id) is account
     assert uow.list_inventory_accounts() == [account]
     assert len(session.added) == 3
+    assert session.flush_count == 3
     assert len(session.statements) == 1
 
 

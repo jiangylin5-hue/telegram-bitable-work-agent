@@ -80,6 +80,7 @@ def apply_service_draft_action(
             uow.commit()
             return _draft_response(draft.id, draft.status)
     except PermissionDenied as exc:
+        uow.commit()
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ConfirmationStateError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc

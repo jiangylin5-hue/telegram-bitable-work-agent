@@ -3,6 +3,8 @@ from decimal import Decimal
 from typing import Protocol
 from uuid import UUID, uuid4
 
+from sqlalchemy.orm import Session
+
 from app.adapters.providers_mock import MockRechargeProvider
 from app.models.audit import OpsAuditEvent
 from app.models.outbox import OutboxEvent
@@ -104,6 +106,42 @@ class InMemoryRechargeUnitOfWork:
 
     def add(self, value: object) -> None:
         self.audit_events.append(value)
+
+
+class SqlAlchemyRechargeUnitOfWork:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def get_collection_record(self, collection_id: UUID) -> CollectionRecord | None:
+        return self.session.get(CollectionRecord, collection_id)
+
+    def get_recharge_record(self, recharge_id: UUID) -> RechargeRecord | None:
+        return self.session.get(RechargeRecord, recharge_id)
+
+    def get_service_record(self, service_record_id: UUID) -> ServiceRecord | None:
+        return self.session.get(ServiceRecord, service_record_id)
+
+    def get_execution_ticket(self, ticket_id: UUID) -> ExecutionTicket | None:
+        return self.session.get(ExecutionTicket, ticket_id)
+
+    def add_execution_log(self, execution_log: ExecutionLog) -> None:
+        self.session.add(execution_log)
+        self.session.flush()
+
+    def add_recharge_record(self, recharge_record: RechargeRecord) -> None:
+        self.session.add(recharge_record)
+        self.session.flush()
+
+    def add_collection_record(self, collection_record: CollectionRecord) -> None:
+        self.session.add(collection_record)
+        self.session.flush()
+
+    def add_outbox_event(self, event: OutboxEvent) -> None:
+        self.session.add(event)
+        self.session.flush()
+
+    def add(self, value: object) -> None:
+        self.session.add(value)
 
 
 def confirm_collection(
@@ -307,8 +345,34 @@ def mark_readback_failed(
     recharge = uow.get_recharge_record(recharge_id)
     if recharge is None:
         raise RechargeStateError(f"Recharge not found: {recharge_id}")
+    if recharge.execution_status != "succeeded":
+        raise RechargeStateError("Recharge execution has not succeeded")
     recharge.readback_status = "failed"
     recharge.readback_at = datetime.now(timezone.utc)
+    reply_text = (
+        "Recharge execution succeeded, but balance readback failed. "
+        "Please wait for manual balance verification."
+    )
+    uow.add_outbox_event(
+        OutboxEvent(
+            event_type="customer.reply",
+            aggregate_type="recharge_record",
+            aggregate_id=str(recharge.id),
+            payload={
+                "customer_id": str(recharge.customer_id),
+                "recharge_id": str(recharge.id),
+                "message_text": reply_text,
+                "execution_status": recharge.execution_status,
+                "readback_status": recharge.readback_status,
+            },
+            status="pending",
+            attempts=0,
+            attempt_count=0,
+            max_attempts=3,
+            idempotency_key=f"customer-reply:readback_failed:{recharge.id}",
+            trace_id="readback",
+        )
+    )
     record_audit_event(
         uow,
         trace_id="readback",

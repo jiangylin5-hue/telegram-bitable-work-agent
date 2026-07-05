@@ -4,7 +4,7 @@
 
 - Document status: active SDD draft
 - Scope: Stage 02 后端内核、Bitable view、权限审计、outbox、mock Telegram、草稿确认、充值、账户库存、日报模块的软件设计
-- Current Progress: 2026-07-05 更新 API UOW 持久化边界设计：`/service-drafts`、`/inventory/accounts`、`/confirmations/service-drafts/{draft_id}/actions`、`/reports/*` 默认通过 FastAPI dependency 获取 SQLAlchemy session，并使用 SQLAlchemy-backed UOW；confirmation/report 写入型 API 成功路径必须调用 `uow.commit()`；测试仍可 dependency override 为 in-memory UOW，真实 PostgreSQL 在线验证仍为环境项。
+- Current Progress: 2026-07-05 扩展 bounded online PostgreSQL smoke：`tests/integration/test_online_postgres_smoke.py` 使用 disposable PostgreSQL 验证 Alembic online `upgrade head`、mock Telegram API 真实落库与跨 session 幂等、DB-backed `agent.intent_extract` 生成 draft、Bitable view 真实回读、`audit_view` 真实审计投影、`recharge_view` sales actor scoped/masked readback、customer report stale_data/risk_event persistence、confirmation success、Agent confirmation denial、customer report sales scoped-denial 和 company report sales denial 的 API/DB 事务边界、reporting API 提交、business write + outbox event rollback 原子性、inventory/recharge service 状态跃迁、readback failure 的 `customer.reply` mock outbox、database-backed outbox dispatcher success/retry/dead_letter；最新 online smoke 为 17 passed、全量 `pytest tests -v` 102 passed、Alembic offline SQL 到 `20260705_0009`、AST_OK 93 files；完整生产级在线覆盖仍为后续 hardening。
 
 ## 1. Design Goal
 
@@ -204,6 +204,9 @@ Acceptance:
 - 未知 view 返回稳定错误。
 - Stage 02 每条业务切片都有 view endpoint。
 - 默认 `/views` dependency 使用 SQLAlchemy-backed data source。
+- `tests/integration/test_online_postgres_smoke.py` 验证 `/views/telegram_inbox/records` 和 `/views/ai_draft_queue/records` 可以从真实 PostgreSQL rows 投影，其中 `ai_draft_queue` 覆盖 DB-backed `agent.intent_extract` 生成的 draft。
+- `tests/integration/test_online_postgres_smoke.py::test_online_recharge_view_scopes_and_masks_sales_actor_from_real_rows` 验证 `/views/recharge_view/records` 在真实 PostgreSQL rows 上对 sales actor 执行 customer scope 过滤、`amount` 脱敏，并保留 `collection_status`、`execution_status`、`readback_status`。
+- `ai_draft_queue` 保持 Bitable output field `intent_type`，物理读取 `service_drafts.draft_type`，避免视图契约和事实表字段脱节。
 - SQLAlchemy-backed data source 对未知物理表返回空结果且不执行查询。
 - `/views` route 注入 actor context，并对客户记录和敏感金额字段执行权限过滤。
 - `recharge_view` 输出 `collection_status`、`execution_status`、`readback_status`，不得使用不存在于 `recharge_records` 的泛化 `status` 代替真实状态。
@@ -283,6 +286,7 @@ Stage 02 event types:
 - `agent.intent_extract`
 - `execution.recharge`
 - `readback.balance`
+- `customer.reply`
 - `report.customer_daily`
 - `report.company_daily`
 
@@ -294,7 +298,10 @@ Does not do:
 Acceptance:
 
 - 业务写入和 outbox event 同事务。
+- `tests/integration/test_online_postgres_smoke.py::test_online_business_write_and_outbox_event_rollback_atomically` 必须证明真实 PostgreSQL transaction rollback 后业务草稿和 outbox event 都不存在。
 - dispatcher 可重试失败事件。
+- `SqlAlchemyOutboxRepository` 支持 dispatcher 从真实 `outbox_events` 表读取 ready event、更新 processed/retry/dead_letter 状态。
+- `tests/integration/test_online_postgres_smoke.py::test_online_outbox_dispatcher_retries_then_dead_letters_database_backed_event` 必须验证真实 `outbox_events` retry -> dead_letter 状态、attempt counters、last_error 和 `outbox_dead_letter` audit event。
 - dead letter 写 audit 或可被 view 查询。
 
 ### 3.6 Mock Telegram Ingestion Module
@@ -319,6 +326,7 @@ Responsibilities:
 - 幂等写入 `messages`。
 - 关联 `customer_groups`。
 - 创建 `agent.intent_extract` outbox event。
+- DB-backed `agent.intent_extract` handler 必须使用 `SqlAlchemyServiceDraftUnitOfWork` 读取真实 `messages` row、创建 `service_drafts`、更新 `messages.intent_status/intent_type`，并写入 `draft_created` audit event。
 
 Does not do:
 
@@ -435,6 +443,7 @@ Responsibilities:
 - 写 execution log。
 - mock readback。
 - 为 recharge record 创建、collection record 创建、收款确认、执行成功和 readback 失败写 audit event。
+- `SqlAlchemyRechargeUnitOfWork` 支持同一 PostgreSQL transaction 内创建 recharge/collection、执行 mock recharge、写 execution log、写 readback outbox event、写 audit event，并可由 Bitable-shaped `recharge_view` 回读状态。
 
 Does not do:
 
@@ -447,6 +456,8 @@ Acceptance:
 
 - 充值 request 可以从 mock Telegram 到 execution log。
 - readback failed 可单独显示。
+- readback failed 只能在 `execution_status = succeeded` 后标记；否则必须抛出状态错误，不能生成会误导客户的 `customer.reply`。
+- readback failed 后必须创建 `customer.reply` mock outbox event，payload 明确表达“充值执行已成功，但余额回读失败，需要人工余额核验”；Stage 02 不做真实 Telegram 发送。
 - 关键充值状态写入 `ops_audit_events`，至少覆盖 `recharge_record_created`、`collection_record_created`、`collection_confirmed`、`recharge_execution_succeeded`、`readback_failed`。
 
 ### 3.10 Account Inventory Module
@@ -471,6 +482,7 @@ Responsibilities:
 - 写 `account_status_events`，覆盖 `produced`、`assigned`、`activated`。
 - 在 `account_inventory` Bitable-shaped view 中输出 `assigned_customer_id`、`assigned_at`、`inventory_status`、`status_reason`。
 - `/inventory/accounts` API 默认使用 SQLAlchemy-backed UOW，共用 FastAPI DB session dependency；测试可覆盖为 in-memory UOW。
+- `SqlAlchemyAccountInventoryUnitOfWork` 在 add 后 flush，使同一 PostgreSQL transaction 内的 create -> propose -> confirm 状态跃迁可以读到新建库存账户和分配记录。
 
 Does not do:
 
@@ -512,7 +524,7 @@ Responsibilities:
 - 按权限过滤报告。
 - 报告生成和风险事件生成写 audit event。
 - `/reports/*` API 默认使用 SQLAlchemy-backed UOW，共用 FastAPI DB session dependency；查询 account metrics、recharge records、card bindings 时必须带 report_date 条件。
-- `/reports/*` 的成功写入路径必须在返回响应前调用 `uow.commit()`；生成失败或权限失败不提交。
+- `/reports/*` 的成功写入路径必须在返回响应前调用 `uow.commit()`；权限失败路径只允许提交 `permission_denied` audit，不得提交业务 report rows；其他生成失败或校验失败不得声称成功提交。
 
 Does not do:
 
@@ -527,6 +539,7 @@ Acceptance:
 - 每个日报数值都有 source 和 freshness。
 - 客户日报只包含该客户数据。
 - 公司日报仅 manager/admin 可见。
+- `tests/integration/test_online_postgres_smoke.py::test_online_customer_report_keeps_stale_spend_unknown_and_persists_risk_event` 验证真实 PostgreSQL API 路径中 stale spend 保持 unknown、生成 `RiskEvent`、写入 `risk_event_created` audit，并能从 `customer_daily_reports` Bitable view 回读。
 - 客户日报包含同日同客户充值记录。
 - 公司日报包含同日充值总额、执行状态计数和回读状态计数。
 - 客户日报包含同日同客户绑卡记录，并遮蔽 `failure_reason`。

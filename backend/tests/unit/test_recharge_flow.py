@@ -1,10 +1,13 @@
 from decimal import Decimal
 from uuid import uuid4
 
+import pytest
+
 from app.models.recharge import CollectionRecord, RechargeRecord
 from app.models.service import ExecutionTicket, ServiceRecord
 from app.services.recharge import (
     InMemoryRechargeUnitOfWork,
+    RechargeStateError,
     confirm_collection,
     create_collection_record_for_recharge,
     create_recharge_record_from_confirmation,
@@ -117,6 +120,45 @@ def test_readback_failure_remains_separate_from_execution_success() -> None:
     assert recharge.execution_status == "succeeded"
     assert recharge.readback_status == "failed"
     assert uow.audit_events[0].event_type == "readback_failed"
+
+
+def test_readback_failure_enqueues_customer_reply_with_separate_status_message() -> None:
+    recharge = make_recharge_record()
+    recharge.execution_status = "succeeded"
+    recharge.readback_status = "pending"
+    uow = InMemoryRechargeUnitOfWork(recharge_records=[recharge])
+
+    mark_readback_failed(uow, recharge.id, error_message="mock readback failed")
+
+    assert len(uow.outbox_events) == 1
+    reply_event = uow.outbox_events[0]
+    assert reply_event.event_type == "customer.reply"
+    assert reply_event.aggregate_type == "recharge_record"
+    assert reply_event.aggregate_id == str(recharge.id)
+    assert reply_event.payload == {
+        "customer_id": str(recharge.customer_id),
+        "recharge_id": str(recharge.id),
+        "message_text": (
+            "Recharge execution succeeded, but balance readback failed. "
+            "Please wait for manual balance verification."
+        ),
+        "execution_status": "succeeded",
+        "readback_status": "failed",
+    }
+
+
+def test_readback_failure_requires_successful_execution_before_customer_reply() -> None:
+    recharge = make_recharge_record()
+    recharge.execution_status = "queued"
+    recharge.readback_status = "pending"
+    uow = InMemoryRechargeUnitOfWork(recharge_records=[recharge])
+
+    with pytest.raises(RechargeStateError, match="execution has not succeeded"):
+        mark_readback_failed(uow, recharge.id, error_message="mock readback failed")
+
+    assert recharge.readback_status == "pending"
+    assert uow.outbox_events == []
+    assert uow.audit_events == []
 
 
 def test_execution_and_readback_handlers_call_recharge_services() -> None:

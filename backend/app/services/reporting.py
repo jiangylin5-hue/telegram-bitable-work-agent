@@ -309,6 +309,20 @@ def generate_customer_daily_report(
     report_date: date,
 ) -> CustomerDailyReport:
     if not can_view_customer_record(actor, customer_id):
+        record_audit_event(
+            uow,
+            trace_id=f"report:customer:{customer_id}:{report_date.isoformat()}",
+            actor_type=actor.actor_type,
+            actor_id=actor.actor_id,
+            event_type="permission_denied",
+            entity_type="customer_daily_report",
+            permission_snapshot={
+                "action": "view_customer_report",
+                "role": actor.role,
+                "actor_type": actor.actor_type,
+                "customer_id": str(customer_id),
+            },
+        )
         raise PermissionDenied(f"{actor.role} cannot view customer {customer_id}")
 
     metrics = uow.list_metrics_for_customer_on_date(customer_id, report_date)
