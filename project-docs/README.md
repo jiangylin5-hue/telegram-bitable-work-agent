@@ -4,7 +4,7 @@
 
 - Document status: active project document index
 - Current project mode: Stage 03 backend implementation
-- Current Progress: 2026-07-06 Stage 02 已冻结关闭；Stage 03 已完成 Tasks 1-6 本地后端实施与验收记录：真实 Telegram receive-only webhook、最小 customer binding、`telegram_inbox`、PostgreSQL outbox bridge 和 dependency-neutral Redis Streams worker runtime 已有自动化测试证据。Task 7 腾讯云 staging rehearsal 仍等待真实 Redis client、部署文件和外部操作确认。
+- Current Progress: 2026-07-06 Stage 02 已冻结关闭；Stage 03 已完成 Tasks 1-6 本地后端实施与 Task 7A 本地部署准备：真实 Telegram receive-only webhook、最小 customer binding、`telegram_inbox`、PostgreSQL outbox bridge、Redis Streams worker runtime、真实 Redis adapter 代码和 Stage03 compose/Caddy/env 文件已有自动化或文件证据。Task 7 腾讯云 staging rehearsal 仍等待真实服务器、DNS、Caddy 证书和 Telegram webhook 外部操作确认。
 
 ## Document Map
 

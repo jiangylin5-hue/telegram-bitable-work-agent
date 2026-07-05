@@ -13,7 +13,7 @@
 
 - Document status: active implementation plan (confirmed by user 2026-07-06)
 - Scope: Stage 03 真实 Telegram 收件入口、PostgreSQL Outbox、Redis Streams worker、最小客户绑定、多维表格 Telegram Inbox、腾讯云 CVM staging、Caddy HTTPS。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge、Task 6 Durable Worker Runtime 已按 TDD 完成并进入验收记录；真实 Redis client wiring 和腾讯云 staging rehearsal 仍待后续确认与执行。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge、Task 6 Durable Worker Runtime 和 Task 7A Real Redis Adapter And Deployment Files 已按 TDD/验收记录完成；真实腾讯云服务器、DNS、Caddy 证书签发和 Telegram webhook 设置仍待后续确认与执行。
 
 ## 1. Delivery Shape
 
@@ -81,6 +81,8 @@ backend/
     workers/
       runner.py
       stage03_handlers.py
+      stage03_outbox_bridge_runtime.py
+      stage03_runtime.py
     models/
       telegram.py
       outbox.py
@@ -91,6 +93,9 @@ backend/
       test_stage03_config.py
       test_stage03_telegram_update_parser.py
       test_stage03_telegram_inbox_view.py
+      test_stage03_redis_streams_adapter.py
+      test_stage03_outbox_bridge_runtime_factory.py
+      test_stage03_worker_runtime_factory.py
     integration/
       test_stage03_telegram_webhook.py
       test_stage03_customer_binding.py
@@ -551,7 +556,33 @@ These tasks are the active Stage 03 implementation checklist after user approval
 - [x] Step 5: Run worker tests.
 - [x] Step 6: Update progress.
 
-Task 6 note: implementation uses the existing queue protocol and in-memory Redis Streams adapter for deterministic tests. A real `redis` / `redis.asyncio` adapter remains pending explicit dependency confirmation before Tencent Cloud staging.
+Task 6 note: implementation used the existing queue protocol and in-memory Redis Streams adapter for deterministic tests. Task 7A later added the approved `redis>=5.0` production adapter and deployment entrypoints; live Redis rehearsal remains part of Task 7.
+
+### Task 7A: Real Redis Adapter And Deployment Files
+
+**Files:**
+
+- Modify: `backend/pyproject.toml`
+- Modify: `backend/app/queues/redis_streams.py`
+- Create: `backend/app/workers/stage03_runtime.py`
+- Create: `backend/app/workers/stage03_outbox_bridge_runtime.py`
+- Create: `backend/Dockerfile`
+- Create: `deploy/stage03/compose.yml`
+- Create: `deploy/stage03/Caddyfile`
+- Create: `deploy/stage03/env.stage03.example`
+- Test: `backend/tests/unit/test_stage03_redis_streams_adapter.py`
+- Test: `backend/tests/unit/test_stage03_worker_runtime_factory.py`
+- Test: `backend/tests/unit/test_stage03_outbox_bridge_runtime_factory.py`
+
+- [x] Step 1: Record user choice A approving `redis` dependency and local deployment files while keeping real external writes gated.
+- [x] Step 2: Write failing adapter/factory tests before implementation.
+- [x] Step 3: Implement lazy-loaded Redis Streams adapter without requiring live Redis in normal imports.
+- [x] Step 4: Implement worker and outbox bridge runtime factories/entrypoints.
+- [x] Step 5: Add Dockerfile, compose, Caddyfile and env example with placeholders only.
+- [x] Step 6: Run focused Task7A tests and full backend suite.
+- [x] Step 7: Update progress, acceptance checklist, deployment doc and runbook.
+
+Task 7A note: this is local repository preparation only. It does not prove live Redis connectivity, Tencent Cloud deployment, HTTPS certificate issuance or real Telegram webhook delivery.
 
 ### Task 7: Tencent Cloud Staging Rehearsal
 

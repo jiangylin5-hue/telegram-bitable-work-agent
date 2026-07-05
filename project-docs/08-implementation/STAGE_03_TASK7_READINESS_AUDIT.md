@@ -4,7 +4,7 @@
 
 - Document status: active readiness audit
 - Scope: Task 7 腾讯云 staging rehearsal 前置条件、确认项、可执行边界和验收证据。
-- Current Progress: 2026-07-06 完成 Tasks 1-6 当前状态审计：本地后端 Telegram receive-only webhook、customer binding、`telegram_inbox`、outbox bridge 和 dependency-neutral worker runtime 已有自动化测试证据；真实 Redis client/live Redis runtime、Stage03 compose/Caddy 文件、腾讯云服务器、DNS 和 Telegram webhook 外部写入仍未执行，必须等待用户确认。
+- Current Progress: 2026-07-06 完成 Tasks 1-6 当前状态审计并执行用户选择 A 的 Task 7A：本地后端 Telegram receive-only webhook、customer binding、`telegram_inbox`、outbox bridge、worker runtime、真实 Redis adapter 代码和 Stage03 compose/Caddy/env 文件已有自动化或文件证据；腾讯云服务器、DNS、Caddy 真实证书签发和 Telegram webhook 外部写入仍未执行，必须等待用户确认。
 
 ## 1. Purpose
 
@@ -12,10 +12,10 @@
 
 结论：
 
-- 可以继续做本地部署准备和文档完善。
+- 可以继续做本地部署准备和文档完善；Task 7A 本地部署准备已完成。
 - 不可以直接执行真实腾讯云服务器、DNS 或 Telegram webhook 操作。
-- 不可以声称 Stage 03 已完成真实 Redis runtime 或 staging rehearsal。
-- 真实 Redis adapter 需要先确认是否引入 `redis` / `redis.asyncio` 依赖。
+- 不可以声称 Stage 03 已完成 live Redis staging rehearsal 或真实 Telegram webhook rehearsal。
+- 用户已选择 A，允许引入 `redis` 依赖和本地部署文件；真实外部写入仍需另行确认。
 
 ## 2. Current Evidence
 
@@ -28,8 +28,12 @@
 | `telegram_inbox` projection | passed | `test_stage03_telegram_inbox_view.py` passed in prior Task 4 evidence |
 | Outbox to Redis Streams bridge semantics | passed | `test_stage03_redis_streams_bridge.py` passed in prior Task 5 evidence |
 | Worker runtime semantics | passed | `test_stage03_worker_runtime.py` passed in prior Task 6 evidence |
-| Full backend regression | passed | Task 6 progress records `pytest tests -q` => 119 passed / 17 skipped |
-| Git state | clean at audit start | `git status --short` returned no changes |
+| Real Redis adapter code | passed | `test_stage03_redis_streams_adapter.py` => 3 passed |
+| Worker runtime entrypoint | passed | `test_stage03_worker_runtime_factory.py` => 1 passed |
+| Outbox bridge runtime entrypoint | passed | `test_stage03_outbox_bridge_runtime_factory.py` => 1 passed |
+| Stage03 deploy files | passed | `backend/Dockerfile`; `deploy/stage03/compose.yml`; `deploy/stage03/Caddyfile`; `deploy/stage03/env.stage03.example` |
+| Full backend regression | passed | Task 7A progress records `pytest tests -q` => 124 passed / 17 skipped |
+| Git state | dirty after Task7A implementation | expected local changes awaiting commit |
 
 The 17 skipped tests are existing online PostgreSQL smoke tests gated by `STAGE02_ONLINE_DATABASE_URL`; they do not prove or disprove Task 7 staging readiness.
 
@@ -70,6 +74,10 @@ Recommended answer:
 - Keep in-memory adapter for deterministic tests.
 - Add integration tests around adapter behavior without requiring a live Redis by default.
 
+Current answer:
+
+- Approved by user choice A on 2026-07-06.
+
 ### 4.2 Deployment File Confirmation
 
 Question:
@@ -89,6 +97,10 @@ Recommended answer:
 - Approve local repository deployment files.
 - Keep real `.env` values outside git.
 - Use `.env.stage03.example` or documented placeholders only.
+
+Current answer:
+
+- Approved by user choice A on 2026-07-06.
 
 ### 4.3 External Operation Confirmation
 
@@ -111,10 +123,10 @@ Rule:
 | Precondition | Required Evidence | Current Status |
 | --- | --- | --- |
 | Branch pushed or server can access code | git remote/branch evidence | not checked in this audit |
-| Real Redis adapter exists | tests and dependency manifest | pending confirmation |
-| Stage03 compose file exists | repo file with API/worker/postgres/redis/caddy | pending |
-| Caddyfile exists | repo file or server-side config | pending |
-| Secret template exists | `.env.example` style placeholders only | pending |
+| Real Redis adapter exists | tests and dependency manifest | passed for code; live Redis rehearsal pending |
+| Stage03 compose file exists | repo file with API/worker/postgres/redis/caddy | passed: `deploy/stage03/compose.yml` |
+| Caddyfile exists | repo file or server-side config | passed: `deploy/stage03/Caddyfile` |
+| Secret template exists | `.env.example` style placeholders only | passed: `deploy/stage03/env.stage03.example` |
 | Staging server exists | user-provided CVM/IP/SSH path | pending user input |
 | Domain/subdomain exists | user-provided DNS plan | pending user input |
 | Telegram bot token available outside git | user-provided secret handling | pending user input |
@@ -143,7 +155,7 @@ Not allowed without explicit confirmation:
 
 ## 7. Proposed Next Implementation Slice
 
-If user approves option A:
+User approved option A and Task 7A has been implemented locally:
 
 ```text
 Task 7A: Real Redis Adapter And Deployment Files
@@ -158,11 +170,13 @@ Task 7A: Real Redis Adapter And Deployment Files
 
 Acceptance for Task 7A:
 
-- Existing in-memory worker tests still pass.
-- Redis adapter code imports without live Redis requirement in normal tests.
-- Compose/Caddy/env files contain no real secrets.
-- Full backend suite passes.
-- Secret scan finds no tokens or passwords.
+- Existing in-memory worker tests still pass: passed in focused Task7A regression.
+- Redis adapter code imports without live Redis requirement in normal tests: passed via `python -B` import check.
+- Compose/Caddy/env files contain no real secrets: passed via secret pattern scan.
+- Full backend suite passes: `pytest tests -q` => 124 passed / 17 skipped.
+- Secret scan finds no tokens or passwords: `rg` secret pattern scan returned `no secret pattern matches`.
+
+Next implementation slice is real Task 7 staging rehearsal, not more local runtime work. It requires explicit confirmation for server, DNS, secrets and Telegram webhook actions.
 
 If user chooses documentation-only:
 
@@ -182,11 +196,11 @@ Acceptance for Task 7B:
 
 ## 8. Required User Choices
 
-Please choose one:
+Historical choice prompt and recorded answer:
 
 | Choice | Meaning |
 | --- | --- |
-| A | Approve `redis` / `redis.asyncio` dependency and local deployment files; real server/DNS/webhook still require later confirmation |
+| A | Approved by user: `redis` dependency and local deployment files; real server/DNS/webhook still require later confirmation |
 | B | Do not add Redis dependency yet; only improve deployment docs/checklists |
 | C | Pause Stage 03 implementation and do a broader stage audit or push current branch |
 

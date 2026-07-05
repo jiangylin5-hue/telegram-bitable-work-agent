@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Any, Protocol
 
 
 class RedisStreams(Protocol):
@@ -30,6 +30,88 @@ class RedisStreams(Protocol):
 class RedisStreamJob:
     entry_id: str
     fields: dict[str, str]
+
+
+class RedisStreamsClient:
+    def __init__(self, redis_client: Any) -> None:
+        self._redis = redis_client
+        self._known_groups: set[tuple[str, str]] = set()
+
+    @classmethod
+    def from_url(cls, redis_url: str, **kwargs: Any) -> "RedisStreamsClient":
+        from redis import Redis
+
+        redis_client = Redis.from_url(
+            redis_url,
+            decode_responses=False,
+            **kwargs,
+        )
+        return cls(redis_client)
+
+    def xadd_once(
+        self,
+        stream_name: str,
+        *,
+        idempotency_key: str,
+        fields: dict[str, str],
+    ) -> bool:
+        for _entry_id, existing_fields in self._redis.xrange(stream_name):
+            existing_idempotency_key = _decode_fields(existing_fields).get(
+                "idempotency_key"
+            )
+            if existing_idempotency_key == idempotency_key:
+                return False
+
+        payload = dict(fields)
+        payload["idempotency_key"] = idempotency_key
+        self._redis.xadd(stream_name, payload)
+        return True
+
+    def read_group(
+        self,
+        stream_name: str,
+        *,
+        group_name: str,
+        consumer_name: str,
+        count: int = 10,
+    ) -> list[RedisStreamJob]:
+        self._ensure_group(stream_name, group_name)
+        response = self._redis.xreadgroup(
+            groupname=group_name,
+            consumername=consumer_name,
+            streams={stream_name: ">"},
+            count=count,
+        )
+        jobs: list[RedisStreamJob] = []
+        for _response_stream_name, entries in response:
+            for entry_id, fields in entries:
+                jobs.append(
+                    RedisStreamJob(
+                        entry_id=_decode_value(entry_id),
+                        fields=_decode_fields(fields),
+                    )
+                )
+        return jobs
+
+    def ack(self, stream_name: str, *, group_name: str, entry_id: str) -> bool:
+        acknowledged = self._redis.xack(stream_name, group_name, entry_id)
+        return bool(acknowledged)
+
+    def _ensure_group(self, stream_name: str, group_name: str) -> None:
+        group_key = (stream_name, group_name)
+        if group_key in self._known_groups:
+            return
+        try:
+            self._redis.xgroup_create(
+                stream_name,
+                group_name,
+                id="0",
+                mkstream=True,
+            )
+        except Exception as exc:
+            if "BUSYGROUP" not in str(exc).upper():
+                raise
+        self._known_groups.add(group_key)
 
 
 @dataclass
@@ -120,3 +202,16 @@ class InMemoryRedisStreams:
         next_id = self._next_id_by_stream.get(stream_name, 0) + 1
         self._next_id_by_stream[stream_name] = next_id
         return f"{next_id}-0"
+
+
+def _decode_fields(fields: dict[object, object]) -> dict[str, str]:
+    return {
+        _decode_value(key): _decode_value(value)
+        for key, value in fields.items()
+    }
+
+
+def _decode_value(value: object) -> str:
+    if isinstance(value, bytes):
+        return value.decode("utf-8")
+    return str(value)

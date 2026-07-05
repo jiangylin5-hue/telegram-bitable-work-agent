@@ -4,7 +4,7 @@
 
 - Document status: active deployment design (confirmed by user 2026-07-06)
 - Scope: Stage 03 腾讯云 CVM staging、Docker Compose 单机运行、Caddy HTTPS 反代、Telegram webhook 联调和部署验收边界。
-- Current Progress: 2026-07-06 用户确认 Stage 03 使用腾讯云服务器部署，HTTPS 入口采用域名子域名 + Caddy 自动 HTTPS。Tasks 1-6 本地后端切片已实施；Stage03 compose/Caddy 部署文件、真实 Redis client wiring、腾讯云服务器、DNS 和 Telegram webhook 外部操作仍待用户确认后执行。
+- Current Progress: 2026-07-06 用户确认 Stage 03 使用腾讯云服务器部署，HTTPS 入口采用域名子域名 + Caddy 自动 HTTPS。Tasks 1-6 本地后端切片已实施；Task 7A 已新增 Stage03 Dockerfile、compose、Caddyfile、env 示例、真实 Redis adapter 代码和 worker/outbox bridge 入口。腾讯云服务器、DNS、Caddy 真实证书签发和 Telegram webhook 外部操作仍待用户确认后执行。
 
 ## 1. Deployment Goal
 
@@ -62,11 +62,22 @@ Planned services:
 | --- | --- | --- |
 | `caddy` | TLS and reverse proxy | HTTP health on public endpoint |
 | `api` | FastAPI webhook/API | `/health` and future readiness endpoint |
+| `migrate` | One-shot Alembic migration tool service | exits after `alembic upgrade head` |
+| `outbox-bridge` | PostgreSQL Outbox to Redis Streams bridge | process heartbeat/logs |
 | `worker` | Redis Streams consumer | process heartbeat/logs |
 | `postgres` | Stage 03 database | container health check |
 | `redis` | queue/cache | container health check |
 
-No Stage 03 compose file has been created yet. Implementation should add staging compose/Caddy files only after the user confirms deployment-file work and the real Redis client decision; real server/DNS/Telegram webhook operations still require separate confirmation at execution time.
+Current repository deployment files:
+
+| File | Purpose |
+| --- | --- |
+| `backend/Dockerfile` | Builds the FastAPI/worker runtime image from the backend package |
+| `deploy/stage03/compose.yml` | Defines `api`, `migrate`, `outbox-bridge`, `worker`, `postgres`, `redis` and `caddy` |
+| `deploy/stage03/Caddyfile` | Terminates HTTPS and reverse-proxies to `api:8000` |
+| `deploy/stage03/env.stage03.example` | Placeholder-only environment template; copy to `.env.stage03` outside git before use |
+
+Real server/DNS/Telegram webhook operations still require separate confirmation at execution time.
 
 ## 5. Caddy Route Design
 
@@ -76,10 +87,11 @@ Expected public route:
 https://<stage03-subdomain>/telegram/webhook
 ```
 
-Reverse proxy:
+Current `deploy/stage03/Caddyfile` shape:
 
 ```text
-<stage03-subdomain> {
+{$STAGE03_DOMAIN} {
+    encode zstd gzip
     reverse_proxy api:8000
 }
 ```
@@ -136,22 +148,37 @@ Rules:
 - Do not enable send behavior.
 - If webhook setup fails, do not retry blindly with secrets in logs.
 
-## 8. Deployment Steps For Future Code Phase
+## 8. Deployment Steps For Future Staging Rehearsal
 
 These steps are planned for Task 7 and have not been executed:
 
 1. Provision Tencent Cloud CVM.
 2. Point subdomain DNS `A` record to CVM public IP.
 3. Install Docker and Docker Compose plugin.
-4. Add staging environment file on server, outside git.
-5. Deploy compose services.
-6. Verify Caddy obtains certificate.
-7. Run Alembic upgrade against staging database.
-8. Start API and worker.
-9. Run health check.
-10. After explicit user confirmation, set Telegram webhook.
-11. Send one real test message.
-12. Verify `telegram_inbox`, `outbox_events`, Redis Streams worker logs and audit evidence.
+4. Copy `deploy/stage03/env.stage03.example` to `deploy/stage03/.env.stage03` on the server and replace placeholders outside git.
+5. Pull the approved branch/commit.
+6. Run the migration service:
+
+```bash
+cd deploy/stage03
+docker compose --env-file .env.stage03 -f compose.yml --profile tools run --rm migrate
+```
+
+7. Start staging services:
+
+```bash
+cd deploy/stage03
+docker compose --env-file .env.stage03 -f compose.yml up -d api outbox-bridge worker caddy
+```
+
+8. Verify Caddy obtains certificate.
+9. Run health check through HTTPS.
+10. Verify invalid webhook secret is rejected.
+11. After explicit user confirmation, set Telegram webhook.
+12. Send one real test message.
+13. Verify `telegram_inbox`, `outbox_events`, Redis Streams worker logs and audit evidence.
+
+Note: the commands above are documented runbook targets. They have not been executed in this repository session.
 
 ## 9. Rollback And Safety
 

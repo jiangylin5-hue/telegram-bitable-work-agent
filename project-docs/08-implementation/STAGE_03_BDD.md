@@ -4,7 +4,7 @@
 
 - Document status: active BDD (confirmed by user 2026-07-06)
 - Scope: Stage 03 可验收行为、测试映射和业务证据。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Runtime config、Telegram update parser、receive-only webhook route、customer binding、`telegram_inbox` view、Outbox To Redis Streams bridge 和 dependency-neutral worker runtime 已有自动化测试证据；真实 Redis client wiring 和 staging rehearsal 仍待确认与执行。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Runtime config、Telegram update parser、receive-only webhook route、customer binding、`telegram_inbox` view、Outbox To Redis Streams bridge、worker runtime、真实 Redis adapter 代码和 Stage03 runtime packaging 已有自动化测试证据；腾讯云 staging rehearsal 仍待确认与执行。
 
 ## 1. Feature: Receive-Only Telegram Webhook
 
@@ -365,9 +365,54 @@ Test mapping:
 
 - `tests/unit/test_stage03_telegram_inbox_view.py::test_inbox_view_redacts_secret_and_raw_payload`
 
-## 6. Feature: Tencent Cloud Staging Webhook Rehearsal
+## 6. Feature: Stage03 Runtime Packaging
 
-### Scenario 6.1: Real Telegram message reaches staging inbox
+### Scenario 6.1: Production Redis wrapper preserves stream contract without live Redis during normal tests
+
+Given:
+
+- The backend declares the approved `redis` dependency.
+- Unit tests use a fake Redis client instead of a live server.
+
+When:
+
+- The production Redis Streams wrapper writes, reads and acknowledges jobs.
+
+Then:
+
+- Duplicate idempotency keys are not added twice.
+- Redis Stream group reads decode bytes to stable string fields.
+- Ack delegates to Redis and returns a boolean result.
+- Importing the module does not require a live Redis server.
+
+Test mapping:
+
+- `tests/unit/test_stage03_redis_streams_adapter.py`
+
+### Scenario 6.2: Deployment entrypoints wire the same business handlers as tests
+
+Given:
+
+- Stage03 compose starts an outbox bridge process and a worker process.
+
+When:
+
+- The runtime factories are created with repository/stream/UOW dependencies.
+
+Then:
+
+- Outbox bridge moves ready outbox events to the Stage03 stream.
+- Worker handles `telegram.message_received` through the Stage03 handler.
+- The behavior remains observable through message status and outbox status.
+
+Test mapping:
+
+- `tests/unit/test_stage03_outbox_bridge_runtime_factory.py`
+- `tests/unit/test_stage03_worker_runtime_factory.py`
+
+## 7. Feature: Tencent Cloud Staging Webhook Rehearsal
+
+### Scenario 7.1: Real Telegram message reaches staging inbox
 
 Given:
 
@@ -390,7 +435,7 @@ Test mapping:
 
 - Manual staging verification recorded in `STAGE_03_ACCEPTANCE_CHECKLIST.md`.
 
-## 7. Stage 03 BDD Acceptance
+## 8. Stage 03 BDD Acceptance
 
 Stage 03 BDD is accepted only when:
 

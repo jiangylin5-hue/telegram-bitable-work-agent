@@ -4,7 +4,7 @@
 
 - Document status: active module design
 - Scope: Stage 03 PostgreSQL Outbox 到 Redis Streams 的投递桥接、worker runtime、retry/dead letter 和审计。
-- Current Progress: 2026-07-06 Redis Streams bridge 和 dependency-neutral worker runtime local/backend slice 已完成：新增 queue adapter interface、in-memory Redis Streams adapter、outbox bridge、consumer-group-like read/ack/pending semantics、worker runner、Stage03 message handler、worker UOW、retry/dead letter 和 worker audit tests。真实 Redis client wiring、live Redis consumer group 和腾讯云 staging rehearsal 仍待后续确认与执行。
+- Current Progress: 2026-07-06 Redis Streams bridge 和 worker runtime local/backend slice 已完成：新增 queue adapter interface、in-memory Redis Streams adapter、真实 Redis adapter 代码、outbox bridge、consumer-group-like read/ack/pending semantics、worker runner、Stage03 message handler、worker UOW、retry/dead letter、worker audit tests、worker runtime entrypoint 和 outbox bridge runtime entrypoint。live Redis consumer group rehearsal 和腾讯云 staging rehearsal 仍待后续确认与执行。
 
 ## 1. Scope
 
@@ -152,7 +152,7 @@ handler error
 
 | Purpose | File |
 | --- | --- |
-| Redis Streams adapter | `backend/app/queues/redis_streams.py` implemented for interface + in-memory test adapter + read/ack/pending semantics |
+| Redis Streams adapter | `backend/app/queues/redis_streams.py` implemented for interface + in-memory test adapter + production `RedisStreamsClient` + read/ack/pending semantics |
 | Queue package init | `backend/app/queues/__init__.py` implemented |
 | Worker runner | `backend/app/workers/runner.py` implemented |
 | Stage 03 handlers | `backend/app/workers/stage03_handlers.py` implemented |
@@ -178,7 +178,7 @@ Required tests:
 ## 10. Acceptance Criteria
 
 - PostgreSQL outbox remains consistency anchor.
-- Redis Streams worker can run through the queue protocol; live Redis adapter remains pending before staging.
+- Redis Streams worker can run through the queue protocol; live Redis rehearsal remains pending before Stage 03 close.
 - Worker can be tested in bounded mode.
 - Duplicate Redis delivery does not duplicate business rows.
 - Failures are visible, retryable or dead-lettered with audit.

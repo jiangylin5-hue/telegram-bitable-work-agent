@@ -4,7 +4,7 @@
 
 - Document status: active operations runbook
 - Scope: Stage 03 staging 启停、配置、联调、排障、回滚和证据记录。
-- Current Progress: 2026-07-06 运维手册已建立；Stage 03 代码实施已开始，但尚未执行腾讯云服务器、DNS、Caddy 或 Telegram webhook 设置，任何真实外部操作仍需单独确认。
+- Current Progress: 2026-07-06 运维手册已建立；Task 7A 已新增本地部署文件和运行时入口，但尚未执行腾讯云服务器、DNS、Caddy 证书签发或 Telegram webhook 设置，任何真实外部操作仍需单独确认。
 
 ## 1. Purpose
 
@@ -12,18 +12,48 @@
 
 ## 2. Start Procedure
 
-Future implementation batch should document exact commands after compose files exist. The intended sequence is:
+Run these commands only after the user explicitly confirms real server work and staging secrets exist outside git.
 
-1. Confirm server secrets exist outside git.
-2. Pull latest approved branch.
-3. Start PostgreSQL and Redis.
-4. Run Alembic migrations.
-5. Start API.
-6. Start worker.
-7. Start or reload Caddy.
-8. Verify health endpoint.
-9. Verify invalid webhook secret is rejected.
-10. Ask user before setting Telegram webhook.
+1. Confirm branch/commit and secrets.
+
+```bash
+git status --short
+git rev-parse --short HEAD
+```
+
+2. Prepare server env file outside git.
+
+```bash
+cd deploy/stage03
+cp env.stage03.example .env.stage03
+```
+
+Then replace every `CHANGE_ME_*` value in `.env.stage03` on the server. Do not commit `.env.stage03`.
+
+3. Run database migration.
+
+```bash
+cd deploy/stage03
+docker compose --env-file .env.stage03 -f compose.yml --profile tools run --rm migrate
+```
+
+4. Start API, outbox bridge, worker and Caddy.
+
+```bash
+cd deploy/stage03
+docker compose --env-file .env.stage03 -f compose.yml up -d api outbox-bridge worker caddy
+```
+
+5. Inspect status and logs.
+
+```bash
+cd deploy/stage03
+docker compose --env-file .env.stage03 -f compose.yml ps
+docker compose --env-file .env.stage03 -f compose.yml logs --tail=100 api outbox-bridge worker caddy
+```
+
+6. Verify health endpoint and invalid webhook secret rejection.
+7. Ask user before setting Telegram webhook.
 
 ## 3. Stop Procedure
 
@@ -32,6 +62,13 @@ Future implementation batch should document exact commands after compose files e
 3. Stop API.
 4. Keep PostgreSQL volume unless user confirms deletion.
 5. Keep logs for acceptance evidence, with secrets redacted.
+
+Command target:
+
+```bash
+cd deploy/stage03
+docker compose --env-file .env.stage03 -f compose.yml stop worker outbox-bridge api caddy
+```
 
 ## 4. Health Checks
 

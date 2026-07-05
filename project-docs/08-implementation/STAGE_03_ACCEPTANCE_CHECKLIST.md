@@ -4,7 +4,7 @@
 
 - Document status: active acceptance checklist (confirmed by user 2026-07-06)
 - Scope: Stage 03 文档、真实 Telegram 收件入口、Redis Streams worker、多维表格 Telegram Inbox 和腾讯云 staging 验收。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge、Task 6 Durable Worker Runtime 已通过 focused tests；Task6 affected regression 为 14 passed，全量 backend suite 为 119 passed / 17 skipped。真实 Redis client wiring 和腾讯云 staging rehearsal 仍 pending。
+- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge、Task 6 Durable Worker Runtime 和 Task 7A Real Redis Adapter And Deployment Files 已通过自动化验证；Task7A focused/runtime regression 为 13 passed，全量 backend suite 为 124 passed / 17 skipped。真实腾讯云 staging rehearsal 仍 pending。
 
 ## 1. Acceptance Boundary
 
@@ -68,6 +68,9 @@ These commands are the Stage 03 implementation verification commands. Rows move 
 | `cd backend; pytest tests/integration/test_stage03_customer_binding.py -v` | Customer binding tests pass | Proves bound/unbound/inactive binding behavior |
 | `cd backend; pytest tests/integration/test_stage03_redis_streams_bridge.py -v` | Queue bridge tests pass | Proves committed outbox becomes Redis Streams job and rollback does not |
 | `cd backend; pytest tests/integration/test_stage03_worker_runtime.py -v` | Worker runtime tests pass | Proves bounded worker loop, idempotency and dead letter handling |
+| `cd backend; pytest tests/unit/test_stage03_redis_streams_adapter.py -v` | Redis adapter contract tests pass | Proves production Redis wrapper idempotency, group read decoding and ack delegation without live Redis |
+| `cd backend; pytest tests/unit/test_stage03_worker_runtime_factory.py -v` | Worker factory test passes | Proves deployment worker entrypoint wires Telegram handler |
+| `cd backend; pytest tests/unit/test_stage03_outbox_bridge_runtime_factory.py -v` | Outbox bridge factory test passes | Proves deployment outbox bridge entrypoint wires repository to Redis Streams |
 | `cd backend; pytest tests/unit/test_stage03_telegram_inbox_view.py -v` | Inbox view tests pass | Proves Bitable view fields, limit/order and redaction |
 | `cd backend; alembic upgrade head --sql` | SQL includes all revisions | Proves migrations import and order |
 | `cd backend; pytest tests -v` | Full backend suite passes | Proves Stage 02 + Stage 03 behavior together |
@@ -78,7 +81,7 @@ These commands are the Stage 03 implementation verification commands. Rows move 
 | --- | --- | --- |
 | Stage 03 code development approved by user | passed | User goal on 2026-07-06: "开始实施，严格执行阶段开发和真源文档..." |
 | Runtime config contract | passed | `pytest tests/unit/test_stage03_config.py -v` => 8 passed; `pytest tests -q` => 93 passed, 17 skipped |
-| Tencent Cloud compose files or deploy docs | pending | deployment rehearsal |
+| Tencent Cloud compose files or deploy docs | passed for local files, rehearsal pending | `deploy/stage03/compose.yml`, `deploy/stage03/Caddyfile`, `deploy/stage03/env.stage03.example`, `backend/Dockerfile`; no external deployment executed |
 | Caddy HTTPS endpoint | pending | staging smoke evidence |
 | Telegram update parser | passed | `pytest tests/unit/test_stage03_telegram_update_parser.py -v` => 5 passed; combined config/parser tests 13 passed; full suite 98 passed, 17 skipped |
 | Telegram webhook route | passed | `pytest tests/integration/test_stage03_telegram_webhook.py -v` => 5 passed |
@@ -97,7 +100,13 @@ These commands are the Stage 03 implementation verification commands. Rows move 
 | Worker retry/dead letter | passed | `pytest tests/integration/test_stage03_worker_runtime.py -v` => 5 passed; covers retryable failure to `retry`, exhausted retry to `dead_letter`, audit evidence and `telegram_inbox` field visibility |
 | Affected backend regression after Task 6 | passed | `pytest tests/integration/test_stage03_worker_runtime.py tests/integration/test_stage03_redis_streams_bridge.py tests/unit/test_outbox.py tests/unit/test_stage03_telegram_inbox_view.py -v` => 14 passed |
 | Full backend regression after Task 6 | passed | `pytest tests -q` => 119 passed, 17 skipped; skips are existing online PostgreSQL smoke tests gated by `STAGE02_ONLINE_DATABASE_URL` |
-| Real Redis client / live Redis runtime | pending | `redis` / `redis.asyncio` dependency and live Redis adapter require explicit confirmation before staging |
+| Real Redis adapter code | passed | `pytest tests/unit/test_stage03_redis_streams_adapter.py -q` => 3 passed; `redis>=5.0` declared in `backend/pyproject.toml`; adapter imports without live Redis |
+| Worker runtime entrypoint factory | passed | `pytest tests/unit/test_stage03_worker_runtime_factory.py -q` => 1 passed; `python -m app.workers.stage03_runtime` entrypoint exists |
+| Outbox bridge runtime entrypoint factory | passed | `pytest tests/unit/test_stage03_outbox_bridge_runtime_factory.py -q` => 1 passed; `python -m app.workers.stage03_outbox_bridge_runtime` entrypoint exists |
+| Task7A focused runtime regression | passed | `pytest tests/unit/test_stage03_redis_streams_adapter.py tests/unit/test_stage03_worker_runtime_factory.py tests/unit/test_stage03_outbox_bridge_runtime_factory.py tests/integration/test_stage03_redis_streams_bridge.py tests/integration/test_stage03_worker_runtime.py -q` => 13 passed |
+| Import check without `.pyc` writes | passed | `python -B -c "import app.queues.redis_streams; import app.workers.stage03_runtime; import app.workers.stage03_outbox_bridge_runtime; print('imports ok')"` => `imports ok` |
+| Full backend regression after Task 7A | passed | `pytest tests -q` => 124 passed, 17 skipped; skips are existing online PostgreSQL smoke tests gated by `STAGE02_ONLINE_DATABASE_URL` |
+| Live Redis runtime / staging Redis rehearsal | pending | Requires running compose or Tencent Cloud staging with real Redis and recording evidence |
 | Staging real Telegram webhook rehearsal | pending | manual evidence |
 
 ## 5. Staging Manual Verification Template

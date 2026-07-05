@@ -4,7 +4,7 @@
 
 - Document status: active implementation index
 - Scope: Stage 02 历史入口与 Stage 03 当前阶段入口
-- Current Progress: 2026-07-06 Stage 02 已冻结关闭；Stage 03 已确认转为 active。当前 Stage 03 已完成 Tasks 1-6 本地后端实施与验收记录：真实 Telegram receive-only webhook、最小 customer binding、`telegram_inbox`、PostgreSQL outbox bridge 和 dependency-neutral worker runtime 已有自动化测试证据；Task 7 腾讯云 staging rehearsal 仍等待真实 Redis client、部署文件和外部操作确认。
+- Current Progress: 2026-07-06 Stage 02 已冻结关闭；Stage 03 已确认转为 active。当前 Stage 03 已完成 Tasks 1-6 本地后端实施与 Task 7A 本地部署准备：真实 Telegram receive-only webhook、最小 customer binding、`telegram_inbox`、PostgreSQL outbox bridge、Redis Streams worker runtime、真实 Redis adapter 代码和 Stage03 compose/Caddy/env 文件已有自动化或文件证据；Task 7 腾讯云 staging rehearsal 仍等待真实服务器、DNS、Caddy 证书和 Telegram webhook 外部操作确认。
 
 ## 1. Read Order
 
@@ -45,7 +45,7 @@ Stage 03 complex module docs:
 2. [Stage 03 Customer Binding And Telegram Inbox Module](modules/STAGE_03_CUSTOMER_BINDING_AND_INBOX.md)
 3. [Stage 03 Redis Streams Worker Module](modules/STAGE_03_REDIS_STREAMS_WORKER.md)
 
-Stage 02 已于 2026-07-06 冻结关闭。Stage 03 已由用户于 2026-07-06 确认转为 active，补充决策：Telegram 只收不发、Worker 使用 PostgreSQL Outbox + Redis Streams、Stage 03 暂不调用 LLM、第一批业务场景为 Telegram 收件箱 / 客户消息登记、Webhook 使用 secret token + optional allowlist、做最小客户绑定、部署到腾讯云 CVM staging、HTTPS 使用 Caddy。当前 Tasks 1-6 已进入代码实施并提交；Task 7 真实 staging 前必须确认 Redis client 依赖、部署文件边界以及服务器/DNS/Telegram webhook 外部操作。
+Stage 02 已于 2026-07-06 冻结关闭。Stage 03 已由用户于 2026-07-06 确认转为 active，补充决策：Telegram 只收不发、Worker 使用 PostgreSQL Outbox + Redis Streams、Stage 03 暂不调用 LLM、第一批业务场景为 Telegram 收件箱 / 客户消息登记、Webhook 使用 secret token + optional allowlist、做最小客户绑定、部署到腾讯云 CVM staging、HTTPS 使用 Caddy。当前 Tasks 1-6 和 Task 7A 本地部署准备已进入代码实施并提交候选；Task 7 真实 staging 前必须另行确认服务器、DNS、Telegram webhook 外部操作和 secret handling。
 
 ## 2. Stage 02 Scope
 
