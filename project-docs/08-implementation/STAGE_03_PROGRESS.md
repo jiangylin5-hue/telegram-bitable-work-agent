@@ -4,7 +4,7 @@
 
 - Document status: active progress log (confirmed by user 2026-07-06)
 - Scope: Stage 03 子阶段进度、测试记录、风险和后续项。
-- Current Progress: 2026-07-06 已开始 Stage 03 代码实施。完成 03.0 Runtime Config And Safety Defaults：新增 Stage03 配置字段、安全默认值、staging/production runtime validation，并接入 `create_app()` fail-fast；focused config tests 8 passed，全量 93 passed / 17 skipped。
+- Current Progress: 2026-07-06 已开始 Stage 03 代码实施。完成 03.0 Runtime Config And Safety Defaults 和 Task 2 Telegram Update Parser：新增 Stage03 配置安全门、真实 Telegram update parser 与安全 view DTO；combined focused tests 13 passed，全量 98 passed / 17 skipped。
 
 ## 1. Progress Protocol
 
@@ -29,7 +29,7 @@ Next subphase:
 | --- | --- | --- |
 | 03.0 Documentation and runtime config gate | completed | Docs finalized; runtime config contract implemented and tested (`test_stage03_config.py` 8 passed; full suite 93 passed, 17 skipped) |
 | 03.1 Tencent Cloud staging runtime design | documentation completed, code/deploy pending | Deployment doc exists; no server action yet |
-| 03.2 Real Telegram receive-only webhook | pending code approval | No Stage 03 code yet |
+| 03.2 Real Telegram receive-only webhook | parser completed, route pending | `test_stage03_telegram_update_parser.py` 5 passed; webhook route not implemented yet |
 | 03.3 Minimal customer binding and Telegram Inbox | pending code approval | No Stage 03 code yet |
 | 03.4 PostgreSQL Outbox to Redis Streams worker | pending code approval | No Stage 03 code yet |
 | 03.5 Acceptance, rehearsal and stage close | pending | No Stage 03 tests or staging rehearsal yet |
@@ -86,4 +86,17 @@ Test result: TDD RED first failed because `validate_runtime_settings` was missin
 Not done: No Telegram webhook route, no parser, no customer binding, no Redis Streams worker, no Tencent Cloud deployment, no DNS changes, no Telegram webhook setup, no real Telegram send, no LLM, no provider execution.
 Risks / follow-up: The API runtime intentionally does not require `TELEGRAM_BOT_TOKEN` because Stage 03 is receive-only; webhook setup tooling may still need a Bot Token outside app runtime. Next code task should be Telegram update parser before route implementation.
 Next subphase: Task 2 Telegram Update Parser.
+```
+
+```text
+Date: 2026-07-06
+Subphase: Task 2 Telegram Update Parser
+Status: completed
+Completed: Added Pydantic webhook payload schemas and a parser service for Telegram Bot API message updates. Parser extracts update/message/chat/user ids, message type, received timestamp, text/caption preview and file metadata for photo/document messages. Parser ignores unknown fields, does not download files, raises stable `telegram_update_invalid` errors without echoing raw payload, and exposes a safe view field DTO without raw update or secret-like fields. Followed TDD: wrote parser tests first and observed RED due missing module before implementation.
+Changed files: backend/app/schemas/telegram_webhook.py; backend/app/services/telegram_update_parser.py; backend/tests/unit/test_stage03_telegram_update_parser.py; project-docs/08-implementation/STAGE_03_BACKEND_INTEGRATION_PLAN.md; project-docs/08-implementation/STAGE_03_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_03_PROGRESS.md.
+Tests run: cd backend; pytest tests/unit/test_stage03_telegram_update_parser.py -v; cd backend; pytest tests/unit/test_stage03_config.py tests/unit/test_stage03_telegram_update_parser.py -v; cd backend; pytest tests -q.
+Test result: Parser RED first failed with `ModuleNotFoundError: No module named 'app.services.telegram_update_parser'`. After implementation, parser suite 5 passed, combined config/parser tests 13 passed, full suite 98 passed and 17 skipped. Skips are existing Stage 02 online PostgreSQL smoke tests gated by `STAGE02_ONLINE_DATABASE_URL`.
+Not done: No `/telegram/webhook` route, no secret header validation, no allowlist, no database writes, no outbox event, no customer binding, no Redis Streams worker, no Tencent Cloud deployment, no real Telegram webhook setup.
+Risks / follow-up: Parser currently supports `message` updates first, as required by Stage 03 module doc; non-message update types remain route-level unsupported/malformed handling for Task 3. Next task is receive-only webhook route.
+Next subphase: Task 3 Receive-Only Webhook Route.
 ```

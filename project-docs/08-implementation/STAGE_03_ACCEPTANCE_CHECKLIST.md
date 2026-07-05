@@ -80,6 +80,7 @@ These commands are planned for the later implementation batch. They are not expe
 | Runtime config contract | passed | `pytest tests/unit/test_stage03_config.py -v` => 8 passed; `pytest tests -q` => 93 passed, 17 skipped |
 | Tencent Cloud compose files or deploy docs | pending | deployment rehearsal |
 | Caddy HTTPS endpoint | pending | staging smoke evidence |
+| Telegram update parser | passed | `pytest tests/unit/test_stage03_telegram_update_parser.py -v` => 5 passed; combined config/parser tests 13 passed; full suite 98 passed, 17 skipped |
 | Telegram webhook route | pending | `test_stage03_telegram_webhook.py` |
 | Webhook secret validation | pending | invalid secret test |
 | Allowlist behavior | pending | blocked chat/user test |

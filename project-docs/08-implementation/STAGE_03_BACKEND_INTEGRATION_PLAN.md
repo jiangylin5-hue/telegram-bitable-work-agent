@@ -477,11 +477,11 @@ These tasks are for the later code phase. The current user-approved batch remain
 - Create: `backend/app/schemas/telegram_webhook.py`
 - Test: `backend/tests/unit/test_stage03_telegram_update_parser.py`
 
-- [ ] Step 1: Write parser tests for text message, non-text metadata, malformed update and redaction.
-- [ ] Step 2: Implement parser returning normalized update fields.
-- [ ] Step 3: Ensure parser does not expose Bot Token, secret header or full raw update to view DTOs.
-- [ ] Step 4: Run `pytest tests/unit/test_stage03_telegram_update_parser.py -v`.
-- [ ] Step 5: Update progress.
+- [x] Step 1: Write parser tests for text message, non-text metadata, malformed update and redaction.
+- [x] Step 2: Implement parser returning normalized update fields.
+- [x] Step 3: Ensure parser does not expose Bot Token, secret header or full raw update to view DTOs.
+- [x] Step 4: Run `pytest tests/unit/test_stage03_telegram_update_parser.py -v`.
+- [x] Step 5: Update progress.
 
 ### Task 3: Receive-Only Webhook Route
 
