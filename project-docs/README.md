@@ -2,9 +2,9 @@
 
 ## Status
 
-- Document status: initial project document index
-- Current project mode: Stage 03 documentation finalization
-- Current Progress: 2026-07-06 Stage 02 已冻结关闭；Stage 03 已确认方向为真实 Telegram 收件入口 + PostgreSQL Outbox + Redis Streams worker + Telegram Inbox 多维表格闭环 + 腾讯云 CVM staging + Caddy HTTPS。当前先补齐 Stage 03 完整文档包，不写代码。
+- Document status: active project document index
+- Current project mode: Stage 03 backend implementation
+- Current Progress: 2026-07-06 Stage 02 已冻结关闭；Stage 03 已完成 Tasks 1-6 本地后端实施与验收记录：真实 Telegram receive-only webhook、最小 customer binding、`telegram_inbox`、PostgreSQL outbox bridge 和 dependency-neutral Redis Streams worker runtime 已有自动化测试证据。Task 7 腾讯云 staging rehearsal 仍等待真实 Redis client、部署文件和外部操作确认。
 
 ## Document Map
 
@@ -84,6 +84,7 @@
 - [Stage 03 Tencent Cloud Staging Deployment](08-implementation/STAGE_03_TENCENT_CLOUD_STAGING_DEPLOYMENT.md)
 - [Stage 03 Operations Runbook](08-implementation/STAGE_03_OPERATIONS_RUNBOOK.md)
 - [Stage 03 Risk Register](08-implementation/STAGE_03_RISK_REGISTER.md)
+- [Stage 03 Task 7 Readiness Audit](08-implementation/STAGE_03_TASK7_READINESS_AUDIT.md)
 - [Stage 03 Acceptance Checklist](08-implementation/STAGE_03_ACCEPTANCE_CHECKLIST.md)
 - [Stage 03 Progress](08-implementation/STAGE_03_PROGRESS.md)
 

@@ -4,7 +4,7 @@
 
 - Document status: active deployment design (confirmed by user 2026-07-06)
 - Scope: Stage 03 腾讯云 CVM staging、Docker Compose 单机运行、Caddy HTTPS 反代、Telegram webhook 联调和部署验收边界。
-- Current Progress: 2026-07-06 用户确认 Stage 03 使用腾讯云服务器部署，HTTPS 入口采用域名子域名 + Caddy 自动 HTTPS。本文件先写部署设计，不执行真实服务器操作。
+- Current Progress: 2026-07-06 用户确认 Stage 03 使用腾讯云服务器部署，HTTPS 入口采用域名子域名 + Caddy 自动 HTTPS。Tasks 1-6 本地后端切片已实施；Stage03 compose/Caddy 部署文件、真实 Redis client wiring、腾讯云服务器、DNS 和 Telegram webhook 外部操作仍待用户确认后执行。
 
 ## 1. Deployment Goal
 
@@ -66,7 +66,7 @@ Planned services:
 | `postgres` | Stage 03 database | container health check |
 | `redis` | queue/cache | container health check |
 
-No compose file is created in the current docs-only batch. Implementation should add a staging compose file only after user confirms code/deployment work may start.
+No Stage 03 compose file has been created yet. Implementation should add staging compose/Caddy files only after the user confirms deployment-file work and the real Redis client decision; real server/DNS/Telegram webhook operations still require separate confirmation at execution time.
 
 ## 5. Caddy Route Design
 
@@ -138,7 +138,7 @@ Rules:
 
 ## 8. Deployment Steps For Future Code Phase
 
-These steps are planned, not executed in the current docs-only batch:
+These steps are planned for Task 7 and have not been executed:
 
 1. Provision Tencent Cloud CVM.
 2. Point subdomain DNS `A` record to CVM public IP.
