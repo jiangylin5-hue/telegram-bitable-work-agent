@@ -4,7 +4,7 @@
 
 - Document status: active test plan
 - Scope: Stage 03 automated tests、manual staging verification、验收证据和不可测试项说明。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。`test_stage03_config.py`、`test_stage03_telegram_update_parser.py`、`test_stage03_telegram_webhook.py`、`test_stage03_customer_binding.py`、`test_stage03_telegram_inbox_view.py`、`test_stage03_redis_streams_bridge.py` 和 `test_stage03_worker_runtime.py` 已通过 focused verification；真实 Redis runtime、online migration rehearsal 和 staging manual verification 仍待后续任务完成。
+- Current Progress: 2026-07-06 Stage 03 自动化测试和手工 staging 验收均已记录。`test_stage03_config.py`、`test_stage03_telegram_update_parser.py`、`test_stage03_telegram_webhook.py`、`test_stage03_customer_binding.py`、`test_stage03_telegram_inbox_view.py`、`test_stage03_redis_streams_bridge.py`、`test_stage03_worker_runtime.py`、真实 Redis adapter/factory tests 和全量 backend suite 已有通过证据；真实 Redis runtime、online migration rehearsal 和 real Telegram webhook manual verification 已在腾讯云 staging 完成。
 
 ## 1. Test Strategy
 
@@ -59,6 +59,8 @@ Expected at Stage 03 close:
 - Do not call Telegram network API in automated tests.
 - Use fake Redis or disposable Redis for queue tests.
 - Use disposable or staging-like PostgreSQL for online migration tests.
+- Local development database `ads_agent` is not disposable and must not be used as `STAGE02_ONLINE_DATABASE_URL`.
+- `STAGE02_ONLINE_DATABASE_URL` may only point to the local disposable PostgreSQL started by `backend/docker-compose.stage02-online.yml`, because those tests reset the public schema.
 - Do not store raw card/payment data.
 
 ## 5. Manual Staging Verification
@@ -72,7 +74,7 @@ Manual test:
 3. Confirm invalid secret is rejected.
 4. After explicit user approval, set Telegram webhook to staging endpoint.
 5. Send one real test message.
-6. Verify database row, outbox event, Redis worker processing, `telegram_inbox` view and audit.
+6. Verify database row, outbox event, Redis worker processing, `telegram_inbox` view and audit. Completed in Task 7: update ids `184365900` and `184365901` reached `messages`, `outbox_events`, `ops_audit_events` and `/views/telegram_inbox/records`.
 7. Confirm no real Telegram reply was sent.
 8. Record evidence in `STAGE_03_ACCEPTANCE_CHECKLIST.md`.
 

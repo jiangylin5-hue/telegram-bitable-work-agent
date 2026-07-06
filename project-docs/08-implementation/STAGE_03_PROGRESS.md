@@ -4,7 +4,7 @@
 
 - Document status: active progress log (confirmed by user 2026-07-06)
 - Scope: Stage 03 子阶段进度、测试记录、风险和后续项。
-- Current Progress: 2026-07-06 已开始 Stage 03 代码实施。完成 03.0 Runtime Config And Safety Defaults、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge、Task 6 Durable Worker Runtime、Task 7 readiness audit 和 Task 7A Real Redis Adapter And Deployment Files。本地后端闭环已有自动化测试证据；真实腾讯云服务器、DNS 和 Telegram webhook 外部写入仍未执行，必须另行确认。
+- Current Progress: 2026-07-06 Stage 03 已完成真实 staging 验收。完成 03.0 Runtime Config And Safety Defaults、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge、Task 6 Durable Worker Runtime、Task 7 readiness audit、Task 7A Real Redis Adapter And Deployment Files 和 Task 7 Tencent Cloud Staging Rehearsal。真实 Telegram 测试消息已进入 `telegram_inbox` 并完成 outbox/worker/audit 闭环；Telegram send、LLM、provider 仍保持禁用。
 
 ## 1. Progress Protocol
 
@@ -28,11 +28,11 @@ Next subphase:
 | Subphase | Status | Evidence |
 | --- | --- | --- |
 | 03.0 Documentation and runtime config gate | completed | Docs finalized; runtime config contract implemented and tested (`test_stage03_config.py` 8 passed; full suite 93 passed, 17 skipped) |
-| 03.1 Tencent Cloud staging runtime design | documentation completed, code/deploy pending | Deployment doc exists; no server action yet |
-| 03.2 Real Telegram receive-only webhook | parser and route completed, inbox projection pending under 03.3 | `test_stage03_telegram_update_parser.py` 5 passed; `test_stage03_telegram_webhook.py` 5 passed |
+| 03.1 Tencent Cloud staging runtime design | completed through real staging rehearsal | Tencent Cloud CVM `43.160.215.224`, domain `api.jiangtest1.online`, Caddy HTTPS, Docker Compose services running |
+| 03.2 Real Telegram receive-only webhook | completed | `test_stage03_telegram_update_parser.py` 5 passed; `test_stage03_telegram_webhook.py` 5 passed; Telegram `setWebhook` returned `ok=true`; real webhook delivery observed |
 | 03.3 Minimal customer binding and Telegram Inbox | completed for local/backend slice | `test_stage03_customer_binding.py` 5 passed; `test_stage03_telegram_inbox_view.py` 3 passed; Alembic offline SQL reaches `20260706_0010` |
-| 03.4 PostgreSQL Outbox to Redis Streams worker | local/backend worker runtime and real Redis adapter code completed, live Redis rehearsal pending | `test_stage03_redis_streams_bridge.py` 3 passed; `test_stage03_worker_runtime.py` 5 passed; Task7A focused runtime tests 13 passed; full backend suite 124 passed / 17 skipped |
-| 03.5 Acceptance, rehearsal and stage close | readiness audit and local deployment prep completed, Tencent Cloud rehearsal pending | `STAGE_03_TASK7_READINESS_AUDIT.md` updated; `deploy/stage03/compose.yml`, `Caddyfile`, `env.stage03.example` added; no Tencent Cloud staging rehearsal yet |
+| 03.4 PostgreSQL Outbox to Redis Streams worker | completed with live staging processing evidence | `test_stage03_redis_streams_bridge.py` 3 passed; `test_stage03_worker_runtime.py` 5 passed; Task7A focused runtime tests 13 passed; full backend suite 124 passed / 17 skipped; staging outbox rows processed and worker audit observed |
+| 03.5 Acceptance, rehearsal and stage close | completed | `STAGE_03_ACCEPTANCE_CHECKLIST.md`, `STAGE_03_TENCENT_CLOUD_STAGING_DEPLOYMENT.md`, `STAGE_03_TASK7_READINESS_AUDIT.md` and `STAGE_03_FINAL_ACCEPTANCE_REPORT.md` record final evidence |
 
 ## 3. Progress Records
 
@@ -177,4 +177,30 @@ Test result: TDD RED first failed because `RedisStreamsClient`, `app.workers.sta
 Not done: No Docker image build, no live Redis connection test, no Tencent Cloud SSH/server operation, no DNS change, no Caddy certificate issuance, no Telegram `setWebhook`, no real Telegram message, no real Telegram send, no LLM, no provider execution, no funds movement.
 Risks / follow-up: Redis adapter idempotency is backed by PostgreSQL outbox source-of-truth and a Redis stream scan in this slice; live staging should verify behavior under real Redis before closing Stage 03. Next step is Task 7 real staging rehearsal only after explicit confirmation for server/DNS/webhook operations and secret handling.
 Next subphase: Task 7 Tencent Cloud Staging Rehearsal, gated by explicit external-operation confirmation.
+```
+
+```text
+Date: 2026-07-06
+Subphase: Task 7 Tencent Cloud Staging Rehearsal And Stage 03 Acceptance
+Status: completed
+Completed: Executed the real Tencent Cloud staging rehearsal step by step with user confirmation. Replaced the unused prior nginx deployment, installed Docker/Compose, cloned the private GitHub repo through a deploy key, generated server-only `.env.stage03`, validated compose services, fixed Docker package discovery through commit `d9607e0`, ran Alembic migration against staging PostgreSQL through `20260706_0010`, started `api`, `outbox-bridge`, `worker`, `postgres`, `redis` and `caddy`, verified `/health`, verified invalid webhook secret returns 403, corrected the Telegram Bot Token stored in `.env.stage03`, confirmed `getMe` for `@BitableAgentBot`, set Telegram webhook after explicit confirmation, sent real Telegram messages, and verified database rows, outbox status, audit events and `/views/telegram_inbox/records`.
+Changed files: project-docs/README.md; project-docs/08-implementation/README.md; project-docs/08-implementation/STAGE_03_SOURCE_OF_TRUTH.md; project-docs/08-implementation/STAGE_03_BACKEND_INTEGRATION_PLAN.md; project-docs/08-implementation/STAGE_03_SDD.md; project-docs/08-implementation/STAGE_03_BDD.md; project-docs/08-implementation/STAGE_03_API_CONTRACT.md; project-docs/08-implementation/STAGE_03_DATABASE_AND_MIGRATION_DESIGN.md; project-docs/08-implementation/STAGE_03_SECURITY_AND_PERMISSION_DESIGN.md; project-docs/08-implementation/STAGE_03_TEST_PLAN.md; project-docs/08-implementation/STAGE_03_MODULE_INDEX.md; project-docs/08-implementation/STAGE_03_TENCENT_CLOUD_STAGING_DEPLOYMENT.md; project-docs/08-implementation/STAGE_03_OPERATIONS_RUNBOOK.md; project-docs/08-implementation/STAGE_03_RISK_REGISTER.md; project-docs/08-implementation/STAGE_03_TASK7_READINESS_AUDIT.md; project-docs/08-implementation/STAGE_03_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_03_PROGRESS.md; project-docs/08-implementation/STAGE_03_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/modules/STAGE_03_TELEGRAM_WEBHOOK_INGRESS.md; project-docs/08-implementation/modules/STAGE_03_CUSTOMER_BINDING_AND_INBOX.md; project-docs/08-implementation/modules/STAGE_03_REDIS_STREAMS_WORKER.md.
+Tests run: Server: `docker compose --env-file .env.stage03 -f compose.yml --profile tools run --rm migrate`; `docker compose --env-file .env.stage03 -f compose.yml ps`; Telegram Bot API `getMe`, `setWebhook`, `getWebhookInfo`; public HTTPS `/health`; invalid secret smoke; real Telegram message; PostgreSQL queries for `messages`, `outbox_events`, `ops_audit_events`; public `/views/telegram_inbox/records?limit=3`. Local: `cd backend; pytest tests -q`; documentation consistency/secret checks after final doc update.
+Test result: Migration ran through `20260706_0010`; services `api`, `caddy`, `outbox-bridge`, `postgres`, `redis`, `worker` were running with `postgres` and `redis` healthy; safety env remained `TELEGRAM_SEND_MODE=dry_run`, `LLM_ENABLED=false`, `PROVIDER_MODE=disabled`; Telegram `setWebhook` returned `ok=true`; `getWebhookInfo` returned URL `https://api.jiangtest1.online/telegram/webhook`, `pending_update_count=0`, `ip_address=43.160.215.224`; real update `184365901` appeared in `messages` and `/views/telegram_inbox/records` with `text_preview=stage03 webhook test`, `binding_status=needs_manual_binding`, `processing_status=processed`, `outbox_status=processed`; `outbox_events` shows `telegram.message_received status=processed`; `ops_audit_events` shows `message_ingested`, `telegram.binding.unbound`, `telegram.message_processed`; final local full backend suite passed with 124 passed / 17 skipped.
+Not done: No Telegram real send, no OpenRouter/LLM call, no provider/Meta/card/recharge write, no funds movement, no production cutover, no load/concurrency test.
+Risks / follow-up: Single-node staging is not production. Final server `git rev-parse --short HEAD` was not reprinted in the last evidence command; Docker build/migration/runtime evidence proves the deployed path worked, but future release runbooks should capture commit hash at the end. Bot token was accidentally pasted in chat during setup; it must remain rotated/regenerated and stored only in server env.
+Next subphase: Stage 04 planning after user chooses the next business/agent direction.
+```
+
+```text
+Date: 2026-07-06
+Subphase: Post-acceptance local database configuration note
+Status: completed
+Completed: Documented database environment separation after user confirmed the local PostgreSQL setup. Local development defaults now use `ads_agent`; online smoke tests remain restricted to disposable local PostgreSQL via `STAGE02_ONLINE_DATABASE_URL`; Tencent Cloud staging remains server-only; production database readiness is deferred to a later launch-hardening stage. Added `backend/.env.example` with local development defaults and safety switches only.
+Changed files: backend/.env.example; backend/app/core/config.py; backend/alembic.ini; backend/tests/unit/test_stage03_config.py; project-docs/05-data/POSTGRES_DATABASE_DESIGN.md; project-docs/08-implementation/STAGE_03_TEST_PLAN.md; project-docs/08-implementation/STAGE_03_OPERATIONS_RUNBOOK.md; project-docs/08-implementation/STAGE_03_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/STAGE_03_PROGRESS.md.
+Tests run: cd backend; pytest tests/unit/test_stage03_config.py -q; cd backend; pytest tests -q; cd backend; alembic upgrade head --sql; rg old default database URL scan.
+Test result: Config tests passed with 8 passed; full backend suite passed with 124 passed / 17 skipped; Alembic offline SQL reached `20260706_0010`; old `telegram_bitable_agent` default scan returned no matches in backend/project docs.
+Not done: No production database architecture, backup/PITR, migration approval workflow or managed PostgreSQL decision; those are deferred to production readiness.
+Risks / follow-up: `STAGE02_ONLINE_DATABASE_URL` must never point at `ads_agent`, staging or production because online smoke tests reset public schema.
+Next subphase: Stage 04 planning / production readiness planning when selected by user.
 ```

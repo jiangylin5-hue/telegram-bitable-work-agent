@@ -4,7 +4,7 @@
 
 - Document status: active module design
 - Scope: Stage 03 PostgreSQL Outbox 到 Redis Streams 的投递桥接、worker runtime、retry/dead letter 和审计。
-- Current Progress: 2026-07-06 Redis Streams bridge 和 worker runtime local/backend slice 已完成：新增 queue adapter interface、in-memory Redis Streams adapter、真实 Redis adapter 代码、outbox bridge、consumer-group-like read/ack/pending semantics、worker runner、Stage03 message handler、worker UOW、retry/dead letter、worker audit tests、worker runtime entrypoint 和 outbox bridge runtime entrypoint。live Redis consumer group rehearsal 和腾讯云 staging rehearsal 仍待后续确认与执行。
+- Current Progress: 2026-07-06 Redis Streams bridge、worker runtime 和真实 staging rehearsal 已完成：新增 queue adapter interface、in-memory Redis Streams adapter、真实 Redis adapter 代码、outbox bridge、consumer-group-like read/ack/pending semantics、worker runner、Stage03 message handler、worker UOW、retry/dead letter、worker audit tests、worker runtime entrypoint 和 outbox bridge runtime entrypoint；腾讯云 staging 中 Redis/worker/outbox bridge 已运行，真实 Telegram outbox event 已处理为 `processed` 并写入 worker audit。
 
 ## 1. Scope
 
@@ -178,7 +178,7 @@ Required tests:
 ## 10. Acceptance Criteria
 
 - PostgreSQL outbox remains consistency anchor.
-- Redis Streams worker can run through the queue protocol; live Redis rehearsal remains pending before Stage 03 close.
+- Redis Streams worker can run through the queue protocol; live Redis rehearsal passed for the Stage 03 single-message staging path before Stage 03 close.
 - Worker can be tested in bounded mode.
 - Duplicate Redis delivery does not duplicate business rows.
 - Failures are visible, retryable or dead-lettered with audit.

@@ -28,6 +28,10 @@ def test_stage03_runtime_defaults_are_safe_for_local_tests(
     settings = get_settings()
 
     assert settings.environment == "local"
+    assert settings.database_url == (
+        "postgresql+psycopg://ads_agent:ads_agent@127.0.0.1:5432/"
+        "ads_agent?connect_timeout=3"
+    )
     assert settings.telegram_send_mode == "dry_run"
     assert settings.provider_mode == "disabled"
     assert settings.llm_enabled is False

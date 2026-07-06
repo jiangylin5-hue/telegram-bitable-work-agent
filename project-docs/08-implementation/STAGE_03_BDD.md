@@ -4,7 +4,7 @@
 
 - Document status: active BDD (confirmed by user 2026-07-06)
 - Scope: Stage 03 可验收行为、测试映射和业务证据。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Runtime config、Telegram update parser、receive-only webhook route、customer binding、`telegram_inbox` view、Outbox To Redis Streams bridge、worker runtime、真实 Redis adapter 代码和 Stage03 runtime packaging 已有自动化测试证据；腾讯云 staging rehearsal 仍待确认与执行。
+- Current Progress: 2026-07-06 Stage 03 BDD 已完成自动化和手工 staging 映射。Runtime config、Telegram update parser、receive-only webhook route、customer binding、`telegram_inbox` view、Outbox To Redis Streams bridge、worker runtime、真实 Redis adapter 代码和 Stage03 runtime packaging 已有自动化测试证据；腾讯云 staging rehearsal 已通过真实 Telegram 消息 `stage03 webhook test` 验证。
 
 ## 1. Feature: Receive-Only Telegram Webhook
 
@@ -433,7 +433,8 @@ Then:
 
 Test mapping:
 
-- Manual staging verification recorded in `STAGE_03_ACCEPTANCE_CHECKLIST.md`.
+- Manual staging verification recorded in `STAGE_03_ACCEPTANCE_CHECKLIST.md` and `STAGE_03_FINAL_ACCEPTANCE_REPORT.md`.
+- Evidence: Telegram update `184365901` created inbox record `618e51be-f71e-4793-bb72-67c6b7bfa9a9`, `binding_status=needs_manual_binding`, `processing_status=processed`, `outbox_status=processed`, `trace_id=tg:184365901`; audit includes `message_ingested`, `telegram.binding.unbound` and `telegram.message_processed`.
 
 ## 8. Stage 03 BDD Acceptance
 

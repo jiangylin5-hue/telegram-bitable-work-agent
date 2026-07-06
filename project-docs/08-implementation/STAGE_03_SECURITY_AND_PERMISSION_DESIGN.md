@@ -4,7 +4,7 @@
 
 - Document status: active security design
 - Scope: Stage 03 webhook security、allowlist、secret handling、view masking、audit 和真实外部写入边界。
-- Current Progress: 2026-07-06 Stage 03 runtime safety defaults、staging fail-fast env validation、webhook secret validation、optional chat/user allowlist、`telegram_inbox` scope filtering/redaction、binding resolution audit 和 worker processing/retry/dead-letter audit 已落地并有自动化测试证据；binding admin permission API 和真实 Redis/staging security verification 仍待后续任务或后续阶段。
+- Current Progress: 2026-07-06 Stage 03 runtime safety defaults、staging fail-fast env validation、webhook secret validation、optional chat/user allowlist、`telegram_inbox` scope filtering/redaction、binding resolution audit 和 worker processing/retry/dead-letter audit 已落地并有自动化测试证据；真实 staging 已验证 invalid secret 返回 403、Telegram webhook secret 生效、Bot Token/secret 未入库文档、`TELEGRAM_SEND_MODE=dry_run`、`LLM_ENABLED=false`、`PROVIDER_MODE=disabled`。binding admin permission API 留到后续阶段。
 
 ## 1. Security Goal
 

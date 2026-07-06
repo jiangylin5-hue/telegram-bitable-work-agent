@@ -4,11 +4,28 @@
 
 - Document status: active operations runbook
 - Scope: Stage 03 staging 启停、配置、联调、排障、回滚和证据记录。
-- Current Progress: 2026-07-06 运维手册已建立；Task 7A 已新增本地部署文件和运行时入口，但尚未执行腾讯云服务器、DNS、Caddy 证书签发或 Telegram webhook 设置，任何真实外部操作仍需单独确认。
+- Current Progress: 2026-07-06 运维手册已用于 Task 7 腾讯云 staging rehearsal。Docker、Compose、Caddy、PostgreSQL、Redis、API、outbox bridge、worker、Telegram webhook 和真实测试消息验收均已记录；后续任何新的真实外部操作仍需单独确认。
 
 ## 1. Purpose
 
 本手册用于 Stage 03 腾讯云 staging 环境。它不是生产运维手册，不覆盖真实资金、真实 provider 或客户生产流量。
+
+## 1.1 Database Environment Policy
+
+Stage 03 之后继续开发时，数据库使用必须保持分层：
+
+| Database | Use | Rule |
+| --- | --- | --- |
+| Local `ads_agent` | 本机开发、手工 API 调试、临时数据观察 | 可以执行 `alembic upgrade head`，不能用于会重置 schema 的测试 |
+| Disposable `stage02_online_test` | `STAGE02_ONLINE_DATABASE_URL` online smoke tests | 只能通过 `backend/docker-compose.stage02-online.yml` 启动，测试结束可 `down -v` 删除 |
+| Tencent Cloud staging DB | Stage 03 webhook 和 worker 联调 | 连接串只在服务器 `.env.stage03`，不得复用为本机测试库 |
+| Production DB | 未来正式上线 | 未进入 Stage 03；上线前必须补齐生产数据库方案 |
+
+Important:
+
+- `test_online_postgres_smoke.py` 会重置 public schema，因此 `STAGE02_ONLINE_DATABASE_URL` 绝不能指向 `ads_agent`、staging 或 production。
+- 本机开发默认连接串记录在 `backend/.env.example`，真实 `.env` 不提交。
+- 正式上线前需要补充备份、恢复演练、迁移审批、最小权限账号、secret manager、监控告警和数据保留策略。
 
 ## 2. Start Procedure
 

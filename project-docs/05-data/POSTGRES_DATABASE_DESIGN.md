@@ -4,7 +4,7 @@
 
 - Document status: database design draft
 - Scope: PostgreSQL schema、关系、唯一约束、敏感字段、事务边界、pgvector
-- Current Progress: 2026-07-04 完成第一版数据库设计文档，并对齐多维表格总蓝图补充账户状态事件、绑卡、收款和 Bitable metadata 表。
+- Current Progress: 2026-07-06 完成第一版数据库设计文档，并对齐多维表格总蓝图补充账户状态事件、绑卡、收款和 Bitable metadata 表；补充数据库环境分层规则：本机开发库使用 `ads_agent`，online smoke 使用 disposable PostgreSQL，腾讯云 staging 使用独立 server env，正式上线数据库方案后续单独完善。
 
 ## 1. Database Principles
 
@@ -15,6 +15,26 @@
 - 所有关键状态变化必须写 audit event。
 - 所有外部写入请求必须有 idempotency key。
 - 敏感字段必须分类、脱敏和权限控制。
+
+## 1.1 Database Environment Policy
+
+当前项目数据库按环境分层管理，不能混用：
+
+| Environment | Purpose | Connection | Reset allowed |
+| --- | --- | --- | --- |
+| Local development | 本机跑 API、手工调试、查看开发数据 | `postgresql+psycopg://ads_agent:ads_agent@127.0.0.1:5432/ads_agent?connect_timeout=3` | no |
+| Online smoke / disposable test | 运行会重置 schema 的真实 PostgreSQL smoke tests | `STAGE02_ONLINE_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:55433/stage02_online_test` | yes |
+| Tencent Cloud staging | Stage 03 真实 webhook 联调和验收 | server-only `deploy/stage03/.env.stage03` | no, unless explicitly approved |
+| Production | 正式客户业务 | to be designed in a later production-readiness stage | no |
+
+Rules:
+
+- `ads_agent` 是本机开发库，只用于长期开发和手工调试。
+- `STAGE02_ONLINE_DATABASE_URL` 只能指向 disposable local PostgreSQL，因为 `test_online_postgres_smoke.py` 会在运行前重置 public schema。
+- 不允许把 `STAGE02_ONLINE_DATABASE_URL` 指向 `ads_agent`、腾讯云 staging 或未来 production database。
+- 腾讯云 staging 的数据库密码、连接串和真实 webhook secret 只放在服务器 `.env.stage03`，不进入 git。
+- `backend/.env.example` 只记录本机开发默认值和安全开关，不是正式上线配置。
+- 正式上线前必须另开 production database readiness 文档，至少覆盖 managed PostgreSQL 或自管方案、备份/PITR、迁移审批、权限角色、secret manager、监控告警、容量评估、回滚和数据保留策略。
 
 ## 2. Core Tables
 

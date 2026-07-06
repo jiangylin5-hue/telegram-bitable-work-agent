@@ -4,7 +4,7 @@
 
 - Document status: active API contract
 - Scope: Stage 03 receive-only Telegram webhook and related read/view contracts.
-- Current Progress: 2026-07-06 `POST /telegram/webhook` receive-only contract、`/views/telegram_inbox/records` Stage03 projection、Outbox To Redis Streams Bridge、Durable Worker Runtime、真实 Redis adapter 代码和 Stage03 runtime entrypoints 已按 Stage 03 范围落地并通过 focused tests；staging API/runtime 联调仍待后续确认与执行。
+- Current Progress: 2026-07-06 `POST /telegram/webhook` receive-only contract、`/views/telegram_inbox/records` Stage03 projection、Outbox To Redis Streams Bridge、Durable Worker Runtime、真实 Redis adapter 代码和 Stage03 runtime entrypoints 已按 Stage 03 范围落地并通过 focused tests；staging API/runtime 联调已通过真实 Telegram webhook 和 `telegram_inbox` 查询验证。
 
 ## 1. Contract Boundary
 

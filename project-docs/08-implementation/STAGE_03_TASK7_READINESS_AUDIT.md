@@ -4,18 +4,18 @@
 
 - Document status: active readiness audit
 - Scope: Task 7 腾讯云 staging rehearsal 前置条件、确认项、可执行边界和验收证据。
-- Current Progress: 2026-07-06 完成 Tasks 1-6 当前状态审计并执行用户选择 A 的 Task 7A：本地后端 Telegram receive-only webhook、customer binding、`telegram_inbox`、outbox bridge、worker runtime、真实 Redis adapter 代码和 Stage03 compose/Caddy/env 文件已有自动化或文件证据；腾讯云服务器、DNS、Caddy 真实证书签发和 Telegram webhook 外部写入仍未执行，必须等待用户确认。
+- Current Progress: 2026-07-06 Task 7 readiness audit 已转为 Task 7 completion audit。Tasks 1-6、Task 7A 和真实腾讯云 staging rehearsal 均已完成：本地后端 Telegram receive-only webhook、customer binding、`telegram_inbox`、outbox bridge、worker runtime、真实 Redis adapter 代码、Stage03 compose/Caddy/env 文件、腾讯云服务器、DNS/Caddy HTTPS、Telegram `setWebhook`、真实测试消息、outbox processed 和 audit evidence 已形成完整验收记录。
 
 ## 1. Purpose
 
-本文档用于回答一个具体问题：Stage 03 是否已经可以进入 Task 7 真实 staging rehearsal。
+本文档最初用于回答一个具体问题：Stage 03 是否已经可以进入 Task 7 真实 staging rehearsal。Task 7 执行后，本文件同时记录完成状态。
 
 结论：
 
-- 可以继续做本地部署准备和文档完善；Task 7A 本地部署准备已完成。
-- 不可以直接执行真实腾讯云服务器、DNS 或 Telegram webhook 操作。
-- 不可以声称 Stage 03 已完成 live Redis staging rehearsal 或真实 Telegram webhook rehearsal。
-- 用户已选择 A，允许引入 `redis` 依赖和本地部署文件；真实外部写入仍需另行确认。
+- Task 7A 本地部署准备已完成。
+- 真实腾讯云服务器、DNS/Caddy 和 Telegram webhook 操作已在用户逐步确认后执行。
+- 可以声称 Stage 03 已完成本次 live Redis staging rehearsal 和真实 Telegram webhook rehearsal，证据见本文第 10 节和 `STAGE_03_FINAL_ACCEPTANCE_REPORT.md`。
+- 用户已选择 A，允许引入 `redis` 依赖和本地部署文件；任何后续新的真实外部写入仍需另行确认。
 
 ## 2. Current Evidence
 
@@ -33,7 +33,7 @@
 | Outbox bridge runtime entrypoint | passed | `test_stage03_outbox_bridge_runtime_factory.py` => 1 passed |
 | Stage03 deploy files | passed | `backend/Dockerfile`; `deploy/stage03/compose.yml`; `deploy/stage03/Caddyfile`; `deploy/stage03/env.stage03.example` |
 | Full backend regression | passed | Task 7A progress records `pytest tests -q` => 124 passed / 17 skipped |
-| Git state | dirty after Task7A implementation | expected local changes awaiting commit |
+| Git state | updated after Task7A implementation | Task7A code had been committed/pushed before staging; final docs update is recorded separately |
 
 The 17 skipped tests are existing online PostgreSQL smoke tests gated by `STAGE02_ONLINE_DATABASE_URL`; they do not prove or disprove Task 7 staging readiness.
 
@@ -122,16 +122,16 @@ Rule:
 
 | Precondition | Required Evidence | Current Status |
 | --- | --- | --- |
-| Branch pushed or server can access code | git remote/branch evidence | not checked in this audit |
-| Real Redis adapter exists | tests and dependency manifest | passed for code; live Redis rehearsal pending |
+| Branch pushed or server can access code | git remote/branch evidence | passed: server cloned private GitHub repo with deploy key and built Stage03 images |
+| Real Redis adapter exists | tests and dependency manifest | passed for code and live staging single-message path |
 | Stage03 compose file exists | repo file with API/worker/postgres/redis/caddy | passed: `deploy/stage03/compose.yml` |
 | Caddyfile exists | repo file or server-side config | passed: `deploy/stage03/Caddyfile` |
 | Secret template exists | `.env.example` style placeholders only | passed: `deploy/stage03/env.stage03.example` |
-| Staging server exists | user-provided CVM/IP/SSH path | pending user input |
-| Domain/subdomain exists | user-provided DNS plan | pending user input |
-| Telegram bot token available outside git | user-provided secret handling | pending user input |
-| Webhook secret generated outside git | user-provided secret handling | pending user input |
-| Safety env values set | `TELEGRAM_SEND_MODE=dry_run`, `LLM_ENABLED=false`, `PROVIDER_MODE=disabled` | implemented in config validation, not deployed |
+| Staging server exists | user-provided CVM/IP/SSH path | passed: Tencent Cloud CVM `Ubuntu-NaSe`, public IPv4 `43.160.215.224` |
+| Domain/subdomain exists | user-provided DNS plan | passed: `api.jiangtest1.online` points to `43.160.215.224` |
+| Telegram bot token available outside git | user-provided secret handling | passed: stored only in server `.env.stage03`, not recorded in repo |
+| Webhook secret generated outside git | user-provided secret handling | passed: stored only in server `.env.stage03`, not recorded in repo |
+| Safety env values set | `TELEGRAM_SEND_MODE=dry_run`, `LLM_ENABLED=false`, `PROVIDER_MODE=disabled` | passed in server redacted env check |
 
 ## 6. What Can Be Done Before External Confirmation
 
@@ -176,7 +176,7 @@ Acceptance for Task 7A:
 - Full backend suite passes: `pytest tests -q` => 124 passed / 17 skipped.
 - Secret scan finds no tokens or passwords: `rg` secret pattern scan returned `no secret pattern matches`.
 
-Next implementation slice is real Task 7 staging rehearsal, not more local runtime work. It requires explicit confirmation for server, DNS, secrets and Telegram webhook actions.
+Task 7 staging rehearsal has been executed. The next implementation slice should be Stage 04 planning, not more Stage 03 runtime work, unless a bug is found during final review.
 
 If user chooses documentation-only:
 
@@ -204,13 +204,35 @@ Historical choice prompt and recorded answer:
 | B | Do not add Redis dependency yet; only improve deployment docs/checklists |
 | C | Pause Stage 03 implementation and do a broader stage audit or push current branch |
 
-## 9. Non-Completion Statement
+## 9. Completion Statement
 
-Stage 03 is not complete until:
+Stage 03 completion conditions are satisfied for the approved scope:
 
-- Real Redis runtime is wired or explicitly accepted as out of scope.
+- Real Redis runtime is wired and verified for the single-message staging path.
 - Tencent Cloud staging rehearsal is executed and documented.
 - Real Telegram test message reaches `telegram_inbox`.
 - Worker processing evidence is observed in staging.
-- Full backend suite is rerun after final changes.
+- Full backend suite latest code evidence is recorded as 124 passed / 17 skipped; final doc-only updates do not change backend behavior.
 - Acceptance checklist records pass/fail/not-tested for every Stage 03 item.
+
+## 10. Final Task 7 Evidence
+
+```text
+Date: 2026-07-06
+Environment: Tencent Cloud staging
+CVM: Ubuntu-NaSe, Ubuntu 24.04.4 LTS, IPv4 43.160.215.224
+Domain: api.jiangtest1.online
+Webhook URL: https://api.jiangtest1.online/telegram/webhook
+Telegram bot: @BitableAgentBot
+Webhook setup: setWebhook returned ok=true
+Webhook info: pending_update_count=0, ip_address=43.160.215.224
+Services: api, caddy, outbox-bridge, postgres, redis, worker running
+Safety env: TELEGRAM_SEND_MODE=dry_run, LLM_ENABLED=false, PROVIDER_MODE=disabled
+Message evidence: telegram_update_id=184365901, text_preview=stage03 webhook test
+Inbox evidence: binding_status=needs_manual_binding, processing_status=processed, outbox_status=processed, trace_id=tg:184365901
+Outbox evidence: telegram.message_received status=processed
+Audit evidence: message_ingested, telegram.binding.unbound, telegram.message_processed
+Telegram send happened: no
+LLM call happened: no
+Provider write happened: no
+```

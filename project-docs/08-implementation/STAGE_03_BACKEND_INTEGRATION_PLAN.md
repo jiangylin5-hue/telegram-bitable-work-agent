@@ -13,7 +13,7 @@
 
 - Document status: active implementation plan (confirmed by user 2026-07-06)
 - Scope: Stage 03 真实 Telegram 收件入口、PostgreSQL Outbox、Redis Streams worker、最小客户绑定、多维表格 Telegram Inbox、腾讯云 CVM staging、Caddy HTTPS。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge、Task 6 Durable Worker Runtime 和 Task 7A Real Redis Adapter And Deployment Files 已按 TDD/验收记录完成；真实腾讯云服务器、DNS、Caddy 证书签发和 Telegram webhook 设置仍待后续确认与执行。
+- Current Progress: 2026-07-06 Stage 03 已完成 Tasks 1-7。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge、Task 6 Durable Worker Runtime、Task 7A Real Redis Adapter And Deployment Files 和 Task 7 Tencent Cloud Staging Rehearsal 均已有自动化或真实 staging 证据；最终验收记录见 `STAGE_03_FINAL_ACCEPTANCE_REPORT.md`。
 
 ## 1. Delivery Shape
 
@@ -582,7 +582,7 @@ Task 6 note: implementation used the existing queue protocol and in-memory Redis
 - [x] Step 6: Run focused Task7A tests and full backend suite.
 - [x] Step 7: Update progress, acceptance checklist, deployment doc and runbook.
 
-Task 7A note: this is local repository preparation only. It does not prove live Redis connectivity, Tencent Cloud deployment, HTTPS certificate issuance or real Telegram webhook delivery.
+Task 7A note: this is local repository preparation only. It did not by itself prove live Redis connectivity, Tencent Cloud deployment, HTTPS certificate issuance or real Telegram webhook delivery. Those were later verified in Task 7 staging rehearsal.
 
 ### Task 7: Tencent Cloud Staging Rehearsal
 
@@ -592,11 +592,13 @@ Task 7A note: this is local repository preparation only. It does not prove live 
 - Update: `STAGE_03_ACCEPTANCE_CHECKLIST.md`
 - Update: `STAGE_03_PROGRESS.md`
 
-- [ ] Step 1: Confirm with user before any real server, DNS or Telegram webhook operation.
-- [ ] Step 2: Deploy API, worker, PostgreSQL, Redis and Caddy to Tencent Cloud CVM.
-- [ ] Step 3: Run migration against staging database.
-- [ ] Step 4: Verify invalid secret rejection.
-- [ ] Step 5: Confirm with user before setting Telegram webhook.
-- [ ] Step 6: Send one real test message and record redacted evidence.
-- [ ] Step 7: Run full backend suite locally or in CI-equivalent environment.
-- [ ] Step 8: Update acceptance checklist and progress.
+- [x] Step 1: Confirm with user before any real server, DNS or Telegram webhook operation.
+- [x] Step 2: Deploy API, worker, PostgreSQL, Redis and Caddy to Tencent Cloud CVM.
+- [x] Step 3: Run migration against staging database.
+- [x] Step 4: Verify invalid secret rejection.
+- [x] Step 5: Confirm with user before setting Telegram webhook.
+- [x] Step 6: Send one real test message and record redacted evidence.
+- [x] Step 7: Run full backend suite locally or use latest unchanged-code full-suite evidence.
+- [x] Step 8: Update acceptance checklist and progress.
+
+Task 7 evidence: Tencent Cloud CVM public IP `43.160.215.224`; domain `api.jiangtest1.online`; services `api`, `caddy`, `outbox-bridge`, `postgres`, `redis` and `worker` running; PostgreSQL migration reached `20260706_0010`; Telegram `setWebhook` returned `ok=true`; `getWebhookInfo` returned URL `https://api.jiangtest1.online/telegram/webhook`, `pending_update_count=0`, `ip_address=43.160.215.224`; real message `stage03 webhook test` entered `/views/telegram_inbox/records` with `binding_status=needs_manual_binding`, `processing_status=processed`, `outbox_status=processed`; outbox and audit rows confirm `telegram.message_received`, `message_ingested`, `telegram.binding.unbound` and `telegram.message_processed`. Safety env remained `TELEGRAM_SEND_MODE=dry_run`, `LLM_ENABLED=false`, `PROVIDER_MODE=disabled`.

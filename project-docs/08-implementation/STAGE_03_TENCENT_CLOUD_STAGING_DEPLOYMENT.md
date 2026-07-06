@@ -4,7 +4,7 @@
 
 - Document status: active deployment design (confirmed by user 2026-07-06)
 - Scope: Stage 03 腾讯云 CVM staging、Docker Compose 单机运行、Caddy HTTPS 反代、Telegram webhook 联调和部署验收边界。
-- Current Progress: 2026-07-06 用户确认 Stage 03 使用腾讯云服务器部署，HTTPS 入口采用域名子域名 + Caddy 自动 HTTPS。Tasks 1-6 本地后端切片已实施；Task 7A 已新增 Stage03 Dockerfile、compose、Caddyfile、env 示例、真实 Redis adapter 代码和 worker/outbox bridge 入口。腾讯云服务器、DNS、Caddy 真实证书签发和 Telegram webhook 外部操作仍待用户确认后执行。
+- Current Progress: 2026-07-06 腾讯云 staging rehearsal 已执行并通过验收。域名 `api.jiangtest1.online` 指向 CVM `43.160.215.224`，Caddy 暴露 80/443，FastAPI、PostgreSQL、Redis、outbox bridge 和 worker 运行，Alembic 迁移已跑到 `20260706_0010`，Telegram webhook 已设置，真实测试消息进入 `telegram_inbox` 并完成 worker/audit 闭环。
 
 ## 1. Deployment Goal
 
@@ -77,7 +77,7 @@ Current repository deployment files:
 | `deploy/stage03/Caddyfile` | Terminates HTTPS and reverse-proxies to `api:8000` |
 | `deploy/stage03/env.stage03.example` | Placeholder-only environment template; copy to `.env.stage03` outside git before use |
 
-Real server/DNS/Telegram webhook operations still require separate confirmation at execution time.
+Real server/DNS/Telegram webhook operations were executed only after user confirmation during Task 7 rehearsal. Real secrets remain outside git.
 
 Local compose preflight can be run without creating `.env.stage03`:
 
@@ -157,9 +157,9 @@ Rules:
 - Do not enable send behavior.
 - If webhook setup fails, do not retry blindly with secrets in logs.
 
-## 8. Deployment Steps For Future Staging Rehearsal
+## 8. Deployment Steps Executed In Staging Rehearsal
 
-These steps are planned for Task 7 and have not been executed:
+These steps were executed during Task 7 with user-provided server/browser/terminal control and explicit confirmation before Telegram `setWebhook`:
 
 1. Provision Tencent Cloud CVM.
 2. Point subdomain DNS `A` record to CVM public IP.
@@ -194,7 +194,16 @@ docker compose --env-file .env.stage03 -f compose.yml up -d api outbox-bridge wo
 13. Send one real test message.
 14. Verify `telegram_inbox`, `outbox_events`, Redis Streams worker logs and audit evidence.
 
-Note: the commands above are documented runbook targets. They have not been executed in this repository session.
+Task 7 observed evidence:
+
+- CVM: Tencent Cloud Lightweight/CVM `Ubuntu-NaSe`, public IPv4 `43.160.215.224`, Ubuntu 24.04.4 LTS.
+- Domain: `api.jiangtest1.online`.
+- Docker: Docker `29.6.1`, Docker Compose `v5.3.0`.
+- Services: `api`, `caddy`, `outbox-bridge`, `postgres`, `redis`, `worker` all running; `postgres` and `redis` healthy.
+- Migration: Alembic ran through `20260706_0010 Add Stage 03 Telegram customer bindings and inbox fields`.
+- Webhook: Telegram `setWebhook` returned `ok=true`; `getWebhookInfo` returned URL `https://api.jiangtest1.online/telegram/webhook`, `pending_update_count=0`, `ip_address=43.160.215.224`.
+- Real message: `/views/telegram_inbox/records?limit=3` returned the message `stage03 webhook test` with `binding_status=needs_manual_binding`, `processing_status=processed`, `outbox_status=processed`, `trace_id=tg:184365901`.
+- Safety: `TELEGRAM_SEND_MODE=dry_run`, `LLM_ENABLED=false`, `PROVIDER_MODE=disabled`.
 
 ## 9. Rollback And Safety
 

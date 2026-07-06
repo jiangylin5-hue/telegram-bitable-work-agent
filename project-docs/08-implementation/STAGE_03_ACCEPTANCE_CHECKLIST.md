@@ -4,7 +4,7 @@
 
 - Document status: active acceptance checklist (confirmed by user 2026-07-06)
 - Scope: Stage 03 文档、真实 Telegram 收件入口、Redis Streams worker、多维表格 Telegram Inbox 和腾讯云 staging 验收。
-- Current Progress: 2026-07-06 已进入 Stage 03 代码实施。Task 1 Runtime Config、Task 2 Telegram Update Parser、Task 3 Receive-Only Webhook Route、Task 4 Customer Binding And Telegram Inbox、Task 5 Outbox To Redis Streams Bridge、Task 6 Durable Worker Runtime 和 Task 7A Real Redis Adapter And Deployment Files 已通过自动化验证；Task7A focused/runtime regression 为 13 passed，全量 backend suite 为 124 passed / 17 skipped。真实腾讯云 staging rehearsal 仍 pending。
+- Current Progress: 2026-07-06 Stage 03 已完成真实腾讯云 staging 验收。Task 1-7A 自动化验证通过；Task 7 真实 staging 验收通过：Caddy HTTPS、FastAPI、PostgreSQL、Redis、outbox bridge、worker、Telegram `setWebhook`、真实消息入 `telegram_inbox`、outbox processed 和 audit evidence 均有记录。全量 backend suite 最新代码证据为 124 passed / 17 skipped；最终报告见 `STAGE_03_FINAL_ACCEPTANCE_REPORT.md`。
 
 ## 1. Acceptance Boundary
 
@@ -81,8 +81,8 @@ These commands are the Stage 03 implementation verification commands. Rows move 
 | --- | --- | --- |
 | Stage 03 code development approved by user | passed | User goal on 2026-07-06: "开始实施，严格执行阶段开发和真源文档..." |
 | Runtime config contract | passed | `pytest tests/unit/test_stage03_config.py -v` => 8 passed; `pytest tests -q` => 93 passed, 17 skipped |
-| Tencent Cloud compose files or deploy docs | passed for local files, rehearsal pending | `deploy/stage03/compose.yml`, `deploy/stage03/Caddyfile`, `deploy/stage03/env.stage03.example`, `backend/Dockerfile`; no external deployment executed |
-| Caddy HTTPS endpoint | pending | staging smoke evidence |
+| Tencent Cloud compose files or deploy docs | passed | `deploy/stage03/compose.yml`, `deploy/stage03/Caddyfile`, `deploy/stage03/env.stage03.example`, `backend/Dockerfile`; staging services running on Tencent Cloud CVM |
+| Caddy HTTPS endpoint | passed | `https://api.jiangtest1.online/health` returned 200 in staging; `getWebhookInfo.ip_address=43.160.215.224`; Caddy exposes `0.0.0.0:80` and `0.0.0.0:443` |
 | Telegram update parser | passed | `pytest tests/unit/test_stage03_telegram_update_parser.py -v` => 5 passed; combined config/parser tests 13 passed; full suite 98 passed, 17 skipped |
 | Telegram webhook route | passed | `pytest tests/integration/test_stage03_telegram_webhook.py -v` => 5 passed |
 | Webhook secret validation | passed | `test_receive_only_webhook_rejects_invalid_secret_without_business_rows` passed; no secret echoed in response |
@@ -106,8 +106,10 @@ These commands are the Stage 03 implementation verification commands. Rows move 
 | Task7A focused runtime regression | passed | `pytest tests/unit/test_stage03_redis_streams_adapter.py tests/unit/test_stage03_worker_runtime_factory.py tests/unit/test_stage03_outbox_bridge_runtime_factory.py tests/integration/test_stage03_redis_streams_bridge.py tests/integration/test_stage03_worker_runtime.py -q` => 13 passed |
 | Import check without `.pyc` writes | passed | `python -B -c "import app.queues.redis_streams; import app.workers.stage03_runtime; import app.workers.stage03_outbox_bridge_runtime; print('imports ok')"` => `imports ok` |
 | Full backend regression after Task 7A | passed | `pytest tests -q` => 124 passed, 17 skipped; skips are existing online PostgreSQL smoke tests gated by `STAGE02_ONLINE_DATABASE_URL` |
-| Live Redis runtime / staging Redis rehearsal | pending | Requires running compose or Tencent Cloud staging with real Redis and recording evidence |
-| Staging real Telegram webhook rehearsal | pending | manual evidence |
+| Online PostgreSQL migration rehearsal | passed | `docker compose --profile tools run --rm migrate` ran Alembic through `20260706_0010 Add Stage 03 Telegram customer bindings and inbox fields` against staging PostgreSQL |
+| Live Redis runtime / staging Redis rehearsal | passed | Docker Compose shows `redis` healthy, `outbox-bridge` and `worker` running; staging `outbox_events` for real Telegram updates are `processed`; `ops_audit_events` includes `telegram.message_processed` |
+| Staging real Telegram webhook rehearsal | passed | Telegram `setWebhook` returned `ok=true`; `getWebhookInfo.url=https://api.jiangtest1.online/telegram/webhook`, `pending_update_count=0`; real message `stage03 webhook test` appeared in `/views/telegram_inbox/records` |
+| Safety locks during staging | passed | `.env.stage03` redacted check showed `TELEGRAM_SEND_MODE=dry_run`, `LLM_ENABLED=false`, `PROVIDER_MODE=disabled`, `STAGE03_DOMAIN=api.jiangtest1.online` |
 
 ## 5. Staging Manual Verification Template
 
@@ -131,6 +133,28 @@ Telegram send happened: no
 LLM call happened: no
 Provider write happened: no
 Result:
+```
+
+## 5.1 Recorded Staging Verification
+
+```text
+Date: 2026-07-06
+Environment: Tencent Cloud staging
+Tencent Cloud CVM: Ubuntu-NaSe, Ubuntu 24.04.4 LTS, IPv4 43.160.215.224
+Domain: api.jiangtest1.online
+Webhook URL: https://api.jiangtest1.online/telegram/webhook
+Telegram bot: @BitableAgentBot
+Secret token configured: yes, value not recorded
+Allowlist mode: not configured in final redacted env output
+Command run: docker compose migrate/ps; Telegram getMe/setWebhook/getWebhookInfo; PostgreSQL messages/outbox/audit queries; /views/telegram_inbox/records?limit=3
+Observed API logs: Uvicorn serving; /health 200; invalid webhook secret returned 403
+Observed worker logs: worker service running; worker result confirmed by database/audit evidence
+Observed Bitable view record: telegram_update_id=184365901, text_preview=stage03 webhook test, binding_status=needs_manual_binding, processing_status=processed, outbox_status=processed, trace_id=tg:184365901
+Observed audit event: message_ingested, telegram.binding.unbound, telegram.message_processed
+Telegram send happened: no
+LLM call happened: no
+Provider write happened: no
+Result: passed
 ```
 
 ## 6. Remaining Risks To Track

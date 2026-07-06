@@ -19,8 +19,8 @@ class Settings:
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_model: str = "openrouter/auto"
     database_url: str = (
-        "postgresql+psycopg://postgres:postgres@localhost:5432/"
-        "telegram_bitable_agent"
+        "postgresql+psycopg://ads_agent:ads_agent@127.0.0.1:5432/"
+        "ads_agent?connect_timeout=3"
     )
     telegram_bot_token: str | None = None
     telegram_webhook_secret: str | None = None

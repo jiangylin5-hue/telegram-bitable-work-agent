@@ -4,7 +4,7 @@
 
 - Document status: active database design
 - Scope: Stage 03 数据库增量、迁移边界、唯一约束、敏感字段和验收。
-- Current Progress: 2026-07-06 数据库/迁移设计已建立并部分落地。已新增 migration `20260706_0010_stage03_customer_bindings.py`，包含 `telegram_customer_bindings`、messages Stage03 inbox fields 和 partial unique indexes；Task5 Redis bridge 和 Task6 worker runtime 复用既有 `outbox_events.status/attempts/available_at/processed_at/dispatched_at/idempotency_key/trace_id` 与 `messages.processing_status/outbox_status/last_error_code/processed_at` 字段，无新增迁移；真实在线 PostgreSQL 验证仍待后续环境。
+- Current Progress: 2026-07-06 数据库/迁移设计已落地并通过 staging PostgreSQL 验证。Migration `20260706_0010_stage03_customer_bindings.py` 已在腾讯云 staging 执行，包含 `telegram_customer_bindings`、messages Stage03 inbox fields 和 partial unique indexes；Task5 Redis bridge 和 Task6 worker runtime 复用既有 `outbox_events.status/attempts/available_at/processed_at/dispatched_at/idempotency_key/trace_id` 与 `messages.processing_status/outbox_status/last_error_code/processed_at` 字段；真实 Telegram 测试消息已写入 `messages`、`outbox_events`、`ops_audit_events` 并从 `telegram_inbox` 投影读出。
 
 ## 1. Design Boundary
 
