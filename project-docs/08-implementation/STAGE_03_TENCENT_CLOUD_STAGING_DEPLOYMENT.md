@@ -79,6 +79,15 @@ Current repository deployment files:
 
 Real server/DNS/Telegram webhook operations still require separate confirmation at execution time.
 
+Local compose preflight can be run without creating `.env.stage03`:
+
+```bash
+cd deploy/stage03
+docker compose --env-file env.stage03.example -f compose.yml config
+```
+
+This only validates compose interpolation and service shape. It does not build images, start containers, connect Redis/PostgreSQL, issue Caddy certificates or set Telegram webhook.
+
 ## 5. Caddy Route Design
 
 Expected public route:
@@ -157,26 +166,33 @@ These steps are planned for Task 7 and have not been executed:
 3. Install Docker and Docker Compose plugin.
 4. Copy `deploy/stage03/env.stage03.example` to `deploy/stage03/.env.stage03` on the server and replace placeholders outside git.
 5. Pull the approved branch/commit.
-6. Run the migration service:
+6. Validate compose configuration on the server:
+
+```bash
+cd deploy/stage03
+docker compose --env-file .env.stage03 -f compose.yml config
+```
+
+7. Run the migration service:
 
 ```bash
 cd deploy/stage03
 docker compose --env-file .env.stage03 -f compose.yml --profile tools run --rm migrate
 ```
 
-7. Start staging services:
+8. Start staging services:
 
 ```bash
 cd deploy/stage03
 docker compose --env-file .env.stage03 -f compose.yml up -d api outbox-bridge worker caddy
 ```
 
-8. Verify Caddy obtains certificate.
-9. Run health check through HTTPS.
-10. Verify invalid webhook secret is rejected.
-11. After explicit user confirmation, set Telegram webhook.
-12. Send one real test message.
-13. Verify `telegram_inbox`, `outbox_events`, Redis Streams worker logs and audit evidence.
+9. Verify Caddy obtains certificate.
+10. Run health check through HTTPS.
+11. Verify invalid webhook secret is rejected.
+12. After explicit user confirmation, set Telegram webhook.
+13. Send one real test message.
+14. Verify `telegram_inbox`, `outbox_events`, Redis Streams worker logs and audit evidence.
 
 Note: the commands above are documented runbook targets. They have not been executed in this repository session.
 

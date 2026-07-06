@@ -30,21 +30,39 @@ cp env.stage03.example .env.stage03
 
 Then replace every `CHANGE_ME_*` value in `.env.stage03` on the server. Do not commit `.env.stage03`.
 
-3. Run database migration.
+3. Validate compose configuration before starting containers.
+
+Local placeholder-only preflight:
+
+```bash
+cd deploy/stage03
+docker compose --env-file env.stage03.example -f compose.yml config
+```
+
+Server preflight after `.env.stage03` is populated:
+
+```bash
+cd deploy/stage03
+docker compose --env-file .env.stage03 -f compose.yml config
+```
+
+Both commands should parse the compose file without requiring real containers to start. The local placeholder output may include `CHANGE_ME_*` values and must not be used for live deployment.
+
+4. Run database migration.
 
 ```bash
 cd deploy/stage03
 docker compose --env-file .env.stage03 -f compose.yml --profile tools run --rm migrate
 ```
 
-4. Start API, outbox bridge, worker and Caddy.
+5. Start API, outbox bridge, worker and Caddy.
 
 ```bash
 cd deploy/stage03
 docker compose --env-file .env.stage03 -f compose.yml up -d api outbox-bridge worker caddy
 ```
 
-5. Inspect status and logs.
+6. Inspect status and logs.
 
 ```bash
 cd deploy/stage03
@@ -52,8 +70,8 @@ docker compose --env-file .env.stage03 -f compose.yml ps
 docker compose --env-file .env.stage03 -f compose.yml logs --tail=100 api outbox-bridge worker caddy
 ```
 
-6. Verify health endpoint and invalid webhook secret rejection.
-7. Ask user before setting Telegram webhook.
+7. Verify health endpoint and invalid webhook secret rejection.
+8. Ask user before setting Telegram webhook.
 
 ## 3. Stop Procedure
 
