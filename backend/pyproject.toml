@@ -15,6 +15,10 @@ dependencies = [
     "uvicorn[standard]>=0.30",
 ]
 
+[tool.setuptools.packages.find]
+include = ["app*"]
+exclude = ["alembic*", "tests*"]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
