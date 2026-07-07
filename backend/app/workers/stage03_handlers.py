@@ -10,7 +10,10 @@ from app.models.telegram import Message, TelegramSendRequest
 from app.services.audit import record_audit_event
 from app.services.telegram_intent_placeholder import apply_telegram_intent_placeholder
 from app.services.telegram_ingestion import IngestedMessage
-from app.services.telegram_send_requests import NOT_ALLOWLISTED_ERROR
+from app.services.telegram_send_requests import (
+    CUSTOMER_REPLY_SEND_PURPOSE,
+    NOT_ALLOWLISTED_ERROR,
+)
 
 
 class RetryableStage03WorkerError(RuntimeError):
@@ -44,6 +47,17 @@ class Stage03WorkerUnitOfWork(Protocol):
         pass
 
     def commit(self) -> None:
+        pass
+
+
+class Stage05WorkflowTrigger(Protocol):
+    def run_for_message(
+        self,
+        *,
+        message: IngestedMessage | Message,
+        trace_id: str,
+        uow: "Stage03WorkerUnitOfWork",
+    ):
         pass
 
 
@@ -125,6 +139,8 @@ class SqlAlchemyStage03WorkerUnitOfWork:
 def handle_telegram_message_received(
     fields: dict[str, str],
     uow: Stage03WorkerUnitOfWork,
+    *,
+    stage05_workflow: Stage05WorkflowTrigger | None = None,
 ) -> None:
     event = _load_outbox_event(fields, uow)
     message = _load_message(fields, event, uow)
@@ -163,6 +179,12 @@ def handle_telegram_message_received(
             "intent_status": message.intent_status,
         },
     )
+    if stage05_workflow is not None and _is_stage05_workflow_ready(message):
+        stage05_workflow.run_for_message(
+            message=message,
+            trace_id=event.trace_id,
+            uow=uow,
+        )
     uow.commit()
 
 
@@ -202,7 +224,11 @@ def handle_telegram_test_send_requested(
         event.last_error_redacted = NOT_ALLOWLISTED_ERROR
         _record_test_send_audit(
             uow,
-            event_type="telegram.test_send.blocked",
+            event_type=_send_audit_event_type(
+                send_request,
+                test_send_event="telegram.test_send.blocked",
+                customer_reply_event="customer_reply_send_failed",
+            ),
             send_request=send_request,
             event=event,
             after_state={
@@ -240,6 +266,13 @@ def handle_telegram_test_send_requested(
         event.last_error = send_request.last_error_code
         event.last_error_redacted = send_request.last_error_code
         audit_type = "telegram.test_send.failed"
+    audit_type = _send_audit_event_type(
+        send_request,
+        test_send_event=audit_type,
+        customer_reply_event=(
+            "customer_reply_send_sent" if result.ok else "customer_reply_send_failed"
+        ),
+    )
     send_request.updated_at = now
     _record_test_send_audit(
         uow,
@@ -388,7 +421,26 @@ def _record_test_send_audit(
     )
 
 
+def _send_audit_event_type(
+    send_request: TelegramSendRequest,
+    *,
+    test_send_event: str,
+    customer_reply_event: str,
+) -> str:
+    if send_request.send_purpose == CUSTOMER_REPLY_SEND_PURPOSE:
+        return customer_reply_event
+    return test_send_event
+
+
 def _string_or_none(value: object | None) -> str | None:
     if value is None:
         return None
     return str(value)
+
+
+def _is_stage05_workflow_ready(message: IngestedMessage | Message) -> bool:
+    return (
+        message.binding_status == "bound"
+        and message.intent_status == "intent_ready"
+        and message.customer_id is not None
+    )

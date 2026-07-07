@@ -13,6 +13,8 @@ from app.services.audit import record_audit_event
 from app.services.permissions import Actor, assert_action_allowed
 
 NOT_ALLOWLISTED_ERROR = "telegram_test_send_target_not_allowlisted"
+TEST_SEND_PURPOSE = "test_send"
+CUSTOMER_REPLY_SEND_PURPOSE = "customer_reply_rehearsal"
 
 
 class TelegramSendRequestNotFound(LookupError):
@@ -130,6 +132,8 @@ def create_test_send_request(
         id=uuid4(),
         target_chat_id=request.target_chat_id,
         message_text=request.message_text,
+        send_purpose=TEST_SEND_PURPOSE,
+        message_text_summary=summarize_message_text(request.message_text),
         status="pending_confirmation" if target_allowed else "blocked",
         requested_by_actor_type=actor.actor_type,
         requested_by_actor_id=actor.actor_id,
@@ -194,7 +198,11 @@ def confirm_test_send_request(
             trace_id=send_request.trace_id,
             actor_type=actor.actor_type,
             actor_id=actor.actor_id,
-            event_type="telegram.test_send.blocked",
+            event_type=_send_audit_event_type(
+                send_request,
+                test_send_event="telegram.test_send.blocked",
+                customer_reply_event="customer_reply_send_failed",
+            ),
             entity_type="telegram_send_request",
             entity_id=send_request.id,
             after_state={
@@ -236,7 +244,11 @@ def confirm_test_send_request(
         trace_id=send_request.trace_id,
         actor_type=actor.actor_type,
         actor_id=actor.actor_id,
-        event_type="telegram.test_send.confirmed",
+        event_type=_send_audit_event_type(
+            send_request,
+            test_send_event="telegram.test_send.confirmed",
+            customer_reply_event="customer_reply_send_confirmed",
+        ),
         entity_type="telegram_send_request",
         entity_id=send_request.id,
         after_state={
@@ -260,4 +272,22 @@ def _allowlist_snapshot(
     return {
         "target_allowed": allowed,
         "allowed_chat_count": len(allowed_chat_ids),
+    }
+
+
+def _send_audit_event_type(
+    send_request: TelegramSendRequest,
+    *,
+    test_send_event: str,
+    customer_reply_event: str,
+) -> str:
+    if send_request.send_purpose == CUSTOMER_REPLY_SEND_PURPOSE:
+        return customer_reply_event
+    return test_send_event
+
+
+def summarize_message_text(message_text: str) -> dict[str, object]:
+    return {
+        "length": len(message_text),
+        "preview": message_text[:80],
     }

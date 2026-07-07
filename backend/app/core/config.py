@@ -30,6 +30,10 @@ class Settings:
     telegram_test_send_allowed_chat_ids: tuple[str, ...] = ()
     provider_mode: str = "disabled"
     llm_enabled: bool = False
+    agent_workflow_mode: str = "fake"
+    agent_llm_timeout_seconds: int = 30
+    agent_save_full_prompt: bool = False
+    agent_save_full_response: bool = False
 
 
 def get_settings() -> Settings:
@@ -57,11 +61,35 @@ def get_settings() -> Settings:
         ),
         provider_mode=os.getenv("PROVIDER_MODE", Settings.provider_mode),
         llm_enabled=_env_bool("LLM_ENABLED", Settings.llm_enabled),
+        agent_workflow_mode=os.getenv(
+            "AGENT_WORKFLOW_MODE",
+            Settings.agent_workflow_mode,
+        ),
+        agent_llm_timeout_seconds=_env_int(
+            "AGENT_LLM_TIMEOUT_SECONDS",
+            Settings.agent_llm_timeout_seconds,
+        ),
+        agent_save_full_prompt=_env_bool(
+            "AGENT_SAVE_FULL_PROMPT",
+            Settings.agent_save_full_prompt,
+        ),
+        agent_save_full_response=_env_bool(
+            "AGENT_SAVE_FULL_RESPONSE",
+            Settings.agent_save_full_response,
+        ),
     )
 
 
 def validate_runtime_settings(settings: Settings | None = None) -> Settings:
     settings = settings or get_settings()
+    if (
+        settings.agent_workflow_mode == "real_openrouter"
+        and not settings.openrouter_api_key
+    ):
+        raise RuntimeError(
+            "Missing required Stage 05 OpenRouter environment variables: "
+            "OPENROUTER_API_KEY"
+        )
     if settings.environment in PRODUCTION_LIKE_ENVIRONMENTS:
         missing = [
             name
@@ -77,7 +105,10 @@ def validate_runtime_settings(settings: Settings | None = None) -> Settings:
         unsafe = []
         if settings.telegram_send_mode not in {"dry_run", "restricted_test"}:
             unsafe.append("TELEGRAM_SEND_MODE")
-        if settings.llm_enabled:
+        if (
+            settings.llm_enabled
+            and settings.agent_workflow_mode != "real_openrouter"
+        ):
             unsafe.append("LLM_ENABLED")
         if settings.provider_mode != "disabled":
             unsafe.append("PROVIDER_MODE")
@@ -107,6 +138,13 @@ def _env_bool(name: str, default: bool) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_int(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return int(value.strip())
 
 
 def _env_csv_tuple(name: str) -> tuple[str, ...]:

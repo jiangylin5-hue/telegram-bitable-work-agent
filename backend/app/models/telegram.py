@@ -98,6 +98,17 @@ class TelegramSendRequest(UuidPrimaryKeyMixin, TimestampMixin, Base):
 
     target_chat_id: Mapped[str] = mapped_column(String(80), nullable=False)
     message_text: Mapped[str] = mapped_column(Text, nullable=False)
+    source_service_draft_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("service_drafts.id"),
+        nullable=True,
+    )
+    send_purpose: Mapped[str] = mapped_column(
+        String(60),
+        nullable=False,
+        default="test_send",
+    )
+    message_text_summary: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(
         String(40),
         nullable=False,

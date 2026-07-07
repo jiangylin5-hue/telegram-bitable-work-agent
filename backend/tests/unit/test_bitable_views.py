@@ -165,12 +165,12 @@ def test_account_inventory_view_projects_assignment_and_status_fields() -> None:
     assert response.json()["records"] == [
         {
             "id": "inventory-1",
-            "fields": {
-                "platform": "meta",
-                "external_account_id": "[masked]",
-                "inventory_status": "allocated",
-                "assigned_customer_id": "customer-1",
-                "assigned_at": "2026-07-04T09:00:00+00:00",
+                "fields": {
+                    "platform": "meta",
+                    "external_account_id": "act_2001",
+                    "inventory_status": "allocated",
+                    "assigned_customer_id": "customer-1",
+                    "assigned_at": "2026-07-04T09:00:00+00:00",
                 "status_reason": "assigned after confirmation",
             },
         }

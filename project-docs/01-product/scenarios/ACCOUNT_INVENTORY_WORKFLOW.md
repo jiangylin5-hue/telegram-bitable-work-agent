@@ -4,7 +4,20 @@
 
 - Document status: scenario draft
 - Scope: 账户库存、生产账户、未启用账户、分配给客户、账户状态流转
-- Current Progress: 2026-07-04 新增账户库存场景，并补充 Bitable endpoint。
+- Current Progress: 2026-07-07 根据 Stage05 用户确认补充边界：Account Inventory Agent 不生产账户，只负责账户分发、库存管理和异常状态处理；高确定性风控/封号可自动标记状态，但不自动替换分发。
+
+## 0. Stage 05 Clarification
+
+2026-07-07 用户明确：
+
+- 本项目中的 Account Inventory Agent 不生产账户。
+- 账户生产由人工生产人员、外部系统或后续独立流程负责。
+- Account Inventory Agent 的核心职责是分发账户、管理库存、识别异常、维护账户状态。
+- 账户经常不稳定，可能风控、封号或不可用，因此库存工作流必须覆盖异常状态管理。
+- Stage05 允许 Agent 对高确定性异常自动标记 `blocked`、`disabled` 或 `risk_controlled`，但必须有账户记录、来源证据、状态事件和审计。
+- Stage05 不自动推荐替代账户、不自动预留账户、不自动重新分配账户；替换需求进入人工处理或后续阶段。
+
+后文中关于 Production 生产账户的段落，表示“库存表接收生产结果”的业务背景，不表示 Stage05 Agent 负责生产账户。
 
 ## 1. Business Value
 

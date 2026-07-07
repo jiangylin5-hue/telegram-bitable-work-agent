@@ -1,0 +1,532 @@
+﻿# Stage 05 Progress
+
+## Status
+
+- Document status: active progress log draft
+- Scope: Stage 05 documentation, implementation, testing, staging acceptance and risk tracking.
+- Current Progress: 2026-07-07 Phase 05.1 Task 1 and Task 2, Phase 05.2 Task 3 and Task 4, Phase 05.3 Task 5 and Task 6, Phase 05.4 Task 7, Phase 05.5 Tasks 8-9 and Phase 05.6 Tasks 10-11 completed locally with TDD/verification after user confirmation gates where required. Task12 local staging-contract preflight was added and passed without external calls. Stage05 runtime config, AgentRun evidence, Router schema, Supervisor workflow, child Draft Agents, multi-draft persistence, Service Draft API filters/response, Account Inventory Agent, Confirmation Branch, Customer Reply Send Request and Bitable View tests were added, observed failing, then passed after implementation. Local acceptance audit passed for non-staging scope: focused Stage05 tests, Stage03/Stage04 regression, full suite, Alembic offline SQL, secret scan and whitespace check all have evidence. Migrations `20260707_0012_stage05_agent_run_evidence.py`, `20260707_0013_stage05_service_draft_metadata.py`, `20260707_0015_stage05_account_status_event_metadata.py` and `20260707_0016_stage05_reply_send_link.py` were created and Alembic offline SQL reaches Stage05 head. No dependency install, staging deployment, OpenRouter call or real Telegram send has been executed yet.
+- Current Progress Update: 2026-07-07 Added Stage05 requirement traceability audit. The audit maps major source-of-truth, implementation, security, Bitable endpoint, local verification and exit-gate requirements to current evidence and explicitly keeps real staging, real OpenRouter, real Telegram receipt and safety close as pending.
+- Current Progress Update: 2026-07-07 Added Stage05 out-of-scope runtime guard test. Latest local focused Stage05 suite is now 82 selected tests and latest full backend suite is 255 passed / 17 skipped after the redacted runtime summary command. Final acceptance remains pending real staging evidence and safety close.
+- Current Progress Update: 2026-07-07 Final report local out-of-scope confirmation and risk-register local mitigation summary were added. Final acceptance remains pending real staging evidence and safety close.
+- Current Progress Update: 2026-07-07 Completion audit tightened local dependency evidence. `langgraph` imports and `StateGraph` resolves in the current backend environment; no dependency install, lock refresh, staging env change, OpenRouter call or Telegram send was executed.
+- Current Progress Update: 2026-07-07 Task12 staging evidence ledger template was added to the operations runbook and linked from the acceptance checklist, test plan, final report, traceability audit and local acceptance audit. No staging action was executed.
+- Current Progress Update: 2026-07-07 Task12 pre-staging approval packet was added and linked from Stage05 indexes and acceptance evidence docs. No staging action was executed.
+- Current Progress Update: 2026-07-07 Task12 pre-approval local evidence snapshot was refreshed and recorded in the approval packet. No staging action was executed.
+- Current Progress Update: 2026-07-07 Stage05 code readiness audit was added to the pre-approval evidence set. Runtime AST compile/import and TODO/provider keyword scans passed for local readiness; no staging action was executed.
+- Current Progress Update: 2026-07-07 Stage05 API/OpenAPI readiness audit was added to the pre-approval evidence set. FastAPI app creation, OpenAPI generation and key Stage05 API paths were verified locally; no staging action was executed.
+- Current Progress Update: 2026-07-07 Task12 staging command/evidence map was added to the operations runbook and approval packet. It reuses the Stage03/Stage04 Tencent Cloud deployment pattern, adds Stage05 runtime delta gates, and requires redacted runtime proof before real OpenRouter mode is counted as staging evidence. No staging action was executed.
+- Current Progress Update: 2026-07-07 Stage05 deployment config gate was implemented locally with TDD. `tests/unit/test_stage05_deploy_compose.py` failed against the old compose/env shape, then passed after `deploy/stage03/compose.yml` and `deploy/stage03/env.stage03.example` were updated to keep safe defaults while allowing approved real OpenRouter env to reach runtime services. Stage04 compose regression also passed. No staging action was executed.
+- Current Progress Update: 2026-07-07 Redacted runtime summary command was implemented locally with TDD. `tests/unit/test_stage05_runtime_summary.py` failed before `app.core.runtime_summary` existed, then passed after adding a CLI that prints only modes, booleans, presence flags and validation status. No staging action, OpenRouter call or Telegram send was executed.
+- Current Progress Update: 2026-07-08 Stage05 development detail completion audit was added after user requested a non-verbal, document-based check against all pre-development Stage05 documents. The audit confirms local/non-staging development details are implemented and records remaining `pending-artifact` and `pending-staging` gaps.
+
+## 1. Progress Protocol
+
+每个子阶段完成后追加：
+```text
+Date:
+Subphase:
+Status:
+Completed:
+Changed files:
+Tests run:
+Test result:
+Not done:
+Risks / follow-up:
+Next subphase:
+```
+
+Progress records are historical snapshots. Current status is always the `Status` and latest progress record above older entries.
+
+## 2. Current State
+
+| Subphase | Status | Evidence |
+| --- | --- | --- |
+| 05.0 Documentation And Stage Gate | completed for docs draft | Stage05 source, implementation plan, SDD, BDD, API, DB, security, test, acceptance, progress, runbook, risk, local audit, final report shell and module docs created |
+| 05.1 Runtime Config, Dependency And LLM Evidence Foundation | completed locally for Tasks 1-2 | Runtime config gate and AgentRun evidence model/service completed locally; `langgraph` dependency declaration and local import/StateGraph resolution verified; no package install or lock refresh was run; real staging verification pending |
+| 05.2 Supervisor Graph And Router | completed locally for Tasks 3-4 | Router schema/state and Supervisor workflow/worker delegation completed locally; child draft execution remains 05.3 |
+| 05.3 Child Draft Agents And Multi-Draft Persistence | completed locally for Tasks 5-6 | Four Task5 child Draft Agents, Stage05 draft candidate schema, service_drafts metadata migration, workflow multi-draft persistence and Task6 Service Draft API filters/response fields completed locally |
+| 05.4 Account Inventory Exception Handling | completed locally for Task 7 | Deterministic Account Inventory Agent, narrow auto-mark permission guard, abnormal status event metadata, workflow account exception marking and account_assignment draft generation completed locally |
+| 05.5 Confirmation, Customer Reply Send And No-Op Evidence | completed locally for Tasks 8-9 | Confirmation branches, business no-op evidence, customer reply linked send request, send confirmation, fake worker send and allowlist re-checks completed locally; real staging Telegram receipt remains later acceptance |
+| 05.6 Bitable Views, Regression And Staging Rehearsal | local acceptance and staging-contract preflight completed; real staging pending | Task10 Bitable Views, Task11 Local Acceptance Audit and Task12 local staging-contract preflight completed locally; staging rehearsal and safety close remain pending explicit approval |
+| 05.6 Requirement Traceability Audit | completed locally; real staging rows pending | `STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md` records `passed-local`, `pending-staging`, `guarded-out-of-scope` and `documented-only` status for the Stage05 requirement set |
+| 05.6 Out-of-Scope Runtime Guard | completed locally; staging rows pending | `tests/unit/test_stage05_scope_guards.py` verifies Stage05 runtime files avoid provider/ticket/account-production paths and deferred UI/RAG/skills runtime surfaces |
+| 05.6 Final Report And Risk Summary | completed locally; staging rows pending | `STAGE_05_FINAL_ACCEPTANCE_REPORT.md` now records local out-of-scope confirmations; `STAGE_05_RISK_REGISTER.md` records local mitigation evidence for R05-01 through R05-14 |
+| 05.6 Task12 Evidence Ledger Preparation | completed locally; real ledger pending staging | `STAGE_05_OPERATIONS_RUNBOOK.md` Section 7 defines redacted staging evidence fields, pass conditions and failure actions; final report and checklist now require a completed ledger after approved staging |
+| 05.6 Task12 Pre-Staging Approval Packet | completed locally; approval pending | `STAGE_05_PRE_STAGING_APPROVAL_PACKET.md` defines exact approval boundary, still-forbidden actions, pre-approval evidence, execution order, abort conditions and evidence output |
+| 05.6 Task12 Pre-Approval Evidence Refresh | completed locally; approval pending | Refreshed Stage05 focused tests, scope guard, staging contract, full suite, Alembic offline SQL, strict secret scan and whitespace check; evidence recorded in `STAGE_05_PRE_STAGING_APPROVAL_PACKET.md` |
+| 05.6 Stage05 Code Readiness Audit | completed locally; approval pending | Runtime AST compile, key module import, TODO/NotImplemented scan and direct provider/network keyword scan evidence recorded in `STAGE_05_PRE_STAGING_APPROVAL_PACKET.md` |
+| 05.6 Stage05 API/OpenAPI Readiness Audit | completed locally; approval pending | FastAPI app creation, OpenAPI generation and key Stage05 API path presence verified locally and recorded in `STAGE_05_PRE_STAGING_APPROVAL_PACKET.md` |
+| 05.6 Task12 Staging Command/Evidence Map | completed locally; approval pending | `STAGE_05_OPERATIONS_RUNBOOK.md` Section 4 now maps Stage04 staging reuse, Stage05 runtime delta proof, command categories, API evidence shapes, operator query boundary and safety close; `STAGE_05_PRE_STAGING_APPROVAL_PACKET.md` records the runtime delta gate |
+| 05.6 Stage05 Deployment Config Gate | completed locally; approval pending | `tests/unit/test_stage05_deploy_compose.py` verifies runtime compose/env can carry approved real OpenRouter settings with safe defaults; `tests/unit/test_stage04_deploy_compose.py` still passes |
+| 05.6 Redacted Runtime Summary Command | completed locally; approval pending | `backend/app/core/runtime_summary.py` and `tests/unit/test_stage05_runtime_summary.py` provide the approved container command for redacted Task12 runtime settings proof |
+| 05.6 Development Detail Completion Audit | completed locally; reviewed artifact and staging pending | `STAGE_05_DEVELOPMENT_DETAIL_COMPLETION_AUDIT.md` checks all pre-development Stage05 documents against implementation evidence and lists remaining gaps |
+
+## 3. Progress Records
+
+```text
+Date: 2026-07-08
+Subphase: 05.6 Development Detail Completion Audit
+Status: completed locally; reviewed artifact and staging pending
+Completed: Added STAGE_05_DEVELOPMENT_DETAIL_COMPLETION_AUDIT.md after the user requested a non-verbal, document-based audit. The audit inventories all pre-development Stage05 documents from the implementation plan, required reading, module docs, approval/runbook documents and Account Inventory boundary docs. It maps each document group to implementation evidence, verification commands, out-of-scope guards, pending staging rows and the reviewed-artifact gate. Linked the audit from project indexes, acceptance checklist, requirement traceability audit, final acceptance report and progress log.
+Changed files: project-docs/08-implementation/STAGE_05_DEVELOPMENT_DETAIL_COMPLETION_AUDIT.md; project-docs/README.md; project-docs/08-implementation/README.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: document link scan for STAGE_05_DEVELOPMENT_DETAIL_COMPLETION_AUDIT.md; pending-gap scan over the new audit; no-placeholder scan over the new audit; corrected repo-root `pytest backend\tests\unit\test_stage05_runtime_summary.py -v`; `git diff --check`; strict high-risk secret scan for OpenRouter-style keys, Telegram bot tokens, private keys, GitHub tokens and raw allowlist assignment.
+Test result: The audit document is linked from project index, implementation index, acceptance checklist, final report, traceability audit and progress. No-placeholder scan over the audit returned no matches. The first repo-root attempt using `pytest tests\unit\test_stage05_runtime_summary.py -v` failed because that path is backend-relative; the corrected repo-root command passed 3/3. `git diff --check` reported no whitespace errors and only Windows LF-to-CRLF warnings. Strict high-risk secret scan found no private key, real OpenRouter-style key, Telegram bot token, GitHub token or raw allowlist assignment.
+Not done: Reviewed deployable artifact is not produced because current Stage05 worktree changes are still uncommitted; Tencent Cloud staging deployment, staging migration, real OpenRouter, real allowlisted Telegram receipt, staging business no-op evidence, staging account exception evidence, staging view/audit evidence, safety close and completed Task12 ledger remain pending.
+Risks / follow-up: Do not deploy current old HEAD `3c82a2fc2427c37729cf7ef222be84ede43f1300` as the reviewed Stage05 artifact. Next valid action is to produce a reviewed commit or explicit artifact bundle, then continue Task12 staging rehearsal.
+Next subphase: Reviewed artifact preparation before Task12 Step 2 deployment.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.6 Redacted Runtime Summary Command
+Status: completed locally; approval pending
+Completed: Added a local redacted runtime settings summary command for Task12. The command `python -m app.core.runtime_summary` returns JSON with app env, LLM mode, workflow mode, OpenRouter key presence, Telegram token presence, allowlist presence, prompt/response persistence flags, provider mode and runtime validation status. It intentionally never prints raw OpenRouter keys, Telegram tokens, allowlist values, webhook secret, database URL or Redis URL. Updated the runbook, approval packet, test plan, local audit, acceptance checklist, traceability audit, final report, implementation plan, Bitable view module note and this progress log so staging operators have one safe command for deployed-container runtime proof.
+Changed files: backend/app/core/runtime_summary.py; backend/tests/unit/test_stage05_runtime_summary.py; project-docs/08-implementation/STAGE_05_OPERATIONS_RUNBOOK.md; project-docs/08-implementation/STAGE_05_PRE_STAGING_APPROVAL_PACKET.md; project-docs/08-implementation/STAGE_05_TEST_PLAN.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md; project-docs/08-implementation/STAGE_05_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/modules/STAGE_05_BITABLE_VIEWS.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: RED `pytest tests\unit\test_stage05_runtime_summary.py -v`; GREEN `pytest tests\unit\test_stage05_runtime_summary.py -v`; `pytest tests\integration\test_stage05_staging_contract.py -v`; `python -m app.core.runtime_summary`; `pytest tests -k stage05 -v`; `pytest tests -q`; strict high-risk secret scan; `git diff --check`.
+Test result: RED failed because `app.core.runtime_summary` did not exist. GREEN passed 3/3 after adding the command. Staging contract passed 5/5. Direct local CLI printed only safe JSON fields with no secret values. Focused Stage05 regression passed 82/82 selected with 190 deselected. Full backend suite passed 255/255 with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured. Strict high-risk secret scan found no private key, real OpenRouter-style key, Telegram bot token, GitHub token or raw allowlist assignment. `git diff --check` reported no whitespace errors and only Windows LF-to-CRLF warnings.
+Not done: No Tencent Cloud staging deployment, server env change, real OpenRouter call, real Telegram send, provider execution, customer/customer-group send, dependency install, git staging or commit was performed.
+Risks / follow-up: Local runtime summary proves the command is redacted, but actual deployed-container runtime proof still requires explicit Task12 approval and execution in Tencent Cloud staging.
+Next subphase: Task12 staging rehearsal after explicit approval, or additional local review if requested.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.6 Stage05 Deployment Config Gate
+Status: completed locally; approval pending
+Completed: Added a local Stage05 deployment compose/env gate. The new test first proved that the old `deploy/stage03/compose.yml` and `env.stage03.example` could not carry Stage05 real OpenRouter runtime env into `api`, `outbox-bridge` and `worker`. Then `compose.yml` was updated so runtime services default to LLM-off/fake but can receive approved `LLM_ENABLED`, `AGENT_WORKFLOW_MODE`, OpenRouter metadata and prompt/response persistence flags from server env. The `migrate` service remains LLM-off/fake and provider stays disabled. `env.stage03.example` now documents safe placeholder/default Stage05 real-mode fields. Updated runbook, approval packet, test plan, acceptance checklist, local audit, traceability audit, final report, Stage04 runbook and progress docs to match the new safe-default/approved-override behavior.
+Changed files: deploy/stage03/compose.yml; deploy/stage03/env.stage03.example; backend/tests/unit/test_stage05_deploy_compose.py; project-docs/08-implementation/STAGE_05_OPERATIONS_RUNBOOK.md; project-docs/08-implementation/STAGE_05_PRE_STAGING_APPROVAL_PACKET.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_TEST_PLAN.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md; project-docs/08-implementation/STAGE_05_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/STAGE_04_OPERATIONS_RUNBOOK.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: RED `pytest tests\unit\test_stage05_deploy_compose.py -v`; GREEN `pytest tests\unit\test_stage05_deploy_compose.py -v`; stricter RED/GREEN for quoted compose env interpolation; Stage04 compose regression `pytest tests\unit\test_stage04_deploy_compose.py -v`; staging contract regression `pytest tests\integration\test_stage05_staging_contract.py -v`; local `docker compose --env-file env.stage03.example -f compose.yml config`; redacted real-mode compose override summary; focused Stage05 regression `pytest tests -k stage05 -v`; full backend suite `pytest tests -q`; stale runtime-delta wording scan; strict high-risk secret scan; `git diff --check`.
+Test result: Initial RED failed 2/2 for missing Stage05 real-mode compose/env fields. GREEN passed 2/2. Stricter RED failed 1/2 for unquoted compose env interpolation, then GREEN passed 2/2 after quoting Stage05 runtime env fields. Stage04 compose regression passed 1/1. Staging contract passed 5/5. `docker compose config` rendered successfully with safe defaults `LLM_ENABLED=false`, `AGENT_WORKFLOW_MODE=fake`, prompt/response persistence false and provider disabled; the real-mode override summary returned `llm_true=True`, `workflow_real=True`, `key_present=True`, `prompt_false=True`, `provider_disabled=True` without printing a real key. Focused Stage05 regression passed 79/79 selected with 190 deselected. Full backend suite passed 252/252 with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured. Stale old compose-blocker wording scan found only the intended safe-default sentence. Strict high-risk secret scan returned documented scan command examples only; no private key, real OpenRouter-style key, Telegram bot token, GitHub token or raw allowlist assignment was found. `git diff --check` reported no whitespace errors and only Windows LF-to-CRLF warnings.
+Not done: No Tencent Cloud staging deployment, server env change, real OpenRouter call, real Telegram send, provider execution, customer/customer-group send, dependency install, git staging or commit was performed.
+Risks / follow-up: Local compose/env tests prove deploy artifact readiness only. Final Stage05 acceptance still requires explicit Task12 approval, deployed-container redacted runtime proof, real OpenRouter AgentRun evidence, allowlisted Telegram test receipt, business no-op evidence, account exception evidence, completed ledger and safety close.
+Next subphase: Run focused Stage05 deployment/staging contract regression and documentation scans, then Task12 staging rehearsal after explicit approval.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.6 Task12 Staging Command/Evidence Map
+Status: completed locally; approval pending
+Completed: Added a detailed Task12 command/evidence map to STAGE_05_OPERATIONS_RUNBOOK.md. The map reuses the Stage03/Stage04 Tencent Cloud staging pattern, lists approval/deploy/migration/health/runtime-env/Telegram/Agent/draft/no-op/account-exception/view/audit/safety-close command categories, defines redacted evidence to capture, and sets explicit stop conditions. Updated STAGE_05_PRE_STAGING_APPROVAL_PACKET.md so approval after this point requires reviewing the command/evidence map and verifying the Stage05 runtime delta before the first real OpenRouter call. Updated STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md with the new local documentation evidence.
+Changed files: project-docs/08-implementation/STAGE_05_OPERATIONS_RUNBOOK.md; project-docs/08-implementation/STAGE_05_PRE_STAGING_APPROVAL_PACKET.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: documentation scan for Task12 command/evidence map and runtime delta references; pending/external-action wording scan; `git diff --check`.
+Test result: Task12 command/evidence map and Stage05 runtime delta references were found in the operations runbook, approval packet, local acceptance audit and progress log. Pending/external-action wording scan found no false claim that real OpenRouter or real Telegram send has been executed; the only final-acceptance phrase found was an abort-condition warning not to mark final acceptance passed. `git diff --check` reported no whitespace errors and only Windows LF-to-CRLF warnings.
+Not done: No Tencent Cloud staging deployment, server env change, real OpenRouter call, real Telegram send, provider execution, customer/customer-group send, dependency install, git staging or commit was performed.
+Risks / follow-up: Real Stage05 staging cannot proceed until approval is granted and deployed containers prove `LLM_ENABLED=true` and `AGENT_WORKFLOW_MODE=real_openrouter` inside the `api` and `worker` containers with redacted runtime summaries. Final Stage05 acceptance still requires explicit approval, Task12 execution, completed redacted evidence ledger and safety close evidence.
+Next subphase: Run the documentation verification for this map, then Task12 staging rehearsal after explicit approval.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.6 Stage05 API/OpenAPI Readiness Audit
+Status: completed locally; approval pending
+Completed: Ran a local FastAPI app/OpenAPI readiness check before staging approval. Initial check used two incorrect path assumptions, then root-caused the mismatch against `STAGE_05_API_CONTRACT.md`, route definitions and tests. The actual contract paths are `/confirmations/service-drafts/{draft_id}/actions` and `/views/{view_key}/records`. Reran the readiness check with the contract paths and recorded the evidence in the pre-staging approval packet and linked evidence docs.
+Changed files: project-docs/08-implementation/STAGE_05_PRE_STAGING_APPROVAL_PACKET.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md; project-docs/08-implementation/STAGE_05_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: FastAPI `create_app().openapi()` check for Stage05 key API paths; route/API contract scan over `STAGE_05_API_CONTRACT.md`, route definitions and tests.
+Test result: Corrected readiness check printed `route_count=18`, `openapi_paths=13` and `stage05-api-openapi-readiness-ok`. Required paths present: `/service-drafts`, `/confirmations/service-drafts/{draft_id}/actions`, `/telegram/send-requests/{request_id}/confirm`, `/views/{view_key}/records`.
+Not done: No Tencent Cloud staging deployment, real OpenRouter call, real Telegram send, provider execution, customer/customer-group send, dependency install, staging env change, git staging or commit was performed.
+Risks / follow-up: Local OpenAPI readiness does not replace staging API evidence. Final Stage05 acceptance still requires explicit approval, Task12 execution, completed redacted evidence ledger and safety close evidence.
+Next subphase: Task12 staging rehearsal after explicit approval, or additional local review if requested.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.6 Stage05 Code Readiness Audit
+Status: completed locally; approval pending
+Completed: Ran local code readiness checks for Stage05 runtime-relevant files before staging approval. Added the resulting evidence to the pre-staging approval packet and linked evidence docs. This check is local-only and does not replace real Tencent Cloud staging runtime evidence.
+Changed files: project-docs/08-implementation/STAGE_05_PRE_STAGING_APPROVAL_PACKET.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md; project-docs/08-implementation/STAGE_05_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: Python AST compile over `app/agents`, `app/services`, `app/api/routes` and `app/workers`; import check for Stage05 supervisor, router, child agents, account inventory, workflow, confirmation and Bitable view modules; TODO/FIXME/NotImplemented/stub scan over Stage05 runtime paths; direct provider/network keyword scan over Stage05 runtime paths.
+Test result: AST compile checked 50 files and printed `stage05-runtime-ast-ok`. Key module import check printed `stage05-imports-ok`. TODO/FIXME/NotImplemented/stub scan had no matches. Direct provider/network scan had no action-import matches; the only match was `SENSITIVE_PAYMENT_PATTERN` in `card_binding_draft_agent.py`, which is the intentional card/CVV-like input rejection guard.
+Not done: No Tencent Cloud staging deployment, real OpenRouter call, real Telegram send, provider execution, customer/customer-group send, dependency install, staging env change, git staging or commit was performed.
+Risks / follow-up: Final Stage05 acceptance still requires explicit approval against the pre-staging approval packet, approved Task12 execution, a completed redacted evidence ledger and safety close evidence.
+Next subphase: Task12 staging rehearsal after explicit approval, or additional local review if requested.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.6 Task12 Pre-Approval Evidence Refresh
+Status: completed locally; approval pending
+Completed: Refreshed the required local evidence listed in STAGE_05_PRE_STAGING_APPROVAL_PACKET.md before any Task12 approval request. Recorded the latest local pre-approval snapshot in the approval packet and linked evidence docs. This reduces staging risk without executing any external action.
+Changed files: project-docs/08-implementation/STAGE_05_PRE_STAGING_APPROVAL_PACKET.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md; project-docs/08-implementation/STAGE_05_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: `pytest tests -k stage05 -v`; `pytest tests\unit\test_stage05_scope_guards.py -v`; `pytest tests\integration\test_stage05_staging_contract.py -v`; `pytest tests -q`; `alembic upgrade head --sql` filtered for Stage05 reply-send head/linkage evidence; strict secret scan for private key/OpenRouter-style key/Telegram bot token/GitHub token/raw allowlist assignment; `git diff --check`.
+Test result: Stage05 focused suite passed 77/77 selected with 190 deselected. Scope guard passed 4/4. Staging contract passed 5/5. Full backend suite passed 250/250 with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured. Alembic offline SQL reaches `20260707_0016` and emits Stage05 reply-send linkage columns, FK and indexes. Strict secret scans returned no high-risk matches. `git diff --check` reported no whitespace errors and only Windows LF-to-CRLF warnings.
+Not done: No Tencent Cloud staging deployment, real OpenRouter call, real Telegram send, provider execution, customer/customer-group send, dependency install, staging env change, git staging or commit was performed.
+Risks / follow-up: Final Stage05 acceptance still requires explicit approval against the pre-staging approval packet, approved Task12 execution, a completed redacted evidence ledger and safety close evidence.
+Next subphase: Task12 staging rehearsal after explicit approval, or additional local review if requested.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.6 Task12 Pre-Staging Approval Packet
+Status: completed locally; approval pending
+Completed: Added STAGE_05_PRE_STAGING_APPROVAL_PACKET.md as the single review entry before any Task12 Tencent Cloud staging env change, real OpenRouter call or real Telegram send. The packet records permitted actions, still-forbidden actions, recommended approval wording, required pre-approval evidence, execution order after approval, abort conditions and required redacted evidence output. Linked the packet from the project index, implementation index, acceptance checklist, requirement traceability audit, local acceptance audit, final acceptance report and progress log.
+Changed files: project-docs/08-implementation/STAGE_05_PRE_STAGING_APPROVAL_PACKET.md; project-docs/08-implementation/README.md; project-docs/README.md; project-docs/08-implementation/STAGE_05_SOURCE_OF_TRUTH.md; project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/STAGE_05_MODULE_INDEX.md; project-docs/08-implementation/STAGE_05_OPERATIONS_RUNBOOK.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: approval-packet link scan across project index, implementation index, source of truth, implementation plan, module index, operations runbook, acceptance checklist, traceability audit, local acceptance audit, final acceptance report and progress; pending-placeholder scan over approval packet, progress, acceptance checklist and implementation plan; `git diff --check`.
+Test result: Approval-packet links were found in all required Stage05 entry and evidence docs. Pending-placeholder scan found no unresolved approval-packet placeholders; the remaining unchecked item is Task12 Step 1, which is intentionally pending explicit user approval. `git diff --check` reported no whitespace errors and only Windows LF-to-CRLF warnings.
+Not done: No Tencent Cloud staging deployment, real OpenRouter call, real Telegram send, provider execution, customer/customer-group send, dependency install, staging env change, git staging or commit was performed.
+Risks / follow-up: Final Stage05 acceptance still requires explicit approval against the packet, approved Task12 execution, a completed redacted evidence ledger and safety close evidence.
+Next subphase: Task12 staging rehearsal after explicit approval, or additional local review if requested.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.6 Task12 Evidence Ledger Preparation
+Status: completed locally; real staging ledger pending
+Completed: Added a Task12 evidence ledger template to STAGE_05_OPERATIONS_RUNBOOK.md with required redacted values, pass conditions and failure actions for approval, deployment, migration, service health, OpenRouter env proof, provider-disabled proof, restricted Telegram send proof, inbound message evidence, AgentRun evidence, draft evidence, customer reply send, business no-op evidence, account exception branch, views, audit, out-of-scope reconfirmation and safety close. Linked the ledger requirement from the test plan, acceptance checklist, final acceptance report, traceability audit and local acceptance audit. Normalized two corrupted historical text fragments in STAGE_05_PROGRESS.md.
+Changed files: project-docs/08-implementation/STAGE_05_OPERATIONS_RUNBOOK.md; project-docs/08-implementation/STAGE_05_TEST_PLAN.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: documentation scan for Task12 ledger links across operations runbook, test plan, acceptance checklist, final report, traceability audit, local acceptance audit and progress; pending-placeholder scan over the same docs; `git diff --check`.
+Test result: Task12 ledger links were found in all required Stage05 evidence documents. Pending-placeholder scan found no new unresolved ledger placeholders; remaining pending rows are real staging evidence by design. `git diff --check` reported no whitespace errors and only Windows LF-to-CRLF warnings.
+Not done: No Tencent Cloud staging deployment, real OpenRouter call, real Telegram send, provider execution, customer/customer-group send, dependency install, staging env change, git staging or commit was performed.
+Risks / follow-up: Final Stage05 acceptance still requires explicit approval for Task12 staging rehearsal and a completed redacted ledger with real evidence.
+Next subphase: Task12 staging rehearsal after explicit approval, or additional local review if requested.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.6 Completion Audit And Dependency Evidence Tightening
+Status: completed locally; staging evidence pending
+Completed: Re-read Stage05 source-of-truth, implementation plan, acceptance checklist, traceability audit, test plan, progress, final report and risk/local-audit docs for current-state gaps. Tightened the local dependency evidence so LangGraph is not left as an ambiguous later-verification item: the current backend environment imports `langgraph`, resolves `StateGraph`, and Stage05 graph tests already exercise the supervisor path. Updated acceptance checklist, local acceptance audit, requirement traceability audit and this progress log.
+Changed files: project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: `python -c "import langgraph; from langgraph.graph import StateGraph; print('langgraph-import-ok', StateGraph.__name__)"`; Stage05 requirement/pending scan over source-of-truth, implementation plan, acceptance checklist, traceability audit, test plan, progress, local audit, final report and risk register; `pytest tests -k stage05 -v`.
+Test result: LangGraph import check printed `langgraph-import-ok StateGraph`. Requirement/pending scan confirmed remaining unchecked implementation-plan items are Task12 staging rehearsal steps and the obsolete dependency-verification wording has been removed from current acceptance rows. Stage05 focused suite passed 77/77 selected with 190 deselected.
+Not done: No package install, lock refresh, Tencent Cloud staging deployment, real OpenRouter call, real Telegram send, provider execution, customer/customer-group send, staging env change, git staging or commit was performed.
+Risks / follow-up: Final Stage05 acceptance still requires explicit approval for Task12 staging rehearsal and redacted staging evidence for real OpenRouter, allowlisted Telegram receipt, business no-op evidence, account exception evidence and safety close.
+Next subphase: Task12 staging rehearsal after explicit approval, or additional local review if requested.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.6 Final Report And Risk Summary
+Status: completed locally; staging evidence pending
+Completed: Updated STAGE_05_FINAL_ACCEPTANCE_REPORT.md Section 3 to record local evidence for each out-of-scope item that did not happen locally, plus staging follow-up required after rehearsal. Updated Section 4 with a risk summary mapped to R05-01 through R05-14. Updated STAGE_05_RISK_REGISTER.md with local mitigation evidence for each risk. Updated acceptance checklist and local acceptance audit to reference these artifacts.
+Changed files: project-docs/08-implementation/STAGE_05_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/STAGE_05_RISK_REGISTER.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: `pytest tests\unit\test_stage05_scope_guards.py -v`; `pytest tests -k stage05 -v`; `pytest tests -q`; `git diff --check`; documentation scan over final report, risk register, acceptance checklist, local audit and progress; secret scan over workspace excluding virtualenv/cache/git.
+Test result: Scope guard passed 4/4. Stage05 focused suite passed 77/77 selected with 190 deselected. Full backend suite passed 250/250 with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured. `git diff --check` reported no whitespace errors and only Windows LF-to-CRLF warnings. Documentation scan confirmed final-report/risk-summary links and risk register section numbering. Secret scan returned only config names, placeholders, documented scan patterns and fake test values.
+Not done: No Tencent Cloud staging deployment, real OpenRouter call, real Telegram send, provider execution, customer/customer-group send, dependency install, staging env change, git staging or commit was performed.
+Risks / follow-up: Final Stage05 acceptance still requires explicit approval for Task12 staging rehearsal and redacted staging evidence for real OpenRouter, allowlisted Telegram receipt, business no-op evidence, account exception evidence and safety close.
+Next subphase: Task12 staging rehearsal after explicit approval, or additional local review if requested.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.6 Out-of-Scope Runtime Guard
+Status: completed locally; staging evidence pending
+Completed: Added tests/unit/test_stage05_scope_guards.py. The guard verifies that Stage05 runtime files do not call provider execution, execution-ticket production, account production, assignment confirmation or activation paths; Stage05 confirmation branches remain limited to customer-reply send requests or no-op service evidence; and deferred UI/Mini App/RAG/pgvector/skills runtime surfaces have not been introduced before main Stage05 acceptance.
+Changed files: backend/tests/unit/test_stage05_scope_guards.py; project-docs/08-implementation/STAGE_05_TEST_PLAN.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/modules/STAGE_05_BITABLE_VIEWS.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: RED `pytest tests\unit\test_stage05_scope_guards.py -v` before file creation; GREEN `pytest tests\unit\test_stage05_scope_guards.py -v`; `pytest tests -k stage05 -v`; `pytest tests -q`.
+Test result: RED failed because the guard test file did not exist. First GREEN attempt exposed two test-scope issues, then the guard passed 4/4 after narrowing assertions to the actual Stage05 source boundaries. Stage05 focused suite passed 77/77 selected with 190 deselected. Full backend suite passed 250/250 with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured.
+Not done: No Tencent Cloud staging deployment, real OpenRouter call, real Telegram send, provider execution, customer/customer-group send, dependency install, staging env change, git staging or commit was performed.
+Risks / follow-up: Static source guards complement behavior tests but do not replace staging evidence. Final Stage05 acceptance still requires explicit approval for Task12 staging rehearsal and redacted evidence for real OpenRouter, allowlisted Telegram receipt, business no-op evidence, account exception evidence and safety close.
+Next subphase: Task12 staging rehearsal after explicit approval, or additional local review if requested.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.6 Local Acceptance Evidence Consistency Pass
+Status: completed locally; staging evidence pending
+Completed: Updated the current-state sections of STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md and STAGE_05_FINAL_ACCEPTANCE_REPORT.md so they no longer describe the latest local evidence as Task10-era or fully unevaluated. Current local evidence now reflects Task12 local staging-contract preflight, 73 selected Stage05 tests, 246-test backend suite, requirement traceability audit, and the remaining staging-only blockers for real OpenRouter, allowlisted Telegram receipt, business no-op evidence, account exception evidence and safety close.
+Changed files: project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: `pytest tests -k stage05 -v`; `pytest tests -q`; `git diff --check`; current-state wording scan over STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md and STAGE_05_FINAL_ACCEPTANCE_REPORT.md; secret scan over workspace excluding virtualenv/cache/git.
+Test result: Stage05 focused tests passed 73/73 selected with 190 deselected; full backend suite passed 246 tests with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured; `git diff --check` reported no whitespace errors and only Windows LF-to-CRLF warnings; secret scan returned only config names, placeholders, documented scan patterns and fake test values. Current-state wording scan was rerun after final wording cleanup.
+Not done: No Tencent Cloud staging deployment, real OpenRouter call, real Telegram send, provider execution, customer/customer-group send, dependency install, staging env change, git staging or commit was performed.
+Risks / follow-up: Final Stage05 acceptance still requires explicit approval for Task12 staging rehearsal and redacted staging evidence for real OpenRouter, allowlisted Telegram receipt, business no-op evidence, account exception evidence and safety close.
+Next subphase: Task12 staging rehearsal after explicit approval, or additional local review if requested.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.6 Requirement Traceability Audit
+Status: completed locally; staging evidence pending
+Completed: Added STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md. The audit maps Stage05 source-of-truth, implementation plan, acceptance checklist, test plan, security boundary, Bitable endpoint and exit-gate requirements to current evidence. It distinguishes passed-local requirements from pending-staging requirements and guarded out-of-scope items so final acceptance cannot be inferred from local tests alone.
+Changed files: project-docs/08-implementation/STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md; project-docs/08-implementation/README.md; project-docs/README.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: `pytest tests -k stage05 -v`; `pytest tests -q`; `git diff --check`; `rg -n "STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT" project-docs\README.md project-docs\08-implementation\README.md project-docs\08-implementation\STAGE_05_ACCEPTANCE_CHECKLIST.md project-docs\08-implementation\STAGE_05_FINAL_ACCEPTANCE_REPORT.md project-docs\08-implementation\STAGE_05_PROGRESS.md`; secret scan `rg -n --hidden --glob '!backend/.venv/**' --glob '!**/__pycache__/**' --glob '!**/.pytest_cache/**' --glob '!**/.git/**' "(OPENROUTER_API_KEY|TELEGRAM_BOT_TOKEN|openrouter-[A-Za-z0-9_-]+|[0-9]{6,}:[A-Za-z0-9_-]+|sk-[A-Za-z0-9]{20,})" .`.
+Test result: Stage05 focused tests passed 73/73 selected with 190 deselected; full backend suite passed 246 tests with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured; `git diff --check` reported no whitespace errors and only Windows LF-to-CRLF warnings; traceability audit links were found in both indexes, acceptance checklist, final report and progress log; secret scan returned only config names, placeholders, documented scan patterns and fake test values.
+Not done: No Tencent Cloud staging deployment, real OpenRouter call, real Telegram send, provider execution, customer/customer-group send, dependency install, staging env change, git staging or commit was performed.
+Risks / follow-up: Final Stage05 acceptance still requires explicit approval for Task12 staging rehearsal and redacted evidence for real OpenRouter, allowlisted Telegram receipt, business no-op evidence, account exception evidence and safety close.
+Next subphase: Task12 staging rehearsal after explicit approval, or additional local review if requested.
+```
+
+```text
+Date: 2026-07-07
+Subphase: Stage 05 direction confirmation
+Status: completed for scope discussion
+Completed: User confirmed Stage05 as Agent capability first. Stage05 will use real OpenRouter as main path, LangGraph Supervisor plus child agents, API + Bitable-like views only, Tencent Cloud staging, mixed Chinese/English Telegram validation, multiple draft candidates, customer_reply allowlisted test send, business draft no-op evidence, no RAG, no UI, no production launch, and no provider writes.
+Changed files: discussion only.
+Tests run: not applicable.
+Test result: not applicable.
+Not done: Stage05 docs and code were not yet written at this point.
+Risks / follow-up: Real OpenRouter and Telegram test send are external calls; both require secret hygiene, explicit staging approval and redacted evidence.
+Next subphase: Stage05 documentation package.
+```
+
+```text
+Date: 2026-07-07
+Subphase: Account Inventory Agent boundary clarification
+Status: completed for scope discussion
+Completed: User clarified that the Agent must not produce accounts. Account Inventory Agent is responsible for account distribution, inventory management and exception handling because accounts are unstable, frequently risk-controlled and often blocked. User selected high-confidence automatic marking for risk/block states, and selected no automatic replacement recommendation/reservation/distribution after marking an account abnormal.
+Changed files: discussion only.
+Tests run: not applicable.
+Test result: not applicable.
+Not done: High-level agent docs and Stage05 docs still needed updates at this point.
+Risks / follow-up: Automatic status marking must be narrow, evidence-based and audited so it does not incorrectly disable usable accounts.
+Next subphase: Stage05 documentation package.
+```
+
+```text
+Date: 2026-07-07
+Subphase: Stage 05 documentation package
+Status: completed for docs draft
+Completed: Created Stage05 Source Of Truth, Implementation Plan, SDD, BDD, API Contract, Database And Migration Design, Security And Permission Design, Test Plan, Acceptance Checklist, Progress, Operations Runbook, Risk Register, Local Acceptance Audit, Final Acceptance Report shell, Module Index, six core module docs and one post-acceptance Agent skills reference doc. Updated project indexes. Updated high-level Account Inventory Agent and Account Inventory Workflow docs to clarify that Account Inventory Agent does not produce accounts and does not automatically replace/distribute accounts after abnormal marking.
+Changed files: project-docs/README.md; project-docs/08-implementation/README.md; project-docs/04-agents/ACCOUNT_INVENTORY_AGENT.md; project-docs/01-product/scenarios/ACCOUNT_INVENTORY_WORKFLOW.md; Stage05 docs under project-docs/08-implementation; Stage05 module docs under project-docs/08-implementation/modules.
+Tests run: rg Stage05 file list; rg Stage05 placeholder scan; rg Stage05 boundary term scan; git diff --check.
+Test result: Stage05 file list contains 22 Stage05 docs including six core module docs and one post-acceptance Agent skills reference doc; placeholder scan found no unresolved placeholder patterns in Stage05 docs; boundary scan shows account production, auto replacement, real customer send and provider writes are documented as excluded or constrained; `git diff --check` reported no whitespace errors, only Windows LF-to-CRLF warnings on modified existing docs.
+Not done: No backend code, migration, dependency install, staging deployment, OpenRouter call or Telegram send was executed.
+Risks / follow-up: User must review and approve the Stage05 documentation package before code implementation. Real OpenRouter and allowlisted Telegram test send still require separate staging confirmation.
+Next subphase: User review of Stage05 docs.
+```
+
+```text
+Date: 2026-07-07
+Subphase: Stage 05 Agent skills/capabilities benchmark alignment
+Status: deferred as post-acceptance reference
+Completed: Added Stage05 Agent Skills And Capabilities module after reviewing the official `larksuite/cli` structure as a high-similarity reference. The module adapts Feishu CLI skill patterns such as when-to-use, do-not-use, required context, allowed tools, forbidden actions, output schema, Bitable endpoint, permission gate, confirmation gate, audit events and recovery rules to this project's Telegram + FastAPI + PostgreSQL + LangGraph + Bitable-like architecture. Per latest user instruction, this remains documentation-only until the main Stage05 workflow has completed final acceptance.
+Changed files: project-docs/08-implementation/modules/STAGE_05_AGENT_SKILLS_AND_CAPABILITIES.md; project-docs/08-implementation/STAGE_05_MODULE_INDEX.md; project-docs/08-implementation/STAGE_05_SOURCE_OF_TRUTH.md; project-docs/08-implementation/STAGE_05_SDD.md; project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/STAGE_05_TEST_PLAN.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/README.md.
+Tests run: rg Stage05 skill/capability reference scan; rg Stage05 file list.
+Test result: Stage05 docs now include the Agent skills/capabilities module as a post-acceptance reference and no longer require capability registry code or tests in the main Stage05 implementation/acceptance path.
+Not done: No runtime Codex skill, dynamic skill marketplace, backend capability registry, capability test, backend code or prompt implementation has been created.
+Risks / follow-up: Keep Skills deferred until Stage05 main workflow is complete and accepted. When reopened, implement it as a reviewed static business capability registry first, not as an unreviewed plugin installer or user-editable runtime skill system.
+Next subphase: User review of Stage05 docs.
+```
+
+```text
+Date: 2026-07-07
+Subphase: Stage 05 Skills deferral clarification
+Status: completed for docs draft
+Completed: User clarified that Skills should keep documentation only for now. The runtime Skills/capability registry should be added separately after Stage05 is completed and acceptance checks pass. Updated Stage05 source, SDD, implementation plan, test plan, acceptance checklist, local audit, final report, module index, implementation README and Skills module to remove Skills from the current implementation and acceptance blocker path.
+Changed files: project-docs/08-implementation/STAGE_05_SOURCE_OF_TRUTH.md; project-docs/08-implementation/STAGE_05_SDD.md; project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/STAGE_05_TEST_PLAN.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/STAGE_05_MODULE_INDEX.md; project-docs/08-implementation/README.md; project-docs/08-implementation/modules/STAGE_05_AGENT_SKILLS_AND_CAPABILITIES.md.
+Tests run: rg Stage05 file count; rg Stage05 placeholder scan; rg deferred Skills reference scan; rg capability runtime/test residual scan; git diff --check.
+Test result: Stage05 file count is 22; placeholder scan found no unresolved placeholder patterns; deferred Skills reference scan shows the Skills module is marked post-acceptance/deferred across source, SDD, plan, test, acceptance, index and module docs; capability residual scan found no current runtime-file or capability-test references; `git diff --check` reported no whitespace errors, only Windows LF-to-CRLF warnings on modified existing docs.
+Not done: No backend code or real external call was executed.
+Risks / follow-up: Future developers must not interpret the Skills module as a current Stage05 blocker.
+Next subphase: Documentation consistency scan.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.1 Task 1 Runtime Config And Dependency Gate
+Status: completed locally
+Completed: Added Stage05 configuration tests with TDD. The new tests first failed because `Settings` had no Stage05 Agent workflow fields and staging still rejected all `LLM_ENABLED=true` modes. Implemented `AGENT_WORKFLOW_MODE`, `AGENT_LLM_TIMEOUT_SECONDS`, `AGENT_SAVE_FULL_PROMPT`, `AGENT_SAVE_FULL_RESPONSE`, real OpenRouter key fail-closed validation, Stage05-safe `LLM_ENABLED=true` handling only when `AGENT_WORKFLOW_MODE=real_openrouter`, `.env.example` placeholders and `langgraph` dependency declaration.
+Changed files: backend/pyproject.toml; backend/.env.example; backend/app/core/config.py; backend/tests/unit/test_stage05_config.py; project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: `pytest tests\unit\test_stage03_config.py tests\unit\test_stage04_config.py tests\unit\test_llm_adapters.py -v`; RED `pytest tests\unit\test_stage05_config.py -v`; GREEN `pytest tests\unit\test_stage05_config.py -v`; regression `pytest tests\unit\test_stage03_config.py tests\unit\test_stage04_config.py tests\unit\test_llm_adapters.py tests\unit\test_stage05_config.py -v`; secret scan `rg -n "OPENROUTER_API_KEY|TELEGRAM_BOT_TOKEN|sk-[A-Za-z0-9]|BEGIN PRIVATE KEY|TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS" backend deploy project-docs`; full suite `pytest tests -q`.
+Test result: Baseline config/LLM adapter tests passed 16/16 before edits. RED Stage05 config test failed 4/4 for expected missing fields and missing OpenRouter gate behavior. GREEN Stage05 config test passed 4/4. Focused regression passed 20/20. Secret scan found only config names, placeholders, documented scan patterns and existing fake test values; no real `sk-` key or private key was found. Full backend suite passed 176/176 with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured.
+Not done: No package install or lock refresh was run; no runtime LangGraph graph was implemented; no AgentRun schema/migration was changed; no OpenRouter network call, Telegram send, Tencent Cloud staging change or provider call occurred.
+Risks / follow-up: `langgraph` is declared but not installed/verified in this local environment yet. Full backend suite and Alembic offline SQL are still pending for later local acceptance. Next implementation task must continue with TDD on AgentRun evidence and migration design.
+Next subphase: 05.1 Task 2 AgentRun Evidence Model And Service.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.1 Task 2 AgentRun Evidence Model And Service
+Status: completed locally
+Completed: Added Stage05 AgentRun evidence tests with TDD. The tests first failed because AgentRun had no Stage05 evidence columns, the service did not accept message/usage/cost/latency/created refs metadata, failed AgentRun evidence did not exist, the AgentRun API schema did not exist and migration `20260707_0012_stage05_agent_run_evidence.py` did not exist. Implemented additive AgentRun model fields, success and failure evidence service helpers, operational Pydantic read schema and Alembic migration. Implemented `message_id + started_at` index instead of adding a duplicate `created_at` column because the existing `agent_runs` table already uses `started_at` / `completed_at`.
+Changed files: backend/app/models/agent.py; backend/app/services/agent_runs.py; backend/app/schemas/agent_runs.py; backend/alembic/versions/20260707_0012_stage05_agent_run_evidence.py; backend/tests/unit/test_stage05_openrouter_evidence.py; project-docs/08-implementation/STAGE_05_DATABASE_AND_MIGRATION_DESIGN.md; project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_TEST_PLAN.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: RED `pytest tests\unit\test_stage05_openrouter_evidence.py -v`; GREEN `pytest tests\unit\test_stage05_openrouter_evidence.py -v`; focused regression `pytest tests\unit\test_llm_adapters.py tests\unit\test_model_metadata.py tests\unit\test_initial_migration.py tests\unit\test_stage05_config.py tests\unit\test_stage05_openrouter_evidence.py -v`; migration `alembic upgrade head --sql`; full suite `pytest tests -q`; secret scan `rg -n "OPENROUTER_API_KEY|TELEGRAM_BOT_TOKEN|sk-[A-Za-z0-9]|BEGIN PRIVATE KEY|TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS" backend deploy project-docs`; `git diff --check`.
+Test result: RED failed 5/5 for expected missing Stage05 AgentRun evidence functionality. GREEN passed 5/5. Focused regression passed 24/24. Alembic offline SQL reached revision `20260707_0012` and emitted additive `agent_runs` columns, FK and indexes. Full backend suite passed 181/181 with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured. Secret scan found only config names, placeholders, documented scan patterns and fake test values; no real `sk-` key or private key was found. `git diff --check` reported no whitespace errors, only Windows LF-to-CRLF warnings on modified existing docs/code.
+Not done: No real OpenRouter call was made; no Agent workflow, Router, draft creation, confirmation, views or staging deployment was implemented; no dependency install was run.
+Risks / follow-up: OpenRouter request id is not a first-class column in this migration because the Stage05 database design did not define one; if needed later, discuss and add explicitly. Next implementation task is 05.2 Task 3 Stage05 State And Router Schema.
+Next subphase: 05.2 Task 3 Stage05 State And Router Schema.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.2 Task 3 technical approach gate
+Status: waiting for user confirmation
+Completed: Recorded that Stage05 Router/state schema implementation must wait for explicit confirmation because it changes schema and technical approach. Proposed approach is official LangGraph StateGraph-compatible state, Pydantic v2 Router schemas, reuse of the existing OpenRouter adapter boundary, and no runtime Agent skills/capabilities registry in Task 3.
+Changed files: project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/modules/STAGE_05_AGENT_GRAPH_AND_ROUTING.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: not run; documentation-only gate update.
+Test result: not applicable.
+Not done: No backend schema/router/workflow code was changed. No tests were added because implementation remains blocked on confirmation.
+Risks / follow-up: User must confirm the technical approach before code begins. If confirmed, next step is TDD for `test_stage05_router_schema.py`, then `stage05_state.py`, `schemas.py` and `message_intake_router.py`.
+Next subphase: 05.2 Task 3 Stage05 State And Router Schema after confirmation.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.2 Task 3 Stage05 State And Router Schema
+Status: completed locally
+Completed: User confirmed technical approach A. Added Stage05 Router Pydantic schemas, StateGraph-compatible workflow state initializer, Router request construction, intent-to-child-agent mapping and invalid output mapping to agent_failed. The Router request reuses the existing StructuredLLMRequest boundary and does not make network calls.
+Changed files: backend/app/agents/schemas.py; backend/app/agents/stage05_state.py; backend/app/agents/message_intake_router.py; backend/tests/unit/test_stage05_router_schema.py; project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_TEST_PLAN.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/modules/STAGE_05_AGENT_GRAPH_AND_ROUTING.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: RED `pytest tests\unit\test_stage05_router_schema.py -v`; GREEN `pytest tests\unit\test_stage05_router_schema.py -v`; focused regression `pytest tests\unit\test_stage05_router_schema.py tests\unit\test_stage05_config.py tests\unit\test_stage05_openrouter_evidence.py tests\unit\test_llm_adapters.py -v`; full suite `pytest tests -q`; migration `alembic upgrade head --sql`; secret scan `rg -n "OPENROUTER_API_KEY|TELEGRAM_BOT_TOKEN|sk-[A-Za-z0-9]|BEGIN PRIVATE KEY|TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS" backend deploy project-docs`; `git diff --check`.
+Test result: RED failed 6/6 for expected missing Stage05 Router/state modules. GREEN passed 6/6. Focused regression passed 18/18. Full backend suite passed 187/187 with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured. Alembic offline SQL reached `20260707_0012`. Secret scan found only config names, placeholders, documented scan patterns and fake test values; no real `sk-` key or private key was found. `git diff --check` reported no whitespace errors, only Windows LF-to-CRLF warnings on modified existing docs/code.
+Not done: No Supervisor graph execution, child Agent draft generation, persistence, worker integration, dependency install, real OpenRouter call, Telegram send, provider call or staging deployment was implemented.
+Risks / follow-up: Task 4 must connect this schema/router boundary into the LangGraph workflow and persistence services with integration tests. Invalid OpenRouter adapter JSON parsing errors still need workflow-level mapping in Task 4 because Task 3 only maps invalid Router payload objects.
+Next subphase: 05.2 Task 4 Supervisor Graph.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.2 Task 4 technical approach gate
+Status: waiting for user confirmation
+Completed: Recorded that Supervisor Graph implementation must wait for explicit confirmation because it introduces the LangGraph workflow execution boundary, creates `stage05_supervisor.py`, creates `agent_workflows.py` and modifies `stage03_handlers.py`. Proposed approach is official LangGraph StateGraph with the Task 3 state, service injection for fake local tests, workflow service ownership of message status and AgentRun evidence, minimal worker delegation, and no child draft/account inventory/confirmation/send/staging behavior in Task 4.
+Changed files: project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/modules/STAGE_05_AGENT_GRAPH_AND_ROUTING.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: not run; documentation-only gate update.
+Test result: not applicable.
+Not done: No `stage05_supervisor.py`, `agent_workflows.py`, worker integration, workflow tests, OpenRouter call, Redis worker execution, Telegram send or provider call was implemented.
+Risks / follow-up: User must confirm the Task 4 technical approach before code begins. If confirmed, next step is TDD for `test_stage05_agent_workflow.py` and `test_stage05_worker_runtime.py`.
+Next subphase: 05.2 Task 4 Supervisor Graph after confirmation.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.2 Task 4 Supervisor Graph
+Status: completed locally
+Completed: User confirmed Task4 方案 A. Added official LangGraph StateGraph supervisor builder, Stage05 workflow service with in-memory and SQLAlchemy unit-of-work boundaries, Router AgentRun success/failure evidence, `agent_running`/`routed`/`manual_review`/`agent_failed` status mapping, duplicate workflow trigger no-op and optional Stage05 workflow delegation from Stage03 worker after `bound + intent_ready`. Preserved Stage04 placeholder behavior when no Stage05 workflow is injected.
+Changed files: backend/app/agents/stage05_supervisor.py; backend/app/services/agent_workflows.py; backend/app/workers/stage03_handlers.py; backend/tests/integration/test_stage05_agent_workflow.py; backend/tests/integration/test_stage05_worker_runtime.py; project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/modules/STAGE_05_AGENT_GRAPH_AND_ROUTING.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_TEST_PLAN.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: RED `pytest tests\integration\test_stage05_agent_workflow.py tests\integration\test_stage05_worker_runtime.py -v`; additional RED `pytest tests\integration\test_stage05_agent_workflow.py::test_workflow_maps_llm_runtime_failure_to_agent_failed -v`; GREEN `pytest tests\integration\test_stage05_agent_workflow.py tests\integration\test_stage05_worker_runtime.py -v`; Stage03/Stage04 regression `pytest tests\integration\test_stage03_worker_runtime.py tests\integration\test_stage04_intent_placeholder.py -v`; focused Stage05 regression `pytest tests\unit\test_stage05_router_schema.py tests\unit\test_stage05_config.py tests\unit\test_stage05_openrouter_evidence.py tests\unit\test_llm_adapters.py tests\integration\test_stage05_agent_workflow.py tests\integration\test_stage05_worker_runtime.py -v`; full suite `pytest tests -q`; migration `alembic upgrade head --sql`; secret scan `rg -n "OPENROUTER_API_KEY|TELEGRAM_BOT_TOKEN|sk-[A-Za-z0-9]|BEGIN PRIVATE KEY|TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS" backend deploy project-docs`; `git diff --check`.
+Test result: Initial RED failed 7/8 for expected missing Task4 modules and worker parameter. Additional RED failed for missing outcome reason. GREEN passed 9/9. Stage03/Stage04 regression passed 7/7. Focused Stage05 regression passed 27/27. Full backend suite passed 196/196 with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured. Alembic offline SQL reached `20260707_0012`. Secret scan found only config names, placeholders, documented scan patterns and fake test values; no real `sk-` key or private key was found. `git diff --check` reported no whitespace errors, only Windows LF-to-CRLF warnings on modified existing docs/code.
+Not done: No child Agent draft generation, service draft persistence, account inventory mutation, confirmation/send, real OpenRouter call, Redis worker runtime exercise, provider call or staging deployment was implemented.
+Risks / follow-up: Task 4 marks messages `routed` after Router AgentRun evidence and selected child agents, before actual child draft persistence. Task 5 must replace this bridge with real child Agent draft persistence/idempotency so the Bitable endpoint becomes service_drafts, not only AgentRun evidence.
+Next subphase: 05.3 Task 5 Draft Agents.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.3 Task 5 technical approach gate
+Status: waiting for user confirmation
+Completed: Read Stage05 Draft Agents module, Stage05 database design, Task5 implementation plan, existing service_drafts model/service/API/schema, existing mock router draft tests, service draft API tests, confirmation state machine tests and old worker handler. Recorded proposed Task5 approach: Stage05-specific draft candidate schema, deterministic child-agent pure functions, additive nullable service_drafts metadata migration, workflow persistence integration with `draft:{message_id}:{draft_type}:{intent_index}`, no first-class intent_type DB column unless separately confirmed, and no account inventory/confirmation/send/provider/staging behavior in Task5.
+Changed files: project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/modules/STAGE_05_DRAFT_AGENTS.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: not run; documentation-only gate update after read-only compatibility review.
+Test result: not applicable.
+Not done: No child Agent files, service_drafts model changes, migration, workflow draft persistence or tests were implemented because Task5 technical confirmation is pending.
+Risks / follow-up: User must confirm Task5 approach before code begins. If confirmed, next step is TDD for child Agent unit tests, service_drafts metadata migration tests and one Stage05 workflow integration test that creates multiple drafts.
+Next subphase: 05.3 Task 5 Draft Agents after confirmation.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.3 Task 5 Draft Agents And Multi-Draft Persistence
+Status: completed locally
+Completed: User confirmed Task5 approach A. Added Stage05-specific draft candidate schema and compact draft context, implemented deterministic pure-function child Agents for recharge, card binding, BM invite and customer reply, extended service_drafts with additive metadata fields, added Alembic revision `20260707_0013_stage05_service_draft_metadata.py`, and connected the Stage05 workflow to persist one draft per supported child-agent intent. Draft idempotency uses `draft:{message_id}:{draft_type}:{intent_index}`. Existing Stage02/Stage04 `DraftCandidate` and mock-router service draft behavior were preserved.
+Changed files: backend/app/agents/schemas.py; backend/app/agents/recharge_draft_agent.py; backend/app/agents/card_binding_draft_agent.py; backend/app/agents/bm_invite_draft_agent.py; backend/app/agents/customer_reply_draft_agent.py; backend/app/models/service_drafts.py; backend/app/services/service_drafts.py; backend/app/services/agent_workflows.py; backend/alembic/versions/20260707_0013_stage05_service_draft_metadata.py; backend/tests/unit/test_stage05_child_agents.py; backend/tests/integration/test_stage05_agent_workflow.py; project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/modules/STAGE_05_DRAFT_AGENTS.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_TEST_PLAN.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_DATABASE_AND_MIGRATION_DESIGN.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: RED `pytest tests\unit\test_stage05_child_agents.py tests\integration\test_stage05_agent_workflow.py::test_workflow_routes_bound_intent_ready_message_and_records_agent_run -v`; GREEN same command; workflow/worker regression `pytest tests\integration\test_stage05_agent_workflow.py tests\integration\test_stage05_worker_runtime.py -v`; old draft compatibility regression `pytest tests\unit\test_mock_router_agent.py tests\unit\test_service_drafts_api.py tests\unit\test_service_draft_state_machine.py -v`; model/migration/child regression `pytest tests\unit\test_model_metadata.py tests\unit\test_initial_migration.py tests\unit\test_stage05_child_agents.py -v`; focused Stage05 regression `pytest tests\unit\test_stage05_child_agents.py tests\unit\test_stage05_router_schema.py tests\unit\test_stage05_config.py tests\unit\test_stage05_openrouter_evidence.py tests\unit\test_llm_adapters.py tests\integration\test_stage05_agent_workflow.py tests\integration\test_stage05_worker_runtime.py -v`; migration `alembic upgrade head --sql`; full suite `pytest tests -q`; secret scan; `git diff --check`.
+Test result: RED failed 8/8 for expected missing child Agent modules, Stage05 draft candidate schema, service_drafts metadata migration and workflow draft persistence. GREEN passed 8/8. Workflow/worker regression passed 9/9. Old draft compatibility regression passed 16/16. Model/migration/child regression passed 19/19. Focused Stage05 regression passed 34/34. Alembic offline SQL reached `20260707_0013` and emitted additive service_drafts metadata columns. Full backend suite passed 203/203 with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured. Secret scan found only config names, placeholders, documented scan patterns and fake test values; no real `sk-` key or private key was found. `git diff --check` reported no whitespace errors, only Windows LF-to-CRLF warnings on modified docs/code.
+Not done: No Service Draft API enhancement filters or response-shape changes were implemented; no account inventory mutation, confirmation/send, provider call, real OpenRouter call, Redis worker runtime exercise, Tencent Cloud staging deployment or Telegram send occurred.
+Risks / follow-up: Task6 must add API filter/response behavior separately after confirmation because it changes API contract. Task5 may create `needs_more_info` drafts when required fields are absent; this is intentional and must be handled by later review/confirmation flows. `account_assignment` and `account_status_exception` remain owned by 05.4 Account Inventory Agent.
+Next subphase: 05.3 Task 6 Service Draft API Enhancements after confirmation.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.3 Task 6 Service Draft API Enhancements
+Status: completed locally
+Completed: User confirmed Task6. Extended `/service-drafts` list API to support `status`, `draft_type`, `customer_id`, `source_message_id`, `trace_id` and API-contract `limit` filters. Extended ServiceDraft response schema to include `risk_flags`, `confidence`, `created_by_type`, `created_by_id`, `source_message_id` and `created_at`. Moved filtering into the ServiceDraft UOW boundary for both in-memory and SQLAlchemy implementations, keeping the route thin. Confirmed the response does not expose raw LLM prompt/response fields.
+Changed files: backend/app/api/routes/service_drafts.py; backend/app/schemas/service_drafts.py; backend/app/services/service_drafts.py; backend/tests/unit/test_service_drafts_api.py; project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_TEST_PLAN.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: RED `pytest tests\unit\test_service_drafts_api.py -v`; GREEN same command; draft/confirmation regression `pytest tests\unit\test_mock_router_agent.py tests\unit\test_service_drafts_api.py tests\unit\test_service_draft_state_machine.py -v`; Stage05 draft/workflow regression `pytest tests\unit\test_stage05_child_agents.py tests\integration\test_stage05_agent_workflow.py tests\integration\test_stage05_worker_runtime.py -v`.
+Test result: RED failed 3/4 for expected missing Task6 response fields and query filters before implementation. GREEN passed 5/5. Draft/confirmation regression passed 19/19. Stage05 draft/workflow regression passed 16/16. Full backend suite passed 206/206 with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured. Alembic offline SQL reached `20260707_0013`. Secret scan found only config names, placeholders, documented scan patterns and fake test values; no real `sk-` key or private key was found. `git diff --check` reported no whitespace errors, only Windows LF-to-CRLF warnings on modified docs/code.
+Not done: No confirmation branch change, customer reply send request, account inventory mutation, provider call, real OpenRouter call, Redis worker runtime exercise, Tencent Cloud staging deployment or Telegram send occurred.
+Risks / follow-up: Task6 only exposes operational fields already present on `service_drafts`. It does not yet implement Bitable views or confirmation/send side effects. Next phase starts 05.4 Account Inventory Exception Handling and must be confirmed because it changes account status mutation rules.
+Next subphase: 05.4 Task 7 Account Inventory Agent after technical confirmation.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.4 Task 7 technical approach gate
+Status: waiting for user confirmation
+Completed: Read Account Inventory Agent module, Task7 implementation plan, existing `account_inventory.py`, account models, permissions service and current inventory tests. Recorded proposed Task7 approach: deterministic Account Inventory Agent policy logic, service-level mutation boundary, narrow `auto_mark_account_exception` guard for manager/admin or `actor_id=account_inventory_agent` only, allowed automatic statuses limited to `blocked`, `disabled` and `risk_controlled`, additive `account_status_events` confidence/risk_flags metadata, audit event `account.exception_marked`, and no account production/replacement/reservation/automatic assignment/provider calls.
+Changed files: project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/modules/STAGE_05_ACCOUNT_INVENTORY_AGENT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: not run; documentation-only gate update after read-only compatibility review.
+Test result: not applicable.
+Not done: No `account_inventory_agent.py`, account inventory service mutation, permissions code, migration, workflow integration or tests were implemented because Task7 requires explicit technical confirmation before code.
+Risks / follow-up: The main risk is accidentally granting inventory mutation to all `agent` role actors. The proposed approach avoids this with an actor-id-specific service guard. User must confirm before TDD starts.
+Next subphase: 05.4 Task 7 Account Inventory Agent after confirmation.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.4 Task 7 Account Inventory Agent
+Status: completed locally
+Completed: User confirmed the existing Task7 plan. Added deterministic Account Inventory Agent policy logic for `account_assignment` draft candidates and `account_status_exception` decisions. Added narrow `auto_mark_account_exception` guard for manager/admin or `actor_id=account_inventory_agent` only. Added service-level `mark_account_exception_from_agent(...)` mutation boundary. Automatic status changes are limited to `blocked`, `disabled` and `risk_controlled`, require high confidence and allowed risk flags, and write `account_status_events` plus audit `account.exception_marked`. Added account status event metadata migration `20260707_0015_stage05_account_status_event_metadata.py`. Integrated Stage05 workflow so account assignment requests create `account_assignment` drafts and high-confidence account exceptions update inventory/status-event evidence.
+Changed files: backend/app/agents/account_inventory_agent.py; backend/app/models/accounts.py; backend/app/services/account_inventory.py; backend/app/services/permissions.py; backend/app/services/agent_workflows.py; backend/alembic/versions/20260707_0015_stage05_account_status_event_metadata.py; backend/tests/unit/test_stage05_account_inventory_agent.py; backend/tests/integration/test_stage05_agent_workflow.py; project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/modules/STAGE_05_ACCOUNT_INVENTORY_AGENT.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_TEST_PLAN.md; project-docs/08-implementation/STAGE_05_DATABASE_AND_MIGRATION_DESIGN.md; project-docs/08-implementation/STAGE_05_SECURITY_AND_PERMISSION_DESIGN.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: RED `pytest tests\unit\test_stage05_account_inventory_agent.py tests\integration\test_stage05_agent_workflow.py::test_workflow_marks_high_confidence_account_exception_status_event tests\integration\test_stage05_agent_workflow.py::test_workflow_creates_account_assignment_draft_without_assignment_side_effect -v`; GREEN same command; inventory regression `pytest tests\unit\test_account_inventory.py tests\integration\test_inventory_assignment_slice.py -v`; Stage05 workflow regression `pytest tests\integration\test_stage05_agent_workflow.py tests\integration\test_stage05_worker_runtime.py -v`; migration/model/account focused regression `pytest tests\unit\test_model_metadata.py tests\unit\test_initial_migration.py tests\unit\test_stage05_account_inventory_agent.py -v`; focused Stage05 regression; migration `alembic upgrade head --sql`; full suite `pytest tests -q`.
+Test result: RED failed 10/10 for expected missing account_inventory_agent module, service mutation function, migration, workflow inventory UOW support and account_assignment draft wiring. GREEN passed 10/10. Inventory regression passed 10/10. Stage05 workflow regression passed 11/11. Migration/model/account focused regression passed 20/20. Focused Stage05 regression passed 46/46. Alembic offline SQL reached `20260707_0015` and emitted account_status_events `confidence` and `risk_flags` columns. Full backend suite passed 216/216 with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured.
+Not done: No account production, provider readback, replacement recommendation, replacement reservation, automatic assignment confirmation, account recycling, customer reply send, real OpenRouter call, Redis worker runtime exercise, Tencent Cloud staging deployment or Telegram send occurred.
+Risks / follow-up: Future Task9 reply-send migration must avoid creating a second Alembic head because Task7 implemented `20260707_0015` before the pending reply-send link migration. Task8 confirmation branches remain next and still must not create provider writes.
+Next subphase: 05.5 Task 8 Confirmation Branches.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.5 Task 8 Confirmation Branches
+Status: completed locally
+Completed: Added Stage05 branch-specific confirmation behavior. `customer_reply` drafts now confirm into a `telegram_send_requests` row using the source message `telegram_chat_id`, reuse existing requests by `reply-send:{draft_id}` trace, and block non-allowlisted targets without outbox or Telegram calls. Stage05 business drafts `recharge`, `card_binding`, `bm_invite` and `account_assignment` now confirm into `service_records` plus `execution_logs(provider=noop, execution_status=skipped)` and create no `ExecutionTicket`. Stage05 confirmation is limited to manager/admin; old Stage02 `mock_router` recharge confirmation still supports production confirmation and `ExecutionTicket` for the existing vertical slice. Added audit events `customer_reply_send_requested`, `business_noop_evidence_created` and `draft_confirmed` for the new branches.
+Changed files: backend/app/services/confirmation.py; backend/app/api/routes/confirmations.py; backend/app/schemas/service_drafts.py; backend/tests/integration/test_stage05_service_draft_confirmation.py; project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/modules/STAGE_05_CONFIRMATION_AND_SEND.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_TEST_PLAN.md; project-docs/08-implementation/STAGE_05_SECURITY_AND_PERMISSION_DESIGN.md; project-docs/08-implementation/STAGE_05_API_CONTRACT.md; project-docs/08-implementation/STAGE_05_DATABASE_AND_MIGRATION_DESIGN.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: RED `pytest tests\integration\test_stage05_service_draft_confirmation.py -v`; RED permission-focused `pytest tests\integration\test_stage05_service_draft_confirmation.py::test_production_role_cannot_confirm_stage05_business_draft -v`; GREEN `pytest tests\integration\test_stage05_service_draft_confirmation.py -v`; Stage02 confirmation regression `pytest tests\unit\test_service_draft_state_machine.py tests\integration\test_recharge_vertical_slice.py tests\integration\test_stage_02_e2e.py -v`; Stage04 send regression `pytest tests\integration\test_stage04_test_send.py -v`; Stage05 workflow regression `pytest tests\integration\test_stage05_agent_workflow.py tests\integration\test_stage05_worker_runtime.py -v`; focused Stage05 regression; combined Stage02/Stage04 regression; full suite `pytest tests -q`; `alembic upgrade head --sql`; secret scan; `git diff --check`.
+Test result: RED failed 15/15 for missing UOW messages/send_requests and allowed_chat_ids/branch behavior; permission RED failed 1/1 for the same missing Stage05 confirmation path. GREEN passed 16/16. Stage02 confirmation regression passed 12/12. Stage04 send regression passed 13/13. Stage05 workflow regression passed 11/11. Focused Stage05 regression passed 62/62. Combined Stage02/Stage04 regression passed 25/25. Full backend suite passed 232/232 with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured. Alembic offline SQL still reaches `20260707_0015`; Task8 required no migration. Secret scan found config names, placeholders, documented scan patterns and fake test values only. `git diff --check` reported no whitespace errors; only Windows LF-to-CRLF warnings.
+Not done: No persisted `source_service_draft_id` or `send_purpose` migration, no send confirmation, no outbox enqueue, no worker fake send, no real Telegram call, no OpenRouter call, no provider execution, no staging deployment and no customer/customer-group send occurred.
+Risks / follow-up: Task8 uses `reply-send:{draft_id}` trace as the current request reuse key until Task9 adds persisted draft linkage. Task9 must continue from current Alembic head `20260707_0015`, add the reply-send link safely, and verify send-confirm/worker allowlist re-checks.
+Next subphase: 05.5 Task 9 Customer Reply Send Request.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.5 Task 9 Customer Reply Send Request
+Status: completed locally
+Completed: Added persisted customer reply send request linkage on `telegram_send_requests`: `source_service_draft_id`, `send_purpose` and `message_text_summary`. Customer reply draft confirmation now stores the source draft id and `send_purpose = customer_reply_rehearsal`. Send confirmation still uses the existing Stage04 confirm route/service and checks the current allowlist; for Stage05 reply sends it records `customer_reply_send_confirmed`. The existing Stage04 worker is reused for fake/local send verification and now emits `customer_reply_send_sent` or `customer_reply_send_failed` for customer reply sends while preserving `telegram.test_send.*` audit names for Stage04 generic test sends. Added migration `20260707_0016_stage05_reply_send_link.py` with `down_revision = "20260707_0015"`.
+Changed files: backend/app/models/telegram.py; backend/app/services/confirmation.py; backend/app/services/telegram_send_requests.py; backend/app/workers/stage03_handlers.py; backend/alembic/versions/20260707_0016_stage05_reply_send_link.py; backend/tests/integration/test_stage05_customer_reply_send.py; project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/modules/STAGE_05_CONFIRMATION_AND_SEND.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_TEST_PLAN.md; project-docs/08-implementation/STAGE_05_DATABASE_AND_MIGRATION_DESIGN.md; project-docs/08-implementation/STAGE_05_SECURITY_AND_PERMISSION_DESIGN.md; project-docs/08-implementation/STAGE_05_API_CONTRACT.md; project-docs/08-implementation/STAGE_05_BDD.md; project-docs/08-implementation/STAGE_05_SDD.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: RED `pytest tests\integration\test_stage05_customer_reply_send.py -v`; GREEN same command; confirmation/send regression `pytest tests\integration\test_stage04_test_send.py tests\integration\test_stage05_service_draft_confirmation.py tests\integration\test_stage05_customer_reply_send.py -v`; model/migration/confirmation regression `pytest tests\unit\test_model_metadata.py tests\unit\test_initial_migration.py tests\unit\test_service_draft_state_machine.py -v`; Stage05 workflow regression `pytest tests\integration\test_stage05_agent_workflow.py tests\integration\test_stage05_worker_runtime.py -v`; migration `alembic upgrade head --sql`; full suite `pytest tests -q`.
+Test result: RED failed 4/4 for expected missing TelegramSendRequest link fields, migration and customer-reply audit branches. GREEN passed 4/4. Confirmation/send regression passed 33/33. Model/migration/confirmation regression passed 22/22. Stage05 workflow regression passed 11/11. Full backend suite passed 236/236 with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured. First Alembic offline SQL run caught an overlong FK identifier; after shortening it to `fk_tg_send_req_source_draft`, Alembic offline SQL reached `20260707_0016`.
+Not done: No real Telegram API call, real OpenRouter call, provider execution, Tencent Cloud staging deployment, real customer chat send or customer group send occurred. The send path used a fake Telegram bot client only.
+Risks / follow-up: Task10 views must expose the linked customer reply send request evidence safely, with target chat masking for non-global roles. Staging still requires explicit env/send approval before any real Telegram call.
+Next subphase: 05.6 Task 10 Bitable Views.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.6 Task 10 Bitable Views
+Status: completed locally
+Completed: Added Stage05 Bitable-like view coverage and implementation. New views include `service_drafts`, `agent_review_queue`, `pending_confirmation` and `customer_reply_send_requests`. Existing `telegram_inbox` now derives `agent_status`, `draft_count` and `agent_last_error_code` from AgentRun/draft evidence when present. Existing `account_inventory` now derives latest risk signal fields from `account_status_events`; manager/admin can inspect external account ids while customer-scoped roles see only authorized rows and masked external ids. `pending_confirmation` is intentionally an action queue and omits full payload summary; the detail view remains `service_drafts`.
+Changed files: backend/app/services/bitable_views.py; backend/tests/unit/test_stage05_bitable_views.py; backend/tests/unit/test_bitable_views.py; project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/modules/STAGE_05_BITABLE_VIEWS.md; project-docs/08-implementation/STAGE_05_API_CONTRACT.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_TEST_PLAN.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: RED `pytest tests\unit\test_stage05_bitable_views.py -v`; GREEN `pytest tests\unit\test_stage05_bitable_views.py -v`; view regression `pytest tests\unit\test_bitable_views.py tests\unit\test_stage03_telegram_inbox_view.py tests\unit\test_stage04_bitable_views.py tests\unit\test_stage05_bitable_views.py -v`; Stage05 regression `pytest tests -k stage05 -v`.
+Test result: RED failed 4/4 for expected unknown Stage05 views and missing enhanced evidence fields. GREEN passed 5/5. View regression passed 22/22. Stage05 regression selected 68 tests and passed 68/68.
+Not done: Full local acceptance, Tencent Cloud staging deployment, real OpenRouter call, real Telegram allowlisted private test send, provider checks and safety close remain pending.
+Risks / follow-up: Task10 changes operational visibility for manager/admin in `account_inventory` by allowing external account id inspection; scoped roles remain masked and row-scoped. Final local acceptance must rerun full backend suite, migration SQL, secret scan and documentation consistency before any staging rehearsal.
+Next subphase: 05.6 Task 11 Local Acceptance Audit.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.6 Task 11 Local Acceptance Audit
+Status: completed locally for non-staging scope
+Completed: Ran focused Stage05 tests, Stage03/Stage04 regression tests, full backend suite, Alembic offline SQL, secret scan, whitespace check and documentation stale-pending scan. Recorded the local acceptance result, skipped online PostgreSQL smoke tests and remaining staging gaps in `STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md` and updated the acceptance checklist.
+Changed files: project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: `pytest tests -k stage05 -v`; `pytest tests\integration\test_stage03_customer_binding.py tests\integration\test_stage03_worker_runtime.py tests\integration\test_stage04_intent_placeholder.py tests\integration\test_stage04_test_send.py tests\unit\test_stage04_bitable_views.py tests\unit\test_stage04_config.py -v`; `pytest tests -q`; `alembic upgrade head --sql`; secret scan; `git diff --check`; documentation pending wording scan.
+Test result: Stage05 focused tests passed 73/73 selected. Stage03/Stage04 regression passed 33/33. Full backend suite passed 246/246 with 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured. Alembic offline SQL reaches `20260707_0016`. Secret scan found only config names, placeholders, documented scan patterns and fake test values. `git diff --check` reported no whitespace errors; Windows LF-to-CRLF warnings only. Documentation pending wording scan found no stale Task10 view-pending wording outside staging-pending context.
+Not done: Tencent Cloud staging deployment, real OpenRouter call, real Telegram allowlisted private test send, provider-disabled staging evidence and safety close remain pending.
+Risks / follow-up: Task12 requires explicit approval before any staging env change, real OpenRouter call or real Telegram send. Do not run staging rehearsal without that approval.
+Next subphase: 05.6 Task 12 Tencent Cloud Staging Rehearsal after explicit approval.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.6 Task 12 Local Staging Contract Preflight
+Status: completed locally; real staging pending approval
+Completed: Added `tests/integration/test_stage05_staging_contract.py` to cover Task12 runbook/test-plan assumptions without deploying or calling external systems. The tests verify a valid Stage05 rehearsal env shape, provider-disabled enforcement, LLM enabled only with `AGENT_WORKFLOW_MODE=real_openrouter`, restricted Telegram send allowlist requirement and safety-close dry-run/empty-allowlist contract. Updated runbook, test plan, acceptance checklist, local audit, implementation plan and final acceptance report.
+Changed files: backend/tests/integration/test_stage05_staging_contract.py; project-docs/08-implementation/STAGE_05_OPERATIONS_RUNBOOK.md; project-docs/08-implementation/STAGE_05_TEST_PLAN.md; project-docs/08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_05_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: RED `pytest tests\integration\test_stage05_staging_contract.py -v`; GREEN same command.
+Test result: RED failed because the file did not exist. GREEN passed 5/5.
+Not done: Task12 Step 1 explicit approval, Tencent Cloud deployment, Alembic staging migration, real OpenRouter call, restricted Telegram test send, staging evidence capture and safety close have not been executed.
+Risks / follow-up: This preflight validates local config contract only. It must not be treated as staging evidence.
+Next subphase: 05.6 Task 12 Tencent Cloud Staging Rehearsal after explicit approval.
+```
+
+```text
+Date: 2026-07-07
+Subphase: 05.2 Task 4 compatibility precheck
+Status: completed for design review
+Completed: Read existing Stage03 worker handler, Telegram message model, Telegram ingestion service, Stage04 intent placeholder service, Stage03 worker runtime tests, Stage04 intent placeholder tests and AgentRun evidence service. Confirmed the proposed Task 4 approach is compatible with existing unit-of-work patterns and must preserve the Stage04 placeholder invariant: bound unclassified messages become `intent_ready` without immediate service draft creation. Confirmed AgentRun evidence helpers can be reused in Task 4.
+Changed files: project-docs/08-implementation/modules/STAGE_05_AGENT_GRAPH_AND_ROUTING.md; project-docs/08-implementation/STAGE_05_PROGRESS.md.
+Tests run: not run; read-only compatibility review plus documentation update.
+Test result: not applicable.
+Not done: No `stage05_supervisor.py`, `agent_workflows.py`, worker integration or workflow tests were implemented because Task 4 technical confirmation is still pending.
+Risks / follow-up: User must confirm Task 4 approach before code begins. Task 4 tests must include Stage04 intent placeholder regression to prove no immediate draft creation is introduced by the worker path.
+Next subphase: 05.2 Task 4 Supervisor Graph after confirmation.
+```

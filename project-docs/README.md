@@ -3,8 +3,11 @@
 ## Status
 
 - Document status: active project document index
-- Current project mode: Stage 04 final acceptance passed; Stage 05 planning pending
-- Current Progress: 2026-07-07 Stage 02 已冻结关闭；Stage 03 已完成真实腾讯云 staging 验收。Stage 04 已在确认范围内完成最终验收：本地 `pytest tests -q` 为 172 passed / 17 skipped；腾讯云 staging commit `360d376` 迁移到 `20260706_0011`；真实 Telegram update `184365902` 绑定进入 `telegram_inbox`；restricted test send request `05f46883-e4c7-4669-99cb-99a093629f70` 已发送到 allowlisted private test chat；staging 已恢复 dry-run。下一步是确认 Stage 05 真源和技术/业务范围。
+- Current project mode: Stage 05 implementation in progress
+- Current Progress: 2026-07-07 Stage 05 已完成本地/non-staging 主链路开发与验证：runtime config、AgentRun evidence、Router schema、LangGraph Supervisor、子 Draft Agents、多 draft 持久化、Service Draft API、Account Inventory Agent、confirmation/no-op、customer_reply linked send request、Bitable-like views、deployment config gate 和 redacted runtime summary command 均有本地证据。最新本地证据为 Stage05 focused 82 passed / 190 deselected、full backend suite 255 passed / 17 skipped、staging contract 5 passed、scope guard 4 passed、runtime summary 3 passed。Stage05 最终验收仍未通过，因为 Tencent Cloud staging、真实 OpenRouter、真实 allowlisted Telegram receipt、staging business no-op evidence、staging account exception evidence 和 safety close 仍需显式批准后执行。Stage05 不做 UI、RAG、生产上线、真实客户发送、provider 写入、账户生产或自动替换分发；Skills runtime registry 延后到 Stage05 主链路完成验收后单独做。
+- Current Progress Update: 2026-07-07 Added Stage05 requirement traceability audit to the implementation document map so final acceptance can be checked requirement-by-requirement instead of inferred from local tests alone.
+- Current Progress Update: 2026-07-07 Added Stage05 pre-staging approval packet to make Task12 real staging approval scope explicit before external actions.
+- Current Progress Update: 2026-07-07 Synchronized Stage05 top-level indexes with the latest local evidence and clarified that the only remaining acceptance blockers are Task12 external staging evidence and safety close.
 
 ## Document Map
 
@@ -103,6 +106,24 @@
 - [Stage 04 Local Acceptance Audit](08-implementation/STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md)
 - [Stage 04 Progress](08-implementation/STAGE_04_PROGRESS.md)
 - [Stage 04 Final Acceptance Report](08-implementation/STAGE_04_FINAL_ACCEPTANCE_REPORT.md)
+- [Stage 05 Source Of Truth](08-implementation/STAGE_05_SOURCE_OF_TRUTH.md)
+- [Stage 05 Implementation Plan](08-implementation/STAGE_05_IMPLEMENTATION_PLAN.md)
+- [Stage 05 SDD](08-implementation/STAGE_05_SDD.md)
+- [Stage 05 BDD](08-implementation/STAGE_05_BDD.md)
+- [Stage 05 Module Index](08-implementation/STAGE_05_MODULE_INDEX.md)
+- [Stage 05 API Contract](08-implementation/STAGE_05_API_CONTRACT.md)
+- [Stage 05 Database And Migration Design](08-implementation/STAGE_05_DATABASE_AND_MIGRATION_DESIGN.md)
+- [Stage 05 Security And Permission Design](08-implementation/STAGE_05_SECURITY_AND_PERMISSION_DESIGN.md)
+- [Stage 05 Test Plan](08-implementation/STAGE_05_TEST_PLAN.md)
+- [Stage 05 Operations Runbook](08-implementation/STAGE_05_OPERATIONS_RUNBOOK.md)
+- [Stage 05 Pre-Staging Approval Packet](08-implementation/STAGE_05_PRE_STAGING_APPROVAL_PACKET.md)
+- [Stage 05 Risk Register](08-implementation/STAGE_05_RISK_REGISTER.md)
+- [Stage 05 Acceptance Checklist](08-implementation/STAGE_05_ACCEPTANCE_CHECKLIST.md)
+- [Stage 05 Local Acceptance Audit](08-implementation/STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md)
+- [Stage 05 Development Detail Completion Audit](08-implementation/STAGE_05_DEVELOPMENT_DETAIL_COMPLETION_AUDIT.md)
+- [Stage 05 Requirement Traceability Audit](08-implementation/STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md)
+- [Stage 05 Progress](08-implementation/STAGE_05_PROGRESS.md)
+- [Stage 05 Final Acceptance Report](08-implementation/STAGE_05_FINAL_ACCEPTANCE_REPORT.md)
 
 ## Project Boundary
 

@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+from dataclasses import dataclass
+from decimal import Decimal
 from typing import Protocol
 from uuid import UUID, uuid4
 
@@ -12,10 +14,30 @@ from app.models.accounts import (
 )
 from app.services.audit import record_audit_event
 from app.services.permissions import Actor, assert_action_allowed
+from app.services.permissions import assert_auto_mark_account_exception_allowed
+
+ALLOWED_AUTOMATIC_EXCEPTION_STATUSES = frozenset(
+    {"blocked", "disabled", "risk_controlled"}
+)
+ALLOWED_AUTOMATIC_EXCEPTION_RISK_FLAGS = frozenset(
+    {
+        "account_blocked_reported",
+        "account_disabled_reported",
+        "risk_control_confirmed",
+    }
+)
+MIN_EXCEPTION_CONFIDENCE = Decimal("0.9000")
 
 
 class InventoryStateError(RuntimeError):
     pass
+
+
+@dataclass(frozen=True)
+class AccountExceptionMarkResult:
+    account: AccountInventory
+    event: AccountStatusEvent | None
+    changed: bool
 
 
 class AccountInventoryUnitOfWork(Protocol):
@@ -333,6 +355,77 @@ def activate_inventory_account(
     return account
 
 
+def mark_account_exception_from_agent(
+    uow: AccountInventoryUnitOfWork,
+    *,
+    actor: Actor,
+    account_inventory_id: UUID,
+    target_status: str,
+    confidence: Decimal,
+    risk_flags: list[str],
+    source_message_id: UUID,
+    reason: str,
+    trace_id: str,
+) -> AccountExceptionMarkResult:
+    assert_auto_mark_account_exception_allowed(
+        actor,
+        session=uow,
+        trace_id=trace_id,
+        entity_type="account_inventory",
+        entity_id=account_inventory_id,
+    )
+    if target_status not in ALLOWED_AUTOMATIC_EXCEPTION_STATUSES:
+        raise InventoryStateError(
+            f"Automatic account exception status is not allowed: {target_status}"
+        )
+    if confidence < MIN_EXCEPTION_CONFIDENCE:
+        raise InventoryStateError(
+            f"Automatic account exception confidence is too low: {confidence}"
+        )
+    if not (set(risk_flags) & ALLOWED_AUTOMATIC_EXCEPTION_RISK_FLAGS):
+        raise InventoryStateError("Automatic account exception risk flag is not allowed")
+
+    account = _require_account(uow, account_inventory_id)
+    if account.inventory_status == target_status:
+        return AccountExceptionMarkResult(account=account, event=None, changed=False)
+
+    before_status = account.inventory_status
+    account.inventory_status = target_status
+    account.status_reason = reason
+    event = _status_event(
+        account=account,
+        event_type=target_status,
+        before_status=before_status,
+        after_status=target_status,
+        actor=actor,
+        reason=reason,
+        customer_id=account.assigned_customer_id,
+        source_entity_type="message",
+        source_entity_id=source_message_id,
+        confidence=confidence,
+        risk_flags=risk_flags,
+    )
+    uow.add_status_event(event)
+    record_audit_event(
+        uow,
+        trace_id=trace_id,
+        actor_type=actor.actor_type,
+        actor_id=actor.actor_id,
+        event_type="account.exception_marked",
+        entity_type="account_inventory",
+        entity_id=account.id,
+        before_state={"inventory_status": before_status},
+        after_state={
+            "inventory_status": target_status,
+            "confidence": str(confidence),
+            "risk_flags": list(risk_flags),
+            "source_message_id": str(source_message_id),
+            "replacement_action": "none",
+        },
+    )
+    return AccountExceptionMarkResult(account=account, event=event, changed=True)
+
+
 def _require_account(
     uow: AccountInventoryUnitOfWork,
     account_id: UUID,
@@ -371,6 +464,8 @@ def _status_event(
     customer_id: UUID | None = None,
     source_entity_type: str | None = None,
     source_entity_id: UUID | None = None,
+    confidence: Decimal | None = None,
+    risk_flags: list[str] | None = None,
 ) -> AccountStatusEvent:
     return AccountStatusEvent(
         id=uuid4(),
@@ -384,5 +479,7 @@ def _status_event(
         source_entity_id=source_entity_id,
         actor_type=actor.actor_type,
         actor_id=actor.actor_id,
+        confidence=confidence,
+        risk_flags=risk_flags,
         created_at=datetime.now(timezone.utc),
     )

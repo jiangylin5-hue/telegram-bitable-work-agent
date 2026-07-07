@@ -149,3 +149,44 @@ def assert_action_allowed(
         },
     )
     raise PermissionDenied(f"{actor.role} cannot perform {action}")
+
+
+def can_auto_mark_account_exception(actor: Actor) -> bool:
+    return (
+        actor.role in {"admin", "manager"}
+        or (
+            actor.actor_type == "agent"
+            and actor.actor_id == "account_inventory_agent"
+        )
+    )
+
+
+def assert_auto_mark_account_exception_allowed(
+    actor: Actor,
+    *,
+    session: Any,
+    trace_id: str,
+    entity_type: str,
+    entity_id: UUID | None = None,
+) -> None:
+    if can_auto_mark_account_exception(actor):
+        return
+
+    record_audit_event(
+        session,
+        trace_id=trace_id,
+        actor_type=actor.actor_type,
+        actor_id=actor.actor_id,
+        event_type="permission_denied",
+        entity_type=entity_type,
+        entity_id=entity_id,
+        permission_snapshot={
+            "action": "auto_mark_account_exception",
+            "role": actor.role,
+            "actor_type": actor.actor_type,
+            "actor_id": actor.actor_id,
+        },
+    )
+    raise PermissionDenied(
+        f"{actor.role}:{actor.actor_id} cannot perform auto_mark_account_exception"
+    )

@@ -92,6 +92,9 @@ STAGE_02_VIEW_REGISTRY: dict[str, ViewDefinition] = {
             "last_error_code",
             "intent_status",
             "intent_type",
+            "agent_status",
+            "draft_count",
+            "agent_last_error_code",
             "received_at",
             "processed_at",
             "trace_id",
@@ -130,9 +133,12 @@ STAGE_02_VIEW_REGISTRY: dict[str, ViewDefinition] = {
             "assigned_customer_id",
             "assigned_at",
             "status_reason",
+            "last_risk_signal_at",
+            "last_risk_source",
             "trace_id",
         ),
         sensitive_fields=frozenset({"external_account_id"}),
+        sensitive_fields_visible_to_global_roles=True,
     ),
     "payment_profiles": ViewDefinition(
         view_key="payment_profiles",
@@ -239,6 +245,84 @@ STAGE_02_VIEW_REGISTRY: dict[str, ViewDefinition] = {
         ),
         field_aliases={"message_id": "id"},
     ),
+    "service_drafts": ViewDefinition(
+        view_key="service_drafts",
+        table_name="service_drafts",
+        fields=(
+            "draft_id",
+            "draft_type",
+            "status",
+            "customer_id",
+            "source_message_id",
+            "created_by_type",
+            "created_by_id",
+            "confidence",
+            "missing_fields",
+            "risk_flags",
+            "payload_summary",
+            "trace_id",
+            "created_at",
+        ),
+        field_aliases={"draft_id": "id"},
+    ),
+    "agent_review_queue": ViewDefinition(
+        view_key="agent_review_queue",
+        table_name="agent_review_queue",
+        fields=(
+            "review_id",
+            "review_source",
+            "customer_id",
+            "message_id",
+            "draft_id",
+            "agent_run_id",
+            "reason",
+            "risk_flags",
+            "last_error_code",
+            "trace_id",
+            "created_at",
+        ),
+        field_aliases={"review_id": "id"},
+        default_limit=100,
+        max_limit=200,
+    ),
+    "pending_confirmation": ViewDefinition(
+        view_key="pending_confirmation",
+        table_name="service_drafts",
+        fields=(
+            "draft_id",
+            "draft_type",
+            "customer_id",
+            "source_message_id",
+            "confidence",
+            "risk_flags",
+            "confirm_action",
+            "trace_id",
+            "created_at",
+        ),
+        field_aliases={"draft_id": "id"},
+        default_limit=100,
+        max_limit=200,
+    ),
+    "customer_reply_send_requests": ViewDefinition(
+        view_key="customer_reply_send_requests",
+        table_name="telegram_send_requests",
+        fields=(
+            "request_id",
+            "source_service_draft_id",
+            "status",
+            "requested_by_actor_id",
+            "confirmed_by_actor_id",
+            "telegram_response_summary",
+            "last_error_code",
+            "sent_at",
+            "trace_id",
+        ),
+        field_aliases={"request_id": "id"},
+        sensitive_fields=frozenset({"telegram_response_summary"}),
+        sensitive_fields_visible_to_global_roles=True,
+        default_limit=100,
+        max_limit=200,
+    ),
 }
 
 
@@ -276,7 +360,7 @@ def get_view_records(
     allowed_fields = allowed_fields or _allowed_fields_for_view(view, actor)
     raw_records = [
         record
-        for record in data_source.list_records(view.table_name)
+        for record in _collect_view_records(view, data_source)
         if _can_actor_view_record(actor, record)
     ]
     raw_records = _apply_view_order_and_limit(raw_records, view, limit)
@@ -369,6 +453,8 @@ def _apply_view_order_and_limit(
 ) -> list[dict[str, Any]]:
     if view.view_key == "telegram_inbox":
         records = sorted(records, key=_telegram_inbox_sort_key)
+    if view.view_key in {"agent_review_queue", "pending_confirmation"}:
+        records = sorted(records, key=_created_at_sort_key)
     effective_limit = _effective_limit(view, limit)
     if effective_limit is None:
         return records
@@ -387,6 +473,11 @@ def _effective_limit(view: ViewDefinition, limit: int | None) -> int | None:
 def _telegram_inbox_sort_key(record: dict[str, Any]) -> tuple[float, str]:
     fields = record.get("fields", {})
     return (-_timestamp(fields.get("received_at")), str(record["id"]))
+
+
+def _created_at_sort_key(record: dict[str, Any]) -> tuple[float, str]:
+    fields = record.get("fields", {})
+    return (-_timestamp(fields.get("created_at")), str(record["id"]))
 
 
 def _timestamp(value: Any) -> float:
@@ -421,3 +512,332 @@ def _row_to_record(row: Any) -> dict[str, Any]:
         "id": str(record_id),
         "fields": values,
     }
+
+
+def _collect_view_records(
+    view: ViewDefinition,
+    data_source: BitableViewDataSource,
+) -> list[dict[str, Any]]:
+    if view.view_key == "telegram_inbox":
+        return _telegram_inbox_records(data_source)
+    if view.view_key == "account_inventory":
+        return _account_inventory_records(data_source)
+    if view.view_key == "pending_confirmation":
+        return _pending_confirmation_records(data_source)
+    if view.view_key == "customer_reply_send_requests":
+        return _customer_reply_send_request_records(data_source)
+    if view.view_key == "agent_review_queue":
+        return _agent_review_queue_records(data_source)
+    return data_source.list_records(view.table_name)
+
+
+def _telegram_inbox_records(
+    data_source: BitableViewDataSource,
+) -> list[dict[str, Any]]:
+    drafts_by_message = _count_records_by_field(
+        data_source.list_records("service_drafts"),
+        "source_message_id",
+    )
+    latest_run_by_message = _latest_record_by_field(
+        data_source.list_records("agent_runs"),
+        "message_id",
+        "started_at",
+    )
+    records: list[dict[str, Any]] = []
+    for message in data_source.list_records("messages"):
+        message_id = _record_id(message)
+        extra_fields: dict[str, Any] = {}
+        draft_count = drafts_by_message.get(message_id, 0)
+        if draft_count:
+            extra_fields["draft_count"] = draft_count
+        latest_run = latest_run_by_message.get(message_id)
+        if latest_run is not None:
+            run_fields = latest_run.get("fields", {})
+            extra_fields["agent_status"] = run_fields.get("status")
+            if run_fields.get("error_code") is not None:
+                extra_fields["agent_last_error_code"] = run_fields["error_code"]
+        records.append(_copy_record(message, extra_fields))
+    return records
+
+
+def _account_inventory_records(
+    data_source: BitableViewDataSource,
+) -> list[dict[str, Any]]:
+    latest_event_by_inventory = _latest_record_by_field(
+        data_source.list_records("account_status_events"),
+        "account_inventory_id",
+        "created_at",
+    )
+    records: list[dict[str, Any]] = []
+    for account in data_source.list_records("account_inventory"):
+        latest_event = latest_event_by_inventory.get(_record_id(account))
+        extra_fields: dict[str, Any] = {}
+        if latest_event is not None:
+            event_fields = latest_event.get("fields", {})
+            if event_fields.get("created_at") is not None:
+                extra_fields["last_risk_signal_at"] = event_fields["created_at"]
+            if event_fields.get("source_entity_type") is not None:
+                extra_fields["last_risk_source"] = event_fields["source_entity_type"]
+            elif event_fields.get("event_type") is not None:
+                extra_fields["last_risk_source"] = event_fields["event_type"]
+        records.append(_copy_record(account, extra_fields))
+    return records
+
+
+def _pending_confirmation_records(
+    data_source: BitableViewDataSource,
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for draft in data_source.list_records("service_drafts"):
+        fields = draft.get("fields", {})
+        if fields.get("status") != "pending_confirmation":
+            continue
+        if _has_values(fields.get("missing_fields")):
+            continue
+        if fields.get("customer_id") is None:
+            continue
+        records.append(
+            _copy_record(
+                draft,
+                {"confirm_action": _confirm_action_for_draft(fields.get("draft_type"))},
+            )
+        )
+    return records
+
+
+def _customer_reply_send_request_records(
+    data_source: BitableViewDataSource,
+) -> list[dict[str, Any]]:
+    draft_by_id = _index_by_record_id(data_source.list_records("service_drafts"))
+    records: list[dict[str, Any]] = []
+    for send_request in data_source.list_records("telegram_send_requests"):
+        fields = send_request.get("fields", {})
+        source_draft_id = _normalize_key(fields.get("source_service_draft_id"))
+        if (
+            fields.get("send_purpose") != "customer_reply_rehearsal"
+            and source_draft_id is None
+        ):
+            continue
+        extra_fields: dict[str, Any] = {}
+        source_draft = draft_by_id.get(source_draft_id)
+        if source_draft is not None:
+            draft_fields = source_draft.get("fields", {})
+            if draft_fields.get("customer_id") is not None:
+                extra_fields["customer_id"] = draft_fields["customer_id"]
+        records.append(_copy_record(send_request, extra_fields))
+    return records
+
+
+def _agent_review_queue_records(
+    data_source: BitableViewDataSource,
+) -> list[dict[str, Any]]:
+    messages = data_source.list_records("messages")
+    message_by_id = _index_by_record_id(messages)
+    records: list[dict[str, Any]] = []
+    records.extend(_message_review_records(messages))
+    records.extend(_service_draft_review_records(data_source.list_records("service_drafts")))
+    records.extend(
+        _agent_run_review_records(
+            data_source.list_records("agent_runs"),
+            message_by_id,
+        )
+    )
+    records.extend(
+        _account_status_review_records(data_source.list_records("account_status_events"))
+    )
+    return records
+
+
+def _message_review_records(
+    messages: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for message in messages:
+        fields = message.get("fields", {})
+        if fields.get("intent_status") not in {"manual_review", "agent_failed"}:
+            continue
+        message_id = _record_id(message)
+        review_fields = {
+            "review_source": "message",
+            "customer_id": fields.get("customer_id"),
+            "message_id": message_id,
+            "reason": fields.get("last_error_code") or fields.get("intent_status"),
+            "last_error_code": fields.get("last_error_code"),
+            "trace_id": fields.get("trace_id"),
+            "created_at": fields.get("received_at"),
+        }
+        if fields.get("risk_flags") is not None:
+            review_fields["risk_flags"] = fields["risk_flags"]
+        records.append(
+            {
+                "id": f"message:{message_id}",
+                "fields": review_fields,
+            }
+        )
+    return records
+
+
+def _service_draft_review_records(
+    drafts: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for draft in drafts:
+        fields = draft.get("fields", {})
+        if fields.get("status") != "manual_review":
+            continue
+        draft_id = _record_id(draft)
+        records.append(
+            {
+                "id": f"draft:{draft_id}",
+                "fields": {
+                    "review_source": "service_draft",
+                    "customer_id": fields.get("customer_id"),
+                    "message_id": fields.get("source_message_id"),
+                    "draft_id": draft_id,
+                    "reason": fields.get("review_reason") or "manual_review",
+                    "risk_flags": fields.get("risk_flags"),
+                    "trace_id": fields.get("trace_id"),
+                    "created_at": fields.get("created_at"),
+                },
+            }
+        )
+    return records
+
+
+def _agent_run_review_records(
+    agent_runs: list[dict[str, Any]],
+    message_by_id: dict[str | None, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for run in agent_runs:
+        fields = run.get("fields", {})
+        if fields.get("status") != "failed":
+            continue
+        run_id = _record_id(run)
+        message_id = _normalize_key(fields.get("message_id"))
+        message = message_by_id.get(message_id)
+        message_fields = message.get("fields", {}) if message is not None else {}
+        records.append(
+            {
+                "id": f"agent_run:{run_id}",
+                "fields": {
+                    "review_source": "agent_run",
+                    "customer_id": message_fields.get("customer_id"),
+                    "message_id": message_id,
+                    "agent_run_id": run_id,
+                    "reason": fields.get("error_message_redacted")
+                    or fields.get("error_code")
+                    or "failed",
+                    "last_error_code": fields.get("error_code"),
+                    "trace_id": fields.get("trace_id"),
+                    "created_at": fields.get("started_at") or fields.get("created_at"),
+                },
+            }
+        )
+    return records
+
+
+def _account_status_review_records(
+    events: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for event in events:
+        fields = event.get("fields", {})
+        if not _is_account_status_review_event(fields):
+            continue
+        event_id = _record_id(event)
+        records.append(
+            {
+                "id": f"account_status_event:{event_id}",
+                "fields": {
+                    "review_source": "account_status_event",
+                    "customer_id": fields.get("customer_id"),
+                    "reason": fields.get("reason") or fields.get("event_type"),
+                    "risk_flags": fields.get("risk_flags"),
+                    "trace_id": fields.get("trace_id"),
+                    "created_at": fields.get("created_at"),
+                },
+            }
+        )
+    return records
+
+
+def _is_account_status_review_event(fields: dict[str, Any]) -> bool:
+    return (
+        fields.get("requires_manual_review") is True
+        or fields.get("event_type") in {"manual_review", "account_status_review"}
+        or fields.get("after_status") == "manual_review"
+    )
+
+
+def _confirm_action_for_draft(draft_type: Any) -> str:
+    if draft_type == "customer_reply":
+        return "create_customer_reply_send_request"
+    if draft_type == "account_assignment":
+        return "confirm_account_assignment_draft"
+    return "create_noop_service_evidence"
+
+
+def _index_by_record_id(
+    records: list[dict[str, Any]],
+) -> dict[str | None, dict[str, Any]]:
+    return {_record_id(record): record for record in records}
+
+
+def _count_records_by_field(
+    records: list[dict[str, Any]],
+    field_name: str,
+) -> dict[str | None, int]:
+    counts: dict[str | None, int] = {}
+    for record in records:
+        key = _normalize_key(record.get("fields", {}).get(field_name))
+        if key is None:
+            continue
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+def _latest_record_by_field(
+    records: list[dict[str, Any]],
+    field_name: str,
+    timestamp_field: str,
+) -> dict[str | None, dict[str, Any]]:
+    latest: dict[str | None, dict[str, Any]] = {}
+    for record in records:
+        key = _normalize_key(record.get("fields", {}).get(field_name))
+        if key is None:
+            continue
+        current = latest.get(key)
+        if current is None or _timestamp(
+            record.get("fields", {}).get(timestamp_field)
+        ) >= _timestamp(current.get("fields", {}).get(timestamp_field)):
+            latest[key] = record
+    return latest
+
+
+def _copy_record(
+    record: dict[str, Any],
+    extra_fields: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    fields = dict(record.get("fields", {}))
+    if extra_fields:
+        fields.update(extra_fields)
+    return {"id": str(record["id"]), "fields": fields}
+
+
+def _record_id(record: dict[str, Any]) -> str:
+    return str(record["id"])
+
+
+def _normalize_key(value: Any) -> str | None:
+    if value is None:
+        return None
+    return str(value)
+
+
+def _has_values(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return len(value) > 0
+    return True

@@ -3,8 +3,11 @@
 ## Status
 
 - Document status: active implementation index
-- Scope: Stage 02 / Stage 03 历史入口与 Stage 04 当前实施入口
-- Current Progress: 2026-07-07 Stage 02 已冻结关闭；Stage 03 已完成真实腾讯云 staging 验收。Stage 04 已在确认范围内完成最终验收：本地 `pytest tests -q` 为 172 passed / 17 skipped；腾讯云 staging commit `360d376` 迁移到 `20260706_0011`；真实 Telegram update `184365902` 绑定进入 `telegram_inbox`；restricted test send request `05f46883-e4c7-4669-99cb-99a093629f70` 已发送到 allowlisted private test chat；staging 已恢复 dry-run。
+- Scope: Stage 02 / Stage 03 / Stage 04 历史入口与 Stage 05 当前文档入口
+- Current Progress: 2026-07-07 Stage 05 本地/non-staging 主链路开发已推进到 Task12 前置 readiness：runtime config、AgentRun evidence、Router schema、LangGraph Supervisor、子 Draft Agents、多 draft 持久化、Service Draft API、Account Inventory Agent、confirmation/no-op、customer_reply linked send request、Bitable-like views、deployment config gate 和 redacted runtime summary command 均已落地并记录证据。最新本地证据为 Stage05 focused 82 passed / 190 deselected、full backend suite 255 passed / 17 skipped、staging contract 5 passed、scope guard 4 passed、runtime summary 3 passed。Stage05 范围仍为真实 OpenRouter + LangGraph Supervisor / 子 Agent 多意图草稿闭环、Account Inventory Agent 库存异常管理、customer_reply allowlisted test send、业务 draft no-op evidence；不做 UI、RAG、生产上线、真实客户发送、provider 写入、账户生产或自动替换分发。Stage 04 已在确认范围内完成最终验收并作为 Stage05 基础；Skills runtime registry 延后到 Stage05 主链路完成验收后单独做。
+- Current Progress Update: 2026-07-07 Added Stage05 requirement traceability audit to distinguish locally verified requirements from pending Tencent Cloud staging, real OpenRouter, real Telegram receipt and safety-close evidence.
+- Current Progress Update: 2026-07-07 Added Stage05 pre-staging approval packet as the single review entry before Task12 real staging rehearsal.
+- Current Progress Update: 2026-07-07 Synchronized this implementation index with the latest local evidence and clarified that final Stage05 acceptance remains pending Task12 real staging rehearsal and safety close.
 
 ## 1. Read Order
 
@@ -72,9 +75,45 @@ Stage 04 complex module docs:
 4. [Stage 04 Restricted Test Send Module](modules/STAGE_04_RESTRICTED_TEST_SEND.md)
 5. [Stage 04 Intent Placeholder Module](modules/STAGE_04_INTENT_PLACEHOLDER.md)
 
+Stage 05 开发前按这个顺序阅读：
+
+1. [Stage 05 Source Of Truth](STAGE_05_SOURCE_OF_TRUTH.md)
+2. [Stage 05 Implementation Plan](STAGE_05_IMPLEMENTATION_PLAN.md)
+3. [Stage 05 SDD](STAGE_05_SDD.md)
+4. [Stage 05 BDD](STAGE_05_BDD.md)
+5. [Stage 05 Acceptance Checklist](STAGE_05_ACCEPTANCE_CHECKLIST.md)
+6. [Stage 05 Local Acceptance Audit](STAGE_05_LOCAL_ACCEPTANCE_AUDIT.md)
+7. [Stage 05 Development Detail Completion Audit](STAGE_05_DEVELOPMENT_DETAIL_COMPLETION_AUDIT.md)
+8. [Stage 05 Requirement Traceability Audit](STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md)
+9. [Stage 05 Module Index](STAGE_05_MODULE_INDEX.md)
+10. [Stage 05 API Contract](STAGE_05_API_CONTRACT.md)
+11. [Stage 05 Database And Migration Design](STAGE_05_DATABASE_AND_MIGRATION_DESIGN.md)
+12. [Stage 05 Security And Permission Design](STAGE_05_SECURITY_AND_PERMISSION_DESIGN.md)
+13. [Stage 05 Test Plan](STAGE_05_TEST_PLAN.md)
+14. [Stage 05 Operations Runbook](STAGE_05_OPERATIONS_RUNBOOK.md)
+15. [Stage 05 Pre-Staging Approval Packet](STAGE_05_PRE_STAGING_APPROVAL_PACKET.md)
+16. [Stage 05 Risk Register](STAGE_05_RISK_REGISTER.md)
+17. [Stage 05 Progress](STAGE_05_PROGRESS.md)
+18. [Stage 05 Final Acceptance Report](STAGE_05_FINAL_ACCEPTANCE_REPORT.md)
+
+Stage 05 core module docs:
+
+1. [Stage 05 Agent Graph And Routing Module](modules/STAGE_05_AGENT_GRAPH_AND_ROUTING.md)
+2. [Stage 05 Account Inventory Agent Module](modules/STAGE_05_ACCOUNT_INVENTORY_AGENT.md)
+3. [Stage 05 Draft Agents Module](modules/STAGE_05_DRAFT_AGENTS.md)
+4. [Stage 05 Confirmation And Send Module](modules/STAGE_05_CONFIRMATION_AND_SEND.md)
+5. [Stage 05 Bitable Views Module](modules/STAGE_05_BITABLE_VIEWS.md)
+6. [Stage 05 OpenRouter Evidence Module](modules/STAGE_05_OPENROUTER_EVIDENCE.md)
+
+Stage 05 post-acceptance reference docs:
+
+1. [Stage 05 Agent Skills And Capabilities Module](modules/STAGE_05_AGENT_SKILLS_AND_CAPABILITIES.md)
+
 Stage 02 已于 2026-07-06 冻结关闭。Stage 03 已由用户于 2026-07-06 确认转为 active，补充决策：Telegram 只收不发、Worker 使用 PostgreSQL Outbox + Redis Streams、Stage 03 暂不调用 LLM、第一批业务场景为 Telegram 收件箱 / 客户消息登记、Webhook 使用 secret token + optional allowlist、做最小客户绑定、部署到腾讯云 CVM staging、HTTPS 使用 Caddy。当前 Tasks 1-7 已完成验收；真实 staging 环境已接收 Telegram 测试消息并在 `telegram_inbox`、`outbox_events`、`ops_audit_events` 中形成证据。
 
 Stage 04 已由用户于 2026-07-06 确认范围，并于 2026-07-07 完成最终验收。范围为：绑定管理 API、`chat_id` / `user_id` / `chat_id + user_id` 绑定、绑定后只影响新消息、无 LLM intent placeholder、`telegram_send_requests` 受控测试发送、staging 验收。最终证据见 [Stage 04 Final Acceptance Report](STAGE_04_FINAL_ACCEPTANCE_REPORT.md)。Stage 04 不做 UI、Mini App、客户群发送、OpenRouter、LangGraph、provider、资金或账户外部写入。
+
+Stage 05 已由用户于 2026-07-07 确认进入文档阶段。范围为：真实 OpenRouter 主路径、LangGraph Supervisor + 子 Agent、多意图、多业务草稿、账户库存异常处理、customer_reply allowlisted private test chat 发送、业务 draft no-op evidence、业务处理优先的 Bitable-like views 和 Tencent Cloud staging 验收。Stage05 明确不做 UI、Mini App、RAG、生产上线、真实客户发送、客户群发送、provider 写入、资金动作、账户生产或自动替换分发。
 
 ## 2. Stage 02 Scope
 
@@ -104,3 +143,12 @@ Stage 02 范围已经确认：
 - 用户确认从文档阶段进入代码开发。
 - 不把真实 Bot Token、webhook secret、数据库密码、Redis 密码或 test chat allowlist 写入仓库。
 - 任何腾讯云服务器操作、staging env 修改或 Telegram `sendMessage` 真实发送都必须先单独确认。
+
+进入 Stage 05 代码开发前必须：
+
+- Stage 05 文档包通过用户 review。
+- 用户确认从文档阶段进入代码实施。
+- 不把 OpenRouter key、真实 Bot Token、webhook secret、数据库密码、Redis 密码或 test chat allowlist 写入仓库。
+- 任何 Tencent Cloud staging env 修改、真实 OpenRouter 调用或 Telegram `sendMessage` 真实发送都必须先单独确认。
+- `PROVIDER_MODE` 保持 disabled。
+- Account Inventory Agent 不生产账户、不自动替换分发账户。

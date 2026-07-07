@@ -41,6 +41,7 @@ services:
       REDIS_URL: ${REDIS_URL:?set REDIS_URL}
       TELEGRAM_SEND_MODE: dry_run
       LLM_ENABLED: "false"
+      AGENT_WORKFLOW_MODE: fake
       PROVIDER_MODE: disabled
     command: ["alembic", "upgrade", "head"]
     depends_on:
@@ -62,7 +63,13 @@ services:
       DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
       REDIS_URL: ${REDIS_URL:?set REDIS_URL}
       TELEGRAM_SEND_MODE: ${TELEGRAM_SEND_MODE:-dry_run}
-      LLM_ENABLED: "false"
+      LLM_ENABLED: "${LLM_ENABLED:-false}"
+      AGENT_WORKFLOW_MODE: "${AGENT_WORKFLOW_MODE:-fake}"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
+      OPENROUTER_MODEL: "${OPENROUTER_MODEL:-openrouter/auto}"
+      OPENROUTER_BASE_URL: "${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}"
+      AGENT_SAVE_FULL_PROMPT: "${AGENT_SAVE_FULL_PROMPT:-false}"
+      AGENT_SAVE_FULL_RESPONSE: "${AGENT_SAVE_FULL_RESPONSE:-false}"
       PROVIDER_MODE: disabled
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     depends_on:
@@ -84,7 +91,13 @@ services:
       DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
       REDIS_URL: ${REDIS_URL:?set REDIS_URL}
       TELEGRAM_SEND_MODE: ${TELEGRAM_SEND_MODE:-dry_run}
-      LLM_ENABLED: "false"
+      LLM_ENABLED: "${LLM_ENABLED:-false}"
+      AGENT_WORKFLOW_MODE: "${AGENT_WORKFLOW_MODE:-fake}"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
+      OPENROUTER_MODEL: "${OPENROUTER_MODEL:-openrouter/auto}"
+      OPENROUTER_BASE_URL: "${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}"
+      AGENT_SAVE_FULL_PROMPT: "${AGENT_SAVE_FULL_PROMPT:-false}"
+      AGENT_SAVE_FULL_RESPONSE: "${AGENT_SAVE_FULL_RESPONSE:-false}"
       PROVIDER_MODE: disabled
     command: ["python", "-m", "app.workers.stage03_outbox_bridge_runtime"]
     depends_on:
@@ -106,7 +119,13 @@ services:
       DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
       REDIS_URL: ${REDIS_URL:?set REDIS_URL}
       TELEGRAM_SEND_MODE: ${TELEGRAM_SEND_MODE:-dry_run}
-      LLM_ENABLED: "false"
+      LLM_ENABLED: "${LLM_ENABLED:-false}"
+      AGENT_WORKFLOW_MODE: "${AGENT_WORKFLOW_MODE:-fake}"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
+      OPENROUTER_MODEL: "${OPENROUTER_MODEL:-openrouter/auto}"
+      OPENROUTER_BASE_URL: "${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}"
+      AGENT_SAVE_FULL_PROMPT: "${AGENT_SAVE_FULL_PROMPT:-false}"
+      AGENT_SAVE_FULL_RESPONSE: "${AGENT_SAVE_FULL_RESPONSE:-false}"
       PROVIDER_MODE: disabled
     command: ["python", "-m", "app.workers.stage03_runtime"]
     depends_on:

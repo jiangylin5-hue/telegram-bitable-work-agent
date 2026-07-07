@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.config import Settings, get_settings
 from app.core.database import get_session
 from app.schemas.service_drafts import (
     ConfirmationActionRequest,
@@ -28,6 +29,10 @@ def get_confirmation_uow(
     return SqlAlchemyConfirmationUnitOfWork(session)
 
 
+def get_confirmation_settings() -> Settings:
+    return get_settings()
+
+
 @router.post(
     "/service-drafts/{draft_id}/actions",
     response_model=ConfirmationActionResponse,
@@ -35,6 +40,7 @@ def get_confirmation_uow(
 def apply_service_draft_action(
     draft_id: UUID,
     request: ConfirmationActionRequest,
+    settings: Settings = Depends(get_confirmation_settings),
     uow: ConfirmationUnitOfWork = Depends(get_confirmation_uow),
 ) -> ConfirmationActionResponse:
     actor = Actor(
@@ -44,13 +50,32 @@ def apply_service_draft_action(
     )
     try:
         if request.action == "confirm":
-            result = confirm_service_draft(uow, draft_id, actor)
+            result = confirm_service_draft(
+                uow,
+                draft_id,
+                actor,
+                allowed_chat_ids=_allowed_chat_ids(settings, uow),
+            )
             uow.commit()
             return ConfirmationActionResponse(
                 draft_id=str(draft_id),
-                draft_status="confirmed",
-                service_record_id=str(result.service_record.id),
-                execution_ticket_id=str(result.execution_ticket.id),
+                draft_status=_confirmed_draft_status(result),
+                service_record_id=(
+                    None
+                    if result.service_record is None
+                    else str(result.service_record.id)
+                ),
+                execution_ticket_id=(
+                    None
+                    if result.execution_ticket is None
+                    else str(result.execution_ticket.id)
+                ),
+                telegram_send_request_id=(
+                    None
+                    if result.telegram_send_request is None
+                    else str(result.telegram_send_request.id)
+                ),
+                side_effect=result.side_effect,
             )
         if request.action == "reject":
             draft = reject_service_draft(
@@ -90,3 +115,20 @@ def apply_service_draft_action(
 
 def _draft_response(draft_id: UUID, status: str) -> ConfirmationActionResponse:
     return ConfirmationActionResponse(draft_id=str(draft_id), draft_status=status)
+
+
+def _allowed_chat_ids(
+    settings: Settings,
+    uow: ConfirmationUnitOfWork,
+) -> tuple[str, ...]:
+    return settings.telegram_test_send_allowed_chat_ids or getattr(
+        uow,
+        "allowed_chat_ids",
+        (),
+    )
+
+
+def _confirmed_draft_status(result) -> str:
+    if result.service_record is not None and result.execution_ticket is None:
+        return "service_record_created"
+    return "confirmed"

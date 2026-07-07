@@ -39,7 +39,8 @@ Compose behavior:
 
 - `api`, `outbox-bridge` and `worker` read `TELEGRAM_SEND_MODE` from server env with a safe default of `dry_run`.
 - `migrate` keeps `TELEGRAM_SEND_MODE=dry_run`; migration must not depend on Telegram send capability.
-- `LLM_ENABLED=false` and `PROVIDER_MODE=disabled` remain forced by compose for runtime services.
+- For Stage 04 rehearsals, keep `LLM_ENABLED=false`, `AGENT_WORKFLOW_MODE=fake` and `PROVIDER_MODE=disabled`.
+- Current shared compose defaults remain LLM-off/fake/provider-disabled. Later Stage05-only rehearsals may override LLM fields after separate approval, but that is outside Stage04 scope.
 
 ## 3. Preflight
 

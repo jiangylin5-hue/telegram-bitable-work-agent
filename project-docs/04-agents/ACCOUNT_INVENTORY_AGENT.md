@@ -4,7 +4,21 @@
 
 - Document status: agent draft
 - Scope: 账户库存、生产账户、未启用账户、已分配账户、客户归属、账户状态
-- Current Progress: 2026-07-04 根据用户真实岗位描述新增账户库存 Agent。
+- Current Progress: 2026-07-07 根据 Stage05 用户确认更新职责边界：Account Inventory Agent 不生产账户，只负责账户分发、库存管理、异常状态处理和高确定性风控/封号自动标记。
+
+## 0. Stage 05 Clarification
+
+2026-07-07 用户明确修正本 Agent 边界：
+
+- Account Inventory Agent 不负责生产账户。
+- 账户生产、导入、生产批次创建属于人工生产角色、外部系统或后续单独流程。
+- Account Inventory Agent 负责账户分发、库存管理、库存状态解释和异常处理。
+- 因账户经常不稳定、经常风控、经常封号，Agent 需要能识别账户异常并维护库存状态。
+- 高确定性异常，例如明确封号、明确风控、明确不可用，可以通过后端受控 service 自动标记为 `blocked`、`disabled` 或 `risk_controlled`，并必须写 `account_status_events` 和 `ops_audit_events`。
+- 不明确的异常必须进入人工复核。
+- 自动标记异常后，Stage05 不自动推荐替换账户、不自动预留候选账户、不自动重新分发账户。
+
+本文旧章节中涉及 `Production creates or imports account`、`create_inventory_account` 的内容，只作为账户库存表如何接收外部生产结果的背景，不代表 Account Inventory Agent 在 Stage05 负责生产账户。
 
 ## 1. Business Role
 
