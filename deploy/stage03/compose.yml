@@ -39,7 +39,7 @@ services:
       APP_ENV: staging
       DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
       REDIS_URL: ${REDIS_URL:?set REDIS_URL}
-      TELEGRAM_SEND_MODE: ${TELEGRAM_SEND_MODE:-dry_run}
+      TELEGRAM_SEND_MODE: dry_run
       LLM_ENABLED: "false"
       PROVIDER_MODE: disabled
     command: ["alembic", "upgrade", "head"]
@@ -105,7 +105,7 @@ services:
       APP_ENV: staging
       DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
       REDIS_URL: ${REDIS_URL:?set REDIS_URL}
-      TELEGRAM_SEND_MODE: dry_run
+      TELEGRAM_SEND_MODE: ${TELEGRAM_SEND_MODE:-dry_run}
       LLM_ENABLED: "false"
       PROVIDER_MODE: disabled
     command: ["python", "-m", "app.workers.stage03_runtime"]

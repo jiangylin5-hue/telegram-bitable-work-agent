@@ -98,7 +98,7 @@ Stage 04 不验收：
 | Intent placeholder without LLM | passed locally | `pytest tests/integration/test_stage04_intent_placeholder.py tests/integration/test_stage03_worker_runtime.py tests/unit/test_stage03_worker_runtime_factory.py -v`: 8 passed |
 | `telegram_send_requests` migration | passed locally | `pytest tests/unit/test_model_metadata.py -v`: 3 passed; `alembic upgrade head --sql` reached `20260706_0011` |
 | Restricted send config | passed locally | `pytest tests/unit/test_stage04_config.py tests/unit/test_stage03_config.py -v`: 13 passed |
-| Staging compose send-mode override | passed locally | `pytest tests/unit/test_stage04_deploy_compose.py -v`; api/outbox-bridge/worker read `${TELEGRAM_SEND_MODE:-dry_run}`, while migrate stays `dry_run` |
+| Staging compose send-mode override | passed locally | `pytest tests/unit/test_stage04_deploy_compose.py -v`; service-specific assertions prove api/outbox-bridge/worker read `${TELEGRAM_SEND_MODE:-dry_run}`, while migrate stays `dry_run` |
 | Send request API | passed locally | `pytest tests/integration/test_stage04_test_send.py -v`: 13 passed |
 | Send request schema limit | passed locally | `message_text` over 1000 chars returns 422 without request/outbox/audit; `pytest tests/integration/test_stage04_test_send.py -v`: 13 passed |
 | Send request permission boundary | passed locally | unauthorized request returns 403 and writes `permission_denied`; `pytest tests/integration/test_stage04_test_send.py -v`: 13 passed |

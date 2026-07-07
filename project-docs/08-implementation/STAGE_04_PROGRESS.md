@@ -399,3 +399,16 @@ Not done: Did not deploy, inspect server files, change server `.env.stage03`, ru
 Risks / follow-up: User must provide SSH access details, a key file path, a password-based interactive terminal, or run the documented commands in a user-controlled server terminal and return redacted evidence. Secrets must stay outside git and docs.
 Next subphase: 04.5 Staging Rehearsal And Stage Close after SSH access is available.
 ```
+
+```text
+Date: 2026-07-07
+Subphase: Stage 04 staging compose service-specific correction
+Status: completed locally
+Completed: During server-guided Task10 preflight, re-read the deployed compose file and found the previous count-based test could pass while `migrate` and `worker` send-mode values were swapped. Corrected `deploy/stage03/compose.yml` so `migrate` remains `TELEGRAM_SEND_MODE=dry_run` and `worker` reads `${TELEGRAM_SEND_MODE:-dry_run}` with api/outbox-bridge. Strengthened the unit test to assert the value per service instead of only counting occurrences.
+Changed files: deploy/stage03/compose.yml; backend/tests/unit/test_stage04_deploy_compose.py; project-docs/08-implementation/STAGE_04_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_04_PROGRESS.md.
+Tests run: cd backend; pytest tests/unit/test_stage04_deploy_compose.py tests/unit/test_stage04_config.py tests/integration/test_stage04_test_send.py -q; cd backend; pytest tests -q; git diff --check.
+Test result: Focused suite 19 passed; full backend suite 172 passed / 17 skipped; `git diff --check` reported no whitespace errors, only Windows LF-to-CRLF warnings.
+Not done: Did not restart staging containers, run migration, change server `.env.stage03`, create binding, send Telegram messages, or call Telegram `sendMessage` yet.
+Risks / follow-up: Commit and push this correction before continuing server deployment; then fast-forward the staging checkout again.
+Next subphase: 04.5 Staging Rehearsal And Stage Close after corrected deploy commit reaches server.
+```
