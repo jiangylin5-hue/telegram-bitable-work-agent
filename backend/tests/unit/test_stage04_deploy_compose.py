@@ -1,4 +1,21 @@
 from pathlib import Path
+from subprocess import DEVNULL, check_output
+
+
+def _compose_path() -> Path:
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "deploy" / "stage03" / "compose.yml"
+        if candidate.exists():
+            return candidate
+
+    git_root = Path(
+        check_output(
+            ["git", "rev-parse", "--show-toplevel"],
+            stderr=DEVNULL,
+            text=True,
+        ).strip()
+    )
+    return git_root / "deploy" / "stage03" / "compose.yml"
 
 
 def _service_block(compose_text: str, service_name: str) -> str:
@@ -23,7 +40,7 @@ def _service_block(compose_text: str, service_name: str) -> str:
 
 
 def test_stage04_runtime_services_can_enable_restricted_test_send_mode() -> None:
-    compose_path = Path(__file__).parents[3] / "deploy" / "stage03" / "compose.yml"
+    compose_path = _compose_path()
     compose_text = compose_path.read_text(encoding="utf-8")
 
     assert "TELEGRAM_SEND_MODE: dry_run" in _service_block(compose_text, "migrate")
