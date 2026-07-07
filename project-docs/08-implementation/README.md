@@ -3,8 +3,8 @@
 ## Status
 
 - Document status: active implementation index
-- Scope: Stage 02 历史入口与 Stage 03 当前阶段入口
-- Current Progress: 2026-07-06 Stage 02 已冻结关闭；Stage 03 已完成真实腾讯云 staging 验收：域名 `api.jiangtest1.online` 指向 CVM `43.160.215.224`，Caddy HTTPS、FastAPI、PostgreSQL、Redis、outbox bridge 和 worker 均已运行，Telegram webhook 已设置并通过真实消息验证 `telegram_inbox` / outbox / audit 闭环。Stage 03 未启用 Telegram 真实发送、LLM 或 provider。
+- Scope: Stage 02 / Stage 03 历史入口与 Stage 04 当前实施入口
+- Current Progress: 2026-07-07 Stage 02 已冻结关闭；Stage 03 已完成真实腾讯云 staging 验收。Stage 04 文档已确认，Tasks 1-9 已本地实现并通过 `pytest tests -q`（172 passed / 17 skipped）；本地验收审计见 `STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md`。Task 10 staging rehearsal 已获用户确认进入，仍只允许按 allowlisted test chat 做受控测试发送，禁止客户群发、LLM、provider 和生产切换。
 
 ## 1. Read Order
 
@@ -46,7 +46,34 @@ Stage 03 complex module docs:
 2. [Stage 03 Customer Binding And Telegram Inbox Module](modules/STAGE_03_CUSTOMER_BINDING_AND_INBOX.md)
 3. [Stage 03 Redis Streams Worker Module](modules/STAGE_03_REDIS_STREAMS_WORKER.md)
 
+Stage 04 开发前按这个顺序阅读：
+
+1. [Stage 04 Source Of Truth](STAGE_04_SOURCE_OF_TRUTH.md)
+2. [Stage 04 Implementation Plan](STAGE_04_IMPLEMENTATION_PLAN.md)
+3. [Stage 04 SDD](STAGE_04_SDD.md)
+4. [Stage 04 BDD](STAGE_04_BDD.md)
+5. [Stage 04 Acceptance Checklist](STAGE_04_ACCEPTANCE_CHECKLIST.md)
+6. [Stage 04 Local Acceptance Audit](STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md)
+7. [Stage 04 Module Index](STAGE_04_MODULE_INDEX.md)
+8. [Stage 04 API Contract](STAGE_04_API_CONTRACT.md)
+9. [Stage 04 Database And Migration Design](STAGE_04_DATABASE_AND_MIGRATION_DESIGN.md)
+10. [Stage 04 Security And Permission Design](STAGE_04_SECURITY_AND_PERMISSION_DESIGN.md)
+11. [Stage 04 Test Plan](STAGE_04_TEST_PLAN.md)
+12. [Stage 04 Operations Runbook](STAGE_04_OPERATIONS_RUNBOOK.md)
+13. [Stage 04 Risk Register](STAGE_04_RISK_REGISTER.md)
+14. [Stage 04 Progress](STAGE_04_PROGRESS.md)
+
+Stage 04 complex module docs:
+
+1. [Stage 04 Binding Management Module](modules/STAGE_04_BINDING_MANAGEMENT.md)
+2. [Stage 04 New Message Binding Module](modules/STAGE_04_NEW_MESSAGE_BINDING.md)
+3. [Stage 04 Bitable Views Module](modules/STAGE_04_BITABLE_VIEWS.md)
+4. [Stage 04 Restricted Test Send Module](modules/STAGE_04_RESTRICTED_TEST_SEND.md)
+5. [Stage 04 Intent Placeholder Module](modules/STAGE_04_INTENT_PLACEHOLDER.md)
+
 Stage 02 已于 2026-07-06 冻结关闭。Stage 03 已由用户于 2026-07-06 确认转为 active，补充决策：Telegram 只收不发、Worker 使用 PostgreSQL Outbox + Redis Streams、Stage 03 暂不调用 LLM、第一批业务场景为 Telegram 收件箱 / 客户消息登记、Webhook 使用 secret token + optional allowlist、做最小客户绑定、部署到腾讯云 CVM staging、HTTPS 使用 Caddy。当前 Tasks 1-7 已完成验收；真实 staging 环境已接收 Telegram 测试消息并在 `telegram_inbox`、`outbox_events`、`ops_audit_events` 中形成证据。
+
+Stage 04 已由用户于 2026-07-06 确认并进入本地实现，范围为：绑定管理 API、`chat_id` / `user_id` / `chat_id + user_id` 绑定、绑定后只影响新消息、无 LLM intent placeholder、`telegram_send_requests` 受控测试发送、staging 验收。当前 Tasks 1-9 已本地完成，并由 [Stage 04 Local Acceptance Audit](STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md) 记录本地证据；Task 10 staging rehearsal 尚未执行。Stage 04 不做 UI、Mini App、客户群发送、OpenRouter、LangGraph、provider、资金或账户外部写入。
 
 ## 2. Stage 02 Scope
 
@@ -70,9 +97,9 @@ Stage 02 范围已经确认：
 - 记录为后续候选。
 - 需要用户确认后才能变更阶段范围。
 
-进入 Stage 03 代码开发前必须：
+进入 Stage 04 代码开发前必须：
 
-- Stage 03 文档包通过一致性检查。
+- Stage 04 文档包通过一致性检查。
 - 用户确认从文档阶段进入代码开发。
-- 不把真实 Bot Token、webhook secret、数据库密码或 Redis 密码写入仓库。
-- 任何腾讯云服务器操作、DNS 修改或 Telegram webhook 设置都必须先单独确认。
+- 不把真实 Bot Token、webhook secret、数据库密码、Redis 密码或 test chat allowlist 写入仓库。
+- 任何腾讯云服务器操作、staging env 修改或 Telegram `sendMessage` 真实发送都必须先单独确认。

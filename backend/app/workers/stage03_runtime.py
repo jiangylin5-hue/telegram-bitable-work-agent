@@ -2,6 +2,7 @@ import os
 
 from sqlalchemy.orm import Session
 
+from app.clients.telegram_bot import TelegramBotClient
 from app.core.config import validate_runtime_settings
 from app.core.database import get_session_factory
 from app.queues.redis_streams import RedisStreams, RedisStreamsClient
@@ -10,6 +11,7 @@ from app.workers.stage03_handlers import (
     SqlAlchemyStage03WorkerUnitOfWork,
     Stage03WorkerUnitOfWork,
     handle_telegram_message_received,
+    handle_telegram_test_send_requested,
 )
 
 DEFAULT_STAGE03_STREAM_NAME = "stage03:events"
@@ -24,17 +26,29 @@ def create_stage03_worker(
     consumer_name: str,
     stream_name: str = DEFAULT_STAGE03_STREAM_NAME,
     group_name: str = DEFAULT_STAGE03_GROUP_NAME,
+    telegram_bot_client: TelegramBotClient | None = None,
+    telegram_test_send_allowed_chat_ids: tuple[str, ...] = (),
 ) -> RedisStreamsWorker:
+    handlers = {
+        "telegram.message_received": (
+            lambda fields: handle_telegram_message_received(fields, uow)
+        )
+    }
+    if telegram_bot_client is not None:
+        handlers["telegram.test_send_requested"] = (
+            lambda fields: handle_telegram_test_send_requested(
+                fields,
+                uow,
+                bot_client=telegram_bot_client,
+                allowed_chat_ids=telegram_test_send_allowed_chat_ids,
+            )
+        )
     return RedisStreamsWorker(
         streams=streams,
         stream_name=stream_name,
         group_name=group_name,
         consumer_name=consumer_name,
-        handlers={
-            "telegram.message_received": (
-                lambda fields: handle_telegram_message_received(fields, uow)
-            )
-        },
+        handlers=handlers,
         failure_uow=uow,
     )
 
@@ -46,6 +60,8 @@ def create_stage03_worker_for_session(
     consumer_name: str,
     stream_name: str = DEFAULT_STAGE03_STREAM_NAME,
     group_name: str = DEFAULT_STAGE03_GROUP_NAME,
+    telegram_bot_client: TelegramBotClient | None = None,
+    telegram_test_send_allowed_chat_ids: tuple[str, ...] = (),
 ) -> RedisStreamsWorker:
     return create_stage03_worker(
         streams=streams,
@@ -53,12 +69,20 @@ def create_stage03_worker_for_session(
         stream_name=stream_name,
         group_name=group_name,
         consumer_name=consumer_name,
+        telegram_bot_client=telegram_bot_client,
+        telegram_test_send_allowed_chat_ids=telegram_test_send_allowed_chat_ids,
     )
 
 
 def main() -> None:
     settings = validate_runtime_settings()
     streams = RedisStreamsClient.from_url(settings.redis_url)
+    telegram_bot_client = (
+        TelegramBotClient(bot_token=settings.telegram_bot_token)
+        if settings.telegram_send_mode == "restricted_test"
+        and settings.telegram_bot_token is not None
+        else None
+    )
     session_factory = get_session_factory()
     with session_factory() as session:
         worker = create_stage03_worker_for_session(
@@ -75,6 +99,10 @@ def main() -> None:
             consumer_name=os.getenv(
                 "STAGE03_REDIS_CONSUMER_NAME",
                 DEFAULT_STAGE03_CONSUMER_NAME,
+            ),
+            telegram_bot_client=telegram_bot_client,
+            telegram_test_send_allowed_chat_ids=(
+                settings.telegram_test_send_allowed_chat_ids
             ),
         )
         worker.run_continuously(

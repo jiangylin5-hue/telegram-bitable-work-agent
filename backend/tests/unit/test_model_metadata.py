@@ -31,6 +31,7 @@ CORE_TABLES = {
     "outbox_events",
     "payment_profiles",
     "account_card_bindings",
+    "telegram_send_requests",
 }
 
 FORBIDDEN_COLUMNS = {
@@ -50,3 +51,29 @@ def test_stage_02_does_not_introduce_tenant_or_raw_payment_columns() -> None:
         column_names = {column.name for column in table.columns}
 
         assert column_names.isdisjoint(FORBIDDEN_COLUMNS), table.name
+
+
+def test_stage04_telegram_send_requests_table_shape() -> None:
+    table = metadata.tables["telegram_send_requests"]
+    column_names = {column.name for column in table.columns}
+
+    assert {
+        "id",
+        "target_chat_id",
+        "message_text",
+        "status",
+        "requested_by_actor_type",
+        "requested_by_actor_id",
+        "confirmed_by_actor_type",
+        "confirmed_by_actor_id",
+        "confirmed_at",
+        "allowlist_snapshot",
+        "telegram_response_summary",
+        "last_error_code",
+        "sent_at",
+        "trace_id",
+        "created_at",
+        "updated_at",
+    }.issubset(column_names)
+    assert "telegram_bot_token" not in column_names
+    assert "raw_telegram_response" not in column_names

@@ -27,6 +27,7 @@ class Settings:
     telegram_allowed_chat_ids: tuple[str, ...] = ()
     telegram_allowed_user_ids: tuple[str, ...] = ()
     telegram_send_mode: str = "dry_run"
+    telegram_test_send_allowed_chat_ids: tuple[str, ...] = ()
     provider_mode: str = "disabled"
     llm_enabled: bool = False
 
@@ -51,6 +52,9 @@ def get_settings() -> Settings:
             "TELEGRAM_SEND_MODE",
             Settings.telegram_send_mode,
         ),
+        telegram_test_send_allowed_chat_ids=_env_csv_tuple(
+            "TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS"
+        ),
         provider_mode=os.getenv("PROVIDER_MODE", Settings.provider_mode),
         llm_enabled=_env_bool("LLM_ENABLED", Settings.llm_enabled),
     )
@@ -71,7 +75,7 @@ def validate_runtime_settings(settings: Settings | None = None) -> Settings:
                 f"{joined_names}"
             )
         unsafe = []
-        if settings.telegram_send_mode != "dry_run":
+        if settings.telegram_send_mode not in {"dry_run", "restricted_test"}:
             unsafe.append("TELEGRAM_SEND_MODE")
         if settings.llm_enabled:
             unsafe.append("LLM_ENABLED")
@@ -83,6 +87,18 @@ def validate_runtime_settings(settings: Settings | None = None) -> Settings:
                 "Unsafe Stage 03 runtime settings are enabled: "
                 f"{joined_names}"
             )
+        if settings.telegram_send_mode == "restricted_test":
+            missing_restricted_send = []
+            if not settings.telegram_bot_token:
+                missing_restricted_send.append("TELEGRAM_BOT_TOKEN")
+            if not settings.telegram_test_send_allowed_chat_ids:
+                missing_restricted_send.append("TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS")
+            if missing_restricted_send:
+                joined_names = ", ".join(missing_restricted_send)
+                raise RuntimeError(
+                    "Missing required restricted test send environment variables: "
+                    f"{joined_names}"
+                )
     return settings
 
 

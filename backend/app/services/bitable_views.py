@@ -8,6 +8,7 @@ from app.models import metadata
 from app.schemas.views import ViewRecord, ViewResponse
 from app.services.permissions import (
     Actor,
+    GLOBAL_RECORD_ROLES,
     allowed_fields_for_actor,
     can_view_customer_record,
 )
@@ -26,6 +27,7 @@ class ViewDefinition:
     fields: tuple[str, ...]
     field_aliases: dict[str, str] | None = None
     sensitive_fields: frozenset[str] = frozenset()
+    sensitive_fields_visible_to_global_roles: bool = False
     default_limit: int | None = None
     max_limit: int | None = None
 
@@ -185,6 +187,58 @@ STAGE_02_VIEW_REGISTRY: dict[str, ViewDefinition] = {
         table_name="ops_audit_events",
         fields=("trace_id", "actor_type", "event_type", "entity_type", "created_at"),
     ),
+    "telegram_bindings": ViewDefinition(
+        view_key="telegram_bindings",
+        table_name="telegram_customer_bindings",
+        fields=(
+            "binding_id",
+            "customer_id",
+            "binding_scope",
+            "telegram_chat_id",
+            "telegram_user_id",
+            "status",
+            "label",
+            "created_by",
+            "created_at",
+            "updated_at",
+        ),
+        field_aliases={"binding_id": "id"},
+        sensitive_fields=frozenset({"telegram_chat_id", "telegram_user_id"}),
+        sensitive_fields_visible_to_global_roles=True,
+    ),
+    "telegram_send_requests": ViewDefinition(
+        view_key="telegram_send_requests",
+        table_name="telegram_send_requests",
+        fields=(
+            "request_id",
+            "target_chat_id",
+            "status",
+            "requested_by_actor_id",
+            "confirmed_by_actor_id",
+            "telegram_response_summary",
+            "last_error_code",
+            "sent_at",
+            "trace_id",
+        ),
+        field_aliases={"request_id": "id"},
+        sensitive_fields=frozenset({"target_chat_id", "telegram_response_summary"}),
+        sensitive_fields_visible_to_global_roles=True,
+    ),
+    "telegram_intent_queue": ViewDefinition(
+        view_key="telegram_intent_queue",
+        table_name="messages",
+        fields=(
+            "message_id",
+            "customer_id",
+            "binding_status",
+            "intent_status",
+            "intent_type",
+            "processing_status",
+            "received_at",
+            "trace_id",
+        ),
+        field_aliases={"message_id": "id"},
+    ),
 }
 
 
@@ -266,10 +320,23 @@ def _allowed_fields_for_view(
     view: ViewDefinition,
     actor: Actor | None,
 ) -> set[str]:
-    view_allowed_fields = set(view.fields) - set(view.sensitive_fields)
+    view_allowed_fields = set(view.fields)
+    if not _can_actor_view_sensitive_fields(view, actor):
+        view_allowed_fields = view_allowed_fields - set(view.sensitive_fields)
     if actor is None:
         return view_allowed_fields
     return view_allowed_fields & allowed_fields_for_actor(actor, set(view.fields))
+
+
+def _can_actor_view_sensitive_fields(
+    view: ViewDefinition,
+    actor: Actor | None,
+) -> bool:
+    return (
+        view.sensitive_fields_visible_to_global_roles
+        and actor is not None
+        and actor.role in GLOBAL_RECORD_ROLES
+    )
 
 
 def _source_field_name(

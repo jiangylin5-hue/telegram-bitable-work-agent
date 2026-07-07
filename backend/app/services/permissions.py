@@ -73,6 +73,9 @@ ACTION_ALLOWLIST_BY_ROLE["manager"] = ACTION_ALLOWLIST_BY_ROLE["manager"] | {
     "confirm_account_assignment",
     "activate_inventory_account",
     "view_company_report",
+    "manage_telegram_binding",
+    "request_test_telegram_send",
+    "confirm_test_telegram_send",
 }
 ACTION_ALLOWLIST_BY_ROLE["admin"] = frozenset({"*"})
 

@@ -38,6 +38,36 @@ def test_committed_outbox_event_becomes_redis_stream_job() -> None:
     ]
 
 
+def test_test_send_outbox_event_projects_request_id_to_redis_stream() -> None:
+    event = _test_send_event()
+    repository = InMemoryOutboxRepository([event])
+    streams = InMemoryRedisStreams()
+    bridge = OutboxToRedisStreamsBridge(
+        repository=repository,
+        streams=streams,
+        stream_name="local:stage03:events",
+    )
+
+    result = bridge.dispatch_once()
+
+    assert result.enqueued == 1
+    assert result.skipped == 0
+    assert event.status == "enqueued"
+    assert streams.entries("local:stage03:events") == [
+        {
+            "idempotency_key": event.idempotency_key,
+            "fields": {
+                "event_id": str(event.id),
+                "event_type": "telegram.test_send_requested",
+                "trace_id": "tg-send:test",
+                "idempotency_key": "telegram.test_send_requested:request-1",
+                "request_id": "request-1",
+                "created_at": "2026-07-06T10:00:00+00:00",
+            },
+        }
+    ]
+
+
 def test_rolled_back_outbox_event_is_not_enqueued() -> None:
     repository = InMemoryOutboxRepository()
     streams = InMemoryRedisStreams()
@@ -85,5 +115,20 @@ def _message_event() -> OutboxEvent:
         max_attempts=3,
         idempotency_key="telegram.message_received:message-1",
         trace_id="tg:update-1",
+        created_at=datetime(2026, 7, 6, 10, 0, tzinfo=timezone.utc),
+    )
+
+
+def _test_send_event() -> OutboxEvent:
+    return OutboxEvent(
+        id=uuid4(),
+        event_type="telegram.test_send_requested",
+        payload={"request_id": "request-1"},
+        status="pending",
+        attempts=0,
+        attempt_count=0,
+        max_attempts=3,
+        idempotency_key="telegram.test_send_requested:request-1",
+        trace_id="tg-send:test",
         created_at=datetime(2026, 7, 6, 10, 0, tzinfo=timezone.utc),
     )

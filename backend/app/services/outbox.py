@@ -101,5 +101,8 @@ class OutboxToRedisStreamsBridge:
         message_id = event.payload.get("message_id")
         if message_id is not None:
             fields["message_id"] = str(message_id)
+        request_id = event.payload.get("request_id")
+        if request_id is not None:
+            fields["request_id"] = str(request_id)
 
         return fields

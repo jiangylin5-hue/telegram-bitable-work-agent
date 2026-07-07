@@ -38,6 +38,7 @@ def test_worker_processes_message_registration_job() -> None:
     assert result.dead_lettered == 0
     assert message.processing_status == "processed"
     assert message.outbox_status == "processed"
+    assert message.intent_status == "intent_ready"
     assert message.last_error_code is None
     assert message.processed_at is not None
     assert event.status == "processed"
@@ -45,10 +46,12 @@ def test_worker_processes_message_registration_job() -> None:
     assert streams.pending_count(STREAM_NAME, GROUP_NAME) == 0
     assert uow.commits == 1
     assert [audit.event_type for audit in uow.audit_events] == [
+        "telegram.intent_placeholder.ready",
         "telegram.message_processed"
     ]
-    assert uow.audit_events[0].after_state["message_id"] == str(message.id)
-    assert uow.audit_events[0].after_state["processing_status"] == "processed"
+    assert uow.audit_events[1].after_state["message_id"] == str(message.id)
+    assert uow.audit_events[1].after_state["processing_status"] == "processed"
+    assert uow.audit_events[1].after_state["intent_status"] == "intent_ready"
 
 
 def test_worker_rerun_is_idempotent() -> None:
@@ -73,8 +76,10 @@ def test_worker_rerun_is_idempotent() -> None:
     assert second.retried == 0
     assert second.dead_lettered == 0
     assert message.processing_status == "processed"
+    assert message.intent_status == "intent_ready"
     assert event.status == "processed"
     assert [audit.event_type for audit in uow.audit_events] == [
+        "telegram.intent_placeholder.ready",
         "telegram.message_processed"
     ]
 

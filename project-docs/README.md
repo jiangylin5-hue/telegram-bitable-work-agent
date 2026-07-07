@@ -3,8 +3,8 @@
 ## Status
 
 - Document status: active project document index
-- Current project mode: Stage 03 backend implementation
-- Current Progress: 2026-07-06 Stage 02 已冻结关闭；Stage 03 已完成真实腾讯云 staging 验收：`api.jiangtest1.online` 通过 Caddy HTTPS 接收真实 Telegram webhook，PostgreSQL/Redis/worker/outbox bridge 正常运行，真实测试消息进入 `telegram_inbox` 并完成 worker processed/audit 闭环。Stage 03 仍保持 Telegram send dry-run、LLM disabled、provider disabled。
+- Current project mode: Stage 04 local implementation audited, staging rehearsal pending
+- Current Progress: 2026-07-07 Stage 02 已冻结关闭；Stage 03 已完成真实腾讯云 staging 验收。Stage 04 文档已确认，Tasks 1-9 已本地实现并通过 `pytest tests -q`（172 passed / 17 skipped）；本地验收审计见 `STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md`。Task 10 Tencent Cloud staging rehearsal 已获用户确认进入，仍只允许按 allowlisted test chat 做受控测试发送，禁止客户群发、LLM、provider 和生产切换。
 
 ## Document Map
 
@@ -88,6 +88,20 @@
 - [Stage 03 Acceptance Checklist](08-implementation/STAGE_03_ACCEPTANCE_CHECKLIST.md)
 - [Stage 03 Progress](08-implementation/STAGE_03_PROGRESS.md)
 - [Stage 03 Final Acceptance Report](08-implementation/STAGE_03_FINAL_ACCEPTANCE_REPORT.md)
+- [Stage 04 Source Of Truth](08-implementation/STAGE_04_SOURCE_OF_TRUTH.md)
+- [Stage 04 Implementation Plan](08-implementation/STAGE_04_IMPLEMENTATION_PLAN.md)
+- [Stage 04 SDD](08-implementation/STAGE_04_SDD.md)
+- [Stage 04 BDD](08-implementation/STAGE_04_BDD.md)
+- [Stage 04 Module Index](08-implementation/STAGE_04_MODULE_INDEX.md)
+- [Stage 04 API Contract](08-implementation/STAGE_04_API_CONTRACT.md)
+- [Stage 04 Database And Migration Design](08-implementation/STAGE_04_DATABASE_AND_MIGRATION_DESIGN.md)
+- [Stage 04 Security And Permission Design](08-implementation/STAGE_04_SECURITY_AND_PERMISSION_DESIGN.md)
+- [Stage 04 Test Plan](08-implementation/STAGE_04_TEST_PLAN.md)
+- [Stage 04 Operations Runbook](08-implementation/STAGE_04_OPERATIONS_RUNBOOK.md)
+- [Stage 04 Risk Register](08-implementation/STAGE_04_RISK_REGISTER.md)
+- [Stage 04 Acceptance Checklist](08-implementation/STAGE_04_ACCEPTANCE_CHECKLIST.md)
+- [Stage 04 Local Acceptance Audit](08-implementation/STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md)
+- [Stage 04 Progress](08-implementation/STAGE_04_PROGRESS.md)
 
 ## Project Boundary
 

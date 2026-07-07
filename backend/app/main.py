@@ -6,6 +6,10 @@ from app.api.routes.inventory import router as inventory_router
 from app.api.routes.mock_telegram import router as mock_telegram_router
 from app.api.routes.reports import router as reports_router
 from app.api.routes.service_drafts import router as service_drafts_router
+from app.api.routes.telegram_bindings import router as telegram_bindings_router
+from app.api.routes.telegram_send_requests import (
+    router as telegram_send_requests_router,
+)
 from app.api.routes.telegram_webhook import router as telegram_webhook_router
 from app.api.routes.views import router as views_router
 from app.core.config import get_settings, validate_runtime_settings
@@ -21,6 +25,8 @@ def create_app() -> FastAPI:
     app.include_router(mock_telegram_router)
     app.include_router(reports_router)
     app.include_router(service_drafts_router)
+    app.include_router(telegram_bindings_router)
+    app.include_router(telegram_send_requests_router)
     app.include_router(telegram_webhook_router)
     app.include_router(views_router)
     return app
