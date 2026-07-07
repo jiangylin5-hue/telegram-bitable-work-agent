@@ -17,6 +17,7 @@
 - Current Progress Update: 2026-07-07 Added local redacted runtime summary evidence. `python -m app.core.runtime_summary` is now the documented container command for proving Stage05 runtime settings without exposing secrets.
 - Current Progress Update: 2026-07-08 Captured explicit Task12 approval. Approval covers the bounded staging rehearsal action subset only and does not permit production, real customer chat, customer group, provider write, funds movement, account production, automatic replacement or secret/raw allowlist recording.
 - Current Progress Update: 2026-07-08 Added development detail completion audit. Final acceptance must treat `STAGE_05_DEVELOPMENT_DETAIL_COMPLETION_AUDIT.md` as the document-level implementation completeness check before continuing Task12 external staging steps.
+- Current Progress Update: 2026-07-08 Task12 staging rehearsal produced partial external evidence and one blocking defect. Reviewed commit `17043e8176b25e85fcc022a259bd5a99ee473690` deployed to Tencent Cloud staging, migration reached `20260707_0016`, health returned HTTP 200, redacted runtime summaries proved real OpenRouter/restricted-test/provider-disabled settings, and a private allowlisted Telegram message was received/bound/processed. The message remained `intent_ready` with no AgentRun/draft evidence because `stage03_runtime.py` did not inject the Stage05 workflow into the Redis worker. A local runtime wiring fix now passes targeted, Stage05-focused and full backend tests, but final acceptance remains blocked until the fix is committed, redeployed and proven in staging.
 
 ## 1. Result
 
@@ -61,8 +62,8 @@ This report must not be marked passed until:
 | Environment | Local test environment completed; Tencent Cloud staging pending |
 | Staging commit | Pending |
 | Migration revision | Local Alembic offline SQL reaches `20260707_0016`; staging `alembic current` pending |
-| Local backend suite | `pytest tests -q`: 255 passed / 17 skipped |
-| Stage05 focused tests | `pytest tests -k stage05 -v`: 82 passed / 190 deselected |
+| Local backend suite | Latest after runtime wiring fix: `pytest tests -q`: 258 passed / 17 skipped |
+| Stage05 focused tests | Latest after runtime wiring fix: `pytest tests -k stage05 -q`: 85 passed / 190 deselected |
 | Staging contract preflight | `pytest tests\integration\test_stage05_staging_contract.py -v`: 5 passed |
 | Stage05 out-of-scope runtime guard | `pytest tests\unit\test_stage05_scope_guards.py -v`: 4 passed |
 | Requirement traceability audit | `STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md`: local requirements mapped; staging exit gates remain pending |
@@ -82,6 +83,7 @@ This report must not be marked passed until:
 | Stage05 API/OpenAPI readiness audit | FastAPI app/OpenAPI key-path evidence recorded in `STAGE_05_PRE_STAGING_APPROVAL_PACKET.md`; real staging API evidence pending |
 | Stage05 deployment config gate | `pytest tests\unit\test_stage05_deploy_compose.py -v`: 2 passed; `pytest tests\unit\test_stage04_deploy_compose.py -v`: 1 passed; real container runtime proof pending staging |
 | Redacted runtime summary command | `pytest tests\unit\test_stage05_runtime_summary.py -v`: 3 passed; `python -m app.core.runtime_summary` prints only modes, booleans, presence flags and validation status; deployed-container proof pending staging |
+| Task12 runtime wiring fix | `backend/app/workers/stage03_runtime.py` now builds/injects `Stage05AgentWorkflowService` in real OpenRouter mode; `pytest tests/unit/test_stage03_worker_runtime_factory.py tests/integration/test_stage05_worker_runtime.py -q`: 7 passed; redeploy evidence pending |
 
 ## 3. Out Of Scope Confirmation
 
@@ -127,9 +129,9 @@ Final acceptance must attach or summarize the completed redacted ledger from `ST
 
 | Ledger area | Status | Evidence |
 | --- | --- | --- |
-| Approval, deployment, migration and service health | pending staging | Not executed |
-| Redacted env proof for OpenRouter, provider-disabled and restricted Telegram send | pending staging | Not executed |
-| Mixed-language inbound Telegram message and AgentRun evidence | pending staging | Not executed |
+| Approval, deployment, migration and service health | partial; superseded by fix pending redeploy | Approval captured; commit `17043e8176b25e85fcc022a259bd5a99ee473690` deployed; staging migration reached `20260707_0016`; `/health` returned HTTP 200. Runtime wiring fix is not yet redeployed. |
+| Redacted env proof for OpenRouter, provider-disabled and restricted Telegram send | partial; must repeat after redeploy | API and worker redacted runtime summaries showed real OpenRouter mode, key/model presence, restricted Telegram test send allowlist presence, prompt/response storage disabled and provider disabled. Repeat after runtime wiring redeploy. |
+| Mixed-language inbound Telegram message and AgentRun evidence | failed diagnostic; retry required | Private allowlisted message id `f17a2214-7f6c-4474-9361-6a586458f93b` / Telegram message `6` was received, bound and processed, but stayed `intent_ready`; no real AgentRun/draft evidence was produced before the wiring fix. |
 | Draft creation, customer reply send and business no-op evidence | pending staging | Not executed |
 | Account exception branch and view/audit evidence | pending staging | Not executed |
 | Out-of-scope reconfirmation and safety close | pending staging | Not executed |
@@ -141,6 +143,6 @@ Final acceptance must record explicit approval against `STAGE_05_PRE_STAGING_APP
 | Approval item | Status | Evidence |
 | --- | --- | --- |
 | Approval packet prepared | completed locally | `STAGE_05_PRE_STAGING_APPROVAL_PACKET.md` |
-| Approved action subset recorded | pending staging approval | Not approved yet |
-| Still-forbidden action list reconfirmed | pending staging approval | Not approved yet |
-| Approval timestamp recorded | pending staging approval | Not approved yet |
+| Approved action subset recorded | completed | User approved bounded Task12 staging rehearsal action subset at `2026-07-08 00:15:10 +08:00` |
+| Still-forbidden action list reconfirmed | completed | Production, real customer chat, customer group, provider write, funds movement, account production, automatic replacement and secret/raw allowlist recording remain forbidden |
+| Approval timestamp recorded | completed | `2026-07-08 00:15:10 +08:00` |
