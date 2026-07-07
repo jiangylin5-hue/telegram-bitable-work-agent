@@ -4,7 +4,7 @@
 
 - Document status: active security and permission design
 - Scope: Stage 04 binding admin permissions、restricted test send、intent placeholder safety、secret handling、view masking 和 audit。
-- Current Progress: 2026-07-07 Permission actions, restricted test send runtime validation, view masking, Telegram response redaction, worker allowlist re-check, unauthorized API audits and confirm-time allowlist drift are implemented locally with automated test evidence. Staging secret/allowlist verification remains pending.
+- Current Progress: 2026-07-07 Permission actions, restricted test send runtime validation, view masking, Telegram response redaction, worker allowlist re-check, unauthorized API audits and confirm-time allowlist drift are implemented and verified. Staging temporarily enabled `TELEGRAM_SEND_MODE=restricted_test` with a server-only private test chat allowlist, sent one confirmed test message, then closed back to `TELEGRAM_SEND_MODE=dry_run`, cleared the allowlist and kept `LLM_ENABLED=false`, `PROVIDER_MODE=disabled`.
 
 ## 1. Security Goal
 

@@ -4,7 +4,7 @@
 
 - Document status: active SDD
 - Scope: Stage 04 Telegram binding management、test send、intent placeholder、Bitable views 和 staging 验收的软件设计。
-- Current Progress: 2026-07-07 SDD scope has been implemented locally for Tasks 1-9: binding management API, Bitable views, no-LLM intent placeholder, restricted test send API/model/client/worker and local acceptance hardening. Task 10 staging rehearsal remains pending and requires separate confirmation before any external change or real Telegram send.
+- Current Progress: 2026-07-07 SDD scope has been implemented and verified locally plus staging. Tasks 1-10 have evidence: binding management API, Bitable views, no-LLM intent placeholder, restricted test send API/model/client/worker, staging migration `20260706_0011`, real bound inbox update `184365902`, sent test request `05f46883-e4c7-4669-99cb-99a093629f70`, and post-test dry-run safety close.
 
 ## 1. Design Goal
 

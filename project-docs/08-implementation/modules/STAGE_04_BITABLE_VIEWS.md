@@ -4,7 +4,7 @@
 
 - Document status: active module design and local implementation note
 - Scope: Stage04 Bitable-like view contracts for bindings, send requests, intent queue and updated inbox evidence.
-- Current Progress: 2026-07-07 Stage04 views are implemented locally with focused view tests, existing view regression tests and local acceptance evidence for row-level safety. Staging data evidence remains pending.
+- Current Progress: 2026-07-07 Stage04 views are implemented locally and verified in staging. `/views/telegram_bindings/records` projected binding `76413f27-7de9-4bb4-8e51-ca0ded8f46eb`; `/views/telegram_inbox/records` projected update `184365902` as `bound` and `intent_ready`; `/views/telegram_send_requests/records` projected request `05f46883-e4c7-4669-99cb-99a093629f70` as `sent`.
 
 ## 1. Purpose
 

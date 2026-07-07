@@ -4,7 +4,7 @@
 
 - Document status: active module design and local implementation note
 - Scope: No-LLM intent placeholder state and queue boundary for future Message Intake Router Agent.
-- Current Progress: 2026-07-07 No-LLM intent placeholder is implemented locally in the existing `telegram.message_received` worker path. Bound messages become `intent_ready`, audit is written, tests prove no service draft is created, and local acceptance evidence keeps real LLM routing out of Stage 04.
+- Current Progress: 2026-07-07 No-LLM intent placeholder is implemented locally and verified in staging. Real bound update `184365902` became `intent_ready` in `telegram_inbox`, audit event `telegram.intent_placeholder.ready` was written for message `caec8652-4495-47e5-8345-3d1c7993a15d`, and staging kept `LLM_ENABLED=false`.
 
 ## 1. Purpose
 

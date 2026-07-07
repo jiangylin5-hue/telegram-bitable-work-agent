@@ -2,9 +2,9 @@
 
 ## Status
 
-- Document status: active acceptance checklist draft
+- Document status: final acceptance checklist
 - Scope: Stage 04 文档、binding management、new-message binding、intent placeholder、restricted test send 和 staging 验收。
-- Current Progress: 2026-07-07 Tasks 1-9 are implemented locally; full backend suite passed with 172 passed / 17 skipped after the staging compose send-mode gate test was added. [Stage 04 Local Acceptance Audit](STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md) records local readiness; staging rehearsal remains pending and requires separate confirmation before any real Telegram send.
+- Current Progress: 2026-07-07 Stage 04 在已确认范围内完成 staging 验收。Full backend suite passed with 172 passed / 17 skipped; Tencent Cloud staging ran commit `360d376`, migration reached `20260706_0011`, API-created binding made real Telegram update `184365902` appear as `bound` and `intent_ready`, restricted test send request `05f46883-e4c7-4669-99cb-99a093629f70` reached `sent`, and staging was closed back to `TELEGRAM_SEND_MODE=dry_run`.
 
 ## 1. Acceptance Boundary
 
@@ -112,36 +112,39 @@ Stage 04 不验收：
 | Telegram Bot client redaction | passed locally | `pytest tests/unit/test_stage04_telegram_bot_client.py -v`: 2 passed |
 | Send worker idempotency | passed locally | `pytest tests/integration/test_stage04_test_send.py -v`: 13 passed |
 | Send worker failed response state | passed locally | `pytest tests/integration/test_stage04_test_send.py -v`: 13 passed; request becomes `failed`, outbox becomes `dead_letter`, safe error is recorded |
-| Staging binding rehearsal | pending | manual evidence |
-| Staging test send rehearsal | pending | manual evidence |
-| Safety locks: no customer group send, no LLM, no provider | passed locally, staging pending | `pytest tests -q`: 172 passed / 17 skipped; config tests keep `LLM_ENABLED=false` and `PROVIDER_MODE=disabled`; staging manual evidence pending |
+| Staging binding rehearsal | passed | API-created binding `76413f27-7de9-4bb4-8e51-ca0ded8f46eb`; real update `184365902` appeared in `/views/telegram_inbox/records` with `binding_status=bound`, `customer_id=00000000-0000-4000-8000-000000000404`, `processing_status=processed`, `outbox_status=processed`, `intent_status=intent_ready` |
+| Staging test send rehearsal | passed | Request `05f46883-e4c7-4669-99cb-99a093629f70` moved `pending_confirmation -> confirmed -> sent`; `/views/telegram_send_requests/records` showed `status=sent`, Telegram response summary `ok=true`, outbox `telegram.test_send_requested` processed, user confirmed private test chat received the message |
+| Safety locks: no customer group send, no LLM, no provider | passed | `pytest tests -q`: 172 passed / 17 skipped; staging env was temporarily `restricted_test` only for allowlisted private test chat, then closed back to `TELEGRAM_SEND_MODE=dry_run`, `TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS_present=no`, `LLM_ENABLED=false`, `PROVIDER_MODE=disabled`; no customer group send, provider write, LLM call or funds movement occurred |
 
-## 5. Staging Manual Verification Template
+## 5. Recorded Staging Verification
 
 ```text
-Date:
-Environment:
-Tencent Cloud CVM:
-Domain:
-Git commit:
-Migration revision:
-Services running:
-TELEGRAM_SEND_MODE:
-Test send allowlist configured: yes/no, value not recorded
-Binding API request:
-Observed binding row:
-Observed new Telegram message:
-Observed telegram_inbox record:
-Observed intent placeholder state:
-Test send request id:
-Confirmation actor:
-Observed Telegram test chat result:
-Observed telegram_send_requests row:
-Observed audit events:
+Date: 2026-07-07
+Environment: Tencent Cloud staging
+Tencent Cloud CVM: VM-0-10-ubuntu, public IP 43.160.215.224
+Domain: api.jiangtest1.online
+Git commit: 360d376 Fix Stage04 staging worker send mode
+Migration revision: 20260706_0011 (head)
+Services running: api, caddy, outbox-bridge, postgres, redis, worker; postgres/redis healthy
+TELEGRAM_SEND_MODE during send rehearsal: restricted_test
+TELEGRAM_SEND_MODE after safety close: dry_run
+Test send allowlist configured: yes during rehearsal, value not recorded here; cleared after rehearsal
+Binding API request: POST /telegram/bindings created binding 76413f27-7de9-4bb4-8e51-ca0ded8f46eb
+Observed binding row: telegram_bindings active chat_user binding for customer 00000000-0000-4000-8000-000000000404
+Observed new Telegram message: update 184365902, private test chat/user redacted, text stage04 binding test 2026-07-07
+Observed telegram_inbox record: binding_status=bound, processing_status=processed, outbox_status=processed, intent_status=intent_ready, trace_id=tg:184365902
+Observed intent placeholder state: audit telegram.intent_placeholder.ready for message caec8652-4495-47e5-8345-3d1c7993a15d
+Test send request id: 05f46883-e4c7-4669-99cb-99a093629f70
+Confirmation actor: stage-02-system
+Observed Telegram test chat result: user confirmed the private test chat received Stage04 restricted test send 2026-07-07
+Observed telegram_send_requests row: status=sent, last_error_code=null, sent_at=2026-07-07T08:49:01.613390Z, response summary ok=true and telegram_message_id=4
+Observed outbox events: telegram.test_send_requested status=processed for request 05f46883-e4c7-4669-99cb-99a093629f70
+Observed audit events: telegram.test_send.requested, telegram.test_send.confirmed, telegram.test_send.sent, telegram.binding.created, message_ingested, telegram.binding.resolved, telegram.intent_placeholder.ready, telegram.message_processed
 Customer group send happened: no
 LLM call happened: no
 Provider write happened: no
-Result:
+Funds movement happened: no
+Result: passed
 ```
 
 ## 6. Remaining Risks To Track
@@ -151,3 +154,4 @@ Result:
 - Bot token must stay server-only.
 - Intent placeholder must not be mistaken for completed AI classification.
 - Stage 04 still uses single-node staging, not production HA.
+- Stage 04 staging test customer and binding remain in staging as test data unless a later cleanup task disables or removes them.

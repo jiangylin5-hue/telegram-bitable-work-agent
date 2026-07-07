@@ -4,7 +4,7 @@
 
 - Document status: active module design and local implementation note
 - Scope: Future Telegram messages use active customer bindings while historical messages remain unchanged.
-- Current Progress: 2026-07-07 New-message binding behavior is covered locally by Stage04 regression tests for `chat_user`, `chat`, `user`, inactive binding and no historical rewrite. Existing Stage03 ingestion implementation already satisfied the Stage04 rules; no production code change was required for Task 4.
+- Current Progress: 2026-07-07 New-message binding behavior is covered locally by Stage04 regression tests and verified in staging. After API-created `chat_user` binding, real Telegram update `184365902` entered `telegram_inbox` with `binding_status=bound`, `customer_id=00000000-0000-4000-8000-000000000404`, `processing_status=processed` and `outbox_status=processed`; historical Stage03 messages remained unbound.
 
 ## 1. Purpose
 

@@ -4,7 +4,7 @@
 
 - Document status: active module design and local implementation note
 - Scope: Telegram test send request, confirmation, allowlist enforcement and worker send behavior.
-- Current Progress: 2026-07-07 Restricted test send is implemented locally through config guard, `telegram_send_requests`, request/confirm API, outbox event, Redis `request_id` projection, Telegram Bot client and worker allowlist re-check/idempotency. Real staging send remains pending and requires separate confirmation.
+- Current Progress: 2026-07-07 Restricted test send is implemented locally and verified in staging. Staging temporarily used `TELEGRAM_SEND_MODE=restricted_test` with a server-side private test chat allowlist, request `05f46883-e4c7-4669-99cb-99a093629f70` moved `pending_confirmation -> confirmed -> sent`, outbox `telegram.test_send_requested` was processed, audit recorded `requested/confirmed/sent`, user confirmed receipt, then staging was restored to `TELEGRAM_SEND_MODE=dry_run` with allowlist cleared.
 
 ## 1. Purpose
 

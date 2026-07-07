@@ -4,7 +4,7 @@
 
 - Document status: active database and migration design
 - Scope: Stage 04 数据库增量、迁移边界、唯一约束、敏感字段和验收。
-- Current Progress: 2026-07-07 `telegram_send_requests` SQLAlchemy model and Alembic revision `20260706_0011` are implemented locally. Metadata tests and local acceptance evidence are recorded; `alembic upgrade head --sql` reached `20260706_0011` and emitted `COMMIT`. Staging migration execution remains pending and requires separate confirmation.
+- Current Progress: 2026-07-07 `telegram_send_requests` SQLAlchemy model and Alembic revision `20260706_0011` are implemented and verified. Local `alembic upgrade head --sql` reached `20260706_0011`; Tencent Cloud staging rebuilt the Docker image, `alembic heads` showed `20260706_0011`, migration ran `20260706_0010 -> 20260706_0011`, and `alembic current` returned `20260706_0011 (head)`.
 
 ## 1. Design Boundary
 

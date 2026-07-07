@@ -4,7 +4,7 @@
 
 - Document status: active API contract
 - Scope: Stage 04 binding management API、restricted test send API、intent placeholder views 和相关 Bitable-like view contracts。
-- Current Progress: 2026-07-07 Binding management API, send request API and Stage04 view contracts are implemented locally and mapped to the local acceptance audit. Focused Stage04 API/view tests and the full backend suite have current evidence in `STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md`; staging API evidence remains pending.
+- Current Progress: 2026-07-07 Binding management API, send request API and Stage04 view contracts are implemented and verified locally plus staging. Staging `POST /telegram/bindings` created binding `76413f27-7de9-4bb4-8e51-ca0ded8f46eb`; `/views/telegram_inbox/records` showed real update `184365902` as bound and `intent_ready`; `POST /telegram/send-requests` plus confirm moved request `05f46883-e4c7-4669-99cb-99a093629f70` to `sent`.
 
 ## 1. Contract Boundary
 

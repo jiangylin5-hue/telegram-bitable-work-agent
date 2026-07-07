@@ -4,7 +4,7 @@
 
 - Document status: active stage source of truth
 - Scope: Stage 04 以 Telegram 收件箱运营、客户绑定管理、受控测试发送、无 LLM 的 intent placeholder 和 staging 验收为主线。
-- Current Progress: 2026-07-07 Tasks 1-9 are implemented locally and verified with `pytest tests -q` reporting 172 passed / 17 skipped after the staging compose send-mode gate test was added. [Stage 04 Local Acceptance Audit](STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md) records the local readiness evidence. Stage 04 still requires Task 10 Tencent Cloud staging rehearsal before final acceptance; no staging env change or real Telegram send has been executed in this local batch.
+- Current Progress: 2026-07-07 Stage 04 has passed final acceptance in the confirmed scope. Local verification reported `pytest tests -q` as 172 passed / 17 skipped, staging ran commit `360d376`, Alembic reached `20260706_0011`, real Telegram update `184365902` resolved to a bound inbox record with `intent_ready`, restricted test send request `05f46883-e4c7-4669-99cb-99a093629f70` reached `sent`, and staging was closed back to `TELEGRAM_SEND_MODE=dry_run` with LLM/provider disabled.
 
 ## 1. Stage Goal
 
@@ -116,17 +116,18 @@ Stage 04 执行优先级：
 5. [Stage 04 SDD](STAGE_04_SDD.md)。
 6. [Stage 04 BDD](STAGE_04_BDD.md)。
 7. [Stage 04 Acceptance Checklist](STAGE_04_ACCEPTANCE_CHECKLIST.md)。
-8. [Stage 04 Local Acceptance Audit](STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md)。
-9. [Stage 04 Module Index](STAGE_04_MODULE_INDEX.md)。
-10. [Stage 04 API Contract](STAGE_04_API_CONTRACT.md)。
-11. [Stage 04 Database And Migration Design](STAGE_04_DATABASE_AND_MIGRATION_DESIGN.md)。
-12. [Stage 04 Security And Permission Design](STAGE_04_SECURITY_AND_PERMISSION_DESIGN.md)。
-13. [Stage 04 Test Plan](STAGE_04_TEST_PLAN.md)。
-14. [Stage 04 Operations Runbook](STAGE_04_OPERATIONS_RUNBOOK.md)。
-15. [Stage 04 Risk Register](STAGE_04_RISK_REGISTER.md)。
-16. Stage 04 module docs under `modules/`。
-17. Stage 03 final acceptance docs and existing code。
-18. Architecture, database, permission, queue and Agent专项文档。
+8. [Stage 04 Final Acceptance Report](STAGE_04_FINAL_ACCEPTANCE_REPORT.md)。
+9. [Stage 04 Local Acceptance Audit](STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md)。
+10. [Stage 04 Module Index](STAGE_04_MODULE_INDEX.md)。
+11. [Stage 04 API Contract](STAGE_04_API_CONTRACT.md)。
+12. [Stage 04 Database And Migration Design](STAGE_04_DATABASE_AND_MIGRATION_DESIGN.md)。
+13. [Stage 04 Security And Permission Design](STAGE_04_SECURITY_AND_PERMISSION_DESIGN.md)。
+14. [Stage 04 Test Plan](STAGE_04_TEST_PLAN.md)。
+15. [Stage 04 Operations Runbook](STAGE_04_OPERATIONS_RUNBOOK.md)。
+16. [Stage 04 Risk Register](STAGE_04_RISK_REGISTER.md)。
+17. Stage 04 module docs under `modules/`。
+18. Stage 03 final acceptance docs and existing code。
+19. Architecture, database, permission, queue and Agent专项文档。
 
 ## 6. Entry Gate
 
@@ -154,3 +155,20 @@ Stage 04 完成时必须证明：
 - Staging 记录至少一条绑定后新消息证据和一条 test send 证据。
 - 全量 backend suite 通过，或未运行项明确说明原因。
 - 未发生客户群真实发送、OpenRouter 调用、provider 写入或资金移动。
+
+## 8. Stage 04 Acceptance Result
+
+Stage 04 在已确认范围内通过验收。
+
+验收证据：
+
+- Local backend suite: `172 passed / 17 skipped`。
+- Staging commit: `360d376 Fix Stage04 staging worker send mode`。
+- Staging migration: `20260706_0011 (head)`。
+- Binding evidence: API-created binding `76413f27-7de9-4bb4-8e51-ca0ded8f46eb` projected in `telegram_bindings` as active `chat_user` binding。
+- Real inbound evidence: Telegram update `184365902` projected in `telegram_inbox` with `binding_status=bound`, `customer_id=00000000-0000-4000-8000-000000000404`, `processing_status=processed`, `outbox_status=processed`, `intent_status=intent_ready`。
+- Intent placeholder evidence: audit event `telegram.intent_placeholder.ready` was written; no LLM was enabled。
+- Restricted send evidence: request `05f46883-e4c7-4669-99cb-99a093629f70` reached `sent`, response summary had `ok=true`, outbox `telegram.test_send_requested` was `processed`, and user confirmed the private test chat received the message。
+- Safety close: staging returned to `TELEGRAM_SEND_MODE=dry_run`; allowlist was cleared; `LLM_ENABLED=false`; `PROVIDER_MODE=disabled`。
+
+Stage 04 still does not include UI, Mini App, customer group sending, OpenRouter/LangGraph production routing, provider writes, funds movement, production database design, backup/PITR, monitoring or production cutover.

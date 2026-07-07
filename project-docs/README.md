@@ -3,8 +3,8 @@
 ## Status
 
 - Document status: active project document index
-- Current project mode: Stage 04 local implementation audited, staging rehearsal pending
-- Current Progress: 2026-07-07 Stage 02 已冻结关闭；Stage 03 已完成真实腾讯云 staging 验收。Stage 04 文档已确认，Tasks 1-9 已本地实现并通过 `pytest tests -q`（172 passed / 17 skipped）；本地验收审计见 `STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md`。Task 10 Tencent Cloud staging rehearsal 已获用户确认进入，仍只允许按 allowlisted test chat 做受控测试发送，禁止客户群发、LLM、provider 和生产切换。
+- Current project mode: Stage 04 final acceptance passed; Stage 05 planning pending
+- Current Progress: 2026-07-07 Stage 02 已冻结关闭；Stage 03 已完成真实腾讯云 staging 验收。Stage 04 已在确认范围内完成最终验收：本地 `pytest tests -q` 为 172 passed / 17 skipped；腾讯云 staging commit `360d376` 迁移到 `20260706_0011`；真实 Telegram update `184365902` 绑定进入 `telegram_inbox`；restricted test send request `05f46883-e4c7-4669-99cb-99a093629f70` 已发送到 allowlisted private test chat；staging 已恢复 dry-run。下一步是确认 Stage 05 真源和技术/业务范围。
 
 ## Document Map
 
@@ -102,6 +102,7 @@
 - [Stage 04 Acceptance Checklist](08-implementation/STAGE_04_ACCEPTANCE_CHECKLIST.md)
 - [Stage 04 Local Acceptance Audit](08-implementation/STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md)
 - [Stage 04 Progress](08-implementation/STAGE_04_PROGRESS.md)
+- [Stage 04 Final Acceptance Report](08-implementation/STAGE_04_FINAL_ACCEPTANCE_REPORT.md)
 
 ## Project Boundary
 

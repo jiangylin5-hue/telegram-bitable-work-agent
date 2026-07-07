@@ -10,9 +10,9 @@
 
 ## Status
 
-- Document status: active implementation plan draft
+- Document status: completed implementation plan
 - Scope: Stage 04 documentation and future code task breakdown.
-- Current Progress: 2026-07-07 Tasks 1-9 are implemented locally; full backend suite passed with 172 passed / 17 skipped after the staging compose send-mode gate test was added. [Stage 04 Local Acceptance Audit](STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md) records local readiness; staging rehearsal remains pending and requires separate confirmation before any real Telegram send.
+- Current Progress: 2026-07-07 Tasks 1-10 are complete in the confirmed Stage04 scope. Local backend suite passed with 172 passed / 17 skipped; Tencent Cloud staging ran commit `360d376`, migration reached `20260706_0011`, binding/inbox/intent evidence was recorded for update `184365902`, restricted test send request `05f46883-e4c7-4669-99cb-99a093629f70` reached `sent`, and staging was closed back to dry-run.
 
 ## 1. Delivery Shape
 
@@ -271,16 +271,18 @@ If implementation discovers better existing file placement, update this plan/pro
 - Update: `project-docs/08-implementation/STAGE_04_OPERATIONS_RUNBOOK.md`
 - Update: `project-docs/08-implementation/STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md`
 
-- [ ] Step 1: Confirm with user before any staging env change or real Telegram send.
-- [ ] Step 2: Deploy Stage 04 code to Tencent Cloud staging.
-- [ ] Step 3: Run migration.
-- [ ] Step 4: Configure `TELEGRAM_SEND_MODE=restricted_test` and test chat allowlist server-side only.
-- [ ] Step 5: Create binding through API.
-- [ ] Step 6: Send new real Telegram message and verify bound inbox evidence.
-- [ ] Step 7: Create and confirm test send request.
-- [ ] Step 8: Verify allowlisted test chat receives message.
-- [ ] Step 9: Record redacted evidence.
-- [ ] Step 10: Run full backend suite or record latest unchanged-code evidence.
+- [x] Step 1: Confirm with user before any staging env change or real Telegram send.
+- [x] Step 2: Deploy Stage 04 code to Tencent Cloud staging.
+- [x] Step 3: Run migration.
+- [x] Step 4: Configure `TELEGRAM_SEND_MODE=restricted_test` and test chat allowlist server-side only.
+- [x] Step 5: Create binding through API.
+- [x] Step 6: Send new real Telegram message and verify bound inbox evidence.
+- [x] Step 7: Create and confirm test send request.
+- [x] Step 8: Verify allowlisted test chat receives message.
+- [x] Step 9: Record redacted evidence.
+- [x] Step 10: Run full backend suite or record latest unchanged-code evidence.
+
+Task 10 evidence: staging ran commit `360d376`; migration current/head was `20260706_0011`; `/views/telegram_bindings/records` showed binding `76413f27-7de9-4bb4-8e51-ca0ded8f46eb`; `/views/telegram_inbox/records` showed update `184365902` as `bound`, `processed`, `intent_ready`; `/views/telegram_send_requests/records` showed request `05f46883-e4c7-4669-99cb-99a093629f70` as `sent`; outbox and audit records confirmed processing; staging was returned to `TELEGRAM_SEND_MODE=dry_run` with allowlist cleared.
 
 ## 11. Final Stage 04 Acceptance
 

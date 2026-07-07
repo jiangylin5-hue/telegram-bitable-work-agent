@@ -4,7 +4,7 @@
 
 - Document status: active module design and local implementation note
 - Scope: Internal API and service behavior for Telegram customer binding management.
-- Current Progress: 2026-07-07 Binding management service/API is implemented locally with 15 focused tests covering permission, schema validation, create/list/disable, customer existence, list filters, inactive replacement, idempotent disable, conflict and audit. Staging verification remains pending.
+- Current Progress: 2026-07-07 Binding management service/API is implemented locally with 15 focused tests and verified in staging. Staging `POST /telegram/bindings` created active `chat_user` binding `76413f27-7de9-4bb4-8e51-ca0ded8f46eb` for test customer `00000000-0000-4000-8000-000000000404`, and `/views/telegram_bindings/records` projected the row.
 
 ## 1. Purpose
 

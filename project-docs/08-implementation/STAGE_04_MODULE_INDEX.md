@@ -4,7 +4,7 @@
 
 - Document status: active module index
 - Scope: Stage 04 complex module boundaries, detailed functional development docs and read order.
-- Current Progress: 2026-07-07 Stage04 complex modules have detailed standalone docs, and local readiness is summarized in `STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md`. Staging evidence remains pending.
+- Current Progress: 2026-07-07 Stage04 complex modules have detailed standalone docs, local readiness is summarized in `STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md`, and staging evidence is recorded in `STAGE_04_ACCEPTANCE_CHECKLIST.md` plus `STAGE_04_FINAL_ACCEPTANCE_REPORT.md`. Binding, new-message inbox, Bitable views, intent placeholder and restricted test send all have local and staging evidence within the confirmed Stage04 scope.
 
 ## 1. Module Read Order
 

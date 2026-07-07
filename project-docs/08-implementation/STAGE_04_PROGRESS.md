@@ -4,7 +4,7 @@
 
 - Document status: active progress log draft
 - Scope: Stage 04 子阶段进度、测试记录、风险和后续项。
-- Current Progress: 2026-07-07 Tasks 1-9 are implemented locally; full backend suite passed with 172 passed / 17 skipped after the staging compose send-mode gate test was added. Local acceptance audit is recorded in `STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md`; staging rehearsal remains pending and requires separate confirmation before any real Telegram send.
+- Current Progress: 2026-07-07 Stage04 final acceptance passed in the confirmed scope. Full backend suite passed with 172 passed / 17 skipped; staging ran commit `360d376`, migration reached `20260706_0011`, update `184365902` verified bound inbox and `intent_ready`, request `05f46883-e4c7-4669-99cb-99a093629f70` verified restricted test send, and staging was closed back to `TELEGRAM_SEND_MODE=dry_run`.
 
 ## 1. Progress Protocol
 
@@ -23,6 +23,8 @@ Risks / follow-up:
 Next subphase:
 ```
 
+Progress records are historical snapshots. Older records may mention pending work that was true at that time; the authoritative current status is the `Status` and `Current State` sections above plus the latest progress record.
+
 ## 2. Current State
 
 | Subphase | Status | Evidence |
@@ -32,7 +34,7 @@ Next subphase:
 | 04.2 New Message Binding And Views | completed locally | Stage04 view tests, existing view regression and new-message binding regression passed |
 | 04.3 Intent Placeholder Boundary | completed locally | Intent placeholder and Stage03 worker regression tests passed |
 | 04.4 Restricted Test Send | completed locally | Runtime config, model/migration, request API, client and worker tests passed |
-| 04.5 Staging Rehearsal And Stage Close | pending | Local readiness audit completed; requires separate confirmation before staging env change or real Telegram send |
+| 04.5 Staging Rehearsal And Stage Close | completed | Tencent Cloud staging evidence recorded: migration `20260706_0011`, bound inbox update `184365902`, sent request `05f46883-e4c7-4669-99cb-99a093629f70`, and post-test dry-run safety close |
 
 ## 3. Progress Records
 
@@ -411,4 +413,17 @@ Test result: Focused suite 19 passed; full backend suite 172 passed / 17 skipped
 Not done: Did not restart staging containers, run migration, change server `.env.stage03`, create binding, send Telegram messages, or call Telegram `sendMessage` yet.
 Risks / follow-up: Commit and push this correction before continuing server deployment; then fast-forward the staging checkout again.
 Next subphase: 04.5 Staging Rehearsal And Stage Close after corrected deploy commit reaches server.
+```
+
+```text
+Date: 2026-07-07
+Subphase: Stage 04 Task10 staging rehearsal and stage close
+Status: completed
+Completed: Guided Tencent Cloud staging through the final Stage04 rehearsal. Server fast-forwarded to commit `360d376`, rebuilt api/outbox-bridge/worker/migrate images, ran Alembic migration to `20260706_0011`, restarted runtime services, created staging-only test customer `00000000-0000-4000-8000-000000000404`, created binding `76413f27-7de9-4bb4-8e51-ca0ded8f46eb`, received real Telegram update `184365902` as a bound inbox record, verified intent placeholder audit, enabled `restricted_test` only for private test chat rehearsal, created and confirmed send request `05f46883-e4c7-4669-99cb-99a093629f70`, verified `telegram_send_requests.status=sent`, outbox processed, audit requested/confirmed/sent, and user confirmed Telegram receipt. Closed staging back to dry-run and cleared the test-send allowlist.
+Changed files: project-docs/08-implementation/STAGE_04_ACCEPTANCE_CHECKLIST.md; project-docs/08-implementation/STAGE_04_SOURCE_OF_TRUTH.md; project-docs/08-implementation/STAGE_04_IMPLEMENTATION_PLAN.md; project-docs/08-implementation/STAGE_04_TEST_PLAN.md; project-docs/08-implementation/STAGE_04_BDD.md; project-docs/08-implementation/STAGE_04_SDD.md; project-docs/08-implementation/STAGE_04_API_CONTRACT.md; project-docs/08-implementation/STAGE_04_DATABASE_AND_MIGRATION_DESIGN.md; project-docs/08-implementation/STAGE_04_SECURITY_AND_PERMISSION_DESIGN.md; project-docs/08-implementation/STAGE_04_RISK_REGISTER.md; project-docs/08-implementation/STAGE_04_MODULE_INDEX.md; project-docs/08-implementation/STAGE_04_OPERATIONS_RUNBOOK.md; project-docs/08-implementation/STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md; project-docs/08-implementation/STAGE_04_PROGRESS.md; project-docs/08-implementation/modules/STAGE_04_BINDING_MANAGEMENT.md; project-docs/08-implementation/modules/STAGE_04_NEW_MESSAGE_BINDING.md; project-docs/08-implementation/modules/STAGE_04_BITABLE_VIEWS.md; project-docs/08-implementation/modules/STAGE_04_INTENT_PLACEHOLDER.md; project-docs/08-implementation/modules/STAGE_04_RESTRICTED_TEST_SEND.md; project-docs/08-implementation/STAGE_04_FINAL_ACCEPTANCE_REPORT.md; project-docs/08-implementation/README.md; project-docs/README.md.
+Tests run: Server: `git log --oneline -3`; `docker compose build migrate api outbox-bridge worker`; `alembic heads`; `alembic current`; `alembic upgrade head`; `docker compose up -d api outbox-bridge worker caddy`; public `/health`; `/views/telegram_bindings/records`; `/views/telegram_inbox/records`; `/views/telegram_send_requests/records`; PostgreSQL queries for `messages`, `telegram_send_requests`, `outbox_events`, `ops_audit_events`; container env checks for api/worker. Local unchanged-code evidence: `pytest tests -q` 172 passed / 17 skipped; `git diff --check`.
+Test result: Staging migration current/head `20260706_0011`; services running with postgres/redis healthy; binding view returned active binding; inbox update `184365902` returned `binding_status=bound`, `processing_status=processed`, `outbox_status=processed`, `intent_status=intent_ready`; audit contained `message_ingested`, `telegram.binding.resolved`, `telegram.intent_placeholder.ready`, `telegram.message_processed`; send request `05f46883-e4c7-4669-99cb-99a093629f70` returned `sent` with response summary `ok=true`; outbox event `telegram.test_send_requested` was `processed`; audit contained `telegram.test_send.requested`, `telegram.test_send.confirmed`, `telegram.test_send.sent`; user confirmed private test chat received the message; post-test env was `TELEGRAM_SEND_MODE=dry_run`, allowlist absent, `LLM_ENABLED=false`, `PROVIDER_MODE=disabled`, api/worker dry-run.
+Not done: Did not build UI, Mini App, customer group sending, customer reply drafts, OpenRouter/LLM, LangGraph production graph, Meta/card/recharge provider writes, funds movement, production DB plan, backup/PITR, monitoring, concurrency/load testing or production cutover.
+Risks / follow-up: Stage04 remains a single-node staging acceptance, not production launch. Staging test customer and binding remain as test data unless later cleanup disables or removes them. Bot token stays server-only; earlier chat-token exposure risk still suggests token rotation if not already done.
+Next subphase: Stage 05 planning after user confirms next-stage scope.
 ```

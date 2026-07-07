@@ -4,7 +4,7 @@
 
 - Document status: active BDD
 - Scope: Stage 04 可验收行为、测试映射和业务证据。
-- Current Progress: 2026-07-07 Local automated evidence has been mapped to implemented Stage04 behavior, including binding filters, customer existence, inactive binding semantics, restricted test-send confirm boundaries, outbox `request_id` projection and failed-send state. Manual staging evidence for real webhook binding and allowlisted Telegram test send remains pending.
+- Current Progress: 2026-07-07 Local automated evidence and manual staging evidence have been mapped to implemented Stage04 behavior. Real update `184365902` verified API-created binding to `bound` inbox and `intent_ready`; restricted test send request `05f46883-e4c7-4669-99cb-99a093629f70` verified human-confirmed allowlisted send to private test chat.
 
 ## 1. Feature: Telegram Binding Management API
 

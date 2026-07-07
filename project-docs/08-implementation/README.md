@@ -4,7 +4,7 @@
 
 - Document status: active implementation index
 - Scope: Stage 02 / Stage 03 历史入口与 Stage 04 当前实施入口
-- Current Progress: 2026-07-07 Stage 02 已冻结关闭；Stage 03 已完成真实腾讯云 staging 验收。Stage 04 文档已确认，Tasks 1-9 已本地实现并通过 `pytest tests -q`（172 passed / 17 skipped）；本地验收审计见 `STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md`。Task 10 staging rehearsal 已获用户确认进入，仍只允许按 allowlisted test chat 做受控测试发送，禁止客户群发、LLM、provider 和生产切换。
+- Current Progress: 2026-07-07 Stage 02 已冻结关闭；Stage 03 已完成真实腾讯云 staging 验收。Stage 04 已在确认范围内完成最终验收：本地 `pytest tests -q` 为 172 passed / 17 skipped；腾讯云 staging commit `360d376` 迁移到 `20260706_0011`；真实 Telegram update `184365902` 绑定进入 `telegram_inbox`；restricted test send request `05f46883-e4c7-4669-99cb-99a093629f70` 已发送到 allowlisted private test chat；staging 已恢复 dry-run。
 
 ## 1. Read Order
 
@@ -62,6 +62,7 @@ Stage 04 开发前按这个顺序阅读：
 12. [Stage 04 Operations Runbook](STAGE_04_OPERATIONS_RUNBOOK.md)
 13. [Stage 04 Risk Register](STAGE_04_RISK_REGISTER.md)
 14. [Stage 04 Progress](STAGE_04_PROGRESS.md)
+15. [Stage 04 Final Acceptance Report](STAGE_04_FINAL_ACCEPTANCE_REPORT.md)
 
 Stage 04 complex module docs:
 
@@ -73,7 +74,7 @@ Stage 04 complex module docs:
 
 Stage 02 已于 2026-07-06 冻结关闭。Stage 03 已由用户于 2026-07-06 确认转为 active，补充决策：Telegram 只收不发、Worker 使用 PostgreSQL Outbox + Redis Streams、Stage 03 暂不调用 LLM、第一批业务场景为 Telegram 收件箱 / 客户消息登记、Webhook 使用 secret token + optional allowlist、做最小客户绑定、部署到腾讯云 CVM staging、HTTPS 使用 Caddy。当前 Tasks 1-7 已完成验收；真实 staging 环境已接收 Telegram 测试消息并在 `telegram_inbox`、`outbox_events`、`ops_audit_events` 中形成证据。
 
-Stage 04 已由用户于 2026-07-06 确认并进入本地实现，范围为：绑定管理 API、`chat_id` / `user_id` / `chat_id + user_id` 绑定、绑定后只影响新消息、无 LLM intent placeholder、`telegram_send_requests` 受控测试发送、staging 验收。当前 Tasks 1-9 已本地完成，并由 [Stage 04 Local Acceptance Audit](STAGE_04_LOCAL_ACCEPTANCE_AUDIT.md) 记录本地证据；Task 10 staging rehearsal 尚未执行。Stage 04 不做 UI、Mini App、客户群发送、OpenRouter、LangGraph、provider、资金或账户外部写入。
+Stage 04 已由用户于 2026-07-06 确认范围，并于 2026-07-07 完成最终验收。范围为：绑定管理 API、`chat_id` / `user_id` / `chat_id + user_id` 绑定、绑定后只影响新消息、无 LLM intent placeholder、`telegram_send_requests` 受控测试发送、staging 验收。最终证据见 [Stage 04 Final Acceptance Report](STAGE_04_FINAL_ACCEPTANCE_REPORT.md)。Stage 04 不做 UI、Mini App、客户群发送、OpenRouter、LangGraph、provider、资金或账户外部写入。
 
 ## 2. Stage 02 Scope
 

@@ -4,7 +4,7 @@
 
 - Document status: active test plan
 - Scope: Stage 04 automated tests、manual staging rehearsal、skipped tests policy。
-- Current Progress: 2026-07-07 Stage04 focused automated tests are implemented and `pytest tests -q` reports 172 passed / 17 skipped after the staging compose send-mode gate test was added. Manual Tencent Cloud staging rehearsal remains pending and is required for final Stage04 acceptance.
+- Current Progress: 2026-07-07 Stage04 automated and manual staging tests have final evidence. `pytest tests -q` reported 172 passed / 17 skipped, Tencent Cloud staging migration reached `20260706_0011`, real Telegram update `184365902` verified bound inbox and `intent_ready`, restricted test send request `05f46883-e4c7-4669-99cb-99a093629f70` reached `sent`, and staging was closed back to `TELEGRAM_SEND_MODE=dry_run`.
 
 ## 1. Test Strategy
 
@@ -70,6 +70,14 @@ git diff --check
 6. Verify test chat receives message.
 7. Verify `telegram_send_requests.status=sent`.
 8. Verify audit and outbox processed evidence.
+
+### 4.3 Recorded manual staging result
+
+Manual staging completed on 2026-07-07:
+
+- Binding rehearsal passed: update `184365902` appeared in `telegram_inbox` with `binding_status=bound`, `processing_status=processed`, `outbox_status=processed`, `intent_status=intent_ready`。
+- Restricted test send passed: request `05f46883-e4c7-4669-99cb-99a093629f70` moved to `sent`; user confirmed the private test chat received the message。
+- Safety close passed: staging returned to `TELEGRAM_SEND_MODE=dry_run`; test-send allowlist was cleared; `LLM_ENABLED=false`; `PROVIDER_MODE=disabled`。
 
 ## 5. Skip Policy
 

@@ -2,9 +2,9 @@
 
 ## Status
 
-- Document status: active operations runbook draft
+- Document status: active operations runbook with Stage04 execution record
 - Scope: Stage 04 staging operations for binding rehearsal and restricted test send.
-- Current Progress: 2026-07-07 Runbook remains the Task 10 staging procedure for binding rehearsal and restricted test send. It has not been executed; no staging env change, migration, or real Telegram send has been performed for Stage 04.
+- Current Progress: 2026-07-07 Runbook was executed for Stage04 Task10. Staging ran commit `360d376`, migration reached `20260706_0011`, binding and restricted test-send rehearsals passed, and the environment was closed back to `TELEGRAM_SEND_MODE=dry_run` with the test-send allowlist cleared. This file remains the repeatable runbook for future staging rehearsals.
 
 ## 1. Operating Principles
 
@@ -131,3 +131,16 @@ If test send misconfiguration is detected:
 - Do not enable `LLM_ENABLED=true`.
 - Do not enable provider mode.
 - Do not run destructive database reset on staging without user confirmation.
+
+## 8. Stage 04 Execution Record
+
+Executed on 2026-07-07:
+
+- Staging code: `360d376 Fix Stage04 staging worker send mode`。
+- Migration: `20260706_0010 -> 20260706_0011`; final `alembic current` returned `20260706_0011 (head)`。
+- Binding: `POST /telegram/bindings` created binding `76413f27-7de9-4bb4-8e51-ca0ded8f46eb`。
+- Inbound Telegram evidence: update `184365902` became `binding_status=bound`, `processing_status=processed`, `outbox_status=processed`, `intent_status=intent_ready`。
+- Restricted send: request `05f46883-e4c7-4669-99cb-99a093629f70` reached `sent`; user confirmed private test chat receipt。
+- Safety close: `TELEGRAM_SEND_MODE=dry_run`; `TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS_present=no`; `LLM_ENABLED=false`; `PROVIDER_MODE=disabled`; API and worker container env confirmed dry-run。
+
+No Telegram Bot token, database URL, webhook secret or raw allowlist value is recorded here.
