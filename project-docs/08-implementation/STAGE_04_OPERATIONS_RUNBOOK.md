@@ -53,6 +53,12 @@ Before Stage 04 staging rehearsal:
 6. Run migration.
 7. Verify services healthy.
 
+Required operator access:
+
+- SSH user and key/password must be provided through a secure out-of-repo channel.
+- SSH credentials, Tencent Cloud console credentials and server `.env.stage03` contents must not be committed or pasted into project docs.
+- If SSH is unavailable, Task 10 can only proceed through a user-controlled terminal session where these runbook commands are executed and redacted evidence is returned.
+
 ## 4. Binding Rehearsal
 
 Expected flow:

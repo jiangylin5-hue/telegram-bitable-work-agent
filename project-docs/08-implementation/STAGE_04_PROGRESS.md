@@ -386,3 +386,16 @@ Not done: Did not deploy, change server env, run migration, or call Telegram `se
 Risks / follow-up: After amending the Stage04 commit, rerun full preflight before touching Tencent Cloud.
 Next subphase: 04.5 Staging Rehearsal And Stage Close after user approval.
 ```
+
+```text
+Date: 2026-07-07
+Subphase: Stage 04 Task10 staging access preflight
+Status: waiting for external access
+Completed: Created deployable Stage04 commit `b1dd14f Implement Stage04 Telegram operations`. Performed SSH network/access preflight against Tencent Cloud staging IP `43.160.215.224`. Host key was accepted into local known_hosts after user-approved staging entry; SSH reached the server, but non-interactive authentication failed for both `root` and `ubuntu` with `Permission denied (publickey,password)`.
+Changed files: project-docs/08-implementation/STAGE_04_OPERATIONS_RUNBOOK.md; project-docs/08-implementation/STAGE_04_PROGRESS.md.
+Tests run: ssh root@43.160.215.224 `pwd`; ssh ubuntu@43.160.215.224 `pwd`; git status/diff checks before access attempt.
+Test result: Network path to the staging host is reachable, but no usable SSH credential is available in this workspace/session.
+Not done: Did not deploy, inspect server files, change server `.env.stage03`, run migration, restart containers, create binding, send Telegram messages, or call Telegram `sendMessage`.
+Risks / follow-up: User must provide SSH access details, a key file path, a password-based interactive terminal, or run the documented commands in a user-controlled server terminal and return redacted evidence. Secrets must stay outside git and docs.
+Next subphase: 04.5 Staging Rehearsal And Stage Close after SSH access is available.
+```
