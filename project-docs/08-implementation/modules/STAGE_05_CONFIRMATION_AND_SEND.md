@@ -5,6 +5,7 @@
 - Document status: active module design draft
 - Scope: Service draft confirmation, customer reply allowlisted send, business no-op evidence, idempotency and audit.
 - Current Progress: 2026-07-07 Module design created before implementation. Task8 Confirmation Branches implemented locally. Task9 Customer Reply Send Request implemented locally: send requests now persist `source_service_draft_id`, `send_purpose` and `message_text_summary`; send confirmation checks the current allowlist; the existing Stage04 worker re-checks allowlist and records customer-reply-specific sent/failed audit events.
+- Current Progress Update: 2026-07-08 Confirmation/send was staging-verified. Customer reply send request `0d00bb20-5783-42ba-82e0-9c6c9a535e6a` reached `sent` in the approved private test chat, and business no-op confirmation created service record `1c58d7c3-d098-4281-80e7-931bf56b6b74` plus execution log `7f884981-6bcc-4d83-af70-f086d151e20c` with no provider call and no execution ticket.
 
 ## 1. Purpose
 

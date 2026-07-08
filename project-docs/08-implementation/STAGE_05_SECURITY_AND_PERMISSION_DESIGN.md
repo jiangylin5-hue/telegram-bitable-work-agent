@@ -5,6 +5,7 @@
 - Document status: active security design draft
 - Scope: Stage05 Agent authority, OpenRouter, account inventory mutation, draft confirmation, Telegram send and view permissions.
 - Current Progress: 2026-07-07 Security design drafted before implementation. Task 7 implemented the narrow `auto_mark_account_exception` service guard for manager/admin and `actor_id=account_inventory_agent` only. Task 8 implemented Stage05 confirmation as manager/admin only, blocks agent confirmation, and preserves old Stage02 production confirmation only for non-Stage05 drafts. Task9 implemented customer reply send request linkage plus confirm-time and worker-time allowlist checks. Task10 implemented view-level row scope and scoped masking for Stage05 operational views, including account inventory external-id masking for non-global roles. Generic `agent` role actors are not granted inventory mutation, confirmation or send authority.
+- Current Progress Update: 2026-07-08 Security boundaries were staging-verified. Customer reply send reached only the approved private allowlisted test chat; provider stayed disabled; business confirmation created no execution ticket and only no-op evidence; controlled account exception recorded `replacement_action=none` and zero assignments; safety close restored fake workflow, dry-run send and empty allowlist.
 
 ## 1. Security Goals
 

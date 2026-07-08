@@ -4,7 +4,7 @@
 
 - Document status: active software design draft
 - Scope: Stage 05 Agent graph、OpenRouter 主路径、多子 Agent、账户库存异常、草稿确认、受控发送、Bitable-like views 的软件设计
-- Current Progress: 2026-07-07 Stage05 SDD created from confirmed scope. Local implementation has completed through Phase 05.6 Task11 and Task12 local readiness: runtime config, AgentRun evidence, Router/Supervisor workflow, Draft Agents, Account Inventory exception handling, Confirmation Branches, Customer Reply Send Request, Bitable-like Views, Local Acceptance Audit, staging-contract preflight, deployment config gate and redacted runtime summary command. Real Tencent Cloud staging, real OpenRouter, real Telegram allowlisted receipt and safety close remain pending explicit approval.
+- Current Progress: 2026-07-08 Stage05 SDD remains the design source for the implemented scope. Local implementation and Tencent Cloud staging verification have completed for runtime config, AgentRun evidence, Router/Supervisor workflow, Draft Agents, Account Inventory exception handling, Confirmation Branches, Customer Reply Send Request, Bitable-like Views, real OpenRouter, allowlisted Telegram receipt, no-op evidence, controlled account exception and safety close.
 
 ## 1. Design Overview
 

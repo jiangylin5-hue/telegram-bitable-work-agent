@@ -4,10 +4,11 @@
 
 - Document status: active implementation index
 - Scope: Stage 02 / Stage 03 / Stage 04 历史入口与 Stage 05 当前文档入口
-- Current Progress: 2026-07-07 Stage 05 本地/non-staging 主链路开发已推进到 Task12 前置 readiness：runtime config、AgentRun evidence、Router schema、LangGraph Supervisor、子 Draft Agents、多 draft 持久化、Service Draft API、Account Inventory Agent、confirmation/no-op、customer_reply linked send request、Bitable-like views、deployment config gate 和 redacted runtime summary command 均已落地并记录证据。最新本地证据为 Stage05 focused 82 passed / 190 deselected、full backend suite 255 passed / 17 skipped、staging contract 5 passed、scope guard 4 passed、runtime summary 3 passed。Stage05 范围仍为真实 OpenRouter + LangGraph Supervisor / 子 Agent 多意图草稿闭环、Account Inventory Agent 库存异常管理、customer_reply allowlisted test send、业务 draft no-op evidence；不做 UI、RAG、生产上线、真实客户发送、provider 写入、账户生产或自动替换分发。Stage 04 已在确认范围内完成最终验收并作为 Stage05 基础；Skills runtime registry 延后到 Stage05 主链路完成验收后单独做。
+- Current Progress: 2026-07-08 Stage 05 functional/staging acceptance has passed. Evidence includes local focused/full regression, staging migration `20260707_0016`, real OpenRouter AgentRun, service drafts, customer reply allowlisted send, business no-op evidence, controlled account exception, additional three-message Telegram exercise and safety close. Stage05 still is not production launch and does not approve real customer/group sends, provider writes, funds movement, account production or automatic replacement. Remaining follow-up is durable commit/artifact hygiene plus optional online smoke and later-stage reporting/balance support.
 - Current Progress Update: 2026-07-07 Added Stage05 requirement traceability audit to distinguish locally verified requirements from pending Tencent Cloud staging, real OpenRouter, real Telegram receipt and safety-close evidence.
 - Current Progress Update: 2026-07-07 Added Stage05 pre-staging approval packet as the single review entry before Task12 real staging rehearsal.
-- Current Progress Update: 2026-07-07 Synchronized this implementation index with the latest local evidence and clarified that final Stage05 acceptance remains pending Task12 real staging rehearsal and safety close.
+- Current Progress Update: 2026-07-07 Synchronized this implementation index with the then-latest local evidence; this historical note is superseded by the 2026-07-08 final staging acceptance update below.
+- Current Progress Update: 2026-07-08 Synchronized this implementation index after Task12 staging acceptance and safety close. Historical pending notes remain historical only; current Stage05 closeout evidence lives in `STAGE_05_FINAL_ACCEPTANCE_REPORT.md`, `STAGE_05_ACCEPTANCE_CHECKLIST.md`, `STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md` and `STAGE_05_PROGRESS.md`.
 
 ## 1. Read Order
 

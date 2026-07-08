@@ -4,7 +4,7 @@
 
 - Document status: active detailed completion audit
 - Scope: Stage05 development details checked against all pre-development Stage05 documents, linked module documents, Account Inventory boundary documents and Stage05 staging approval documents.
-- Current Progress: 2026-07-08 Created and verified after the user requested a non-verbal, document-based audit. This audit checks current worktree evidence against Stage05 source documents before continuing Tencent Cloud staging. Task12 approval has been captured, and local preflight plus audit-link/no-placeholder validation have passed, but external staging execution remains paused until this audit is reviewed.
+- Current Progress: 2026-07-08 Updated after real Tencent Cloud staging acceptance and the additional three-message Telegram exercise. The audit now marks Stage05 functional/staging development complete, with remaining follow-up limited to durable artifact/commit hygiene, optional online PostgreSQL smoke setup and later-stage reporting/balance query support.
 
 ## 1. Audit Rule
 
@@ -28,26 +28,31 @@ The audit uses these statuses:
 | `guarded-out-of-scope` | Explicitly forbidden by Stage05 and guarded by tests or documents. |
 | `pending-staging` | Requires Tencent Cloud staging, real OpenRouter, allowlisted Telegram receipt, staging database evidence or safety close. |
 | `pending-artifact` | Local implementation exists, but a reviewed deployable commit or artifact has not yet been produced. |
+| `completed-staging` | Verified in Tencent Cloud staging with redacted evidence and safety close. |
 | `not-required` | Present in design discussion but explicitly deferred or excluded by Stage05 scope. |
 
 ## 2. Current Evidence Snapshot
 
-Evidence captured after Task12 approval and before external staging execution:
+Current evidence after Task12 staging execution and safety close:
 
 | Evidence | Current result |
 | --- | --- |
 | Task12 approval | User approved the bounded Task12 staging rehearsal at `2026-07-08 00:15:10 +08:00`. |
-| Focused Stage05 tests | `pytest tests -k stage05 -v`: 82 passed / 190 deselected. |
+| Focused Stage05 tests | Latest `cd backend; pytest tests -k stage05 -q`: 86 passed / 190 deselected. |
 | Scope guard tests | `pytest tests\unit\test_stage05_scope_guards.py -v`: 4 passed. |
 | Staging contract tests | `pytest tests\integration\test_stage05_staging_contract.py -v`: 5 passed. |
 | Redacted runtime summary tests | Repo-root command `pytest backend\tests\unit\test_stage05_runtime_summary.py -v`: 3 passed. |
-| Full backend suite | `pytest tests -q`: 255 passed / 17 skipped. |
+| Full backend suite | Latest `cd backend; pytest tests -q`: 259 passed / 17 skipped. |
 | Skipped tests | 17 online PostgreSQL smoke tests skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured. |
 | Alembic offline SQL | `alembic upgrade head --sql` emits migrations through `20260707_0016`. |
 | Whitespace check | `git diff --check`: no whitespace errors; Windows LF-to-CRLF warnings only. |
 | High-risk secret scan | Strict scan found no private key, real OpenRouter-style key, Telegram bot token, GitHub token or raw allowlist assignment. |
-| Current HEAD | `3c82a2fc2427c37729cf7ef222be84ede43f1300`. |
-| Worktree state | Stage05 implementation and documents are still uncommitted. Deployment must not use the old HEAD as the reviewed artifact. |
+| Staging deployment identity | Base commit `56a193d` plus hotfix diff `sha256:f0b96aeffb4b4169e053067cb8d40b6baa923270d3ef7509264963aea472e2bd`. |
+| Staging AgentRun | `b1d0afc2-03ad-45e1-9c8f-b34984d4d811`, real OpenRouter, summary-only evidence, usage/cost present. |
+| Staging drafts/send/no-op | Main trace `tg:184365906`; `recharge` and `customer_reply` drafts created; send request `0d00bb20-5783-42ba-82e0-9c6c9a535e6a` reached `sent`; no-op service record `1c58d7c3-d098-4281-80e7-931bf56b6b74`; execution log `7f884981-6bcc-4d83-af70-f086d151e20c`; no execution ticket. |
+| Additional real Telegram cases | `tg:184365907` created a `recharge` draft; `tg:184365908` created a `bm_invite` draft; `tg:184365909` entered manual review for unsupported reporting/balance query without side effects. |
+| Staging safety close | API/worker summaries show fake workflow, LLM disabled, dry-run send, no allowlist and provider disabled; pending/confirmed/sending request count is 0. |
+| Worktree state | Stage05 code/docs remain uncommitted locally; commit or artifact preservation is still required before future deployment. |
 
 ## 3. Source Document Inventory
 
@@ -280,49 +285,43 @@ The following documents form the Stage05 pre-development document set or direct 
 | Staging has allowlisted Telegram customer-reply test send evidence | `pending-staging` | None yet. | Task12 send and receipt. |
 | Multiple draft candidates from one mixed-language message | `completed-local; pending-staging` | Local workflow proves multi-draft. | Real Telegram/OpenRouter run pending. |
 | Account Inventory exception boundary tested and documented | `completed-local; pending-staging` | Local tests and docs. | Staging controlled evidence pending. |
-| No provider/customer/group/funds/account-production/auto-replacement occurred | `completed-local; pending-staging` | Local guard and no external actions so far. | Reconfirm after staging and safety close. |
+| No provider/customer/group/funds/account-production/auto-replacement occurred | `completed-staging` | Local guard plus staging no-op/provider-disabled/safety-close evidence. | Keep forbidden in future stages unless explicitly rescoped. |
 
 ## 18. Project And Account Inventory Document Completion
 
 | Document | Status | Evidence | Remaining work |
 | --- | --- | --- | --- |
-| Project README | `completed-local` | Stage05 links and latest local status recorded. | Update after final staging acceptance. |
-| Implementation README | `completed-local` | Stage05 read order and approval packet link recorded. | Update after final staging acceptance. |
+| Project README | `completed-local` | Stage05 links and latest local status recorded. | Optional wording refresh after final commit. |
+| Implementation README | `completed-local` | Stage05 read order and approval packet link recorded. | Optional wording refresh after final commit. |
 | High-level Account Inventory Agent doc | `completed-local` | Clarifies the Agent distributes/manages inventory and exceptions, not production. | Keep aligned in future stages. |
-| Account Inventory workflow scenario | `completed-local` | Clarifies frequent risk/block state handling and no automatic replacement. | Staging controlled evidence pending for Stage05 final. |
+| Account Inventory workflow scenario | `completed-staging` | Clarifies frequent risk/block state handling and no automatic replacement; staging controlled fixture verified `risk_controlled` without replacement or assignment. | Keep aligned in future stages. |
 
 ## 19. Remaining Gap Register
 
 | Gap ID | Gap | Status | Blocking reason | Required next action |
 | --- | --- | --- | --- | --- |
 | G05-01 | Reviewed deployable artifact is not yet produced | `pending-artifact` | Current HEAD is older than the uncommitted Stage05 worktree. | Stage and commit the reviewed Stage05 work, or produce an explicit reviewed artifact bundle before deployment. |
-| G05-02 | Tencent Cloud staging deployment | `pending-staging` | Requires reviewed artifact. | Deploy only after G05-01 is resolved. |
-| G05-03 | Staging migration | `pending-staging` | Requires deployment context. | Run migration and verify `alembic current`. |
-| G05-04 | Real OpenRouter evidence | `pending-staging` | Requires server-side env and deployed containers. | Enable env, run runtime summary, then process controlled message. |
-| G05-05 | Real allowlisted Telegram receipt | `pending-staging` | Requires restricted private test chat env and confirmed reply. | Confirm only after target is verified private allowlisted test chat. |
-| G05-06 | Staging business no-op evidence | `pending-staging` | Requires staging draft. | Confirm a business draft and verify no execution ticket/provider write. |
-| G05-07 | Staging account exception evidence | `pending-staging` | Requires controlled account fixture or safe test message. | Use controlled fixture/message and verify status event/audit. |
-| G05-08 | Staging views/audit evidence | `pending-staging` | Requires staging records. | Capture redacted view/API/audit evidence. |
-| G05-09 | Safety close | `pending-staging` | Must run after staging rehearsal. | Restore dry-run, clear allowlist, provider disabled, verify no pending unsafe send. |
-| G05-10 | Completed Task12 evidence ledger | `pending-staging` | Depends on G05-02 through G05-09. | Fill ledger and update final report/checklist/progress. |
+| G05-02 | Tencent Cloud staging deployment | `completed-staging with artifact caveat` | Staging deployed base commit `56a193d` plus explicit hotfix diff hash. | Before future deploy, resolve G05-01 by committing or preserving the reviewed artifact. |
+| G05-03 | Staging migration | `completed-staging` | Staging `alembic current` returned `20260707_0016 (head)`. | None for Stage05. |
+| G05-04 | Real OpenRouter evidence | `completed-staging` | AgentRun `b1d0afc2-03ad-45e1-9c8f-b34984d4d811` plus additional AgentRuns for traces `tg:184365907` through `tg:184365909`. | None for Stage05. |
+| G05-05 | Real allowlisted Telegram receipt | `completed-staging` | Send request `0d00bb20-5783-42ba-82e0-9c6c9a535e6a` reached `sent`; user confirmed receipt. | None for Stage05. |
+| G05-06 | Staging business no-op evidence | `completed-staging` | Service record `1c58d7c3-d098-4281-80e7-931bf56b6b74`, execution log `7f884981-6bcc-4d83-af70-f086d151e20c`, no execution ticket/provider write. | None for Stage05. |
+| G05-07 | Staging account exception evidence | `completed-staging` | Controlled fixture produced status event `fcd2db3c-d26e-47ba-86dc-528656d685f2`, `risk_controlled`, `replacement_action=none`, zero assignments. | None for Stage05. |
+| G05-08 | Staging views/audit evidence | `completed-staging` | View/API readbacks and read-only SQL evidence captured for inbox, drafts, pending confirmation, customer reply sends, account inventory and audit events. | None for Stage05. |
+| G05-09 | Safety close | `completed-staging` | API/worker fake/dry-run/empty allowlist/provider-disabled summaries; unsafe send count `0`. | None for Stage05. |
+| G05-10 | Completed Task12 evidence ledger | `completed-staging` | Evidence summarized in final report, acceptance checklist, progress and traceability audit. | None for Stage05. |
+| G05-11 | Unsupported reporting/balance query | `not-required for Stage05` | Trace `tg:184365909` correctly entered manual review with no side effects. | Consider for Stage06+ customer reporting/balance capability. |
 
 ## 20. Audit Conclusion
 
-Local Stage05 development details required by the pre-development documents are implemented and locally verified for the non-staging scope.
+Stage05 development details required by the pre-development documents are implemented, locally verified and staging verified for the agreed Stage05 functional scope.
 
-The audit does not mark Stage05 final acceptance as complete.
+The audit marks Stage05 functional/staging acceptance as complete with residual follow-up risks.
 
-The remaining work is not hidden implementation work. It is the explicit Task12 external evidence set plus the reviewed deployable artifact gate:
+The remaining work is not hidden implementation work:
 
-- reviewed Stage05 commit or artifact;
-- Tencent Cloud staging deployment;
-- Stage05 staging migration;
-- real OpenRouter runtime and AgentRun evidence;
-- real private allowlisted Telegram test receipt;
-- staging business no-op evidence;
-- staging account exception evidence;
-- staging view and audit evidence;
-- safety close;
-- completed redacted evidence ledger.
+- commit or otherwise preserve the reviewed Stage05 hotfix/artifact before future deployment;
+- optionally run online PostgreSQL smoke tests with `STAGE02_ONLINE_DATABASE_URL`;
+- plan reporting/balance query support in a later stage if desired.
 
 No production deployment, real customer chat send, customer group send, provider write, funds movement, account production, automatic replacement or secret/raw allowlist recording is allowed by this audit.

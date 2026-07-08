@@ -3,11 +3,12 @@
 ## Status
 
 - Document status: active project document index
-- Current project mode: Stage 05 implementation in progress
-- Current Progress: 2026-07-07 Stage 05 已完成本地/non-staging 主链路开发与验证：runtime config、AgentRun evidence、Router schema、LangGraph Supervisor、子 Draft Agents、多 draft 持久化、Service Draft API、Account Inventory Agent、confirmation/no-op、customer_reply linked send request、Bitable-like views、deployment config gate 和 redacted runtime summary command 均有本地证据。最新本地证据为 Stage05 focused 82 passed / 190 deselected、full backend suite 255 passed / 17 skipped、staging contract 5 passed、scope guard 4 passed、runtime summary 3 passed。Stage05 最终验收仍未通过，因为 Tencent Cloud staging、真实 OpenRouter、真实 allowlisted Telegram receipt、staging business no-op evidence、staging account exception evidence 和 safety close 仍需显式批准后执行。Stage05 不做 UI、RAG、生产上线、真实客户发送、provider 写入、账户生产或自动替换分发；Skills runtime registry 延后到 Stage05 主链路完成验收后单独做。
+- Current project mode: Stage 05 functional/staging acceptance closeout
+- Current Progress: 2026-07-08 Stage 05 functional/staging acceptance has passed with documented residual risks. Evidence covers local focused/full regression, Tencent Cloud staging migration, real OpenRouter AgentRun, real Telegram allowlisted receipt, business no-op evidence, controlled account exception, additional three-message Telegram exercise and safety close. Stage05 is not production launch and does not approve real customer/group sends, provider writes, funds movement, account production or automatic replacement. Remaining follow-up is durable commit/artifact hygiene plus optional online PostgreSQL smoke and later-stage reporting/balance support.
 - Current Progress Update: 2026-07-07 Added Stage05 requirement traceability audit to the implementation document map so final acceptance can be checked requirement-by-requirement instead of inferred from local tests alone.
 - Current Progress Update: 2026-07-07 Added Stage05 pre-staging approval packet to make Task12 real staging approval scope explicit before external actions.
 - Current Progress Update: 2026-07-07 Synchronized Stage05 top-level indexes with the latest local evidence and clarified that the only remaining acceptance blockers are Task12 external staging evidence and safety close.
+- Current Progress Update: 2026-07-08 Synchronized top-level index after Task12 staging acceptance and safety close; historical pending notes are superseded by the final Stage05 acceptance docs.
 
 ## Document Map
 

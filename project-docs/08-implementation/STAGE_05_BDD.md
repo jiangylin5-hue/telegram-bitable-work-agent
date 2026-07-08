@@ -4,7 +4,7 @@
 
 - Document status: active behavior design draft
 - Scope: Stage05 behavior scenarios for Agent routing, draft creation, account inventory exceptions, confirmation, send/no-op evidence, views and failure handling.
-- Current Progress: 2026-07-07 BDD scenarios created from confirmed Stage05 scope. Automated local tests now cover Agent routing, draft creation, account inventory exceptions, Task8 confirmation/no-op branches, Task9 customer reply send-confirm/fake-worker branches and Task10 Bitable-like views. Staging scenarios remain pending.
+- Current Progress: 2026-07-08 BDD scenarios remain the behavior source for Stage05. Automated local tests cover Agent routing, draft creation, account inventory exceptions, confirmation/no-op branches, customer reply send-confirm/fake-worker branches and Bitable-like views. Tencent Cloud staging scenarios have been exercised with real OpenRouter, real Telegram inbound, allowlisted reply send, no-op evidence, account exception evidence, additional real-case messages and safety close.
 
 ## 1. Feature: Bound Telegram Message Runs Stage05 Agent
 

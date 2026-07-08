@@ -5,6 +5,7 @@
 - Document status: active API contract draft
 - Scope: Stage05 Agent workflow, service draft filtering/actions, confirmation, customer reply send and Bitable-like views.
 - Current Progress: 2026-07-07 API contract drafted before implementation. Task6 implemented Service Draft API filters/response fields. Task8 implemented confirmation response side-effect fields on the existing confirmation action route for customer reply send-request creation and business no-op evidence. Task9 implemented persisted customer reply send request linkage and reused Stage04 send confirmation/worker API behavior. Task10 implemented Stage05 Bitable-like view definitions and derived evidence fields locally.
+- Current Progress Update: 2026-07-08 API/view contracts were exercised in Tencent Cloud staging for Stage05 acceptance: service drafts, pending confirmation, customer reply send requests, account inventory evidence, business no-op confirmation and safety-close readbacks were captured. Additional real Telegram traces generated recharge/BM invite drafts and a manual-review boundary for unsupported reporting/balance query.
 
 ## 1. Contract Principles
 

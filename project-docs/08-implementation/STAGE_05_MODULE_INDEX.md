@@ -4,7 +4,7 @@
 
 - Document status: active module index draft
 - Scope: Stage 05 complex module boundaries, detailed functional docs and read order.
-- Current Progress: 2026-07-07 Stage05 module docs have been created for six core modules: Agent graph/routing, Account Inventory Agent, draft agents, confirmation/send, Bitable views and OpenRouter evidence. Task10 Bitable Views has completed local implementation and focused verification. Agent skills/capabilities is retained as a post-acceptance reference doc only and is not part of the current Stage05 implementation/acceptance blocker set.
+- Current Progress: 2026-07-08 Stage05 module docs have been created for six core modules: Agent graph/routing, Account Inventory Agent, draft agents, confirmation/send, Bitable views and OpenRouter evidence. The main module set has local and staging acceptance evidence. Agent skills/capabilities remains a post-acceptance reference doc only and is not part of the current Stage05 implementation/acceptance blocker set.
 - Current Progress Update: 2026-07-07 Stage05 pre-staging approval packet was added to the read order as the Task12 approval boundary before real staging execution.
 
 ## 1. Module Read Order

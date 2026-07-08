@@ -4,7 +4,7 @@
 
 - Document status: active acceptance checklist draft
 - Scope: Stage05 documentation, implementation, local verification, staging verification and safety close.
-- Current Progress: 2026-07-08 Documentation acceptance items are completed for draft. Phase 05.1 Task 1 runtime config and dependency gate, Task 2 AgentRun evidence model/service, Phase 05.2 Task 3 Router schema/state, Task 4 Supervisor Graph, Phase 05.3 Task 5 Draft Agents, Task 6 Service Draft API Enhancements, Phase 05.4 Task 7 Account Inventory Agent, Phase 05.5 Tasks 8-9 Confirmation Branches / Customer Reply Send Request, Phase 05.6 Task10 Bitable Views, Task11 Local Acceptance Audit and Task12 local readiness have completed local verification. Task12 approval was granted on `2026-07-08 00:15:10 +08:00`; real staging deployment, migration, real OpenRouter, real Telegram allowlisted receipt, staging no-op/account-exception evidence and safety close remain pending execution.
+- Current Progress: 2026-07-08 Documentation, local implementation, local verification, Task12 approval, Tencent Cloud staging rehearsal, real OpenRouter evidence, allowlisted Telegram receipt, business no-op evidence, controlled account exception evidence, additional three-message Telegram real-case exercise and safety close are completed for the Stage05 functional/staging scope. Remaining risks are artifact hygiene, optional online PostgreSQL smoke coverage, controlled staging test rows and later-stage reporting/balance query support.
 - Current Progress Update: 2026-07-07 Requirement traceability audit added to map every major Stage05 requirement to `passed-local`, `pending-staging`, `guarded-out-of-scope` or `documented-only` evidence.
 - Current Progress Update: 2026-07-07 Stage05 out-of-scope runtime guard added and verified locally; latest local focused suite is now 82 selected Stage05 tests and full backend suite is 255 passed / 17 skipped after the redacted runtime summary command.
 - Current Progress Update: 2026-07-07 Completion audit tightened local dependency evidence: `langgraph` imports and `StateGraph` resolves in the current backend environment, and Stage05 graph tests execute locally. No package install, lock refresh, staging env change, OpenRouter call or Telegram send was performed.
@@ -20,6 +20,7 @@
 - Current Progress Update: 2026-07-08 Task12 staging rehearsal started and exposed a runtime wiring gap. Deployment, migration, health, real-mode redacted runtime settings and private allowlisted Telegram inbound/binding evidence were collected, but the message remained `intent_ready` because `stage03_runtime.py` did not inject Stage05 workflow into the worker. Local fix now passes targeted runtime tests, Stage05 focused tests and full backend tests; staging acceptance remains blocked until the fix is committed, redeployed and proven with new evidence.
 - Current Progress Update: 2026-07-08 Runtime wiring fix was redeployed and produced real OpenRouter AgentRun evidence, but the first post-fix staging message failed with `agent_output_invalid`. Following the updated local-first rule, the router prompt contract fix now passes targeted router/workflow tests, focused Stage05 tests and full backend tests locally before any new staging attempt.
 - Current Progress Update: 2026-07-08 Local real OpenRouter workflow passed after the entity-key prompt contract fix. A routed draft scenario created `recharge` and `customer_reply` drafts in `pending_confirmation`, with `reply_text_present=true`, no provider execution, and no Telegram send. A default risk scenario selected recharge/BM/customer-reply/account-inventory agents but safely entered `manual_review` with no draft/provider/send side effects.
+- Current Progress Update: 2026-07-08 Task12 real Tencent Cloud staging acceptance completed for the Stage05 functional scope. Evidence includes base commit `56a193d` plus hotfix diff `sha256:f0b96aeffb4b4169e053067cb8d40b6baa923270d3ef7509264963aea472e2bd`, staging migration `20260707_0016 (head)`, real OpenRouter AgentRun `b1d0afc2-03ad-45e1-9c8f-b34984d4d811`, Telegram trace `tg:184365906`, service drafts `bb98531f-3b94-44ab-8d29-f2066a5760e1` and `43e7c7fc-cd69-408b-bc6a-438818cbfaaa`, sent request `0d00bb20-5783-42ba-82e0-9c6c9a535e6a` with user-confirmed receipt, business no-op service record `1c58d7c3-d098-4281-80e7-931bf56b6b74`, noop execution log `7f884981-6bcc-4d83-af70-f086d151e20c`, controlled account exception event `fcd2db3c-d26e-47ba-86dc-528656d685f2`, and safety close showing dry-run send mode, empty allowlist, provider disabled, LLM off/fake workflow and unsafe send request count 0.
 
 ## 1. Acceptance Boundary
 
@@ -116,9 +117,9 @@ Stage05 does not accept:
 | Stage05 API/OpenAPI readiness refreshed | completed locally | `create_app().openapi()` generated 13 paths from 18 routes and included the Stage05 key paths for service drafts, confirmation actions, send confirmation and view records |
 | Stage05 deployment config gate | completed locally | RED/GREEN `pytest tests\unit\test_stage05_deploy_compose.py -v`: old compose/env shape failed, updated compose/env passed 2/2; `pytest tests\unit\test_stage04_deploy_compose.py -v`: 1 passed |
 | Redacted runtime summary command | completed locally | RED/GREEN `pytest tests\unit\test_stage05_runtime_summary.py -v`: missing module failed first, then passed 3/3 after adding `app.core.runtime_summary`; direct `python -m app.core.runtime_summary` prints JSON without secret values, raw allowlists, webhook secret or database URL |
-| Stage05 worker runtime injection reaches factory path | completed locally; redeploy pending | `stage03_runtime.py` now accepts/builds/injects `Stage05WorkflowTrigger` when `LLM_ENABLED=true` and `AGENT_WORKFLOW_MODE=real_openrouter`; `pytest tests/unit/test_stage03_worker_runtime_factory.py tests/integration/test_stage05_worker_runtime.py -q`: 7 passed |
-| Stage05 router prompt contract guides real model output | completed locally; redeploy pending | `message_intake_router.py` now requires exact RouterResult keys, supported intent types and schema-shaped arrays/objects; `test_build_router_request_example_matches_router_schema` validates the embedded example against `RouterResult` |
-| Local real OpenRouter workflow gate | completed locally; redeploy pending | `backend/scripts/stage05_local_real_workflow.py` passed two real OpenRouter scenarios: routed draft evidence created `recharge` and `customer_reply` pending-confirmation drafts with `reply_text_present=true`; default risk evidence returned `manual_review` and no side effects |
+| Stage05 worker runtime injection reaches factory path | completed locally and staging-verified | `stage03_runtime.py` builds/injects `Stage05WorkflowTrigger` when `LLM_ENABLED=true` and `AGENT_WORKFLOW_MODE=real_openrouter`; staging trace `tg:184365906` reached Stage05 workflow and produced real OpenRouter AgentRun/draft evidence |
+| Stage05 router prompt contract guides real model output | completed locally and staging-verified | Prompt contract tests pass locally; staging AgentRun `b1d0afc2-03ad-45e1-9c8f-b34984d4d811` succeeded with schema-valid structured output |
+| Local real OpenRouter workflow gate | completed locally and staging-verified | `backend/scripts/stage05_local_real_workflow.py` passed routed and manual-review scenarios before staging retry; staging later produced `recharge`, `customer_reply` and additional `bm_invite` draft evidence |
 
 ## 4. Staging Acceptance
 
@@ -126,27 +127,37 @@ Stage05 does not accept:
 | --- | --- | --- |
 | User approved staging env changes | completed | explicit confirmation at `2026-07-08 00:15:10 +08:00`; bounded to Task12 staging rehearsal only |
 | User approved Task12 approval packet | completed | explicit confirmation against `STAGE_05_PRE_STAGING_APPROVAL_PACKET.md`; forbidden actions remain forbidden |
-| Stage05 deployed to Tencent Cloud staging | partial; prompt-fix redeploy pending | Reviewed commit `17043e8176b25e85fcc022a259bd5a99ee473690` and runtime wiring fix `c9347dfb780e2af36c89894d5e2f8cd574f479f9` were deployed in separate rehearsals. Router prompt-contract fix is newer and must be committed/deployed before this row can pass. |
-| Stage05 migration applied | completed for first rehearsal | Staging `alembic current` reached `20260707_0016`; no new migration is expected for runtime wiring or router prompt-contract fixes |
-| Real OpenRouter enabled server-side | partial; repeat after redeploy | Redacted runtime proof showed OpenRouter key/model present and real workflow mode enabled in runtime containers |
-| Real OpenRouter mode reaches runtime containers | partial; repeat after redeploy | API and worker summaries showed `LLM_ENABLED=true`, `AGENT_WORKFLOW_MODE=real_openrouter`, OpenRouter key/model present, raw prompt/response persistence disabled and provider disabled |
-| Provider remains disabled | completed for first rehearsal; repeat after redeploy | Redacted runtime summaries showed `PROVIDER_MODE=disabled` |
-| Restricted test send allowlist configured | completed for first rehearsal; repeat after redeploy | Redacted runtime summaries showed `telegram_send_mode=restricted_test` and allowlist present; raw allowlist was not recorded |
-| Mixed Chinese/English Telegram message received | completed for first and second rehearsal | First message id `f17a2214-7f6c-4474-9361-6a586458f93b` stayed `intent_ready`; second message id `0c466049-309a-40f8-805a-6e682937de1e` reached Stage05 and failed with `agent_output_invalid` |
-| AgentRun records real OpenRouter metadata | partial; prompt-fix retry pending | Second rehearsal produced `agent_runs` evidence with `model_provider=openrouter`, `model_name=openrouter/auto`, `prompt_version=stage05-router-v1`, `status=failed`, `error_code=agent_output_invalid`; succeeded or manual-review AgentRun evidence remains pending after prompt fix |
-| Multiple service drafts created | pending | draft ids |
-| Account exception branch verified | pending | status event or documented fixture |
-| `customer_reply` confirmed | completed locally | draft becomes `confirmed`, linked by `reply-send:{draft_id}` trace, and creates/reuses a `telegram_send_requests` row in Task8 tests |
-| Allowlisted test chat received reply | pending for real staging | local fake worker send passed; real Telegram receipt requires staging rehearsal and user confirmation |
-| Business draft confirmed as no-op evidence | completed locally | Stage05 business draft becomes `service_record_created`, creates `ServiceRecord`, creates `ExecutionLog(provider=noop, execution_status=skipped)`, and creates no `ExecutionTicket` |
-| Views show Stage05 records | completed locally; pending staging evidence | Local API view tests cover Stage05 view records and masking; staging evidence remains pending |
-| Audit events recorded | pending | audit event list |
-| Safety close completed | pending | dry-run/allowlist/provider evidence |
-| Task12 evidence ledger completed | pending | completed redacted ledger from `STAGE_05_OPERATIONS_RUNBOOK.md` Section 7 |
+| Stage05 deployed to Tencent Cloud staging | completed with explicit hotfix artifact identity | Base staging repo commit `56a193d`; deployed hotfix diff `sha256:f0b96aeffb4b4169e053067cb8d40b6baa923270d3ef7509264963aea472e2bd`; API/worker/outbox rebuilt and restarted |
+| Stage05 migration applied | completed | Staging `alembic current` returned `20260707_0016 (head)` |
+| Real OpenRouter enabled server-side | completed during rehearsal; safety-closed after | Runtime proof before rehearsal showed real OpenRouter mode and server-side key/model presence; after safety close API/worker show `LLM_ENABLED=false` and `AGENT_WORKFLOW_MODE=fake` |
+| Real OpenRouter mode reaches runtime containers | completed during rehearsal | Real AgentRun `b1d0afc2-03ad-45e1-9c8f-b34984d4d811` succeeded with `model_provider=openrouter`, `model_name=openrouter/auto`, `prompt_version=stage05-router-v1`, `usage_summary.total_tokens=919`, `cost=0.011145`, `redaction_policy=summary_only` |
+| Provider remains disabled | completed | Rehearsal and safety-close summaries show `PROVIDER_MODE=disabled`; business no-op execution log has `provider=noop` and `external_call_performed=false` |
+| Restricted test send allowlist configured | completed during rehearsal; cleared after safety close | Customer reply send request reached `sent`; after safety close API/worker show `TELEGRAM_SEND_MODE=dry_run` and `telegram_test_send_allowlist_present=false` |
+| Mixed Chinese/English Telegram message received | completed | Trace `tg:184365906`; message id `df39012d-4705-4abd-8008-b7e93fe95c72`; inbox showed `intent_status=routed`, `agent_status=succeeded`, `draft_count=2` |
+| AgentRun records real OpenRouter metadata | completed | AgentRun `b1d0afc2-03ad-45e1-9c8f-b34984d4d811`, `status=succeeded`, `model_provider=openrouter`, `model_name=openrouter/auto`, usage/cost summary present and raw prompt/response not recorded |
+| Multiple service drafts created | completed | `recharge` draft `bb98531f-3b94-44ab-8d29-f2066a5760e1`; `customer_reply` draft `43e7c7fc-cd69-408b-bc6a-438818cbfaaa` |
+| Account exception branch verified | completed | Controlled fixture account `24eb5124-80ab-438f-a4cd-b427a76345a0`; status event `fcd2db3c-d26e-47ba-86dc-528656d685f2`; `after_status=risk_controlled`; `replacement_action=none`; `assignment_count=0` |
+| `customer_reply` confirmed | completed | Draft `43e7c7fc-cd69-408b-bc6a-438818cbfaaa` became `confirmed` and created send request `0d00bb20-5783-42ba-82e0-9c6c9a535e6a` |
+| Allowlisted test chat received reply | completed | Send request `0d00bb20-5783-42ba-82e0-9c6c9a535e6a` reached `sent`, Telegram response summary `ok=true`, message id `9`; user confirmed receipt |
+| Business draft confirmed as no-op evidence | completed | Recharge draft `bb98531f-3b94-44ab-8d29-f2066a5760e1` became `service_record_created`; service record `1c58d7c3-d098-4281-80e7-931bf56b6b74`; execution log `7f884981-6bcc-4d83-af70-f086d151e20c`; `execution_ticket_count=0` |
+| Views show Stage05 records | completed | `telegram_inbox`, `service_drafts`, `pending_confirmation`, `customer_reply_send_requests` and `account_inventory` view/API readbacks captured expected ids/statuses; `pending_confirmation` became empty after confirmations |
+| Audit events recorded | completed | No-op audit events include `business_noop_evidence_created` and `draft_confirmed`; account exception audit includes `account.exception_marked` with `replacement_action=none` |
+| Additional real Telegram cases tested | completed with one expected manual-review boundary | `tg:184365907` generated `recharge` draft `04dc4e65-5f91-4674-83f3-51873a266332`; `tg:184365908` generated `bm_invite` draft `8ab46b89-8b84-4544-a916-4276fffd544f`; `tg:184365909` asked for spend/balance and correctly entered manual review as unsupported in Stage05; all three had no service record, execution ticket, execution log or Telegram send side effects |
+| Safety close completed | completed | API/worker summaries show `llm_enabled=false`, `agent_workflow_mode=fake`, `telegram_send_mode=dry_run`, allowlist absent, `provider_mode=disabled`; DB pending/confirmed/sending send request count `0` |
+| Task12 evidence ledger completed | completed in acceptance docs | Evidence summarized in this checklist, `STAGE_05_FINAL_ACCEPTANCE_REPORT.md`, `STAGE_05_PROGRESS.md` and `STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md` |
 
 ## 5. Final Acceptance Result
 
-Stage05 final result is not assigned until implementation and staging verification are complete.
+Stage05 final result: passed for Stage05 functional/staging acceptance on 2026-07-08.
+
+This is not a production launch and not approval for provider writes, funds movement, customer/group sends, account production or automatic replacement.
+
+Remaining risks are tracked rather than hidden:
+
+- The final staging hotfix was deployed as base commit `56a193d` plus explicit diff hash, not yet as a committed durable repo revision.
+- 17 online PostgreSQL smoke tests remain skipped locally because `STAGE02_ONLINE_DATABASE_URL` is not configured.
+- Staging contains controlled test/evidence rows and must not be treated as production data.
+- Reporting/balance query support is not a Stage05 capability; real trace `tg:184365909` correctly entered manual review and should be considered for Stage06+ if needed.
 
 Required final conclusion must explicitly state:
 

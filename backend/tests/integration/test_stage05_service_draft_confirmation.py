@@ -153,6 +153,8 @@ def test_stage05_business_confirmation_creates_noop_evidence_without_ticket(
     assert result.execution_ticket is None
     assert result.telegram_send_request is None
     assert result.execution_log is not None
+    assert result.execution_log.service_record is result.service_record
+    assert result.service_record.execution_logs == [result.execution_log]
     assert result.execution_log.provider == "noop"
     assert result.execution_log.execution_status == "skipped"
     assert result.execution_log.provider_request_id == (

@@ -619,6 +619,7 @@ def _create_noop_execution_log(
 ) -> ExecutionLog:
     return ExecutionLog(
         id=uuid4(),
+        service_record=service_record,
         service_record_id=service_record.id,
         provider="noop",
         provider_request_id=f"noop-execution:{service_record.id}",

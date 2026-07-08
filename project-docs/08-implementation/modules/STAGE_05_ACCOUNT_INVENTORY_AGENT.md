@@ -5,6 +5,7 @@
 - Document status: active module design draft
 - Scope: Account distribution drafts, inventory state visibility, high-confidence exception marking and manual review boundary.
 - Current Progress: 2026-07-07 Task 7 implemented locally after user confirmed the existing documented plan. Account Inventory Agent now uses deterministic policy logic, creates `account_assignment` drafts only for human review, and may auto-mark high-confidence `blocked`, `disabled` and `risk_controlled` exceptions through a narrow service guard. The implementation writes `account_status_events` and audit evidence, and does not produce accounts, recommend/reserve replacements, confirm assignments, call providers or execute staging actions.
+- Current Progress Update: 2026-07-08 Controlled Tencent Cloud staging fixture verified the account exception boundary: account `24eb5124-80ab-438f-a4cd-b427a76345a0` produced status event `fcd2db3c-d26e-47ba-86dc-528656d685f2`, `after_status=risk_controlled`, audit evidence, `replacement_action=none` and zero assignments.
 
 ## 1. Purpose
 

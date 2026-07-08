@@ -4,7 +4,7 @@
 
 - Document status: active risk register draft
 - Scope: Stage05 product, technical, security, staging and operational risks.
-- Current Progress: 2026-07-07 Risk register drafted before implementation and updated after local Stage05 implementation through out-of-scope runtime guard, deployment config gate and redacted runtime summary command. Local mitigations have evidence from focused Stage05 tests 82 passed / 190 deselected, full backend suite 255 passed / 17 skipped, staging-contract preflight, scope guard, deployment compose/env tests, runtime summary tests, secret scan and traceability audit. Real OpenRouter, real allowlisted Telegram receipt, staging account exception evidence, staging business no-op evidence and safety close remain pending explicit approval and execution.
+- Current Progress: 2026-07-08 Risk register updated after real Tencent Cloud staging acceptance and additional three-message Telegram exercise. Stage05 risks R05-01 through R05-14 have local mitigation evidence plus staging evidence where applicable: real OpenRouter AgentRuns, allowlisted Telegram receipt, business no-op evidence, controlled account exception evidence, provider-disabled proof and safety close. Remaining risks are artifact hygiene, optional online PostgreSQL smoke coverage, controlled staging test data and later-stage reporting/balance query support.
 
 ## 1. Risk Summary
 
@@ -33,19 +33,19 @@ Stage05 introduces real LLM calls and limited automatic account exception mutati
 
 | Risk ID | Local Evidence Status | Evidence |
 | --- | --- | --- |
-| R05-01 | mitigated locally; staging pending | Router schema validation, invalid-output failure mapping, confidence/manual-review tests |
-| R05-02 | mitigated locally; staging pending | AgentRun evidence tests, raw prompt/response defaults, service draft API response-shape tests, redacted runtime summary test, secret scan |
-| R05-03 | mitigated locally; staging pending | High-confidence account exception tests, allowed-status guard, ambiguous-risk manual review |
-| R05-04 | guarded locally; staging pending | Account assignment remains draft-only; `replacement_action = none`; scope guard blocks Stage05 assignment confirmation/activation path |
-| R05-05 | mitigated locally; staging pending | Request-time, confirm-time and worker allowlist tests; local fake Telegram send only |
-| R05-06 | guarded locally; staging pending | Business confirmation creates `ExecutionLog(provider=noop, execution_status=skipped)`; no `ExecutionTicket`; scope guard blocks Stage05 provider execution paths |
+| R05-01 | mitigated locally and staging-verified | Router schema validation, invalid-output failure mapping, confidence/manual-review tests; real traces `tg:184365906`, `tg:184365907`, `tg:184365908` routed to drafts, and `tg:184365909` correctly entered manual review for unsupported reporting/balance query |
+| R05-02 | mitigated locally and staging-verified | AgentRun evidence tests, raw prompt/response defaults, service draft API response-shape tests, redacted runtime summary test, secret scan, staging AgentRuns with `redaction_policy=summary_only` |
+| R05-03 | mitigated locally and staging-verified | High-confidence account exception tests, allowed-status guard, ambiguous-risk manual review; controlled staging fixture produced `risk_controlled` status event |
+| R05-04 | guarded locally and staging-verified | Account assignment remains draft-only; staging account exception recorded `replacement_action=none` and zero assignments |
+| R05-05 | mitigated locally and staging-verified | Request-time, confirm-time and worker allowlist tests; staging send request reached `sent` only for private allowlisted test chat and user confirmed receipt |
+| R05-06 | guarded locally and staging-verified | Business confirmation creates `ExecutionLog(provider=noop, execution_status=skipped)`; no `ExecutionTicket`; staging no-op log had `external_call_performed=false` |
 | R05-07 | mitigated locally | Duplicate workflow trigger idempotency test |
-| R05-08 | mitigated locally; staging pending | Workflow persists AgentRun, service drafts, account status events and message states through services |
-| R05-09 | mitigated locally; repeat before staging | Secret scan finds config names, placeholders, documented commands and fake test values only; `python -m app.core.runtime_summary` reports presence flags without raw key/token/allowlist values |
-| R05-10 | mitigated locally; staging smoke pending | Stage03/Stage04 regression command passed locally |
-| R05-11 | preflighted locally; real close pending | Staging safety-close contract test passes; deployment config gate keeps safe defaults and redacted runtime summary can prove deployed settings after approval |
-| R05-12 | not evaluated with real LLM | AgentRun usage/cost fields exist; real OpenRouter usage/cost evidence pending |
-| R05-13 | mitigated locally; staging view evidence pending | Stage05 Bitable view masking and row-scope tests |
+| R05-08 | mitigated locally and staging-verified | Workflow persists AgentRun, service drafts, account status events and message states through services; staging DB/view evidence captured |
+| R05-09 | mitigated locally; repeat before commit | Secret scan finds config names, placeholders, documented commands and fake test values only; runtime summary reports presence flags without raw key/token/allowlist values |
+| R05-10 | mitigated locally; staging smoke acceptable | Stage03/Stage04 regression command passed locally; staging health and real Telegram paths remained functional after deployment |
+| R05-11 | closed for Task12; keep operational habit | Safety close restored fake workflow, LLM disabled, dry-run send, empty allowlist, provider disabled; unsafe send count `0` |
+| R05-12 | evaluated with bounded real LLM usage | AgentRun usage/cost fields exist; main trace recorded `total_tokens=919`, `cost=0.011145`; additional real-case traces recorded usage/cost summaries |
+| R05-13 | mitigated locally and staging-verified | Stage05 Bitable view masking and row-scope tests; staging view/API/read-only SQL evidence captured for acceptance records |
 | R05-14 | mitigated locally | Account docs updated; scope guard blocks Stage05 account production paths |
 
 ## 4. Risk Handling Rules
@@ -63,3 +63,4 @@ Stage05 introduces real LLM calls and limited automatic account exception mutati
 - UI/Mini App review queue.
 - Account replacement recommendation workflow.
 - Provider sandbox and execution_ticket production hardening.
+- Customer reporting/balance query support; real trace `tg:184365909` correctly entered manual review because this is outside Stage05 supported intent set.

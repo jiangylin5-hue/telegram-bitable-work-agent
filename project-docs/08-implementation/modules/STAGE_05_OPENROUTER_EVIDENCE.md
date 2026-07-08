@@ -5,6 +5,7 @@
 - Document status: active module design draft
 - Scope: Real OpenRouter request/response handling, redaction, AgentRun evidence, usage/cost/latency and failure evidence.
 - Current Progress: 2026-07-07 Module design created before implementation.
+- Current Progress Update: 2026-07-08 Real OpenRouter evidence was captured in Tencent Cloud staging. Main AgentRun `b1d0afc2-03ad-45e1-9c8f-b34984d4d811` succeeded with `model_provider=openrouter`, `model_name=openrouter/auto`, `prompt_version=stage05-router-v1`, usage/cost summary and `redaction_policy=summary_only`. Additional real-case AgentRuns captured recharge, BM invite and unsupported reporting/manual-review behavior.
 
 ## 1. Purpose
 

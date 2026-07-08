@@ -4,7 +4,7 @@
 
 - Document status: active module design draft
 - Scope: Stage05 Bitable-like operational views for draft handling, manual review, pending confirmation, customer reply sends, inbox and account inventory.
-- Current Progress: 2026-07-07 Module design implemented locally in Task10. `service_drafts`, `agent_review_queue`, `pending_confirmation` and `customer_reply_send_requests` views now exist; `telegram_inbox` and `account_inventory` include Stage05 evidence fields where derivable. Focused view tests and Stage05 tests passed locally. Staging view evidence remains pending.
+- Current Progress: 2026-07-08 Module design implemented locally in Task10 and staging evidence was captured during Task12. `service_drafts`, `agent_review_queue`, `pending_confirmation` and `customer_reply_send_requests` views exist; `telegram_inbox` and `account_inventory` include Stage05 evidence fields where derivable. Focused view tests passed locally and staging readbacks were included in acceptance evidence.
 
 ## 1. Purpose
 

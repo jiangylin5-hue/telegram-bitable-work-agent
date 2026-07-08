@@ -5,6 +5,7 @@
 - Document status: active stage source of truth draft
 - Scope: Stage 05 以真实 OpenRouter + LangGraph Supervisor / 子 Agent 为主线，把 Stage 04 `intent_ready` 升级为多意图 Agent 草稿闭环，并补入账户库存异常管理边界。
 - Current Progress: 2026-07-07 Stage05 文档包草稿已完成；随后根据用户补充，将飞书官方 `larksuite/cli` Skills 作为高相似度结构参考写入 Agent skills/capabilities 模块，并明确 Skills 只保留文档说明，不进入 Stage05 当前实施和验收阻塞项。Stage05 本地/non-staging 主链路已完成到 Task12 前置 readiness：runtime config、AgentRun evidence、Router schema、LangGraph Supervisor、子 Draft Agents、多 draft、API + Bitable-like views、Account Inventory Agent、confirmation/no-op、customer_reply linked send request、deployment config gate 和 redacted runtime summary command 均有本地证据。当前范围仍为 Agent 能力优先型：真实 OpenRouter 主路径、LangGraph Supervisor + 子 Agent、多意图、多 draft、API + Bitable-like views、Tencent Cloud staging；Account Inventory Agent 不生产账户，只负责账户分发、库存管理和异常处理；高确定性风控/封号可自动标记异常状态，但不自动替换分发账户。
+- Current Progress Update: 2026-07-08 Stage05 functional/staging acceptance has completed under the approved Task12 boundary. Real Tencent Cloud staging evidence covers migration `20260707_0016`, real OpenRouter AgentRuns, service drafts, customer reply allowlisted send, business no-op evidence, controlled account exception evidence, additional three-message Telegram exercise and safety close. Remaining follow-up is artifact/commit hygiene and later-stage capability planning, not hidden Stage05 implementation work.
 
 ## 1. Stage Goal
 

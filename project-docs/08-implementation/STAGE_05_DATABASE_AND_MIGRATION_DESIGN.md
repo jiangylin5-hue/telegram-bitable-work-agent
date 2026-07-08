@@ -5,6 +5,7 @@
 - Document status: active database design draft
 - Scope: Stage05 schema changes for Agent evidence, draft metadata, customer reply send linkage, account status exceptions and views.
 - Current Progress: 2026-07-07 Phase 05.1 Task 2 created `20260707_0012_stage05_agent_run_evidence.py` for additive AgentRun evidence columns. Phase 05.3 Task 5 created `20260707_0013_stage05_service_draft_metadata.py` for additive `service_drafts` metadata columns after user confirmation. Phase 05.4 Task 7 created `20260707_0015_stage05_account_status_event_metadata.py` for additive `account_status_events` confidence and risk flag metadata. Phase 05.5 Task 8 reused existing `service_records`, `execution_logs` and `telegram_send_requests` tables without a migration. Task9 created `20260707_0016_stage05_reply_send_link.py` for additive `telegram_send_requests` draft-link and purpose metadata. Task10 Bitable Views required no migration; it reuses existing fact tables and view-service aggregation.
+- Current Progress Update: 2026-07-08 Staging migration verification passed: `alembic current` returned `20260707_0016 (head)`. The Stage05 no-op evidence hotfix added ORM relationship wiring for `ServiceRecord`/`ExecutionLog` without a schema change and was verified in staging.
 
 ## 1. Migration Principles
 

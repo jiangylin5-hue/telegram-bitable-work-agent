@@ -12,7 +12,7 @@
 
 - Document status: active implementation plan draft
 - Scope: Stage 05 documentation and future code task breakdown.
-- Current Progress: 2026-07-08 Stage05 scope confirmed by user and documentation package created. Phase 05.1 Task 1 and Task 2, Phase 05.2 Task 3 and Task 4, Phase 05.3 Task 5 and Task 6, Phase 05.4 Task 7, Phase 05.5 Tasks 8-9, Phase 05.6 Task10, Task11 and Task12 local readiness have completed local verification. Task12 was explicitly approved by user on `2026-07-08 00:15:10 +08:00`; Step 1 is complete. Real Tencent Cloud deployment, staging migration, real OpenRouter, real Telegram allowlisted receipt, staging no-op/account-exception evidence and safety close remain pending execution. No dependency install, staging env change, OpenRouter call or real Telegram send has been executed yet after approval.
+- Current Progress: 2026-07-08 Stage05 scope confirmed by user and documentation package created. Phase 05.1 through Phase 05.6 Task12 have completed for the functional/staging scope. Evidence includes local regression, Tencent Cloud deployment, staging migration, real OpenRouter, real allowlisted Telegram receipt, staging no-op/account-exception evidence, additional three-message Telegram exercise and safety close. Remaining follow-up: commit or otherwise preserve the hotfix as a durable reviewed artifact; optional online PostgreSQL smoke setup; later-stage reporting/balance support.
 
 ## Global Constraints
 

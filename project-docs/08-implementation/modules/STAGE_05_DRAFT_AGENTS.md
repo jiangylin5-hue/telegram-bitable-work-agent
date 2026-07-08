@@ -5,6 +5,7 @@
 - Document status: active module design draft
 - Scope: Recharge, card binding, BM invite, customer reply and account assignment draft generation.
 - Current Progress: 2026-07-07 Task 5 Draft Agent and `service_drafts` metadata implementation completed locally after user confirmed approach A. Four deterministic child agents, Stage05 draft candidate schema, additive service_drafts metadata migration and workflow multi-draft persistence are implemented and covered by local tests. Account inventory, confirmation/send, provider writes and staging calls remain out of scope for Task 5.
+- Current Progress Update: 2026-07-08 Draft generation was staging-verified. Main trace `tg:184365906` created `recharge` and `customer_reply`; additional real traces created `recharge` draft `04dc4e65-5f91-4674-83f3-51873a266332` and `bm_invite` draft `8ab46b89-8b84-4544-a916-4276fffd544f`. Unsupported spend/balance query correctly created no draft and entered manual review.
 
 ## 1. Purpose
 

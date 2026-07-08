@@ -4,7 +4,7 @@
 
 - Document status: active operations runbook draft
 - Scope: Local preflight, staging deployment, OpenRouter rehearsal, Telegram allowlisted send, evidence capture and safety close for Stage05.
-- Current Progress: 2026-07-07 Runbook drafted and updated after local implementation through Task11. Local staging-contract preflight test `tests/integration/test_stage05_staging_contract.py` was added for server-env safety assumptions. No Stage05 Tencent Cloud staging operation, real OpenRouter call or real Telegram send has been executed.
+- Current Progress: 2026-07-08 Runbook was used for the approved Task12 Tencent Cloud staging rehearsal, real OpenRouter run, allowlisted Telegram test send, business no-op evidence, controlled account exception evidence, additional three-message Telegram exercise and safety close. Current runtime is safety-closed: fake workflow, LLM disabled, dry-run send, empty allowlist and provider disabled.
 - Current Progress Update: 2026-07-07 Task12 evidence ledger template and safety-close checklist were added so staging evidence can be captured as redacted, pass/fail-oriented records after explicit approval.
 - Current Progress Update: 2026-07-07 Pre-staging approval packet was linked as the required approval boundary before Task12 external actions.
 - Current Progress Update: 2026-07-07 Task12 staging command/evidence map was added. It reuses the Stage03/Stage04 Tencent Cloud staging pattern, records the Stage05 runtime deltas, and requires redacted runtime proof before any real OpenRouter rehearsal.

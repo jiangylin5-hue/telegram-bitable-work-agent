@@ -5,6 +5,7 @@
 - Document status: active module design draft
 - Scope: Stage05 Supervisor graph, Message Intake Router, worker trigger, graph state, routing policy and persistence boundary.
 - Current Progress: 2026-07-07 Module design created before implementation. User confirmed Phase 05.2 technical approach A, and Task 3 StateGraph-compatible state/router schema plus Task 4 Supervisor Graph/workflow service/worker delegation completed local TDD verification.
+- Current Progress Update: 2026-07-08 Agent graph/routing was staging-verified with real OpenRouter. Main trace `tg:184365906` produced a successful AgentRun and drafts; additional traces `tg:184365907`, `tg:184365908` and `tg:184365909` exercised recharge, BM invite and unsupported reporting/manual-review routing.
 
 ## 1. Purpose
 

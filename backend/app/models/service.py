@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlalchemy import DateTime, ForeignKey, Numeric, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import Uuid
 
 from app.models.base import Base, TimestampMixin, UuidPrimaryKeyMixin
@@ -42,6 +42,9 @@ class ServiceRecord(UuidPrimaryKeyMixin, TimestampMixin, Base):
     )
     idempotency_key: Mapped[str] = mapped_column(String(160), nullable=False)
     trace_id: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    execution_logs: Mapped[list["ExecutionLog"]] = relationship(
+        back_populates="service_record",
+    )
 
 
 class ExecutionTicket(UuidPrimaryKeyMixin, Base):
@@ -103,6 +106,9 @@ class ExecutionLog(UuidPrimaryKeyMixin, Base):
         Uuid(as_uuid=True),
         ForeignKey("service_records.id"),
         nullable=False,
+    )
+    service_record: Mapped[ServiceRecord] = relationship(
+        back_populates="execution_logs",
     )
     provider: Mapped[str] = mapped_column(String(80), nullable=False)
     provider_request_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
