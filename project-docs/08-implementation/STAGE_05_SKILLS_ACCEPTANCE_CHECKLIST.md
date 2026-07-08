@@ -4,7 +4,7 @@
 
 - Document status: active acceptance checklist
 - Scope: Requirement-by-requirement acceptance for Stage05 Skills Extension.
-- Current Progress: 2026-07-09 Updated after implementation and verification. Static registry, sidecar matching, AgentRun evidence, local tests and real OpenRouter smoke passed. One local `.pytest_cache` cleanup attempt was blocked by Windows ACL and is documented below.
+- Current Progress: 2026-07-09 Updated after implementation, local verification and Tencent Cloud staging re-acceptance. Static registry, sidecar matching, AgentRun evidence, local tests, real OpenRouter smoke and six real Telegram staging messages passed under a safety window. Staging was safety-closed after validation.
 
 ## 1. Documentation Acceptance
 
@@ -84,3 +84,26 @@ Result:
 - Formal fixture `backend/tests/fixtures/stage05_skill_cases.json` is kept as a durable regression asset.
 - No `__pycache__` directories remained under `backend/app`, `backend/tests` or `backend/scripts` during cleanup check.
 - `.pytest_cache` was attempted for deletion, but Windows denied ACL read/delete access even after a scoped takeown/icacls attempt. It remains ignored by git and is not a source artifact.
+
+## 8. Tencent Cloud Staging Re-Acceptance
+
+| Item | Evidence | Status |
+| --- | --- | --- |
+| Reviewed commit deployed | Staging repo HEAD `558493b2fb95a58ba3a457f68312f824b6a71704` | Passed |
+| Migration head | `alembic current`: `20260707_0016 (head)` | Passed |
+| Runtime window | API/worker summary showed `llm_enabled=true`, `agent_workflow_mode=real_openrouter`, OpenRouter key present, `telegram_send_mode=dry_run`, `provider_mode=disabled`, prompt/response raw storage disabled | Passed |
+| Health | `GET https://api.jiangtest1.online/health`: `{"status":"ok"}` | Passed |
+| Recharge skill | Trace `tg:184365910`; OpenRouter AgentRun `4fc1e067-2a14-464c-b59a-620d9e0c2738`; selected `recharge-draft`; created pending `recharge` draft `e16bf18d-0c6b-44b3-86da-7aa24b91a7db` | Passed |
+| BM invite skill | Trace `tg:184365911`; AgentRun `485a4796-07c3-49cd-b94e-a8a84a32f389`; selected `bm-invite-draft` and `project-contact`; created pending `bm_invite` draft `85badebb-515e-4ff0-aade-082c3d54a9b7` | Passed |
+| Spend query boundary | Trace `tg:184365912`; AgentRun `f74a572b-f8e3-49f0-95b4-9a5ec5a4af39`; selected `spend-query`, `project-tabular-analysis`, `manual-review-handoff`; fallback `manual_review`; no draft | Passed |
+| Manual review task boundary | Trace `tg:184365913`; selected `project-task` and `manual-review-handoff`; no draft/send/execution side effects | Passed |
+| Approval boundary | Trace `tg:184365914`; selected `manual-review-handoff`; no draft/send/execution side effects | Passed |
+| Future workflow boundary | Trace `tg:184365915`; selected `project-daily-operations-workflow`; fallback `future_scope`; no draft/send/execution side effects | Passed |
+| Side effects blocked | For traces `tg:184365910` through `tg:184365915`: `telegram_send_requests=0`, `service_records=0`, `execution_tickets=0`, `execution_logs=0` | Passed |
+| Safety close | API/worker summary after close showed `llm_enabled=false`, `agent_workflow_mode=fake`, `telegram_send_mode=dry_run`, allowlist absent, `provider_mode=disabled`; pending/sendable Telegram requests `0`; execution tickets `0` | Passed |
+
+Not covered in this re-acceptance:
+
+- `card-binding-draft` and `account-exception-marking` were covered by local real OpenRouter smoke and previous Stage05 account-exception staging evidence, but not re-sent in this six-message staging pass.
+- No real Telegram send was performed in this re-acceptance; Telegram remained `dry_run`.
+- No provider, funds, card, Meta/BM execution, account production or automatic replacement was performed.

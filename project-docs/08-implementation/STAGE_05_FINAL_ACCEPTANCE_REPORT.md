@@ -4,7 +4,7 @@
 
 - Document status: final acceptance report
 - Scope: Stage05 final local and Tencent Cloud staging acceptance evidence.
-- Current Progress: 2026-07-08 Stage05 functional/staging acceptance is passed with documented residual risks. Evidence covers local full regression, focused Stage05 regression, migration verification, real Tencent Cloud staging, real OpenRouter AgentRun, service drafts, customer reply allowlisted send, business no-op evidence, controlled account exception, view/audit evidence, additional three-message Telegram real-case exercise and safety close. This is not a production launch and does not approve provider writes, funds movement, customer/group sends, account production or automatic replacement.
+- Current Progress: 2026-07-09 Stage05 functional/staging acceptance remains passed. The Stage05 skills sidecar extension commit `558493b2fb95a58ba3a457f68312f824b6a71704` was deployed to Tencent Cloud staging and re-accepted with six real Telegram inbound messages under a safety window. Evidence covers real OpenRouter AgentRuns, `skill_evidence` persistence, business skill matches, platform/future workflow skill matches, no side effects and safety close. This is not a production launch and does not approve provider writes, funds movement, customer/group sends, account production or automatic replacement.
 
 ## 1. Result
 
@@ -66,14 +66,41 @@ The following did not happen during Stage05 acceptance:
 - No execution ticket was created for Stage05 business no-op confirmation.
 - No raw prompt, raw LLM response, bot token, OpenRouter key, database URL or raw allowlist value was recorded in the report.
 
+## 4.1 Skills Extension Staging Re-Acceptance
+
+On 2026-07-09, commit `558493b2fb95a58ba3a457f68312f824b6a71704` was deployed to Tencent Cloud staging by transferring a local git bundle and fast-forwarding the staging repo. The prior uncommitted staging hotfix was already preserved by durable commit `b5812f8`, so the temporary server stash was dropped after deployment.
+
+Deployment and runtime evidence:
+
+| Area | Evidence |
+| --- | --- |
+| Staging commit | `558493b2fb95a58ba3a457f68312f824b6a71704` |
+| Migration | `20260707_0016 (head)` |
+| Health | `GET /health` returned `{"status":"ok"}` |
+| Real OpenRouter window | API/worker summaries showed `llm_enabled=true`, `agent_workflow_mode=real_openrouter`, OpenRouter key present, `telegram_send_mode=dry_run`, allowlist absent, `provider_mode=disabled`, raw prompt/response storage disabled |
+| Safety close | API/worker summaries returned to `llm_enabled=false`, `agent_workflow_mode=fake`, `telegram_send_mode=dry_run`, allowlist absent, `provider_mode=disabled`; pending/sendable Telegram requests `0`, execution tickets `0` |
+
+Real Telegram traces:
+
+| Trace | Purpose | Result | Skill evidence | Side effects |
+| --- | --- | --- | --- | --- |
+| `tg:184365910` | Recharge request | `recharge` draft `e16bf18d-0c6b-44b3-86da-7aa24b91a7db`, `pending_confirmation` | `project-base`, `project-shared`, `project-im`, `project-event`, `recharge-draft` | No send request, service record, execution ticket or execution log |
+| `tg:184365911` | BM invite request | `bm_invite` draft `85badebb-515e-4ff0-aade-082c3d54a9b7`, `pending_confirmation` | `project-base`, `project-shared`, `project-im`, `project-event`, `bm-invite-draft`, `project-contact` | No send request, service record, execution ticket or execution log |
+| `tg:184365912` | Spend/balance query | `manual_review`, no draft | `project-base`, `project-shared`, `project-im`, `project-event`, `manual-review-handoff`, `spend-query`, `project-tabular-analysis` | No side effects |
+| `tg:184365913` | Customer ownership/manual confirmation boundary | `manual_review`, no draft | `project-base`, `project-shared`, `project-im`, `project-event`, `manual-review-handoff`, `project-task` | No side effects |
+| `tg:184365914` | Approval boundary | `manual_review`, no draft | `project-base`, `project-shared`, `project-im`, `project-event`, `manual-review-handoff` | No side effects |
+| `tg:184365915` | Future monthly workflow | `manual_review`, fallback `future_scope`, no draft | `project-base`, `project-shared`, `project-im`, `project-event`, `manual-review-handoff`, `project-daily-operations-workflow` | No side effects |
+
+This re-acceptance did not perform a real Telegram send. It intentionally kept `TELEGRAM_SEND_MODE=dry_run` to validate inbound routing, real LLM skill evidence and side-effect safety after the skills extension.
+
 ## 5. Remaining Risks
 
 | Risk | Status / next action |
 | --- | --- |
-| Hotfix artifact hygiene | The final staging hotfix is deployed as base commit `56a193d` plus diff hash, not yet as a committed durable repo revision. Next step: commit the reviewed code/docs or otherwise produce a reviewed artifact before any future deploy. |
+| Hotfix artifact hygiene | Resolved for the staging hotfix: commit `b5812f8` preserved the ServiceRecord/ExecutionLog hotfix, and commit `558493b2` was deployed to staging as the current reviewed artifact. |
 | Online PostgreSQL smoke skips | 17 online smoke tests remain skipped because `STAGE02_ONLINE_DATABASE_URL` is not configured. This does not block Stage05 functional staging acceptance, but should be run separately if disposable online DB certification is required. |
 | Staging test data | Staging contains controlled evidence rows and must not be treated as production data. |
-| Reporting/balance query | Real trace `tg:184365909` showed that spend/balance reporting is unsupported in Stage05 and enters manual review. Treat customer reporting/balance query as a Stage06+ candidate. |
+| Reporting/balance query | Real traces `tg:184365909` and `tg:184365912` showed spend/balance reporting is still non-executing in Stage05. The skills layer now logs `spend-query` and `project-tabular-analysis`, but the workflow still falls back to manual review. Treat executable reporting/balance support as Stage06+ work. |
 
 ## 6. Close Decision
 
@@ -81,5 +108,5 @@ Stage05 can be closed for the agreed functional/staging acceptance scope after t
 
 Recommended next stage:
 
-1. Commit the Stage05 hotfix and documentation updates as the durable reviewed artifact.
+1. Keep Stage05 staging safety-closed unless a new explicitly approved rehearsal window is opened.
 2. Start Stage06 planning for production hardening or for the next business capability, with reporting/balance query support as one candidate.
