@@ -90,7 +90,7 @@ Stage 05 开发前按这个顺序阅读：
 11. [Stage 05 Database And Migration Design](STAGE_05_DATABASE_AND_MIGRATION_DESIGN.md)
 12. [Stage 05 Security And Permission Design](STAGE_05_SECURITY_AND_PERMISSION_DESIGN.md)
 13. [Stage 05 Test Plan](STAGE_05_TEST_PLAN.md)
-14. [Stage 05 Local OpenRouter Env Smoke](STAGE_05_LOCAL_OPENROUTER_ENV_SMOKE.md)
+14. [Stage 05 Local Real Workflow Env](STAGE_05_LOCAL_REAL_WORKFLOW_ENV.md)
 15. [Stage 05 Operations Runbook](STAGE_05_OPERATIONS_RUNBOOK.md)
 16. [Stage 05 Pre-Staging Approval Packet](STAGE_05_PRE_STAGING_APPROVAL_PACKET.md)
 17. [Stage 05 Risk Register](STAGE_05_RISK_REGISTER.md)

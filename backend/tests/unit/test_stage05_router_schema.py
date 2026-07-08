@@ -167,6 +167,11 @@ def test_build_router_request_uses_structured_llm_contract_without_secrets() -> 
     assert "required top-level keys are: intents" in combined_prompt
     assert "Do not return top-level fields named intent_type" in combined_prompt
     assert "Allowed intent_type values" in combined_prompt
+    assert "entities.reply_text" in combined_prompt
+    assert "entities.account_hint" in combined_prompt
+    assert "entities.bm_hint" in combined_prompt
+    assert "entities.target_status" in combined_prompt
+    assert "not to execute provider actions can still be routed" in combined_prompt
     assert "Do not invent account ids" in combined_prompt
     assert "客户要求 recharge act_1001 100 USD" in combined_prompt
     assert "OPENROUTER_API_KEY" not in combined_prompt

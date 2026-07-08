@@ -13,8 +13,8 @@ Stage05 uses real OpenRouter in staging, but local automated tests must be deter
 - Local tests use fake LLM clients and fake Telegram clients.
 - Unit tests validate schema, state policy, permission and view behavior.
 - Integration tests validate persistence and worker flow.
-- A local real OpenRouter smoke validates router prompt/schema compatibility after deterministic tests pass and before any further staging retry.
-- Staging validates real OpenRouter in deployed worker context and allowlisted Telegram send once the local suite and local real OpenRouter smoke pass.
+- A local real OpenRouter workflow script validates router prompt/schema compatibility and the Stage05 in-memory workflow after deterministic tests pass and before any further staging retry.
+- Staging validates real OpenRouter in deployed worker context and allowlisted Telegram send once the local suite and local real OpenRouter workflow pass.
 - Stage03/Stage04 regression is mandatory because Stage05 extends their runtime paths.
 
 ## 2. Unit Tests
@@ -106,41 +106,43 @@ Expected result after implementation:
 - Online PostgreSQL smoke tests may remain skipped unless `STAGE02_ONLINE_DATABASE_URL` is configured.
 - Any new skip must be documented with reason.
 
-## 4.1 Local Real OpenRouter Smoke
+## 4.1 Local Real OpenRouter Workflow
 
-Before any Stage05 Task12 staging retry that depends on router prompt/schema behavior, run the local real OpenRouter smoke in [Stage 05 Local OpenRouter Env Smoke](STAGE_05_LOCAL_OPENROUTER_ENV_SMOKE.md).
+Before any Stage05 Task12 staging retry that depends on router prompt/schema behavior, run the local real OpenRouter workflow in [Stage 05 Local Real Workflow Env](STAGE_05_LOCAL_REAL_WORKFLOW_ENV.md).
 
-This smoke is intentionally separate from deterministic automated tests:
+This workflow is intentionally separate from deterministic automated tests:
 
-- It uses a temporary local `OPENROUTER_API_KEY` entered through a secure prompt.
-- It makes one real OpenRouter call through `OpenRouterStructuredLLMClient`.
-- It parses the model output through `parse_router_result(...)`.
+- It reads local secrets from `.local/stage05-real-workflow.env`, which is ignored by git.
+- It makes a real OpenRouter call through `OpenRouterStructuredLLMClient`.
+- It runs `Stage05AgentWorkflowService` with an in-memory UOW.
+- It verifies Router -> LangGraph Supervisor -> child Draft Agents -> AgentRun/draft/account-exception/audit evidence.
 - It prints only redacted operational evidence.
 - It must not print raw prompt, raw response, key, Telegram token, raw allowlist, database URL or Redis URL.
 
-Pass evidence after the router prompt-contract fix:
+Command:
 
-```json
-{
-  "ok": true,
-  "model_provider": "openrouter",
-  "model_name": "openrouter/auto",
-  "prompt_version": "stage05-router-v1",
-  "request_id_present": true,
-  "usage_present": true,
-  "intent_types": ["recharge", "bm_invite"],
-  "overall_confidence": "0.7350",
-  "requires_manual_review": true,
-  "manual_review_reasons": [
-    "Source text is partially garbled and ambiguous.",
-    "BM invite request is missing critical invite details.",
-    "Context states this is a local smoke test and provider actions must not be executed."
-  ],
-  "redacted_summary": "Local smoke message appears to request a 100 USD recharge for account hint act_stage05_test and a BM invite, but invite details are missing."
-}
+```text
+cd backend
+python scripts/stage05_local_real_workflow.py
 ```
 
-This result is acceptable because it is schema-valid, conservative, and routes ambiguous/missing BM invite context to manual review instead of inventing details. The local key must be cleared immediately after the smoke.
+Pass criteria:
+
+- `ok=true`.
+- `workflow_status` is `routed` or `manual_review`.
+- `agent_runs[0].model_provider=openrouter`.
+- `agent_runs[0].prompt_version=stage05-router-v1`.
+- `agent_runs[0].status=succeeded`.
+- `provider_mode=disabled`.
+- `telegram_send_mode=dry_run`.
+- Any created service draft remains reviewable and does not permit provider execution.
+
+Current pass evidence after the entity-key prompt contract fix:
+
+- Routed draft scenario: `ok=true`, `workflow_status=routed`, `model_provider=openrouter`, `prompt_version=stage05-router-v1`, `intent_types=["recharge","customer_reply"]`, `requires_manual_review=false`, `service_drafts=["recharge:pending_confirmation","customer_reply:pending_confirmation"]`, `reply_text_present=true`, `provider_execution_allowed=false`, `send_request_created=false`.
+- Default risk scenario: `ok=true`, `workflow_status=manual_review`, `intent_types=["recharge","bm_invite","customer_reply","account_status_exception"]`, `requires_manual_review=true`, no service drafts, `provider_mode=disabled`, `telegram_send_mode=dry_run`.
+
+Do not proceed to staging if this gate fails with `agent_output_invalid` or any safety preflight error.
 
 ## 5. Migration Tests
 
