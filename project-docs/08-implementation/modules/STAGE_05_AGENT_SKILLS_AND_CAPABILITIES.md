@@ -4,7 +4,7 @@
 
 - Document status: post-acceptance reference draft
 - Scope: Stage05 post-acceptance Agent skill/capability registry reference, using `larksuite/cli` official Skills as a high-similarity structural benchmark while adapting to Telegram + self-hosted backend + Bitable-like workflow boundaries.
-- Current Progress: 2026-07-07 Module retained as documentation only after user clarified that Skills should not enter the main Stage05 implementation/acceptance path yet. The Feishu official `larksuite/cli` Skills remain the structural and safety-thinking reference, but runtime implementation waits until Stage05 is completed and accepted.
+- Current Progress: 2026-07-08 Added the dedicated [Stage 05 LarkSuite Skills Reference Audit](STAGE_05_LARKSUITE_SKILLS_REFERENCE_AUDIT.md), ranking all 27 official `larksuite/cli` skills by project priority and defining which patterns should be adapted into later static Agent skill/capability work. This module remains documentation only and does not add runtime registry code.
 
 ## 1. Purpose
 
@@ -44,6 +44,8 @@ Most valuable references for this project:
 | `lark-im` | Reference for messaging send/reply history semantics, but must be adapted to Telegram |
 | `lark-task` / workflow skills | Reference for task handoff, status and structured operational output |
 | `lark-sheets` / docs skills | Reference for field/value and document-like data safety patterns |
+
+Detailed 27-skill priority, scenario, trigger and business-flow analysis lives in [Stage 05 LarkSuite Skills Reference Audit](STAGE_05_LARKSUITE_SKILLS_REFERENCE_AUDIT.md). This module keeps the project capability contract and later registry guidance; the audit document keeps the full official-skill comparison.
 
 Do not copy the business implementation. Our runtime is not Feishu CLI. Our system is:
 

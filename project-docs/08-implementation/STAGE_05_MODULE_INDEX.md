@@ -4,7 +4,7 @@
 
 - Document status: active module index draft
 - Scope: Stage 05 complex module boundaries, detailed functional docs and read order.
-- Current Progress: 2026-07-08 Stage05 module docs have been created for six core modules: Agent graph/routing, Account Inventory Agent, draft agents, confirmation/send, Bitable views and OpenRouter evidence. The main module set has local and staging acceptance evidence. Agent skills/capabilities remains a post-acceptance reference doc only and is not part of the current Stage05 implementation/acceptance blocker set.
+- Current Progress: 2026-07-08 Stage05 module docs have been created for six core modules: Agent graph/routing, Account Inventory Agent, draft agents, confirmation/send, Bitable views and OpenRouter evidence. The main module set has local and staging acceptance evidence. Agent skills/capabilities remains a post-acceptance reference doc only and now links a dedicated LarkSuite 27-skill priority audit for later static skill/capability work.
 - Current Progress Update: 2026-07-07 Stage05 pre-staging approval packet was added to the read order as the Task12 approval boundary before real staging execution.
 
 ## 1. Module Read Order
@@ -23,6 +23,7 @@
    - [Stage 05 OpenRouter Evidence](modules/STAGE_05_OPENROUTER_EVIDENCE.md)
 7. Post-acceptance reference docs:
    - [Stage 05 Agent Skills And Capabilities](modules/STAGE_05_AGENT_SKILLS_AND_CAPABILITIES.md)
+   - [Stage 05 LarkSuite Skills Reference Audit](modules/STAGE_05_LARKSUITE_SKILLS_REFERENCE_AUDIT.md)
 8. [Stage 05 Test Plan](STAGE_05_TEST_PLAN.md)
 9. [Stage 05 Acceptance Checklist](STAGE_05_ACCEPTANCE_CHECKLIST.md)
 10. [Stage 05 Operations Runbook](STAGE_05_OPERATIONS_RUNBOOK.md)
@@ -36,6 +37,7 @@
 | --- | --- | --- | --- |
 | Agent Graph And Routing | Supervisor graph, Router schema, multi-intent selection and worker trigger | `stage05_supervisor.py`, `message_intake_router.py`, `agent_workflows.py` | `agent_runs`, `telegram_inbox`, `service_drafts`, audit |
 | Agent Skills And Capabilities | Post-acceptance reference only. Feishu CLI-inspired skill registry structure, capability contracts and safety gates for later business Agent skill work | No current Stage05 runtime file; future post-acceptance extension may add registry/constants | Reference only until Stage05 main acceptance is complete |
+| LarkSuite Skills Reference Audit | Post-acceptance audit of all 27 official `larksuite/cli` skills, with project priority, adapter names, business scenarios, triggers, skill layers and hit-rate design | No current Stage05 runtime file; future post-acceptance extension may add static skill manifest schema and tests | Reference only until a separate skill-extension plan is approved |
 | Account Inventory Agent | Account distribution drafts, inventory exception detection and high-confidence risk/block status marking | `account_inventory_agent.py`, `account_inventory.py` | `account_inventory`, `account_status_events`, `agent_review_queue`, audit |
 | Draft Agents | Recharge, card binding, BM invite and customer reply draft generation | child agent files, `service_drafts.py` | `service_drafts`, `pending_confirmation`, audit |
 | Confirmation And Send | Draft confirmation, customer reply allowlisted send and business no-op service evidence | `confirmation.py`, `confirmations.py`, `telegram_send_requests.py` | `service_records`, `execution_logs`, `telegram_send_requests`, `customer_reply_send_requests`, audit |

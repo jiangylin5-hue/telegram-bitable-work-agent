@@ -110,6 +110,7 @@ Stage 05 core module docs:
 Stage 05 post-acceptance reference docs:
 
 1. [Stage 05 Agent Skills And Capabilities Module](modules/STAGE_05_AGENT_SKILLS_AND_CAPABILITIES.md)
+2. [Stage 05 LarkSuite Skills Reference Audit](modules/STAGE_05_LARKSUITE_SKILLS_REFERENCE_AUDIT.md)
 
 Stage 02 已于 2026-07-06 冻结关闭。Stage 03 已由用户于 2026-07-06 确认转为 active，补充决策：Telegram 只收不发、Worker 使用 PostgreSQL Outbox + Redis Streams、Stage 03 暂不调用 LLM、第一批业务场景为 Telegram 收件箱 / 客户消息登记、Webhook 使用 secret token + optional allowlist、做最小客户绑定、部署到腾讯云 CVM staging、HTTPS 使用 Caddy。当前 Tasks 1-7 已完成验收；真实 staging 环境已接收 Telegram 测试消息并在 `telegram_inbox`、`outbox_events`、`ops_audit_events` 中形成证据。
 
