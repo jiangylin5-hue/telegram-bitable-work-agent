@@ -4,7 +4,7 @@
 
 - Document status: active acceptance checklist
 - Scope: Requirement-by-requirement acceptance for Stage05 Skills Extension.
-- Current Progress: 2026-07-09 Updated after implementation, local verification and Tencent Cloud staging re-acceptance. Static registry, sidecar matching, AgentRun evidence, local tests, real OpenRouter smoke and six real Telegram staging messages passed under a safety window. Staging was safety-closed after validation.
+- Current Progress: 2026-07-09 Updated after implementation, local verification, Tencent Cloud staging re-acceptance and optional closeout re-test. Static registry, sidecar matching, AgentRun evidence, local tests, real OpenRouter smoke, six broad real Telegram staging messages and two targeted closeout Telegram messages passed under safety windows. Staging was safety-closed after validation.
 
 ## 1. Documentation Acceptance
 
@@ -102,8 +102,19 @@ Result:
 | Side effects blocked | For traces `tg:184365910` through `tg:184365915`: `telegram_send_requests=0`, `service_records=0`, `execution_tickets=0`, `execution_logs=0` | Passed |
 | Safety close | API/worker summary after close showed `llm_enabled=false`, `agent_workflow_mode=fake`, `telegram_send_mode=dry_run`, allowlist absent, `provider_mode=disabled`; pending/sendable Telegram requests `0`; execution tickets `0` | Passed |
 
-Not covered in this re-acceptance:
+## 9. Optional Closeout Targeted Staging Re-Test
 
-- `card-binding-draft` and `account-exception-marking` were covered by local real OpenRouter smoke and previous Stage05 account-exception staging evidence, but not re-sent in this six-message staging pass.
-- No real Telegram send was performed in this re-acceptance; Telegram remained `dry_run`.
+| Item | Evidence | Status |
+| --- | --- | --- |
+| User approval | User approved reopening a short staging real-LLM window for `card-binding-draft` and `account-exception-marking` | Passed |
+| Runtime window | API/worker showed `llm_enabled=true`, `agent_workflow_mode=real_openrouter`, Telegram `dry_run`, allowlist absent, provider disabled, raw prompt/response storage disabled | Passed |
+| Card binding skill | Trace `tg:184365917`; AgentRun `37ae9014-db9a-4f52-b350-037bb91b6570`; selected `card-binding-draft`; created pending `card_binding` draft `b68e2b5e-b8c2-476f-a63a-de3076032f84` | Passed |
+| Account exception skill | Trace `tg:184365918`; AgentRun `bad259c7-17be-4662-925e-1e60167adb3c`; selected `account-exception-marking` and `manual-review-handoff`; fallback `manual_review`; no draft | Passed |
+| Side effects blocked | For traces `tg:184365917` and `tg:184365918`: `telegram_send_requests=0`, `service_records=0`, `execution_tickets=0`, `execution_logs=0` | Passed |
+| Safety close | API/worker returned to fake + LLM off + Telegram dry-run + provider disabled; pending/sendable Telegram requests `0`; execution tickets `0` | Passed |
+
+Notes:
+
+- `tg:184365916` was an extra contact-recording message sent during the window. It remained `intent_ready` during target polling and was not counted as one of the two closeout target cases.
+- No real Telegram send was performed in this closeout re-test; Telegram remained `dry_run`.
 - No provider, funds, card, Meta/BM execution, account production or automatic replacement was performed.

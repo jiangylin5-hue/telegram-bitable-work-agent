@@ -4,7 +4,7 @@
 
 - Document status: final acceptance report
 - Scope: Stage05 final local and Tencent Cloud staging acceptance evidence.
-- Current Progress: 2026-07-09 Stage05 functional/staging acceptance remains passed. The Stage05 skills sidecar extension commit `558493b2fb95a58ba3a457f68312f824b6a71704` was deployed to Tencent Cloud staging and re-accepted with six real Telegram inbound messages under a safety window. Evidence covers real OpenRouter AgentRuns, `skill_evidence` persistence, business skill matches, platform/future workflow skill matches, no side effects and safety close. This is not a production launch and does not approve provider writes, funds movement, customer/group sends, account production or automatic replacement.
+- Current Progress: 2026-07-09 Stage05 functional/staging acceptance remains passed. The Stage05 skills sidecar extension commit `558493b2fb95a58ba3a457f68312f824b6a71704` was deployed to Tencent Cloud staging and re-accepted with six broad real Telegram inbound messages plus two targeted closeout messages under safety windows. Evidence covers real OpenRouter AgentRuns, `skill_evidence` persistence, business skill matches, platform/future workflow skill matches, card binding, account exception marking, no side effects and safety close. This is not a production launch and does not approve provider writes, funds movement, customer/group sends, account production or automatic replacement.
 
 ## 1. Result
 
@@ -92,6 +92,19 @@ Real Telegram traces:
 | `tg:184365915` | Future monthly workflow | `manual_review`, fallback `future_scope`, no draft | `project-base`, `project-shared`, `project-im`, `project-event`, `manual-review-handoff`, `project-daily-operations-workflow` | No side effects |
 
 This re-acceptance did not perform a real Telegram send. It intentionally kept `TELEGRAM_SEND_MODE=dry_run` to validate inbound routing, real LLM skill evidence and side-effect safety after the skills extension.
+
+## 4.2 Skills Closeout Targeted Re-Test
+
+On 2026-07-09, after user approval, staging was briefly reopened for real OpenRouter while keeping Telegram `dry_run`, allowlist empty, provider disabled and raw prompt/response storage disabled. Two additional real Telegram inbound messages were used to cover the remaining latest-staging skill cases:
+
+| Trace | Purpose | Result | Skill evidence | Side effects |
+| --- | --- | --- | --- | --- |
+| `tg:184365917` | Card binding draft | `card_binding` draft `b68e2b5e-b8c2-476f-a63a-de3076032f84`, `pending_confirmation` | `project-base`, `project-shared`, `project-im`, `project-event`, `card-binding-draft` | No send request, service record, execution ticket or execution log |
+| `tg:184365918` | Account exception marking | `manual_review`, no draft | `project-base`, `project-shared`, `project-im`, `project-event`, `manual-review-handoff`, `account-exception-marking` | No send request, service record, execution ticket or execution log |
+
+After this targeted re-test, staging was safety-closed again. API and worker summaries showed `llm_enabled=false`, `agent_workflow_mode=fake`, `telegram_send_mode=dry_run`, allowlist absent and `provider_mode=disabled`; pending/sendable Telegram requests were `0` and execution tickets were `0`.
+
+Non-target observation: `tg:184365916` was an extra contact-recording message sent during the same window and remained `intent_ready` during target polling. It was not counted as one of the closeout target cases.
 
 ## 5. Remaining Risks
 

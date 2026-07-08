@@ -4,7 +4,7 @@
 
 - Document status: active module index draft
 - Scope: Stage 05 complex module boundaries, detailed functional docs and read order.
-- Current Progress: 2026-07-08 Stage05 module docs have been created for six core modules: Agent graph/routing, Account Inventory Agent, draft agents, confirmation/send, Bitable views and OpenRouter evidence. The main module set has local and staging acceptance evidence. Agent skills/capabilities remains a post-acceptance reference doc only and now links a dedicated LarkSuite 27-skill priority audit for later static skill/capability work.
+- Current Progress: 2026-07-09 Stage05 module docs have been created for six core modules: Agent graph/routing, Account Inventory Agent, draft agents, confirmation/send, Bitable views and OpenRouter evidence. The main module set has local and staging acceptance evidence. Stage05 Skills Extension has local and staging evidence. Stage05 closeout audit is the final gate before Stage06 planning.
 - Current Progress Update: 2026-07-07 Stage05 pre-staging approval packet was added to the read order as the Task12 approval boundary before real staging execution.
 
 ## 1. Module Read Order
@@ -36,6 +36,7 @@
 12. [Stage 05 Pre-Staging Approval Packet](STAGE_05_PRE_STAGING_APPROVAL_PACKET.md)
 13. [Stage 05 Risk Register](STAGE_05_RISK_REGISTER.md)
 14. [Stage 05 Progress](STAGE_05_PROGRESS.md)
+15. [Stage 05 Closeout Audit](STAGE_05_CLOSEOUT_AUDIT.md)
 
 ## 2. Modules
 
