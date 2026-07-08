@@ -18,6 +18,8 @@
 - Current Progress Update: 2026-07-08 Captured explicit Task12 approval. Approval covers the bounded staging rehearsal action subset only and does not permit production, real customer chat, customer group, provider write, funds movement, account production, automatic replacement or secret/raw allowlist recording.
 - Current Progress Update: 2026-07-08 Added development detail completion audit. Final acceptance must treat `STAGE_05_DEVELOPMENT_DETAIL_COMPLETION_AUDIT.md` as the document-level implementation completeness check before continuing Task12 external staging steps.
 - Current Progress Update: 2026-07-08 Task12 staging rehearsal produced partial external evidence and one blocking defect. Reviewed commit `17043e8176b25e85fcc022a259bd5a99ee473690` deployed to Tencent Cloud staging, migration reached `20260707_0016`, health returned HTTP 200, redacted runtime summaries proved real OpenRouter/restricted-test/provider-disabled settings, and a private allowlisted Telegram message was received/bound/processed. The message remained `intent_ready` with no AgentRun/draft evidence because `stage03_runtime.py` did not inject the Stage05 workflow into the Redis worker. A local runtime wiring fix now passes targeted, Stage05-focused and full backend tests, but final acceptance remains blocked until the fix is committed, redeployed and proven in staging.
+- Current Progress Update: 2026-07-08 Runtime wiring fix was redeployed and produced real OpenRouter AgentRun evidence, but the first post-fix staging message failed schema validation with `agent_output_invalid`. Local follow-up now strengthens the router prompt contract and validates the embedded example against `RouterResult`; targeted router/workflow tests, Stage05 focused tests and full backend tests pass locally before any further staging attempt.
+- Current Progress Update: 2026-07-08 Local real OpenRouter smoke gate was added and passed after the router prompt-contract fix. The redacted local smoke proves real OpenRouter can return a schema-valid conservative result before the next staging retry; raw key, raw prompt and raw response were not recorded.
 
 ## 1. Result
 
@@ -62,14 +64,14 @@ This report must not be marked passed until:
 | Environment | Local test environment completed; Tencent Cloud staging pending |
 | Staging commit | Pending |
 | Migration revision | Local Alembic offline SQL reaches `20260707_0016`; staging `alembic current` pending |
-| Local backend suite | Latest after runtime wiring fix: `pytest tests -q`: 258 passed / 17 skipped |
-| Stage05 focused tests | Latest after runtime wiring fix: `pytest tests -k stage05 -q`: 85 passed / 190 deselected |
+| Local backend suite | Latest after router prompt-contract fix: `pytest tests -q`: 259 passed / 17 skipped |
+| Stage05 focused tests | Latest after router prompt-contract fix: `pytest tests -k stage05 -q`: 86 passed / 190 deselected |
 | Staging contract preflight | `pytest tests\integration\test_stage05_staging_contract.py -v`: 5 passed |
 | Stage05 out-of-scope runtime guard | `pytest tests\unit\test_stage05_scope_guards.py -v`: 4 passed |
 | Requirement traceability audit | `STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md`: local requirements mapped; staging exit gates remain pending |
 | Development detail completion audit | `STAGE_05_DEVELOPMENT_DETAIL_COMPLETION_AUDIT.md`: pre-development Stage05 documents checked against implementation evidence; reviewed artifact and Task12 staging evidence remain pending |
 | Telegram update/message evidence | Not evaluated in Stage05 staging; local tests do not call Telegram |
-| OpenRouter AgentRun evidence | Local fake/error metadata passed; real OpenRouter AgentRun evidence pending staging |
+| OpenRouter AgentRun evidence | Local fake/error metadata passed; staging produced failed real OpenRouter AgentRun with `agent_output_invalid`; succeeded or manual-review AgentRun evidence pending after prompt-contract redeploy |
 | Service draft evidence | Local multi-draft persistence passed; staging draft ids pending |
 | Account inventory exception evidence | Local auto-mark/manual-review tests passed; staging status event or fixture evidence pending |
 | Customer reply send evidence | Local linked send request and fake worker send passed; real allowlisted Telegram receipt pending |
@@ -84,6 +86,8 @@ This report must not be marked passed until:
 | Stage05 deployment config gate | `pytest tests\unit\test_stage05_deploy_compose.py -v`: 2 passed; `pytest tests\unit\test_stage04_deploy_compose.py -v`: 1 passed; real container runtime proof pending staging |
 | Redacted runtime summary command | `pytest tests\unit\test_stage05_runtime_summary.py -v`: 3 passed; `python -m app.core.runtime_summary` prints only modes, booleans, presence flags and validation status; deployed-container proof pending staging |
 | Task12 runtime wiring fix | `backend/app/workers/stage03_runtime.py` now builds/injects `Stage05AgentWorkflowService` in real OpenRouter mode; `pytest tests/unit/test_stage03_worker_runtime_factory.py tests/integration/test_stage05_worker_runtime.py -q`: 7 passed; redeploy evidence pending |
+| Task12 router prompt-contract fix | `backend/app/agents/message_intake_router.py` now gives real models an explicit RouterResult output contract and schema-valid example; `pytest tests/unit/test_stage05_router_schema.py tests/integration/test_stage05_agent_workflow.py -q`: 15 passed; redeploy evidence pending |
+| Local real OpenRouter smoke gate | `STAGE_05_LOCAL_OPENROUTER_ENV_SMOKE.md`; local redacted smoke returned `ok=true`, `model_provider=openrouter`, `model_name=openrouter/auto`, `prompt_version=stage05-router-v1`, request id present, usage present, `intent_types=["recharge","bm_invite"]`, `overall_confidence=0.7350`, `requires_manual_review=true`; staging retry pending |
 
 ## 3. Out Of Scope Confirmation
 
@@ -108,7 +112,7 @@ Risk details are tracked in [Stage 05 Risk Register](STAGE_05_RISK_REGISTER.md).
 
 | Risk ID | Current local status | Evidence | Remaining staging risk |
 | --- | --- | --- | --- |
-| R05-01 OpenRouter hallucinated intent/entities | locally mitigated only through fake/schema tests | Router schema, confidence/manual-review and invalid-output tests pass | Real OpenRouter output still needs staging evidence |
+| R05-01 OpenRouter hallucinated intent/entities | locally mitigated; first real staging output still failed schema | Router schema, confidence/manual-review and invalid-output tests pass; router prompt contract now includes explicit top-level keys, allowed intent types and schema-valid example; local real OpenRouter smoke returns schema-valid conservative manual-review output | Deployed worker still needs retry evidence after prompt-contract redeploy |
 | R05-02 prompt/raw response leak | locally mitigated | AgentRun evidence, config defaults, service draft API and secret scans avoid raw prompt/response exposure | Repeat redacted evidence review after real OpenRouter |
 | R05-03 incorrect account abnormal marking | locally mitigated | High-confidence, allowed-status and ambiguous-risk manual-review tests pass | Controlled staging account exception sample still pending |
 | R05-04 auto-replacement despite scope | locally guarded | Replacement action remains `none`; scope guard blocks assignment confirmation/activation from Stage05 workflow | Reconfirm after staging |
@@ -129,9 +133,9 @@ Final acceptance must attach or summarize the completed redacted ledger from `ST
 
 | Ledger area | Status | Evidence |
 | --- | --- | --- |
-| Approval, deployment, migration and service health | partial; superseded by fix pending redeploy | Approval captured; commit `17043e8176b25e85fcc022a259bd5a99ee473690` deployed; staging migration reached `20260707_0016`; `/health` returned HTTP 200. Runtime wiring fix is not yet redeployed. |
-| Redacted env proof for OpenRouter, provider-disabled and restricted Telegram send | partial; must repeat after redeploy | API and worker redacted runtime summaries showed real OpenRouter mode, key/model presence, restricted Telegram test send allowlist presence, prompt/response storage disabled and provider disabled. Repeat after runtime wiring redeploy. |
-| Mixed-language inbound Telegram message and AgentRun evidence | failed diagnostic; retry required | Private allowlisted message id `f17a2214-7f6c-4474-9361-6a586458f93b` / Telegram message `6` was received, bound and processed, but stayed `intent_ready`; no real AgentRun/draft evidence was produced before the wiring fix. |
+| Approval, deployment, migration and service health | partial; prompt-fix redeploy pending | Approval captured; commit `17043e8176b25e85fcc022a259bd5a99ee473690` deployed first; runtime wiring fix `c9347dfb780e2af36c89894d5e2f8cd574f479f9` later deployed; staging migration reached `20260707_0016`; `/health` returned HTTP 200. Router prompt-contract fix is not yet redeployed. |
+| Redacted env proof for OpenRouter, provider-disabled and restricted Telegram send | partial; must repeat after prompt-fix redeploy | API and worker redacted runtime summaries showed real OpenRouter mode, key/model presence, restricted Telegram test send allowlist presence, prompt/response storage disabled and provider disabled. Repeat after router prompt-contract redeploy. |
+| Mixed-language inbound Telegram message and AgentRun evidence | partial; retry required | Private allowlisted message `f17a2214-7f6c-4474-9361-6a586458f93b` was received/bound/processed but stayed `intent_ready` before runtime wiring fix. Message `0c466049-309a-40f8-805a-6e682937de1e` reached Stage05 and created a real OpenRouter AgentRun with `status=failed`, `error_code=agent_output_invalid`, `model_provider=openrouter`, `model_name=openrouter/auto`; successful or manual-review output remains pending after prompt-contract redeploy. |
 | Draft creation, customer reply send and business no-op evidence | pending staging | Not executed |
 | Account exception branch and view/audit evidence | pending staging | Not executed |
 | Out-of-scope reconfirmation and safety close | pending staging | Not executed |

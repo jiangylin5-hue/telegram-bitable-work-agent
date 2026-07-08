@@ -13,7 +13,8 @@ Stage05 uses real OpenRouter in staging, but local automated tests must be deter
 - Local tests use fake LLM clients and fake Telegram clients.
 - Unit tests validate schema, state policy, permission and view behavior.
 - Integration tests validate persistence and worker flow.
-- Staging validates real OpenRouter and allowlisted Telegram send once the local suite passes.
+- A local real OpenRouter smoke validates router prompt/schema compatibility after deterministic tests pass and before any further staging retry.
+- Staging validates real OpenRouter in deployed worker context and allowlisted Telegram send once the local suite and local real OpenRouter smoke pass.
 - Stage03/Stage04 regression is mandatory because Stage05 extends their runtime paths.
 
 ## 2. Unit Tests
@@ -104,6 +105,42 @@ Expected result after implementation:
 - All non-online tests pass.
 - Online PostgreSQL smoke tests may remain skipped unless `STAGE02_ONLINE_DATABASE_URL` is configured.
 - Any new skip must be documented with reason.
+
+## 4.1 Local Real OpenRouter Smoke
+
+Before any Stage05 Task12 staging retry that depends on router prompt/schema behavior, run the local real OpenRouter smoke in [Stage 05 Local OpenRouter Env Smoke](STAGE_05_LOCAL_OPENROUTER_ENV_SMOKE.md).
+
+This smoke is intentionally separate from deterministic automated tests:
+
+- It uses a temporary local `OPENROUTER_API_KEY` entered through a secure prompt.
+- It makes one real OpenRouter call through `OpenRouterStructuredLLMClient`.
+- It parses the model output through `parse_router_result(...)`.
+- It prints only redacted operational evidence.
+- It must not print raw prompt, raw response, key, Telegram token, raw allowlist, database URL or Redis URL.
+
+Pass evidence after the router prompt-contract fix:
+
+```json
+{
+  "ok": true,
+  "model_provider": "openrouter",
+  "model_name": "openrouter/auto",
+  "prompt_version": "stage05-router-v1",
+  "request_id_present": true,
+  "usage_present": true,
+  "intent_types": ["recharge", "bm_invite"],
+  "overall_confidence": "0.7350",
+  "requires_manual_review": true,
+  "manual_review_reasons": [
+    "Source text is partially garbled and ambiguous.",
+    "BM invite request is missing critical invite details.",
+    "Context states this is a local smoke test and provider actions must not be executed."
+  ],
+  "redacted_summary": "Local smoke message appears to request a 100 USD recharge for account hint act_stage05_test and a BM invite, but invite details are missing."
+}
+```
+
+This result is acceptable because it is schema-valid, conservative, and routes ambiguous/missing BM invite context to manual review instead of inventing details. The local key must be cleared immediately after the smoke.
 
 ## 5. Migration Tests
 

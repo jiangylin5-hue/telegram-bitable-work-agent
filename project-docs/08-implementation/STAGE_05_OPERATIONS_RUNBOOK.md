@@ -10,6 +10,7 @@
 - Current Progress Update: 2026-07-07 Task12 staging command/evidence map was added. It reuses the Stage03/Stage04 Tencent Cloud staging pattern, records the Stage05 runtime deltas, and requires redacted runtime proof before any real OpenRouter rehearsal.
 - Current Progress Update: 2026-07-07 Stage05 deployment config gate was added locally. `deploy/stage03/compose.yml` keeps safe defaults but now lets approved staging env set `LLM_ENABLED=true`, `AGENT_WORKFLOW_MODE=real_openrouter` and OpenRouter metadata for `api`, `outbox-bridge` and `worker`; `migrate` remains LLM-off/fake. `tests/unit/test_stage05_deploy_compose.py` covers this without executing staging.
 - Current Progress Update: 2026-07-07 Redacted runtime summary CLI was added locally as `python -m app.core.runtime_summary`. It prints only booleans, modes, presence flags and validation status for Task12 runtime evidence, without raw secrets, raw allowlists or connection URLs.
+- Current Progress Update: 2026-07-08 Local real OpenRouter smoke gate was added. Before any further staging retry after router prompt/schema changes, operators must run deterministic local tests and then `STAGE_05_LOCAL_OPENROUTER_ENV_SMOKE.md`; the smoke uses temporary local env only, prints redacted model/schema evidence, and requires immediate key cleanup.
 
 ## 1. Safety Rules
 
@@ -54,6 +55,35 @@ Expected:
 - Alembic offline SQL reaches Stage05 head.
 - Scan finds placeholders only.
 - Staging contract tests prove: real OpenRouter mode requires server-side key, restricted Telegram send requires bot token and allowlist, provider mode remains disabled, and safety close returns to dry-run with empty allowlist.
+
+### 2.1 Local Real OpenRouter Smoke Gate
+
+After deterministic local tests and before any staging retry that depends on real model behavior, run [Stage 05 Local OpenRouter Env Smoke](STAGE_05_LOCAL_OPENROUTER_ENV_SMOKE.md).
+
+Required properties:
+
+- The key is entered through a secure local prompt.
+- `OPENROUTER_API_KEY` is temporary process env only.
+- The script calls OpenRouter once through the Stage05 router prompt.
+- The output is parsed by `parse_router_result(...)`.
+- The pasted evidence contains only redacted model metadata, intent types, confidence, manual-review flags and redacted summary.
+- The key is removed from the shell immediately after the smoke.
+
+Current pass evidence after the router prompt-contract fix:
+
+```text
+ok=true
+model_provider=openrouter
+model_name=openrouter/auto
+prompt_version=stage05-router-v1
+request_id_present=true
+usage_present=true
+intent_types=recharge,bm_invite
+overall_confidence=0.7350
+requires_manual_review=true
+```
+
+This pass is acceptable because the output is schema-valid and conservative: BM invite details are missing, so manual review is required instead of inventing details. Do not proceed to staging if this smoke fails with `agent_output_invalid`.
 
 ## 3. Staging Env Variables
 

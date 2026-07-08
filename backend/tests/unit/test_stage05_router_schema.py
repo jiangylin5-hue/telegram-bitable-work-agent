@@ -1,4 +1,6 @@
 from decimal import Decimal
+import json
+import re
 
 import pytest
 from pydantic import ValidationError
@@ -162,10 +164,35 @@ def test_build_router_request_uses_structured_llm_contract_without_secrets() -> 
 
     combined_prompt = "\n".join(message.content for message in request.messages)
     assert "Return JSON only" in combined_prompt
+    assert "required top-level keys are: intents" in combined_prompt
+    assert "Do not return top-level fields named intent_type" in combined_prompt
+    assert "Allowed intent_type values" in combined_prompt
     assert "Do not invent account ids" in combined_prompt
     assert "客户要求 recharge act_1001 100 USD" in combined_prompt
     assert "OPENROUTER_API_KEY" not in combined_prompt
     assert "TELEGRAM_BOT_TOKEN" not in combined_prompt
+
+
+def test_build_router_request_example_matches_router_schema() -> None:
+    from app.agents.message_intake_router import build_router_request
+    from app.agents.schemas import RouterResult
+
+    request = build_router_request(
+        trace_id="trace-router-example",
+        message_id="message-router-example",
+        customer_id="customer-router-example",
+        source_text_summary="Recharge act_1001 100 USD.",
+    )
+    system_prompt = request.messages[0].content
+    match = re.search(r"Example response: (\{.*\})", system_prompt)
+
+    assert match is not None
+    example = json.loads(match.group(1))
+    result = RouterResult.model_validate(example)
+
+    assert result.intents[0].intent_type == "recharge"
+    assert result.requires_manual_review is False
+    assert result.redacted_summary
 
 
 def test_parse_router_result_maps_invalid_output_to_agent_failed() -> None:

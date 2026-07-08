@@ -90,11 +90,12 @@ Stage 05 开发前按这个顺序阅读：
 11. [Stage 05 Database And Migration Design](STAGE_05_DATABASE_AND_MIGRATION_DESIGN.md)
 12. [Stage 05 Security And Permission Design](STAGE_05_SECURITY_AND_PERMISSION_DESIGN.md)
 13. [Stage 05 Test Plan](STAGE_05_TEST_PLAN.md)
-14. [Stage 05 Operations Runbook](STAGE_05_OPERATIONS_RUNBOOK.md)
-15. [Stage 05 Pre-Staging Approval Packet](STAGE_05_PRE_STAGING_APPROVAL_PACKET.md)
-16. [Stage 05 Risk Register](STAGE_05_RISK_REGISTER.md)
-17. [Stage 05 Progress](STAGE_05_PROGRESS.md)
-18. [Stage 05 Final Acceptance Report](STAGE_05_FINAL_ACCEPTANCE_REPORT.md)
+14. [Stage 05 Local OpenRouter Env Smoke](STAGE_05_LOCAL_OPENROUTER_ENV_SMOKE.md)
+15. [Stage 05 Operations Runbook](STAGE_05_OPERATIONS_RUNBOOK.md)
+16. [Stage 05 Pre-Staging Approval Packet](STAGE_05_PRE_STAGING_APPROVAL_PACKET.md)
+17. [Stage 05 Risk Register](STAGE_05_RISK_REGISTER.md)
+18. [Stage 05 Progress](STAGE_05_PROGRESS.md)
+19. [Stage 05 Final Acceptance Report](STAGE_05_FINAL_ACCEPTANCE_REPORT.md)
 
 Stage 05 core module docs:
 
