@@ -94,6 +94,13 @@ def test_workflow_routes_bound_intent_ready_message_and_records_agent_run() -> N
     assert uow.agent_runs[0].output_summary["redacted_summary"] == (
         "Customer asks for recharge and reply draft."
     )
+    skill_evidence = uow.agent_runs[0].output_summary["skill_evidence"]
+    selected_skill_ids = {
+        item["skill_id"] for item in skill_evidence["selected_skills"]
+    }
+    assert "recharge-draft" in selected_skill_ids
+    assert "customer-reply-draft" in selected_skill_ids
+    assert skill_evidence["mode"] == "sidecar_candidate_logging"
     assert [draft.draft_type for draft in uow.service_drafts] == [
         "recharge",
         "customer_reply",

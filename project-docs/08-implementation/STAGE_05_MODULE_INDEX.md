@@ -24,12 +24,18 @@
 7. Post-acceptance reference docs:
    - [Stage 05 Agent Skills And Capabilities](modules/STAGE_05_AGENT_SKILLS_AND_CAPABILITIES.md)
    - [Stage 05 LarkSuite Skills Reference Audit](modules/STAGE_05_LARKSUITE_SKILLS_REFERENCE_AUDIT.md)
-8. [Stage 05 Test Plan](STAGE_05_TEST_PLAN.md)
-9. [Stage 05 Acceptance Checklist](STAGE_05_ACCEPTANCE_CHECKLIST.md)
-10. [Stage 05 Operations Runbook](STAGE_05_OPERATIONS_RUNBOOK.md)
-11. [Stage 05 Pre-Staging Approval Packet](STAGE_05_PRE_STAGING_APPROVAL_PACKET.md)
-12. [Stage 05 Risk Register](STAGE_05_RISK_REGISTER.md)
-13. [Stage 05 Progress](STAGE_05_PROGRESS.md)
+   - [Stage 05 LarkSuite Skills Official Summary](modules/STAGE_05_LARKSUITE_SKILLS_OFFICIAL_SUMMARY.md)
+8. Stage05 Skills Extension docs:
+   - [Stage 05 Skills Extension Source Of Truth](STAGE_05_SKILLS_EXTENSION_SOURCE_OF_TRUTH.md)
+   - [Stage 05 Skills Extension Implementation Plan](STAGE_05_SKILLS_EXTENSION_IMPLEMENTATION_PLAN.md)
+   - [Stage 05 Skills Manifest Design](STAGE_05_SKILLS_MANIFEST_DESIGN.md)
+   - [Stage 05 Skills Acceptance Checklist](STAGE_05_SKILLS_ACCEPTANCE_CHECKLIST.md)
+9. [Stage 05 Test Plan](STAGE_05_TEST_PLAN.md)
+10. [Stage 05 Acceptance Checklist](STAGE_05_ACCEPTANCE_CHECKLIST.md)
+11. [Stage 05 Operations Runbook](STAGE_05_OPERATIONS_RUNBOOK.md)
+12. [Stage 05 Pre-Staging Approval Packet](STAGE_05_PRE_STAGING_APPROVAL_PACKET.md)
+13. [Stage 05 Risk Register](STAGE_05_RISK_REGISTER.md)
+14. [Stage 05 Progress](STAGE_05_PROGRESS.md)
 
 ## 2. Modules
 
@@ -38,6 +44,8 @@
 | Agent Graph And Routing | Supervisor graph, Router schema, multi-intent selection and worker trigger | `stage05_supervisor.py`, `message_intake_router.py`, `agent_workflows.py` | `agent_runs`, `telegram_inbox`, `service_drafts`, audit |
 | Agent Skills And Capabilities | Post-acceptance reference only. Feishu CLI-inspired skill registry structure, capability contracts and safety gates for later business Agent skill work | No current Stage05 runtime file; future post-acceptance extension may add registry/constants | Reference only until Stage05 main acceptance is complete |
 | LarkSuite Skills Reference Audit | Post-acceptance audit of all 27 official `larksuite/cli` skills, with project priority, adapter names, business scenarios, triggers, skill layers and hit-rate design | No current Stage05 runtime file; future post-acceptance extension may add static skill manifest schema and tests | Reference only until a separate skill-extension plan is approved |
+| LarkSuite Skills Official Summary | Compact local summary of the 27 official skills without copying full upstream `SKILL.md` bodies | No runtime file | Reference summary |
+| Skills Extension | Static project skill manifest, sidecar matching evidence, fixtures and local verification for post-Stage05 skill work | `stage05_skills.py`, `stage05_skill_matching.py`, tests and smoke script after implementation | `agent_runs.output_summary.skill_evidence` |
 | Account Inventory Agent | Account distribution drafts, inventory exception detection and high-confidence risk/block status marking | `account_inventory_agent.py`, `account_inventory.py` | `account_inventory`, `account_status_events`, `agent_review_queue`, audit |
 | Draft Agents | Recharge, card binding, BM invite and customer reply draft generation | child agent files, `service_drafts.py` | `service_drafts`, `pending_confirmation`, audit |
 | Confirmation And Send | Draft confirmation, customer reply allowlisted send and business no-op service evidence | `confirmation.py`, `confirmations.py`, `telegram_send_requests.py` | `service_records`, `execution_logs`, `telegram_send_requests`, `customer_reply_send_requests`, audit |

@@ -78,6 +78,30 @@ def test_router_result_rejects_unsupported_intent_type() -> None:
         )
 
 
+def test_router_result_accepts_extension_future_and_spend_intents() -> None:
+    from app.agents.schemas import RouterResult
+
+    result = RouterResult.model_validate(
+        {
+            "intents": [
+                _intent("spend_query"),
+                _intent("spend_table"),
+                _intent("report_request"),
+            ],
+            "overall_confidence": "0.8000",
+            "requires_manual_review": True,
+            "manual_review_reasons": ["future_scope"],
+            "redacted_summary": "Customer asks for spend and report information.",
+        }
+    )
+
+    assert [intent.intent_type for intent in result.intents] == [
+        "spend_query",
+        "spend_table",
+        "report_request",
+    ]
+
+
 def test_stage05_workflow_state_initializer_sets_required_keys() -> None:
     from app.agents.stage05_state import new_stage05_workflow_state
 

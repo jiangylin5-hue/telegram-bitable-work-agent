@@ -1,0 +1,220 @@
+[
+  {
+    "case_id": "recharge_and_customer_reply",
+    "source_text_summary": "Customer asks to recharge act_1001 with 200 USDT and asks us to reply that the request was received.",
+    "router_result": {
+      "intents": [
+        {
+          "intent_type": "recharge",
+          "confidence": "0.9300",
+          "entities": {
+            "account_hint": "act_1001",
+            "amount": "200",
+            "currency": "USDT"
+          },
+          "risk_flags": [],
+          "missing_context": []
+        },
+        {
+          "intent_type": "customer_reply",
+          "confidence": "0.8800",
+          "entities": {
+            "reply_text": "Request received. We will process it after confirmation."
+          },
+          "risk_flags": [],
+          "missing_context": []
+        }
+      ],
+      "overall_confidence": "0.9100",
+      "requires_manual_review": false,
+      "manual_review_reasons": [],
+      "redacted_summary": "Customer asks for a recharge draft and customer reply draft."
+    },
+    "expected_selected_skills": [
+      "project-base",
+      "project-shared",
+      "project-im",
+      "project-event",
+      "recharge-draft",
+      "customer-reply-draft"
+    ],
+    "expected_future_scope_skills": []
+  },
+  {
+    "case_id": "bm_invite",
+    "source_text_summary": "Please invite buyer@example.com to BM-APAC-01.",
+    "router_result": {
+      "intents": [
+        {
+          "intent_type": "bm_invite",
+          "confidence": "0.8700",
+          "entities": {
+            "bm_hint": "BM-APAC-01",
+            "invitee_hint": "buyer@example.com"
+          },
+          "risk_flags": [],
+          "missing_context": []
+        }
+      ],
+      "overall_confidence": "0.8700",
+      "requires_manual_review": false,
+      "manual_review_reasons": [],
+      "redacted_summary": "Customer asks for a BM invite draft."
+    },
+    "expected_selected_skills": [
+      "project-base",
+      "project-shared",
+      "project-im",
+      "project-event",
+      "project-contact",
+      "bm-invite-draft"
+    ],
+    "expected_future_scope_skills": []
+  },
+  {
+    "case_id": "spend_balance_query",
+    "source_text_summary": "How much did act_1001 spend today and what balance remains?",
+    "router_result": {
+      "intents": [
+        {
+          "intent_type": "spend_query",
+          "confidence": "0.8400",
+          "entities": {
+            "account_hint": "act_1001",
+            "date_range": "today"
+          },
+          "risk_flags": [],
+          "missing_context": []
+        },
+        {
+          "intent_type": "spend_table",
+          "confidence": "0.7800",
+          "entities": {
+            "account_hint": "act_1001",
+            "date_range": "today"
+          },
+          "risk_flags": [],
+          "missing_context": []
+        }
+      ],
+      "overall_confidence": "0.8200",
+      "requires_manual_review": true,
+      "manual_review_reasons": [
+        "spend_query_not_implemented_in_extension"
+      ],
+      "redacted_summary": "Customer asks for spend and balance facts."
+    },
+    "expected_selected_skills": [
+      "project-base",
+      "project-shared",
+      "project-im",
+      "project-event",
+      "project-tabular-analysis",
+      "manual-review-handoff",
+      "spend-query",
+      "spend-table"
+    ],
+    "expected_future_scope_skills": []
+  },
+  {
+    "case_id": "card_binding",
+    "source_text_summary": "Bind payment profile card_profile_alpha to act_2002.",
+    "router_result": {
+      "intents": [
+        {
+          "intent_type": "card_binding",
+          "confidence": "0.8600",
+          "entities": {
+            "account_hint": "act_2002",
+            "payment_profile_hint": "card_profile_alpha"
+          },
+          "risk_flags": [],
+          "missing_context": []
+        }
+      ],
+      "overall_confidence": "0.8600",
+      "requires_manual_review": false,
+      "manual_review_reasons": [],
+      "redacted_summary": "Customer asks for a card binding draft."
+    },
+    "expected_selected_skills": [
+      "project-base",
+      "project-shared",
+      "project-im",
+      "project-event",
+      "card-binding-draft"
+    ],
+    "expected_future_scope_skills": []
+  },
+  {
+    "case_id": "account_exception",
+    "source_text_summary": "act_stage05_001 is blocked and under risk control.",
+    "router_result": {
+      "intents": [
+        {
+          "intent_type": "account_status_exception",
+          "confidence": "0.9500",
+          "entities": {
+            "account_hint": "act_stage05_001",
+            "target_status": "risk_controlled",
+            "reason": "Customer reports blocked/risk-controlled account."
+          },
+          "risk_flags": [
+            "risk_control_confirmed"
+          ],
+          "missing_context": []
+        }
+      ],
+      "overall_confidence": "0.9500",
+      "requires_manual_review": false,
+      "manual_review_reasons": [],
+      "redacted_summary": "Customer reports account exception."
+    },
+    "expected_selected_skills": [
+      "project-base",
+      "project-shared",
+      "project-im",
+      "project-event",
+      "account-exception-marking"
+    ],
+    "expected_future_scope_skills": []
+  },
+  {
+    "case_id": "future_daily_report",
+    "source_text_summary": "Generate today's customer daily report and send it to the customer group.",
+    "router_result": {
+      "intents": [
+        {
+          "intent_type": "report_request",
+          "confidence": "0.8300",
+          "entities": {
+            "report_type": "customer_daily",
+            "date_range": "today"
+          },
+          "risk_flags": [
+            "customer_group_send_requested"
+          ],
+          "missing_context": []
+        }
+      ],
+      "overall_confidence": "0.8300",
+      "requires_manual_review": true,
+      "manual_review_reasons": [
+        "reporting_future_scope",
+        "customer_group_send_forbidden"
+      ],
+      "redacted_summary": "Customer asks for a daily report and customer group send."
+    },
+    "expected_selected_skills": [
+      "project-base",
+      "project-shared",
+      "project-im",
+      "project-event",
+      "manual-review-handoff",
+      "project-daily-operations-workflow"
+    ],
+    "expected_future_scope_skills": [
+      "project-daily-operations-workflow"
+    ]
+  }
+]

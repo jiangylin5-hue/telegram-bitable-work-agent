@@ -11,6 +11,9 @@ IntentType = Literal[
     "customer_reply",
     "account_assignment",
     "account_status_exception",
+    "spend_query",
+    "spend_table",
+    "report_request",
     "irrelevant",
     "unknown",
 ]

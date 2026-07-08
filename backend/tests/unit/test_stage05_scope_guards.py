@@ -43,7 +43,6 @@ FORBIDDEN_STAGE05_RUNTIME_PATH_PARTS = (
     "miniapp",
     "rag",
     "pgvector",
-    "skill_registry",
     "capability_registry",
 )
 
@@ -99,6 +98,32 @@ def test_stage05_did_not_add_runtime_surfaces_for_deferred_features() -> None:
         and _is_stage05_related(path)
         and any(part in path.as_posix().lower() for part in FORBIDDEN_STAGE05_RUNTIME_PATH_PARTS)
     ]
+
+    assert offenders == []
+
+
+def test_stage05_skills_extension_does_not_add_dynamic_marketplace_or_provider_paths() -> None:
+    skill_files = [
+        APP_ROOT / "agents" / "stage05_skills.py",
+        APP_ROOT / "agents" / "stage05_skill_matching.py",
+    ]
+    forbidden_tokens = (
+        "importlib",
+        "entry_points",
+        "pkg_resources",
+        "execute_recharge_with_mock_provider",
+        "MockRechargeProvider",
+        "execute_meta",
+        "provider_readback(",
+        "TelegramSendRequest(",
+    )
+    offenders: list[str] = []
+
+    for path in skill_files:
+        text = path.read_text(encoding="utf-8")
+        for token in forbidden_tokens:
+            if token in text:
+                offenders.append(f"{path.relative_to(BACKEND_ROOT)} contains {token}")
 
     assert offenders == []
 

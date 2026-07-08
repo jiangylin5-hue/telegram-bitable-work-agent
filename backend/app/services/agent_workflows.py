@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from dataclasses import replace
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any, Protocol
@@ -24,6 +25,7 @@ from app.agents.message_intake_router import (
 )
 from app.agents.recharge_draft_agent import build_recharge_draft
 from app.agents.schemas import DraftAgentContext, RouterIntent, Stage05DraftCandidate
+from app.agents.stage05_skill_matching import build_skill_evidence
 from app.agents.stage05_state import Stage05WorkflowState, new_stage05_workflow_state
 from app.agents.stage05_supervisor import (
     Stage05SupervisorNodeSet,
@@ -355,12 +357,21 @@ class Stage05AgentWorkflowService:
                 model_name=getattr(result, "model_name", self.model_name or "unknown"),
             )
 
+        skill_evidence = build_skill_evidence(
+            router_result=router_result,
+            source_text_summary=state["source_text_summary"],
+        )
+        enriched_result = replace(
+            result,
+            content={**result.content, "skill_evidence": skill_evidence},
+        )
+
         agent_run = create_agent_run_record(
             agent_name=STAGE05_ROUTER_AGENT_NAME,
             graph_name=STAGE05_GRAPH_NAME,
             trace_id=state["trace_id"],
             request=request,
-            result=result,
+            result=enriched_result,
             message_id=_uuid_or_none(message.id),
             created_entity_refs=[],
         )
