@@ -15,6 +15,7 @@ from app.models.stage06_runtime import (
 )
 from app.services.audit import record_audit_event
 from app.services.permissions import Actor
+from app.services.stage06_audit import sanitize_stage06_audit_state
 from app.services.stage06_platform import (
     PlatformValidationError,
     Stage06PlatformUnitOfWork,
@@ -551,8 +552,15 @@ def create_notification_request(
     message_payload: dict[str, Any],
     send_policy: dict[str, Any],
     actor: Actor,
+    server_mode: str = "disabled",
+    server_allowlist: tuple[str, ...] = (),
 ) -> NotificationRequest:
-    status = _notification_status(target=target, send_policy=send_policy)
+    status = _notification_status(
+        target=target,
+        send_policy=send_policy,
+        server_mode=server_mode,
+        server_allowlist=server_allowlist,
+    )
     request = NotificationRequest(
         id=uuid4(),
         workspace_id=workspace_id,
@@ -593,6 +601,8 @@ def confirm_notification_request(
     request_id: UUID,
     *,
     actor: Actor,
+    server_mode: str = "disabled",
+    server_allowlist: tuple[str, ...] = (),
 ) -> NotificationRequest:
     request = uow.get_notification_request(request_id)
     if request is None:
@@ -606,6 +616,8 @@ def confirm_notification_request(
             for key, value in request.send_policy.items()
             if key != "confirmation"
         },
+        server_mode=server_mode,
+        server_allowlist=server_allowlist,
     )
     _record_runtime_audit(
         uow,
@@ -836,8 +848,10 @@ def _record_runtime_audit(
         event_type=event_type,
         entity_type=entity_type,
         entity_id=entity_id,
-        after_state=after_state,
-        permission_snapshot={"role": actor.role, "actor_type": actor.actor_type},
+        after_state=sanitize_stage06_audit_state(after_state),
+        permission_snapshot=sanitize_stage06_audit_state(
+            {"role": actor.role, "actor_type": actor.actor_type}
+        ),
     )
 
 
@@ -986,12 +1000,21 @@ def _notification_status(
     *,
     target: dict[str, Any],
     send_policy: dict[str, Any],
+    server_mode: str,
+    server_allowlist: tuple[str, ...],
 ) -> str:
-    if send_policy.get("dry_run") is True:
+    if server_mode in {"disabled", "dry_run"}:
         return "blocked"
-    allowlist = set(send_policy.get("allowlist") or [])
+    if server_mode != "restricted_test":
+        return "blocked"
     chat_id = target.get("telegram_chat_id")
-    if allowlist and chat_id not in allowlist:
+    allowed_targets = set(server_allowlist)
+    if not allowed_targets or chat_id not in allowed_targets:
+        return "blocked"
+    request_allowlist = set(send_policy.get("allowlist") or [])
+    if request_allowlist and chat_id not in request_allowlist:
+        return "blocked"
+    if send_policy.get("dry_run") is True:
         return "blocked"
     if send_policy.get("confirmation") == "required":
         return "pending_confirmation"

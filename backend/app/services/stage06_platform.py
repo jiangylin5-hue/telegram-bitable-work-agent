@@ -30,6 +30,7 @@ from app.models.stage06_templates import (
 )
 from app.services.audit import record_audit_event
 from app.services.permissions import Actor
+from app.services.stage06_audit import sanitize_stage06_audit_state
 
 
 STAGE06_FIELD_TYPES = frozenset(
@@ -1099,10 +1100,12 @@ def _record_stage06_audit(
         event_type=event_type,
         entity_type=entity_type,
         entity_id=entity_id,
-        before_state=before_state,
-        after_state=after_state,
-        permission_snapshot=permission_snapshot
-        or {"role": actor.role, "actor_type": actor.actor_type},
+        before_state=sanitize_stage06_audit_state(before_state),
+        after_state=sanitize_stage06_audit_state(after_state),
+        permission_snapshot=sanitize_stage06_audit_state(
+            permission_snapshot
+            or {"role": actor.role, "actor_type": actor.actor_type}
+        ),
     )
 
 

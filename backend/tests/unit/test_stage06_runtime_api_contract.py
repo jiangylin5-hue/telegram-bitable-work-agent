@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.api.deps import get_system_actor
@@ -8,7 +9,11 @@ from app.services.permissions import Actor
 from app.services.stage06_platform import InMemoryStage06PlatformUnitOfWork
 
 
-def test_stage06_runtime_api_updates_employee_and_confirms_notification_request() -> None:
+def test_stage06_runtime_api_updates_employee_and_confirms_notification_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("STAGE06_NOTIFICATION_MODE", "restricted_test")
+    monkeypatch.setenv("STAGE06_NOTIFICATION_ALLOWED_CHAT_IDS", "chat-1")
     app = create_app()
     uow = InMemoryStage06PlatformUnitOfWork()
     app.dependency_overrides[get_stage06_platform_uow] = lambda: uow

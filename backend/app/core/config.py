@@ -29,6 +29,8 @@ class Settings:
     telegram_send_mode: str = "dry_run"
     telegram_test_send_allowed_chat_ids: tuple[str, ...] = ()
     provider_mode: str = "disabled"
+    stage06_notification_mode: str = "disabled"
+    stage06_notification_allowed_chat_ids: tuple[str, ...] = ()
     llm_enabled: bool = False
     agent_workflow_mode: str = "fake"
     agent_llm_timeout_seconds: int = 30
@@ -60,6 +62,13 @@ def get_settings() -> Settings:
             "TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS"
         ),
         provider_mode=os.getenv("PROVIDER_MODE", Settings.provider_mode),
+        stage06_notification_mode=os.getenv(
+            "STAGE06_NOTIFICATION_MODE",
+            Settings.stage06_notification_mode,
+        ),
+        stage06_notification_allowed_chat_ids=_env_csv_tuple(
+            "STAGE06_NOTIFICATION_ALLOWED_CHAT_IDS"
+        ),
         llm_enabled=_env_bool("LLM_ENABLED", Settings.llm_enabled),
         agent_workflow_mode=os.getenv(
             "AGENT_WORKFLOW_MODE",

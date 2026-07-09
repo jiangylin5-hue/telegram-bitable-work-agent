@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_stage06_request_identity
 from app.core.database import get_session
+from app.core.config import Settings, get_settings
 from app.core.errors import error_detail
 from app.schemas.stage06_runtime import (
     AuditEventListResponse,
@@ -32,6 +33,7 @@ from app.services.stage06_authorization import (
     workspace_id_for_notification,
 )
 from app.services.stage06_identity import Stage06RequestIdentity
+from app.services.stage06_audit import sanitize_stage06_audit_state
 from app.services.stage06_digital_employees import (
     Stage06RuntimeUnitOfWork,
     bind_telegram_context,
@@ -355,6 +357,7 @@ def resolve_telegram_mention_endpoint(
 def create_notification_request_endpoint(
     request: CreateNotificationRequest,
     identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    settings: Settings = Depends(get_settings),
     uow: Stage06RuntimeUnitOfWork = Depends(get_stage06_runtime_uow),
 ) -> NotificationRequestResponse:
     try:
@@ -375,6 +378,8 @@ def create_notification_request_endpoint(
             message_payload=request.message_payload,
             send_policy=request.send_policy,
             actor=actor,
+            server_mode=settings.stage06_notification_mode,
+            server_allowlist=settings.stage06_notification_allowed_chat_ids,
         )
     except (PlatformValidationError, Stage06AuthorizationError, ValueError) as exc:
         if isinstance(exc, ValueError) and not isinstance(exc, PlatformValidationError):
@@ -394,6 +399,7 @@ def create_notification_request_endpoint(
 def confirm_notification_request_endpoint(
     request_id: UUID,
     identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    settings: Settings = Depends(get_settings),
     uow: Stage06RuntimeUnitOfWork = Depends(get_stage06_runtime_uow),
 ) -> NotificationRequestResponse:
     try:
@@ -404,7 +410,13 @@ def confirm_notification_request_endpoint(
             workspace_id,
             "notification_request.confirm",
         )
-        notification = confirm_notification_request(uow, request_id, actor=actor)
+        notification = confirm_notification_request(
+            uow,
+            request_id,
+            actor=actor,
+            server_mode=settings.stage06_notification_mode,
+            server_allowlist=settings.stage06_notification_allowed_chat_ids,
+        )
     except (PlatformValidationError, Stage06AuthorizationError) as exc:
         _commit_if_sqlalchemy(uow)
         raise _http_error(exc) from exc
@@ -517,9 +529,9 @@ def _audit_event_response(event: object) -> AuditEventResponse:
         event_type=event.event_type,
         entity_type=event.entity_type,
         entity_id=None if event.entity_id is None else str(event.entity_id),
-        before_state=event.before_state,
-        after_state=event.after_state,
-        permission_snapshot=event.permission_snapshot,
+        before_state=sanitize_stage06_audit_state(event.before_state),
+        after_state=sanitize_stage06_audit_state(event.after_state),
+        permission_snapshot=sanitize_stage06_audit_state(event.permission_snapshot),
     )
 
 
