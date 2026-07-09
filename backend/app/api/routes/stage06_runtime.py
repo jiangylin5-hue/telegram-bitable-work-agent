@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_stage06_request_identity, get_system_actor
+from app.api.deps import get_stage06_request_identity
 from app.core.database import get_session
 from app.core.errors import error_detail
 from app.schemas.stage06_runtime import (
@@ -23,7 +23,6 @@ from app.schemas.stage06_runtime import (
     TelegramMentionRequest,
     UpdateDigitalEmployeeRequest,
 )
-from app.services.permissions import Actor
 from app.services.stage06_authorization import (
     Stage06AuthorizationError,
     authorize_workspace_action,
@@ -292,20 +291,30 @@ def bind_telegram_context_endpoint(
         )
     except Stage06AuthorizationError as exc:
         raise _http_error(exc) from exc
-    binding = bind_telegram_context(
-        uow,
-        workspace_id,
-        telegram_chat_id=request.telegram_chat_id,
-        telegram_user_id=request.telegram_user_id,
-        binding_type=request.binding_type,
-        default_base_id=_uuid_or_none(request.default_base_id),
-        default_digital_employee_id=_uuid_or_none(request.default_digital_employee_id),
-        scope_policy=request.scope_policy,
-    )
+    try:
+        binding = bind_telegram_context(
+            uow,
+            workspace_id,
+            workspace_member_id=UUID(request.workspace_member_id),
+            telegram_chat_id=request.telegram_chat_id,
+            telegram_user_id=request.telegram_user_id,
+            binding_type=request.binding_type,
+            default_base_id=_uuid_or_none(request.default_base_id),
+            default_digital_employee_id=_uuid_or_none(request.default_digital_employee_id),
+            scope_policy=request.scope_policy,
+        )
+    except (PlatformValidationError, ValueError) as exc:
+        if isinstance(exc, ValueError) and not isinstance(exc, PlatformValidationError):
+            raise HTTPException(
+                status_code=422,
+                detail=error_detail("invalid_uuid", str(exc)),
+            ) from exc
+        raise _http_error(exc) from exc
     _commit_if_sqlalchemy(uow)
     return TelegramBindingResponse(
         id=str(binding.id),
         workspace_id=str(binding.workspace_id),
+        workspace_member_id=str(binding.workspace_member_id),
         telegram_chat_id=binding.telegram_chat_id,
         telegram_user_id=binding.telegram_user_id,
         binding_type=binding.binding_type,
@@ -325,7 +334,6 @@ def bind_telegram_context_endpoint(
 @router.post("/telegram/mentions", response_model=InvokeDigitalEmployeeResponse)
 def resolve_telegram_mention_endpoint(
     request: TelegramMentionRequest,
-    actor: Actor = Depends(get_system_actor),
     uow: Stage06RuntimeUnitOfWork = Depends(get_stage06_runtime_uow),
 ) -> InvokeDigitalEmployeeResponse:
     try:
@@ -335,7 +343,6 @@ def resolve_telegram_mention_endpoint(
             telegram_user_id=request.telegram_user_id,
             alias=request.alias,
             text=request.text,
-            actor=actor,
         )
     except PlatformValidationError as exc:
         _commit_if_sqlalchemy(uow)

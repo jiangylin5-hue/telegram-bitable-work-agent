@@ -97,6 +97,7 @@ def test_stage06_digital_employee_api_creates_invokes_drafts_confirms_and_mentio
         client.post(
             f"/workspaces/{workspace_id}/telegram-bindings",
             json={
+                "workspace_member_id": str(uow.workspace_members[0].id),
                 "telegram_chat_id": "chat-1",
                 "telegram_user_id": "user-1",
                 "binding_type": "chat_user",

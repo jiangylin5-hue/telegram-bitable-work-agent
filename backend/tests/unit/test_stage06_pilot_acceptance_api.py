@@ -83,6 +83,7 @@ def test_stage06_backend_pilot_path_has_audit_and_safety_close_evidence() -> Non
         client.post(
             f"/workspaces/{workspace_id}/telegram-bindings",
             json={
+                "workspace_member_id": str(uow.workspace_members[0].id),
                 "telegram_chat_id": "chat-1",
                 "telegram_user_id": "user-1",
                 "binding_type": "chat_user",
