@@ -47,10 +47,10 @@ class Stage06TelegramBinding(UuidPrimaryKeyMixin, TimestampMixin, Base):
         ForeignKey("workspaces.id"),
         nullable=False,
     )
-    workspace_member_id: Mapped[UUID] = mapped_column(
+    workspace_member_id: Mapped[UUID | None] = mapped_column(
         Uuid(as_uuid=True),
-        ForeignKey("workspace_members.id"),
-        nullable=False,
+        ForeignKey("workspace_members.id", name="fk_stage06_binding_member"),
+        nullable=True,
     )
     telegram_chat_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
     telegram_user_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
@@ -62,6 +62,7 @@ class Stage06TelegramBinding(UuidPrimaryKeyMixin, TimestampMixin, Base):
     )
     default_digital_employee_id: Mapped[UUID | None] = mapped_column(
         Uuid(as_uuid=True),
+        ForeignKey("digital_employees.id", name="fk_stage06_binding_employee"),
         nullable=True,
     )
     scope_policy: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)

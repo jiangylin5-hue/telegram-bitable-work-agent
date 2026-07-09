@@ -1,6 +1,7 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_stage06_request_identity
@@ -33,6 +34,11 @@ from app.services.stage06_authorization import (
     workspace_id_for_notification,
 )
 from app.services.stage06_identity import Stage06RequestIdentity
+from app.services.stage06_idempotency import (
+    begin_idempotent_operation,
+    complete_idempotent_operation,
+    fingerprint_request,
+)
 from app.services.stage06_audit import sanitize_stage06_audit_state
 from app.services.stage06_pagination import (
     Stage06PaginationError,
@@ -246,6 +252,7 @@ def list_record_change_drafts_endpoint(
 )
 def confirm_record_change_draft_endpoint(
     draft_id: UUID,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=160),
     identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
     uow: Stage06RuntimeUnitOfWork = Depends(get_stage06_runtime_uow),
 ) -> RecordChangeDraftResponse:
@@ -257,7 +264,30 @@ def confirm_record_change_draft_endpoint(
             workspace_id,
             "record_change_draft.confirm",
         )
+        fingerprint = fingerprint_request(
+            {
+                "draft_id": draft_id,
+                "user_id": identity.user_id,
+            }
+        )
+        decision = _begin_and_reserve(
+            uow,
+            workspace_id=workspace_id,
+            operation="record_change_draft.confirm",
+            idempotency_key=idempotency_key,
+            request_fingerprint=fingerprint,
+        )
+        if decision.status == "replay":
+            response_ref = decision.response_ref or {}
+            draft = uow.get_record_change_draft(UUID(str(response_ref["draft_id"])))
+            if draft is None:
+                raise PlatformValidationError("record_change_draft_not_found", str(draft_id))
+            return _draft_response(draft)
         draft = confirm_record_change_draft(uow, draft_id, actor=actor)
+        complete_idempotent_operation(
+            decision.record,
+            response_ref={"draft_id": str(draft.id)},
+        )
     except (PlatformValidationError, Stage06AuthorizationError) as exc:
         _commit_if_sqlalchemy(uow)
         raise _http_error(exc) from exc
@@ -372,6 +402,7 @@ def resolve_telegram_mention_endpoint(
 @router.post("/notification-requests", response_model=NotificationRequestResponse)
 def create_notification_request_endpoint(
     request: CreateNotificationRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=160),
     identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
     settings: Settings = Depends(get_settings),
     uow: Stage06RuntimeUnitOfWork = Depends(get_stage06_runtime_uow),
@@ -384,6 +415,30 @@ def create_notification_request_endpoint(
             workspace_id,
             "notification_request.create",
         )
+        fingerprint = fingerprint_request(
+            {
+                "request": request.model_dump(),
+                "user_id": identity.user_id,
+            }
+        )
+        decision = _begin_and_reserve(
+            uow,
+            workspace_id=workspace_id,
+            operation="notification_request.create",
+            idempotency_key=idempotency_key,
+            request_fingerprint=fingerprint,
+        )
+        if decision.status == "replay":
+            response_ref = decision.response_ref or {}
+            notification = uow.get_notification_request(
+                UUID(str(response_ref["notification_request_id"]))
+            )
+            if notification is None:
+                raise PlatformValidationError(
+                    "notification_request_not_found",
+                    str(response_ref.get("notification_request_id")),
+                )
+            return _notification_response(notification)
         notification = create_notification_request(
             uow,
             workspace_id=workspace_id,
@@ -396,6 +451,10 @@ def create_notification_request_endpoint(
             actor=actor,
             server_mode=settings.stage06_notification_mode,
             server_allowlist=settings.stage06_notification_allowed_chat_ids,
+        )
+        complete_idempotent_operation(
+            decision.record,
+            response_ref={"notification_request_id": str(notification.id)},
         )
     except (PlatformValidationError, Stage06AuthorizationError, ValueError) as exc:
         if isinstance(exc, ValueError) and not isinstance(exc, PlatformValidationError):
@@ -585,6 +644,42 @@ def _commit_if_sqlalchemy(uow: Stage06RuntimeUnitOfWork) -> None:
         session.commit()
 
 
+def _begin_and_reserve(
+    uow: Stage06RuntimeUnitOfWork,
+    *,
+    workspace_id: UUID,
+    operation: str,
+    idempotency_key: str,
+    request_fingerprint: str,
+):
+    trace_id = f"idempotency:{operation}:{request_fingerprint[:24]}"
+    try:
+        decision = begin_idempotent_operation(
+            uow,
+            workspace_id=workspace_id,
+            operation=operation,
+            idempotency_key=idempotency_key,
+            request_fingerprint=request_fingerprint,
+            trace_id=trace_id,
+        )
+        if decision.status == "started":
+            _commit_if_sqlalchemy(uow)
+        return decision
+    except IntegrityError:
+        session = getattr(uow, "session", None)
+        if session is None:
+            raise
+        session.rollback()
+        return begin_idempotent_operation(
+            uow,
+            workspace_id=workspace_id,
+            operation=operation,
+            idempotency_key=idempotency_key,
+            request_fingerprint=request_fingerprint,
+            trace_id=trace_id,
+        )
+
+
 def _http_error(
     exc: PlatformValidationError | Stage06AuthorizationError,
 ) -> HTTPException:
@@ -598,7 +693,7 @@ def _http_error(
         status_code = 404
     elif exc.code.endswith("_denied"):
         status_code = 403
-    elif "conflict" in exc.code:
+    elif "conflict" in exc.code or exc.code == "idempotency_in_progress":
         status_code = 409
     else:
         status_code = 422

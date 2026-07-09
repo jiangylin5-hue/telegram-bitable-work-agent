@@ -23,6 +23,7 @@ def test_stage06_backend_pilot_path_has_audit_and_safety_close_evidence() -> Non
 
     with TestClient(app) as client:
         client.headers["X-Stage06-User-Id"] = "pilot-owner"
+        client.headers["Idempotency-Key"] = "pilot-acceptance"
         workspace_id = client.post(
             "/workspaces",
             json={"name": "Pilot Workspace", "owner_user_id": "pilot-owner"},

@@ -1,7 +1,8 @@
 import base64
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_stage06_request_identity
@@ -25,6 +26,11 @@ from app.services.stage06_authorization import (
     workspace_id_for_import_job,
 )
 from app.services.stage06_identity import Stage06RequestIdentity
+from app.services.stage06_idempotency import (
+    begin_idempotent_operation,
+    complete_idempotent_operation,
+    fingerprint_request,
+)
 from app.services.stage06_platform import PlatformValidationError
 from app.services.stage06_templates import (
     Stage06TemplateImportUnitOfWork,
@@ -68,6 +74,7 @@ def list_templates_endpoint(
 def install_template_endpoint(
     workspace_id: UUID,
     request: InstallTemplateRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=160),
     identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
     uow: Stage06TemplateImportUnitOfWork = Depends(get_stage06_template_import_uow),
 ) -> TemplateInstallationResponse:
@@ -78,6 +85,22 @@ def install_template_endpoint(
             workspace_id,
             "template.install",
         )
+        fingerprint = fingerprint_request(
+            {
+                "workspace_id": workspace_id,
+                "template_id": request.template_id,
+                "user_id": identity.user_id,
+            }
+        )
+        decision = _begin_and_reserve(
+            uow,
+            workspace_id=workspace_id,
+            operation="template.install",
+            idempotency_key=idempotency_key,
+            request_fingerprint=fingerprint,
+        )
+        if decision.status == "replay":
+            return TemplateInstallationResponse(**(decision.response_ref or {}))
         installation = install_template(
             uow,
             workspace_id,
@@ -85,28 +108,52 @@ def install_template_endpoint(
             installed_by_user_id=identity.user_id,
             actor=actor,
         )
+        response = TemplateInstallationResponse(
+            id=str(installation.id),
+            workspace_id=str(installation.workspace_id),
+            base_id=str(installation.base_id),
+            template_id=str(installation.template_id),
+            template_version=installation.template_version,
+            resource_map=installation.resource_map,
+        )
+        complete_idempotent_operation(
+            decision.record,
+            response_ref=response.model_dump(),
+        )
     except (PlatformValidationError, Stage06AuthorizationError, ValueError) as exc:
         raise _http_error(exc) from exc
     _commit_if_sqlalchemy(uow)
-    return TemplateInstallationResponse(
-        id=str(installation.id),
-        workspace_id=str(installation.workspace_id),
-        base_id=str(installation.base_id),
-        template_id=str(installation.template_id),
-        template_version=installation.template_version,
-        resource_map=installation.resource_map,
-    )
+    return response
 
 
 @router.post("/workspaces/{workspace_id}/imports", response_model=ImportJobResponse)
 def create_import_endpoint(
     workspace_id: UUID,
     request: CreateImportRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=160),
     identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
     uow: Stage06TemplateImportUnitOfWork = Depends(get_stage06_template_import_uow),
 ) -> ImportJobResponse:
     try:
         authorize_workspace_action(uow, identity, workspace_id, "import.create")
+        fingerprint = fingerprint_request(
+            {
+                "workspace_id": workspace_id,
+                "request": request.model_dump(),
+                "user_id": identity.user_id,
+            }
+        )
+        decision = _begin_and_reserve(
+            uow,
+            workspace_id=workspace_id,
+            operation="import.create",
+            idempotency_key=idempotency_key,
+            request_fingerprint=fingerprint,
+        )
+        if decision.status == "replay":
+            response_ref = decision.response_ref or {}
+            job = read_import_job(uow, UUID(str(response_ref["import_job_id"])))
+            return _import_job_response(job)
         base_id = None if request.base_id is None else UUID(request.base_id)
         if request.source_type == "csv":
             job = create_import_job_from_csv(
@@ -128,6 +175,10 @@ def create_import_endpoint(
             )
         else:
             raise PlatformValidationError("unsupported_import_source", request.source_type)
+        complete_idempotent_operation(
+            decision.record,
+            response_ref={"import_job_id": str(job.id)},
+        )
     except (PlatformValidationError, Stage06AuthorizationError, ValueError) as exc:
         raise _http_error(exc) from exc
     _commit_if_sqlalchemy(uow)
@@ -153,12 +204,29 @@ def read_import_endpoint(
 def commit_import_endpoint(
     import_job_id: UUID,
     request: CommitImportRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=160),
     identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
     uow: Stage06TemplateImportUnitOfWork = Depends(get_stage06_template_import_uow),
 ) -> ImportCommitResponse:
     try:
         workspace_id = workspace_id_for_import_job(uow, import_job_id)
         actor = authorize_workspace_action(uow, identity, workspace_id, "import.commit")
+        fingerprint = fingerprint_request(
+            {
+                "import_job_id": import_job_id,
+                "request": request.model_dump(),
+                "user_id": identity.user_id,
+            }
+        )
+        decision = _begin_and_reserve(
+            uow,
+            workspace_id=workspace_id,
+            operation="import.commit",
+            idempotency_key=idempotency_key,
+            request_fingerprint=fingerprint,
+        )
+        if decision.status == "replay":
+            return ImportCommitResponse(**(decision.response_ref or {}))
         result = commit_import_job(
             uow,
             import_job_id,
@@ -168,15 +236,20 @@ def commit_import_endpoint(
             field_mapping=request.field_mapping,
             actor=actor,
         )
+        response = ImportCommitResponse(
+            import_job_id=str(result.import_job_id),
+            status=result.status,
+            resource_map=result.resource_map,
+        )
+        complete_idempotent_operation(
+            decision.record,
+            response_ref=response.model_dump(),
+        )
     except (PlatformValidationError, Stage06AuthorizationError) as exc:
         _commit_if_sqlalchemy(uow)
         raise _http_error(exc) from exc
     _commit_if_sqlalchemy(uow)
-    return ImportCommitResponse(
-        import_job_id=str(result.import_job_id),
-        status=result.status,
-        resource_map=result.resource_map,
-    )
+    return response
 
 
 @router.post("/bases/{base_id}/templates", response_model=TemplateResponse)
@@ -234,6 +307,42 @@ def _commit_if_sqlalchemy(uow: Stage06TemplateImportUnitOfWork) -> None:
         session.commit()
 
 
+def _begin_and_reserve(
+    uow: Stage06TemplateImportUnitOfWork,
+    *,
+    workspace_id: UUID,
+    operation: str,
+    idempotency_key: str,
+    request_fingerprint: str,
+):
+    trace_id = f"idempotency:{operation}:{request_fingerprint[:24]}"
+    try:
+        decision = begin_idempotent_operation(
+            uow,
+            workspace_id=workspace_id,
+            operation=operation,
+            idempotency_key=idempotency_key,
+            request_fingerprint=request_fingerprint,
+            trace_id=trace_id,
+        )
+        if decision.status == "started":
+            _commit_if_sqlalchemy(uow)
+        return decision
+    except IntegrityError:
+        session = getattr(uow, "session", None)
+        if session is None:
+            raise
+        session.rollback()
+        return begin_idempotent_operation(
+            uow,
+            workspace_id=workspace_id,
+            operation=operation,
+            idempotency_key=idempotency_key,
+            request_fingerprint=request_fingerprint,
+            trace_id=trace_id,
+        )
+
+
 def _http_error(exc: Exception) -> HTTPException:
     if isinstance(exc, Stage06AuthorizationError):
         status_code = 404 if exc.code.endswith("_not_found") else 403
@@ -242,5 +351,10 @@ def _http_error(exc: Exception) -> HTTPException:
             detail=error_detail(exc.code, str(exc)),
         )
     code = exc.code if isinstance(exc, PlatformValidationError) else "invalid_request"
-    status_code = 404 if code.endswith("_not_found") else 422
+    if code.endswith("_not_found"):
+        status_code = 404
+    elif code in {"idempotency_conflict", "idempotency_in_progress"}:
+        status_code = 409
+    else:
+        status_code = 422
     return HTTPException(status_code=status_code, detail=error_detail(code, str(exc)))

@@ -26,6 +26,7 @@ def test_stage06_runtime_api_updates_employee_and_confirms_notification_request(
 
     with TestClient(app) as client:
         client.headers["X-Stage06-User-Id"] = "owner-1"
+        client.headers["Idempotency-Key"] = "runtime-contract"
         workspace_id = client.post(
             "/workspaces",
             json={"name": "Acme", "owner_user_id": "owner-1"},

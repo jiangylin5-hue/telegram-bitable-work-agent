@@ -25,6 +25,7 @@ def test_stage06_template_import_api_lists_installs_and_imports_csv() -> None:
 
     with TestClient(app) as client:
         client.headers["X-Stage06-User-Id"] = "owner-1"
+        client.headers["Idempotency-Key"] = "template-import-api"
         workspace_response = client.post(
             "/workspaces",
             json={"name": "Acme", "owner_user_id": "owner-1"},
@@ -99,6 +100,7 @@ def test_stage06_template_import_api_imports_excel_after_preview_confirmation() 
 
     with TestClient(app) as client:
         client.headers["X-Stage06-User-Id"] = "owner-1"
+        client.headers["Idempotency-Key"] = "template-import-excel"
         workspace_id = client.post(
             "/workspaces",
             json={"name": "Acme", "owner_user_id": "owner-1"},

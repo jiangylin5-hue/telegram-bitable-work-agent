@@ -145,7 +145,10 @@ def test_stage06_viewer_cannot_create_import_job() -> None:
     try:
         response = TestClient(app).post(
             f"/workspaces/{workspace.id}/imports",
-            headers=_headers("viewer-1"),
+            headers={
+                **_headers("viewer-1"),
+                "Idempotency-Key": "viewer-import-denied",
+            },
             json={
                 "source_type": "csv",
                 "file_name": "data.csv",

@@ -28,6 +28,7 @@ from app.models.stage06_templates import (
     PlatformTemplate,
     TemplateInstallation,
 )
+from app.models.stage06_hardening import Stage06IdempotencyRecord
 from app.services.audit import record_audit_event
 from app.services.permissions import Actor
 from app.services.stage06_audit import sanitize_stage06_audit_state
@@ -188,6 +189,17 @@ class Stage06PlatformUnitOfWork(Protocol):
     def list_telegram_bindings(self) -> list[Stage06TelegramBinding]:
         pass
 
+    def get_idempotency_record(
+        self,
+        workspace_id: UUID,
+        operation: str,
+        idempotency_key: str,
+    ) -> Stage06IdempotencyRecord | None:
+        pass
+
+    def add_idempotency_record(self, record: Stage06IdempotencyRecord) -> None:
+        pass
+
 
 @dataclass
 class InMemoryStage06PlatformUnitOfWork:
@@ -208,6 +220,7 @@ class InMemoryStage06PlatformUnitOfWork:
     agent_runs: list[AgentRun] = field(default_factory=list)
     telegram_bindings: list[Stage06TelegramBinding] = field(default_factory=list)
     audit_events: list[OpsAuditEvent] = field(default_factory=list)
+    idempotency_records: list[Stage06IdempotencyRecord] = field(default_factory=list)
 
     def add(self, value: object) -> None:
         if isinstance(value, OpsAuditEvent):
@@ -345,6 +358,26 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def list_telegram_bindings(self) -> list[Stage06TelegramBinding]:
         return list(self.telegram_bindings)
+
+    def get_idempotency_record(
+        self,
+        workspace_id: UUID,
+        operation: str,
+        idempotency_key: str,
+    ) -> Stage06IdempotencyRecord | None:
+        return next(
+            (
+                record
+                for record in self.idempotency_records
+                if record.workspace_id == workspace_id
+                and record.operation == operation
+                and record.idempotency_key == idempotency_key
+            ),
+            None,
+        )
+
+    def add_idempotency_record(self, record: Stage06IdempotencyRecord) -> None:
+        self.idempotency_records.append(record)
 
 
 class SqlAlchemyStage06PlatformUnitOfWork:
@@ -515,6 +548,25 @@ class SqlAlchemyStage06PlatformUnitOfWork:
 
     def list_telegram_bindings(self) -> list[Stage06TelegramBinding]:
         return list(self.session.scalars(select(Stage06TelegramBinding)))
+
+    def get_idempotency_record(
+        self,
+        workspace_id: UUID,
+        operation: str,
+        idempotency_key: str,
+    ) -> Stage06IdempotencyRecord | None:
+        return self.session.scalar(
+            select(Stage06IdempotencyRecord)
+            .where(
+                Stage06IdempotencyRecord.workspace_id == workspace_id,
+                Stage06IdempotencyRecord.operation == operation,
+                Stage06IdempotencyRecord.idempotency_key == idempotency_key,
+            )
+            .with_for_update()
+        )
+
+    def add_idempotency_record(self, record: Stage06IdempotencyRecord) -> None:
+        self.session.add(record)
 
 
 def create_workspace(
