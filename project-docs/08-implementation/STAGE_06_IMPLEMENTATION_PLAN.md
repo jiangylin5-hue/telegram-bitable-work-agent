@@ -4,7 +4,7 @@
 
 - Document status: active Stage06 implementation plan
 - Scope: Large-package backend-readiness implementation plan for the Stage06 platform pivot
-- Current Progress: 2026-07-10 Packages 1-5 retain their backend feature evidence, but backend exit is reopened for approved Package 6 security hardening. Package 6 covers replaceable request identity, active workspace-member authorization, tenant/resource invariants, lookup permission, audit redaction, server-controlled notification fail-closed policy, import limits, cursor pagination, idempotency, database constraints and PostgreSQL negative/concurrency evidence. Mini App remains deferred.
+- Current Progress: 2026-07-10 Packages 1-6 backend scope is implemented and verified. Package 6 passed identity, active membership, tenant/resource, lookup, audit, notification, import, pagination, idempotency, database constraint and real local PostgreSQL negative/concurrency gates. Mini App remains a separately confirmed phase.
 
 ## Goal
 
@@ -195,7 +195,7 @@ Telegram backend entry
 
 ## Package 6: Stage06 Security Hardening
 
-**Implementation status:** approved design; implementation pending written-spec review and TDD plan.
+**Implementation status:** completed and verified on 2026-07-10; sanitized evidence retained at `evidence/STAGE_06_SECURITY_HARDENING_EVIDENCE.json`.
 
 **Delivery 6A: Identity And Authorization**
 

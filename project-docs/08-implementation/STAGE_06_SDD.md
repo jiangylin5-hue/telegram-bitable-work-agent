@@ -4,7 +4,7 @@
 
 - Document status: active Stage06 software design document
 - Scope: Backend architecture for generic Bitable core, templates/import, digital employees, real LLM runtime, Telegram backend entry and pilot safety
-- Current Progress: 2026-07-10 Reopened for the approved Stage06 security-hardening design. Backend feature evidence remains, while identity resolution, full authorization intersection, tenant invariants, audit redaction, server-controlled notification safety, import limits, pagination, idempotency, database constraints and PostgreSQL negative/concurrency evidence are now required before backend exit.
+- Current Progress: 2026-07-10 The approved security-hardening design is implemented. Identity resolution, workspace-member authorization, tenant invariants, lookup/audit redaction, server-controlled notification safety, bounded imports, cursor pagination, idempotency and additive PostgreSQL guards passed unit, API and real local PostgreSQL verification.
 
 ## 1. Architecture Overview
 

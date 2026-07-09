@@ -4,7 +4,7 @@
 
 - Document status: active Stage06 source of truth
 - Scope: Stage06 backend-readiness boundary for a generic Telegram-first multidimensional table, no-code workspace and table-bound digital employee platform
-- Current Progress: 2026-07-10 Backend feature evidence exists, but the backend-readiness exit is reopened for the approved Stage06 security-hardening package. The package must replace the fixed system actor on Stage06 routes, resolve active workspace membership, enforce workspace/base/table/view/record/field and Telegram scope intersections, redact audit values, make notification policy server-controlled and fail-closed, and add import limits, pagination, idempotency, database constraints and PostgreSQL negative/concurrency evidence. Mini App UI remains deferred.
+- Current Progress: 2026-07-10 Package 6 security hardening is implemented and verified. Stage06 routes now use replaceable request identity plus active workspace membership, enforce tenant/resource and Telegram-member scope, redact audit values, apply server-controlled notification fail-closed policy, bound imports and list pages, and protect multi-resource writes with idempotency and PostgreSQL constraints. Real local PostgreSQL negative/concurrency evidence passed at Alembic head `20260710_0020`. Backend-readiness is passed; Mini App UI and production deployment evidence remain deferred.
 
 ## 1. Stage Goal
 
@@ -208,7 +208,7 @@ Stage06 backend-readiness passes only if:
 
 ## 8. Stage Exit
 
-The earlier backend-only exit decision is provisional and is reopened until the Stage06 security-hardening exit criteria pass. Existing feature and real-provider smoke evidence remains valid historical evidence, but it does not override the permission and tenant-isolation contract.
+The backend-only exit decision is restored after Package 6 passed the permission, tenant-isolation, audit, notification, import, pagination, idempotency, database and real local PostgreSQL gates. This is backend-readiness only and does not claim Mini App, remote staging or production launch readiness.
 
 Security-hardening exit additionally requires:
 

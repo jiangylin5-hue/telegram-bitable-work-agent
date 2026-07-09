@@ -4,7 +4,7 @@
 
 - Document status: active Stage06 API/data/security contract
 - Scope: API resources, data model, permission contract and audit behavior for Stage06
-- Current Progress: 2026-07-10 The contract is reopened for the approved Stage06 security-hardening package. Existing resource APIs remain, but fixed privileged identity, incomplete workspace-member resolution, tenant-boundary gaps, unsafe audit values and request-controlled notification safety must be replaced before backend exit. Import limits, cursor pagination, idempotency and database constraints are added as backward-compatible contract hardening where possible.
+- Current Progress: 2026-07-10 The security-hardening contract is implemented and verified. Development identity is limited to local/test, production-like environments require a verified adapter, roles come from active workspace membership, tenant/resource chains are checked, notification policy is server-controlled, audit state is sanitized, imports/lists are bounded and protected mutations require `Idempotency-Key`.
 
 ## 1. API Principles
 

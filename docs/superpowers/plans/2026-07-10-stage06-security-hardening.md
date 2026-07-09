@@ -1,5 +1,7 @@
 # Stage06 Security Hardening Implementation Plan
 
+> **Implementation status:** Completed on 2026-07-10. Tasks 1-7 passed focused tests, full backend regression, Alembic head verification and real local PostgreSQL security/concurrency smoke. Evidence: `project-docs/08-implementation/evidence/STAGE_06_SECURITY_HARDENING_EVIDENCE.json`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make the Stage06 backend enforce verified identity, active workspace membership, tenant/resource isolation, safe lookup/audit/notification behavior, bounded imports, pagination, idempotency and PostgreSQL concurrency constraints.

@@ -4,7 +4,7 @@
 
 - Document status: active Stage06 behavior and acceptance document
 - Scope: BDD scenarios, acceptance criteria and evidence expectations for Stage06 backend readiness
-- Current Progress: 2026-07-10 Backend feature and real-provider smoke evidence remains, but backend acceptance is reopened for the approved Stage06 security-hardening package. S6-11, notification fail-closed behavior, tenant isolation, audit redaction, import limits, pagination, idempotency, database constraints and PostgreSQL negative/concurrency evidence must pass before a new backend exit decision. Mini App remains deferred.
+- Current Progress: 2026-07-10 Backend acceptance is restored after Package 6 passed S6-11 and S6-22 through S6-27. Identity/membership, tenant isolation, lookup/audit redaction, notification fail-closed, import limits, pagination, idempotency, constraints and real PostgreSQL concurrency evidence are retained. Mini App remains deferred.
 
 ## 1. Acceptance Philosophy
 
@@ -226,23 +226,23 @@ Mini App frontend smoke is explicitly excluded from the current pass and must wa
 | S6-08 | Advertising sample is not the default product path | Local docs/backend passed |
 | S6-09 | Digital employee creation works | Local backend passed |
 | S6-10 | Telegram `@` invocation resolves context | Local backend passed |
-| S6-11 | Effective permission intersection is enforced | Reopened: Stage06 security hardening required |
+| S6-11 | Effective permission intersection is enforced | Passed: request identity, active membership, resource-to-workspace resolution, field/view policy and Telegram-member scope tests |
 | S6-12 | Deterministic digital employee summaries are permission-filtered | Local backend passed |
 | S6-13 | Live LangGraph/OpenRouter digital employee runtime works | Passed: unit-tested with injected client; real summarize and draft-update smokes passed via `.local/stage05-real-workflow.env` |
 | S6-14 | Digital employee writes create drafts | Passed: local backend and real OpenRouter draft-update smoke created a pending draft without direct record mutation |
 | S6-15 | Draft confirmation commits records and audit | Local backend passed |
-| S6-16 | Controlled notifications obey safety switches | Reopened: server-controlled fail-closed policy required |
-| S6-17 | Local PostgreSQL migration smoke passes | Passed with disposable local `stage06_smoke` database owned by `ads_agent` |
+| S6-16 | Controlled notifications obey safety switches | Passed: server mode and allowlist are authoritative; request policy can only narrow; disabled/dry-run fail closed |
+| S6-17 | Local PostgreSQL migration smoke passes | Passed with disposable local `stage06_smoke` database at Alembic head `20260710_0020` |
 | S6-18 | Telegram backend entry smoke passes when configured | Passed: real `@ops` message resolved to `summarize`; temporary polling restored webhook and post-smoke readback showed `pending_update_count = 0` |
 | S6-19 | Safety close is verified | Local backend dry-run/allowlist safety close passed; external sends remain disabled |
 | S6-20 | LarkSuite-style skill evidence is produced | Passed: 27 official skills represented in Stage06 manifest, active core subset matched deterministically, digital employee responses and AgentRun output include `skill_evidence`; real post-skill OpenRouter multi-case smoke passed with 5 cases |
 | S6-21 | Active-core skill routing meets deterministic hit-rate and safety gates | Passed: 118 cases; top-1 89.23%, top-3 100%, high-risk false commit routes 0, unauthorized-data false positives 0, missing-context clarification 100%, evidence presence 100% |
-| S6-22 | Stage06 API identity and active workspace membership are enforced | Pending hardening implementation |
-| S6-23 | Cross-workspace/base resource combinations are rejected | Pending hardening implementation |
-| S6-24 | Lookup and audit readback cannot leak hidden/raw values | Pending hardening implementation |
-| S6-25 | Import limits and cursor pagination pass | Pending hardening implementation |
-| S6-26 | Idempotency and PostgreSQL concurrency gates pass | Pending hardening implementation |
-| S6-27 | Sanitized machine-readable hardening evidence is retained | Pending hardening implementation |
+| S6-22 | Stage06 API identity and active workspace membership are enforced | Passed: local/test development adapter plus production-like verified-adapter fail-closed tests |
+| S6-23 | Cross-workspace/base resource combinations are rejected | Passed: service/API tests and real PostgreSQL outsider denial evidence |
+| S6-24 | Lookup and audit readback cannot leak hidden/raw values | Passed: hidden lookup omission, stored/read audit sanitization and real PostgreSQL artifact scan |
+| S6-25 | Import limits and cursor pagination pass | Passed: decoded byte, row, column and cell limits plus bounded cursor pages |
+| S6-26 | Idempotency and PostgreSQL concurrency gates pass | Passed: replay/conflict API tests, additive constraints and real concurrent import one-winner evidence |
+| S6-27 | Sanitized machine-readable hardening evidence is retained | Passed: `evidence/STAGE_06_SECURITY_HARDENING_EVIDENCE.json` contains only safe status/head/case/count fields |
 
 ## 5. Stage06 Backend Exit Report Must Include
 

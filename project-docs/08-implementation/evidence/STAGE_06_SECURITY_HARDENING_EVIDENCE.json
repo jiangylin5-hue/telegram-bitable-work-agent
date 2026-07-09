@@ -1,0 +1,38 @@
+{
+  "schema_version": "stage06-security-evidence-v1",
+  "generated_at": "2026-07-09T21:33:45.894677+00:00",
+  "status": "passed",
+  "migration_head": "20260710_0020",
+  "checks": [
+    {
+      "case_id": "stage06_unit_security",
+      "status": "passed",
+      "passed_count": 128,
+      "skipped_count": 0
+    },
+    {
+      "case_id": "stage06_alembic_head",
+      "status": "passed",
+      "passed_count": 1,
+      "skipped_count": 0
+    },
+    {
+      "case_id": "stage06_postgres_migration",
+      "status": "passed",
+      "passed_count": 1,
+      "skipped_count": 0
+    },
+    {
+      "case_id": "stage06_postgres_security",
+      "status": "passed",
+      "passed_count": 2,
+      "skipped_count": 0
+    }
+  ],
+  "summary": {
+    "check_count": 4,
+    "passed_count": 4,
+    "blocked_count": 0,
+    "failed_count": 0
+  }
+}

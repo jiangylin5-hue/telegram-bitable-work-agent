@@ -4,9 +4,40 @@
 
 - Document status: active Stage06 progress log
 - Scope: Stage06 platform pivot progress, evidence and open risks
-- Current Progress: 2026-07-10 Backend feature, real-provider smoke and skill evidence remains, but backend exit is reopened for approved Package 6 security hardening. The approved Option A adds a replaceable request identity adapter, workspace-member authority, Telegram-to-member binding, tenant/resource invariants, lookup permission, audit redaction, server-controlled notification fail-closed behavior, import limits, cursor pagination, idempotency, database constraints and PostgreSQL negative/concurrency evidence. Implementation has not started; Stage06 documents are being updated first.
+- Current Progress: 2026-07-10 Package 6 security hardening is complete. Backend verification passed with `401 passed, 17 skipped`; the 17 skips are historical Stage02 online tests requiring `STAGE02_ONLINE_DATABASE_URL`. Real local PostgreSQL migration, tenant denial, audit redaction and concurrent idempotency tests passed at head `20260710_0020`. Sanitized evidence is retained and backend-readiness is restored; Mini App and production deployment remain separate gates.
 
 ## Progress Log
+
+### 2026-07-10: Package 6 Security Hardening Completed
+
+Completed:
+
+- Added replaceable Stage06 request identity; local/test may use the development header, while staging/production require a verified adapter.
+- Centralized active workspace-member authorization and resource-to-workspace resolution across platform, template/import and runtime routes.
+- Enforced cross-workspace/base/table/view/record scope, Telegram-member binding, empty employee scope denial and lookup target-field permission.
+- Sanitized stored and returned audit state and restricted audit readback to owner/admin.
+- Made notification safety server-controlled and fail-closed.
+- Added CSV/Excel decoded-size, row, column and cell limits plus cursor pagination bounded to 200.
+- Added required `Idempotency-Key` handling for template install, import create/commit, notification create and draft confirmation.
+- Added migration `20260710_0020` with idempotency storage, FKs, positive-version checks, partial uniqueness and lookup indexes.
+- Added real PostgreSQL tenant-denial, audit-leak and concurrent import one-winner tests.
+
+Verification:
+
+- `pytest tests -q` with disposable local Stage06 PostgreSQL: `401 passed, 17 skipped`.
+- `python -m compileall -q app scripts`: passed.
+- `python -m alembic heads`: `20260710_0020 (head)`.
+- `python scripts/stage06_security_hardening_smoke.py`: passed all 4 checks; Stage06 unit count `128`, PostgreSQL security count `2`.
+- `git diff --check`: passed; Windows line-ending warnings only.
+
+Retained evidence:
+
+- `project-docs/08-implementation/evidence/STAGE_06_SECURITY_HARDENING_EVIDENCE.json`.
+
+Boundary:
+
+- No external Auth provider, Mini App, real notification send or remote staging deployment was added.
+- A production verified-identity adapter and stale `in_progress` idempotency recovery policy remain production-readiness work.
 
 ### 2026-07-10: Package 6 Security Hardening Design Approved
 

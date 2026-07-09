@@ -4,7 +4,7 @@
 
 - Document status: active backend-readiness exit audit
 - Scope: Stage06 backend-only exit evidence for the generic Telegram-first multidimensional table and table-bound digital employee platform
-- Current Progress: 2026-07-10 Exit decision reopened after the Stage06 security review found fixed privileged API identity, incomplete workspace-member authorization, tenant-boundary gaps, unsafe audit value exposure and request-controlled notification safety. Existing feature and real-provider smoke evidence is retained, but Package 6 security hardening must pass before a new backend exit decision.
+- Current Progress: 2026-07-10 Package 6 security hardening passed. Replaceable identity, active membership, tenant/resource isolation, lookup/audit redaction, notification fail-closed, import limits, pagination, idempotency, additive database guards and real local PostgreSQL negative/concurrency evidence are complete. Stage06 backend-readiness is passed; launch/UI/remote deployment remain out of this audit boundary.
 
 ## 1. Audit Boundary
 
@@ -34,15 +34,23 @@ It does not claim production launch readiness.
 | S6-08 | Advertising sample is not the default product path | Docs and template ordering | Passed |
 | S6-09 | Digital employee creation works | Digital employee service/API tests | Passed |
 | S6-10 | Telegram `@` invocation resolves context | Local API tests plus real Telegram `@ops` smoke | Passed |
-| S6-11 | Effective permission intersection is enforced | Field/view permission, hidden-field omission, Telegram view-scope intersection tests | Partial: workspace/base/table RBAC administration remains future hardening |
+| S6-11 | Effective permission intersection is enforced | Active membership authorization, resource resolvers, field/view permission, hidden lookup omission and Telegram-member scope tests | Passed |
 | S6-12 | Deterministic digital employee summaries are permission-filtered | `test_stage06_digital_employee_runtime.py` | Passed |
 | S6-13 | Live LangGraph/OpenRouter digital employee runtime works | Unit tests with injected client plus real OpenRouter summarize and draft-update smokes | Passed |
 | S6-14 | Digital employee writes create drafts | Deterministic, injected live and real OpenRouter draft-update evidence | Passed |
 | S6-15 | Draft confirmation commits records and audit | Service/API tests confirm draft with permission/version re-check | Passed |
-| S6-16 | Controlled notifications obey safety switches | Notification request tests and pilot API safety-close evidence | Passed |
-| S6-17 | Local PostgreSQL migration smoke passes | `stage06_smoke` disposable local PostgreSQL database upgraded to Alembic head `20260709_0019` | Passed |
+| S6-16 | Controlled notifications obey safety switches | Server-controlled mode/allowlist tests and pilot API safety-close evidence | Passed |
+| S6-17 | Local PostgreSQL migration smoke passes | `stage06_smoke` disposable local PostgreSQL database upgraded to Alembic head `20260710_0020` | Passed |
 | S6-18 | Telegram backend entry smoke passes when configured | Real `@ops` Telegram update resolved to `summarize`; webhook restored; pending update cleared | Passed |
 | S6-19 | Safety close is verified | Dry-run/allowlist notification tests; `PROVIDER_MODE=disabled`; no uncontrolled sends | Passed |
+| S6-20 | LarkSuite-style skill evidence is produced | 27 manifests represented, 11 active core skills, response/AgentRun evidence and real 5-case smoke | Passed |
+| S6-21 | Active-core skill routing meets deterministic gates | 118 cases; top-1 89.23%, top-3 100%, zero high-risk/unauthorized false routes | Passed |
+| S6-22 | API identity and active membership are enforced | Identity and authorization unit/API tests | Passed |
+| S6-23 | Tenant/resource combinations are isolated | Unit/API tests plus real PostgreSQL outsider denial | Passed |
+| S6-24 | Lookup and audit do not leak hidden/raw values | Lookup permission, audit sanitization and real PostgreSQL evidence | Passed |
+| S6-25 | Import limits and cursor pagination pass | Import-limit and pagination tests | Passed |
+| S6-26 | Idempotency and PostgreSQL concurrency pass | Replay/conflict tests, migration guards and concurrent one-winner integration test | Passed |
+| S6-27 | Sanitized hardening evidence is retained | `evidence/STAGE_06_SECURITY_HARDENING_EVIDENCE.json` | Passed |
 
 ## 3. Real LLM Evidence
 
@@ -140,7 +148,7 @@ postgresql+psycopg://ads_agent:***@127.0.0.1:5432/stage06_smoke?connect_timeout=
 Result:
 
 - `status = passed`
-- `alembic_version = 20260709_0019`
+- `alembic_version = 20260710_0020`
 - Required Stage06 tables present
 
 This is real local PostgreSQL evidence, not remote staging or production evidence.
@@ -172,12 +180,25 @@ python -m pytest tests -q
 ```
 
 ```text
-321 passed, 17 skipped
+401 passed, 17 skipped
 ```
 
 Skipped tests require `STAGE02_ONLINE_DATABASE_URL` and belong to old online PostgreSQL smoke coverage.
 
 ## 7. What This Backend Exit Implements
+
+Package 6 changed-file groups:
+
+- Identity/authorization: `backend/app/services/stage06_identity.py`, `stage06_authorization.py`, `backend/app/api/deps.py` and Stage06 route modules.
+- Tenant/audit/notification: Stage06 platform, template and digital-employee services plus runtime schemas/config.
+- Operational guards: `stage06_pagination.py`, `stage06_idempotency.py`, `stage06_hardening.py` and migration `20260710_0020`.
+- Verification: focused Stage06 unit/API tests, `test_stage06_postgres_security.py`, `stage06_security_hardening_smoke.py` and the sanitized evidence artifact.
+
+Skipped tests and cleanup:
+
+- The 17 skipped tests are historical Stage02 online tests requiring `STAGE02_ONLINE_DATABASE_URL`; the new Stage06 PostgreSQL tests ran and passed.
+- The smoke uses the explicitly disposable local `stage06_smoke` database and resets its schema before migration/testing.
+- No temporary source/test file is retained. The sanitized JSON is intentionally retained as audit evidence.
 
 - Generic workspace/base/table/field/record/view backend.
 - JSONB record storage with typed field validation.
@@ -218,10 +239,12 @@ Skipped tests require `STAGE02_ONLINE_DATABASE_URL` and belong to old online Pos
 | Full Feishu-like formula/workflow/dashboard breadth is deferred | Accepted | Keep as Stage07+ candidates |
 | Stage06 LarkSuite-style skill breadth is partial | Active | Keep the implemented 27-manifest/11-active-core evidence distinct from executable backend tool coverage |
 | Real LLM prompt coverage is still narrow | Improved | Real post-skill OpenRouter multi-case smoke passed with 5 cases; broader prompt-evaluation corpus remains a later hardening task |
+| Production verified identity adapter is not connected | Active | Select and implement an external identity provider in a separately confirmed deployment phase |
+| Stale `in_progress` idempotency recovery is not automated | Active | Add expiry/recovery runbook and monitoring before production traffic |
 
 ## 10. Exit Decision
 
-Stage06 backend-readiness is reopened and must not currently be treated as passed. Package 6 identity, authorization, tenant isolation, audit redaction, notification fail-closed, import limit, pagination, idempotency, database constraint and PostgreSQL security evidence gates are pending.
+Stage06 backend-readiness is passed. Package 6 identity, authorization, tenant isolation, audit redaction, notification fail-closed, import limit, pagination, idempotency, database constraint and real local PostgreSQL security/concurrency gates all have current evidence.
 
 It should not be treated as full Stage06 launch-like completion until the user confirms and completes the separate Mini App/frontend phase and production-style deployment evidence.
 
