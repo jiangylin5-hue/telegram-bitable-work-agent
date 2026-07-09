@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_stage06_request_identity
@@ -34,6 +34,10 @@ from app.services.stage06_authorization import (
 )
 from app.services.stage06_identity import Stage06RequestIdentity
 from app.services.stage06_audit import sanitize_stage06_audit_state
+from app.services.stage06_pagination import (
+    Stage06PaginationError,
+    paginate_items,
+)
 from app.services.stage06_digital_employees import (
     Stage06RuntimeUnitOfWork,
     bind_telegram_context,
@@ -203,6 +207,8 @@ def invoke_digital_employee_endpoint(
 )
 def list_record_change_drafts_endpoint(
     base_id: UUID,
+    limit: int = Query(default=50, ge=1, le=200),
+    cursor: str | None = Query(default=None),
     identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
     uow: Stage06RuntimeUnitOfWork = Depends(get_stage06_runtime_uow),
 ) -> RecordChangeDraftListResponse:
@@ -216,11 +222,21 @@ def list_record_change_drafts_endpoint(
         )
     except Stage06AuthorizationError as exc:
         raise _http_error(exc) from exc
+    try:
+        page = paginate_items(
+            list_record_change_drafts(uow, base_id),
+            limit=limit,
+            cursor=cursor,
+        )
+    except Stage06PaginationError as exc:
+        raise _pagination_http_error(exc) from exc
     return RecordChangeDraftListResponse(
         drafts=[
             _draft_response(draft)
-            for draft in list_record_change_drafts(uow, base_id)
-        ]
+            for draft in page.items
+        ],
+        next_cursor=page.next_cursor,
+        has_more=page.has_more,
     )
 
 
@@ -430,6 +446,8 @@ def confirm_notification_request_endpoint(
 )
 def list_notification_requests_endpoint(
     base_id: UUID,
+    limit: int = Query(default=50, ge=1, le=200),
+    cursor: str | None = Query(default=None),
     identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
     uow: Stage06RuntimeUnitOfWork = Depends(get_stage06_runtime_uow),
 ) -> NotificationRequestListResponse:
@@ -443,17 +461,29 @@ def list_notification_requests_endpoint(
         )
     except Stage06AuthorizationError as exc:
         raise _http_error(exc) from exc
+    try:
+        page = paginate_items(
+            list_notification_requests(uow, base_id),
+            limit=limit,
+            cursor=cursor,
+        )
+    except Stage06PaginationError as exc:
+        raise _pagination_http_error(exc) from exc
     return NotificationRequestListResponse(
         requests=[
             _notification_response(request)
-            for request in list_notification_requests(uow, base_id)
-        ]
+            for request in page.items
+        ],
+        next_cursor=page.next_cursor,
+        has_more=page.has_more,
     )
 
 
 @router.get("/bases/{base_id}/audit-events", response_model=AuditEventListResponse)
 def list_base_audit_events_endpoint(
     base_id: UUID,
+    limit: int = Query(default=50, ge=1, le=200),
+    cursor: str | None = Query(default=None),
     identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
     uow: Stage06RuntimeUnitOfWork = Depends(get_stage06_runtime_uow),
 ) -> AuditEventListResponse:
@@ -462,11 +492,21 @@ def list_base_audit_events_endpoint(
         authorize_workspace_action(uow, identity, workspace_id, "audit.read")
     except Stage06AuthorizationError as exc:
         raise _http_error(exc) from exc
+    try:
+        page = paginate_items(
+            list_base_audit_events(uow, base_id),
+            limit=limit,
+            cursor=cursor,
+        )
+    except Stage06PaginationError as exc:
+        raise _pagination_http_error(exc) from exc
     return AuditEventListResponse(
         events=[
             _audit_event_response(event)
-            for event in list_base_audit_events(uow, base_id)
-        ]
+            for event in page.items
+        ],
+        next_cursor=page.next_cursor,
+        has_more=page.has_more,
     )
 
 
@@ -563,3 +603,10 @@ def _http_error(
     else:
         status_code = 422
     return HTTPException(status_code=status_code, detail=error_detail(exc.code, str(exc)))
+
+
+def _pagination_http_error(exc: Stage06PaginationError) -> HTTPException:
+    return HTTPException(
+        status_code=422,
+        detail=error_detail(exc.code, str(exc)),
+    )

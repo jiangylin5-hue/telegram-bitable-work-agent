@@ -89,6 +89,8 @@ class RecordChangeDraftResponse(BaseModel):
 
 class RecordChangeDraftListResponse(BaseModel):
     drafts: list[RecordChangeDraftResponse]
+    next_cursor: str | None = None
+    has_more: bool = False
 
 
 class BindTelegramContextRequest(BaseModel):
@@ -146,6 +148,8 @@ class NotificationRequestResponse(BaseModel):
 
 class NotificationRequestListResponse(BaseModel):
     requests: list[NotificationRequestResponse]
+    next_cursor: str | None = None
+    has_more: bool = False
 
 
 class AuditEventResponse(BaseModel):
@@ -163,3 +167,5 @@ class AuditEventResponse(BaseModel):
 
 class AuditEventListResponse(BaseModel):
     events: list[AuditEventResponse]
+    next_cursor: str | None = None
+    has_more: bool = False

@@ -116,6 +116,8 @@ def test_stage06_view_records_apply_basic_field_permissions() -> None:
         "view_id": str(view.id),
         "records": [{"id": response["records"][0]["id"], "fields": {"name": "Ada Co"}}],
         "trace_id": f"stage06:view:{view.id}",
+        "next_cursor": None,
+        "has_more": False,
     }
 
 

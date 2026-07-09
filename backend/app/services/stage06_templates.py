@@ -33,6 +33,19 @@ class Stage06TemplateImportUnitOfWork(Stage06PlatformUnitOfWork, Protocol):
 
 
 @dataclass(frozen=True)
+class ImportLimits:
+    csv_bytes: int = 5 * 1024 * 1024
+    excel_bytes: int = 10 * 1024 * 1024
+    rows: int = 10_000
+    columns: int = 200
+    cell_chars: int = 65_536
+    preview_rows: int = 20
+
+
+DEFAULT_IMPORT_LIMITS = ImportLimits()
+
+
+@dataclass(frozen=True)
 class ImportCommitResult:
     import_job_id: UUID
     status: str
@@ -211,7 +224,9 @@ def create_import_job_from_csv(
     created_by_user_id: str,
     base_id: UUID | None = None,
 ) -> ImportJob:
+    _validate_import_payload_size(content, DEFAULT_IMPORT_LIMITS.csv_bytes)
     rows = _parse_csv_rows(content)
+    validate_import_rows(rows, DEFAULT_IMPORT_LIMITS)
     return _create_import_job(
         uow,
         workspace_id,
@@ -232,7 +247,9 @@ def create_import_job_from_excel(
     created_by_user_id: str,
     base_id: UUID | None = None,
 ) -> ImportJob:
+    _validate_import_payload_size(content, DEFAULT_IMPORT_LIMITS.excel_bytes)
     rows = _parse_xlsx_rows(content)
+    validate_import_rows(rows, DEFAULT_IMPORT_LIMITS)
     return _create_import_job(
         uow,
         workspace_id,
@@ -480,7 +497,7 @@ def _create_import_job(
         source_type=source_type,
         file_ref={"file_name": file_name, "rows": rows},
         detected_schema=detected_schema,
-        preview_rows=rows[:5],
+        preview_rows=rows[: DEFAULT_IMPORT_LIMITS.preview_rows],
         mapping=[],
         status="awaiting_confirmation",
         created_by_user_id=created_by_user_id,
@@ -499,6 +516,17 @@ def _parse_csv_rows(content: str | bytes) -> list[dict[str, Any]]:
 
 def _parse_xlsx_rows(content: bytes) -> list[dict[str, Any]]:
     with ZipFile(BytesIO(content)) as archive:
+        required_size = sum(
+            item.file_size
+            for item in archive.infolist()
+            if item.filename == "xl/sharedStrings.xml"
+            or item.filename.startswith("xl/worksheets/")
+        )
+        if required_size > DEFAULT_IMPORT_LIMITS.excel_bytes:
+            raise PlatformValidationError(
+                "import_payload_limit_exceeded",
+                "excel_uncompressed_content",
+            )
         sheet_name = _first_sheet_name(archive)
         shared_strings = _shared_strings(archive)
         sheet_rows = _read_sheet_rows(archive.read(sheet_name), shared_strings)
@@ -589,6 +617,33 @@ def _normalize_rows(
             }
         )
     return rows
+
+
+def validate_import_rows(
+    rows: list[dict[str, Any]],
+    limits: ImportLimits = DEFAULT_IMPORT_LIMITS,
+) -> None:
+    if len(rows) > limits.rows:
+        raise PlatformValidationError("import_row_limit_exceeded", str(len(rows)))
+    maximum_columns = max((len(row) for row in rows), default=0)
+    if maximum_columns > limits.columns:
+        raise PlatformValidationError(
+            "import_column_limit_exceeded",
+            str(maximum_columns),
+        )
+    for row in rows:
+        for value in row.values():
+            if len(str(value)) > limits.cell_chars:
+                raise PlatformValidationError(
+                    "import_cell_limit_exceeded",
+                    str(limits.cell_chars),
+                )
+
+
+def _validate_import_payload_size(content: str | bytes, maximum: int) -> None:
+    size = len(content.encode("utf-8")) if isinstance(content, str) else len(content)
+    if size > maximum:
+        raise PlatformValidationError("import_payload_limit_exceeded", str(maximum))
 
 
 def _infer_schema(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

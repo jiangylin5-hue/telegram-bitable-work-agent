@@ -31,6 +31,7 @@ from app.models.stage06_templates import (
 from app.services.audit import record_audit_event
 from app.services.permissions import Actor
 from app.services.stage06_audit import sanitize_stage06_audit_state
+from app.services.stage06_pagination import paginate_items
 
 
 STAGE06_FIELD_TYPES = frozenset(
@@ -820,6 +821,8 @@ def list_view_records(
     view_id: UUID,
     *,
     actor: Actor,
+    limit: int | None = None,
+    cursor: str | None = None,
 ) -> dict[str, Any]:
     view = _require_exists(uow.get_view(view_id), "view_not_found")
     if not _can_actor_read_resource(actor, view.permission_policy):
@@ -836,7 +839,12 @@ def list_view_records(
     field_by_key = {field.key: field for field in fields}
     view_fields = view.config.get("fields") or [field.key for field in fields]
     records = []
-    for record in uow.list_records(view.table_id):
+    page = paginate_items(
+        uow.list_records(view.table_id),
+        limit=limit,
+        cursor=cursor,
+    )
+    for record in page.items:
         visible_fields: dict[str, Any] = {}
         for key in view_fields:
             field = field_by_key.get(key)
@@ -850,6 +858,8 @@ def list_view_records(
         "view_id": str(view.id),
         "records": records,
         "trace_id": f"stage06:view:{view.id}",
+        "next_cursor": page.next_cursor,
+        "has_more": page.has_more,
     }
 
 

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_stage06_request_identity
@@ -35,6 +35,7 @@ from app.services.stage06_authorization import (
     workspace_id_for_view,
 )
 from app.services.stage06_identity import Stage06RequestIdentity
+from app.services.stage06_pagination import Stage06PaginationError
 from app.services.stage06_platform import (
     PlatformValidationError,
     SqlAlchemyStage06PlatformUnitOfWork,
@@ -370,14 +371,26 @@ def get_table_schema_endpoint(
 @router.get("/views/{view_id:uuid}/records", response_model=ViewRecordsResponse)
 def list_view_records_endpoint(
     view_id: UUID,
+    limit: int = Query(default=50, ge=1, le=200),
+    cursor: str | None = Query(default=None),
     identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
     uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
 ) -> ViewRecordsResponse:
     try:
         workspace_id = workspace_id_for_view(uow, view_id)
         actor = authorize_workspace_action(uow, identity, workspace_id, "record.read")
-        response = list_view_records(uow, view_id, actor=actor)
-    except (PlatformValidationError, Stage06AuthorizationError) as exc:
+        response = list_view_records(
+            uow,
+            view_id,
+            actor=actor,
+            limit=limit,
+            cursor=cursor,
+        )
+    except (
+        PlatformValidationError,
+        Stage06AuthorizationError,
+        Stage06PaginationError,
+    ) as exc:
         _commit_if_sqlalchemy(uow)
         raise _http_error(exc) from exc
     return ViewRecordsResponse(**response)
@@ -390,8 +403,13 @@ def _commit_if_sqlalchemy(uow: Stage06PlatformUnitOfWork) -> None:
 
 
 def _http_error(
-    exc: PlatformValidationError | Stage06AuthorizationError,
+    exc: PlatformValidationError | Stage06AuthorizationError | Stage06PaginationError,
 ) -> HTTPException:
+    if isinstance(exc, Stage06PaginationError):
+        return HTTPException(
+            status_code=422,
+            detail=error_detail(exc.code, str(exc)),
+        )
     if isinstance(exc, Stage06AuthorizationError):
         status_code = 404 if exc.code.endswith("_not_found") else 403
         return HTTPException(
