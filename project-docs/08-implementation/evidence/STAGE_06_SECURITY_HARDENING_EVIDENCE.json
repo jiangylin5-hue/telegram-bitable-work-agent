@@ -1,13 +1,13 @@
 {
   "schema_version": "stage06-security-evidence-v1",
-  "generated_at": "2026-07-09T21:33:45.894677+00:00",
+  "generated_at": "2026-07-09T21:48:46.917774+00:00",
   "status": "passed",
   "migration_head": "20260710_0020",
   "checks": [
     {
       "case_id": "stage06_unit_security",
       "status": "passed",
-      "passed_count": 128,
+      "passed_count": 129,
       "skipped_count": 0
     },
     {

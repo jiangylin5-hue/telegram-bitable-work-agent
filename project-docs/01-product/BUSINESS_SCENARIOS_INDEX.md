@@ -1,87 +1,107 @@
-# Business Scenarios Index
+# Templates And Scenarios Index
 
 ## Status
 
-- Document status: product scenario index draft
-- Scope: 当前项目核心业务场景索引和阶段优先级
-- Current Progress: 2026-07-04 建立核心业务场景索引，并要求所有场景对齐多维表格总蓝图的 table、view、automation 和 Agent landing point。
+- Document status: active product template/scenario index
+- Scope: Stage06 通用平台模板、示例业务场景和历史垂直场景入口
+- Current Progress: 2026-07-09 Rewritten for the Stage06 platform pivot. The active index now prioritizes generic templates and platform scenarios. Advertising-agency workflows are retained as historical scenario documents and optional sample-template inputs.
 
-## 1. Scenario Principles
+## 1. Index Principle
 
-所有业务场景必须遵守：
+Stage06 starts from platform resources, not vertical business assumptions.
 
-- 所有业务场景从多维表格反推，不从 Agent 想象反推。
-- 每个场景必须明确最终落在哪张表、哪个视图、哪类记录、哪种状态。
-- Telegram 消息是入口，不是权限来源。
-- Agent 可以识别、整理、摘要、生成草稿、查询授权数据；在人工确认后可以凭 `execution_ticket` 调用受控工具执行真实动作。
-- 禁止的是绕过权限、人工确认、幂等、审计和 Tool Gateway 的裸写入。
-- 真实执行必须经过用户身份、客户/账户 scope、动作权限、字段权限、幂等、风险策略和人工确认。
-- 所有关键动作必须有 audit event。
-- 所有外部写入成功必须有 execution log。
-- unknown、stale data、missing permission 不能被 AI 编造成确定事实。
-
-## 1.1 Bitable Endpoint Rule
-
-每个场景必须定义 Bitable endpoint：
+Every template or scenario must answer:
 
 | Concept | Required answer |
 | --- | --- |
-| Table | 该场景的主数据表是什么 |
-| Fields | 核心字段和字段类型是什么 |
-| Linked records | 关联客户、账户、消息、服务、审计中的哪些记录 |
-| Views | 由哪些视图承载 |
-| Automation | 哪些状态变化触发提醒、日报、确认、执行 |
-| Agent output | Agent 输出最终写入哪条记录 |
+| Workspace/Base | 属于哪个 workspace/base |
+| Tables | 创建哪些 table |
+| Fields | 核心字段和字段类型 |
+| Linked records | 哪些表之间有关联 |
+| Views | grid/kanban/calendar/form-lite 如何承载 |
+| Permissions | 谁能看、谁能写、谁能确认 |
+| Digital employee | 是否需要默认数字员工 |
+| Draft endpoint | Agent 写入是否进入 `record_change_drafts` |
+| Audit endpoint | 哪些动作写 `audit_events` |
 
-没有 Bitable endpoint 的场景不得进入实现。
+没有 table endpoint 的场景不得进入实现计划。
 
-具体 table、field、linked record、view、permission、automation 和 Agent 起点/落点以 [Bitable Schema Blueprint](../03-modules/BITABLE_SCHEMA_BLUEPRINT.md) 为准。场景文档不得定义与蓝图冲突的表格终点。
+## 2. Stage06 Primary Templates
 
-## 2. Priority Scenarios
-
-| Priority | Scenario | Document | Why |
+| Priority | Template | Purpose | Stage06 status |
 | --- | --- | --- | --- |
-| P0 | 充值闭环 | [RECHARGE_WORKFLOW.md](scenarios/RECHARGE_WORKFLOW.md) | 同时验证销售、财务、生产、金额、权限、幂等、执行、回读和审计 |
-| P0 | Telegram 消息转服务草稿 | [TELEGRAM_INGESTION_MODULE.md](../03-modules/TELEGRAM_INGESTION_MODULE.md) | 所有 AI 工作智能体的入口 |
-| P1 | 账户库存管理 | [ACCOUNT_INVENTORY_WORKFLOW.md](scenarios/ACCOUNT_INVENTORY_WORKFLOW.md) | 管理生产账户、未启用账户、已分配账户、客户归属和状态 |
-| P1 | 分户 / BM invite / 账户生产 | [BM_INVITE_AND_ACCOUNT_PRODUCTION.md](scenarios/BM_INVITE_AND_ACCOUNT_PRODUCTION.md) | 广告账户服务核心动作 |
-| P1 | 卡资源 / 卡台 | [CARD_PLATFORM_WORKFLOW.md](scenarios/CARD_PLATFORM_WORKFLOW.md) | 管理 tokenized profile、卡状态、额度和可用性 |
-| P1 | 客户日报和公司日报 | [CUSTOMER_DAILY_REPORTING.md](scenarios/CUSTOMER_DAILY_REPORTING.md) | 每日统计客户账户消耗并自动发送客户/公司日报 |
-| P2 | 消耗与风险统计 | [SPEND_RISK_STATISTICS.md](scenarios/SPEND_RISK_STATISTICS.md) | 支持低余额、异常消耗、stale data 和风险提示 |
+| P0 | CRM / Customer Management | 客户、联系人、跟进、状态、负责人 | Required |
+| P0 | Project / Task | 项目、任务、负责人、进度、截止日期 | Required |
+| P0 | Customer Service / Ticket | 工单、优先级、状态、处理人、回复草稿 | Required |
+| P0 | Inventory / Asset | 资产、库存、分配、异常、状态 | Required |
+| P1 | Advertising Agency Sample | 充值、账户、绑卡、日报等历史能力样例 | Optional sample |
 
-## 3. MVP Scenario
+## 3. Platform Scenarios
 
-第一阶段推荐只承诺一条主闭环：
+| Scenario | Description | Required endpoint |
+| --- | --- | --- |
+| Create base from scratch | 用户手动创建 base/table/fields/views | `bases`、`tables`、`fields`、`views` |
+| Import CSV/Excel | 用户上传表格，系统推断字段，用户确认后创建 table | `import_jobs`、`fields`、`records` |
+| Save as template | 将已有 base/table/view/agent 配置保存为模板 | `templates` |
+| Install template | 从官方模板创建 base | `template_installations`、`bases` |
+| Configure permissions | 配置 workspace/base/table/view/field/action 权限 | `permission_bindings` |
+| Create digital employee | 基于 base/table/view 创建数字员工 | `digital_employees` |
+| Ask digital employee | Telegram 或 Mini App 中提问 | `agent_runs`、optional `record_change_drafts` |
+| Confirm record draft | 用户确认数字员工生成的写入草稿 | `record_change_drafts`、`records`、`audit_events` |
+| Controlled notification | 数字员工生成受控通知草稿或发送请求 | `notification_requests`、`audit_events` |
+
+## 4. Template Requirements
+
+Each official template should include:
+
+- template metadata;
+- table definitions;
+- field definitions;
+- linked record definitions;
+- view definitions;
+- sample records;
+- default permission recommendations;
+- default digital employee preset;
+- import mapping hints;
+- acceptance examples.
+
+Templates must not hardcode platform rules. Installing a template creates ordinary bases, tables, fields, views and optional digital employees.
+
+## 5. Historical Advertising Scenarios
+
+The following documents are retained as historical Stage02-05 capability references and future template input:
+
+- [Recharge Workflow](scenarios/RECHARGE_WORKFLOW.md)
+- [Account Inventory Workflow](scenarios/ACCOUNT_INVENTORY_WORKFLOW.md)
+- [BM Invite And Account Production](scenarios/BM_INVITE_AND_ACCOUNT_PRODUCTION.md)
+- [Card Platform Workflow](scenarios/CARD_PLATFORM_WORKFLOW.md)
+- [Customer Daily Reporting](scenarios/CUSTOMER_DAILY_REPORTING.md)
+- [Spend Risk Statistics](scenarios/SPEND_RISK_STATISTICS.md)
+
+They are not the Stage06 product center. If reused in Stage06, they must be converted into the `Advertising Agency Sample` template and expressed through generic platform resources.
+
+## 6. Stage06 MVP Scenario
+
+The Stage06 pilot should prove one generic path, not one advertising path:
 
 ```text
-客户充值请求
--> Telegram 消息识别
--> recharge draft
--> 财务确认收款证据
--> 生产确认账户和执行条件
--> controlled recharge execution
--> execution log
--> balance readback
--> Telegram 回传
+workspace created
+-> base created from template or import
+-> table fields confirmed
+-> view configured
+-> digital employee created from table/view
+-> Telegram @ mention resolves context
+-> digital employee reads permitted records
+-> digital employee creates record_change_draft
+-> user confirms
+-> record updates
+-> audit event written
 ```
 
-该场景不要求第一版完成真实外部 provider 写入，可以先以 controlled service mock / sandbox adapter 方式验证状态机、权限、队列、审计和 Agent 输出。
+## 7. Acceptance Criteria
 
-## 4. Scenario Document Requirements
-
-每个复杂场景文档必须包含：
-
-- Bitable endpoint。
-- Business value。
-- Actors。
-- Preconditions。
-- Trigger。
-- Workflow。
-- Data handling。
-- Permission checks。
-- LLM usage。
-- What we do。
-- What we do not do。
-- Failure handling。
-- Audit and execution evidence。
-- Acceptance Criteria。
+- Generic templates appear before the advertising sample.
+- A user can run the pilot without choosing the advertising sample.
+- Every template maps to platform resources in [Bitable Schema Blueprint](../03-modules/BITABLE_SCHEMA_BLUEPRINT.md).
+- Every Agent/digital employee action maps to [Agents Index](../04-agents/AGENTS_INDEX.md).
+- Historical advertising documents are clearly marked as historical/template input.

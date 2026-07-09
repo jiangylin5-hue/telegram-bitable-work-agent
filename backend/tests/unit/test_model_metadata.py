@@ -34,6 +34,26 @@ CORE_TABLES = {
     "telegram_send_requests",
 }
 
+STAGE06_TABLES = {
+    "workspaces",
+    "workspace_members",
+    "stage06_telegram_bindings",
+    "bases",
+    "tables",
+    "fields",
+    "records",
+    "record_links",
+    "views",
+    "forms",
+    "templates",
+    "template_installations",
+    "import_jobs",
+    "digital_employees",
+    "record_change_drafts",
+    "notification_requests",
+    "stage06_idempotency_records",
+}
+
 FORBIDDEN_COLUMNS = {
     "tenant_id",
     "raw_card_number",
@@ -44,6 +64,10 @@ FORBIDDEN_COLUMNS = {
 
 def test_core_tables_are_registered_in_metadata() -> None:
     assert CORE_TABLES.issubset(set(metadata.tables))
+
+
+def test_stage06_tables_are_registered_in_metadata() -> None:
+    assert STAGE06_TABLES.issubset(set(metadata.tables))
 
 
 def test_stage_02_does_not_introduce_tenant_or_raw_payment_columns() -> None:

@@ -4,6 +4,7 @@
 
 - Migrated into this project on 2026-07-04 from `D:\广告saas\project-docs\01-product\MULTIDIMENSIONAL_AGENT_PROJECT_INITIATION.md`.
 - This document is retained as product background and scenario reference.
+- Stage06 supersedes this document's advertising-agency-first product framing. The active product is now a generic multidimensional table, no-code workspace and table-bound digital employee platform; advertising-agency workflows are template/sample input only.
 - Links and references to Stage 07, existing SaaS backend, `/api/employee-ops/...`, and old project source-of-truth files are historical context, not binding constraints for this new project.
 - Historical wording that says AI only generates drafts is superseded by the current project rule: Agent can query authorized business data and, after human confirmation, execute through `execution_ticket` and controlled tools.
 - For the new project boundary, see [Telegram 多维表格和工作智能体新项目产品简报](TELEGRAM_MULTIDIMENSIONAL_AGENT_NEW_PROJECT_BRIEF.md).
@@ -14,9 +15,9 @@
 - Proposed direction: Feishu Bitable-style multidimensional table + agent operating system
 - Current active stage: none selected after Stage 07 local acceptance closure
 - Related source of truth: [IMPLEMENTATION_SOURCE_OF_TRUTH.md](../00-governance/IMPLEMENTATION_SOURCE_OF_TRUTH.md)
-- Related product charter: [PROJECT_CHARTER.md](PROJECT_CHARTER.md)
-- Related functional outline: [FUNCTIONAL_OUTLINE.md](FUNCTIONAL_OUTLINE.md)
-- Last closed stage: [STAGE_07_EMPLOYEE_ACCOUNT_OPS_DESK.md](../03-stages/STAGE_07_EMPLOYEE_ACCOUNT_OPS_DESK.md)
+- Related product charter: historical `PROJECT_CHARTER.md` from the migrated source, not present in this repository.
+- Related functional outline: historical `FUNCTIONAL_OUTLINE.md` from the migrated source, not present in this repository.
+- Last closed stage: historical `STAGE_07_EMPLOYEE_ACCOUNT_OPS_DESK.md` from the migrated source, not present in this repository.
 - Document boundary: this document collects project initiation thinking and next-stage candidate scope. It does not switch Active Stage, change schema/API contracts, or authorize implementation.
 - Current Progress: 2026-07-04 作为迁移背景文档保留，并补充当前项目的高权限 Agent 与受控执行边界覆盖旧口径。
 

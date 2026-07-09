@@ -180,7 +180,7 @@ python -m pytest tests -q
 ```
 
 ```text
-401 passed, 17 skipped
+402 passed, 17 skipped
 ```
 
 Skipped tests require `STAGE02_ONLINE_DATABASE_URL` and belong to old online PostgreSQL smoke coverage.

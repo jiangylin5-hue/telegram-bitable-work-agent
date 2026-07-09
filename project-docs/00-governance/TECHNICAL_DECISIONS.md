@@ -4,7 +4,8 @@
 
 - Document status: active technical decision record
 - Scope: 技术选型、替代方案、确认状态和变更规则
-- Current Progress: 2026-07-04 用户确认方案 A、OpenRouter、Agent 查库统计、人工确认后受控执行模型，以及 Stage 02 开发范围和 mock/sandbox 策略。
+- Current Progress: 2026-07-10 Added Stage06 platform-pivot decision and backend-readiness evidence: the active product is a generic Feishu-like multidimensional table, no-code workspace and table-bound digital employee platform. Core records move toward typed field metadata plus JSONB values; advertising-agency workflows become templates/samples, not platform core. Real OpenRouter summarize/draft smoke, local PostgreSQL migration smoke and real Telegram backend entry smoke have evidence for the current non-UI backend pass.
+- Current Progress Update: 2026-07-04 用户确认方案 A、OpenRouter、Agent 查库统计、人工确认后受控执行模型，以及 Stage 02 开发范围和 mock/sandbox 策略。
 
 ## TDR-001 Backend Language
 
@@ -136,3 +137,75 @@
   - outbox table 能保证数据库事务和异步任务投递一致，是后续真实 provider 接入的可靠基础。
 - Implementation plan:
   - [Stage 02 Backend Kernel And Vertical Slices Implementation Plan](../08-implementation/STAGE_02_BACKEND_KERNEL_AND_VERTICAL_SLICES_PLAN.md)。
+
+## TDR-012 Stage06 Platform Pivot
+
+- Status: accepted
+- Decision: Stage06 active product direction is a generic Feishu-like multidimensional table, no-code workspace and table-bound digital employee platform.
+- Data model direction:
+  - Use generic `workspace -> base -> table -> field -> record -> view` platform resources.
+  - Store generic record values in PostgreSQL JSONB.
+  - Store field type, validation, relation, lookup, view and permission rules as metadata.
+  - Treat vertical business tables as template-created ordinary tables unless a later document justifies a specialized backend table.
+- Feishu/Lark relationship:
+  - Imitate Feishu Base / Lark Base product grammar and `larksuite/cli` skill/capability organization.
+  - Do not integrate Feishu/Lark APIs in Stage06.
+  - Do not aim for Feishu API compatibility.
+- Advertising-agency relationship:
+  - Stage02 to Stage05 advertising workflows are retained as historical implementation evidence and optional official template input.
+  - They are not the platform core.
+- Digital employee decision:
+  - Digital employees are configurable resources bound to bases, tables and views.
+  - Effective scope is `agent_configured_scope ∩ caller_user_scope ∩ telegram_chat_scope`.
+  - Write-like actions default to `record_change_drafts` and human confirmation before commit.
+- Rationale:
+  - The user confirmed the final product should resemble Feishu Base as a universal platform rather than a single advertising-agency tool.
+  - Generic table metadata plus JSONB values lets users create and import arbitrary tables without a migration per business scenario.
+  - Template-based vertical workflows preserve Stage02 to Stage05 work without letting it dominate the product.
+- Reference:
+  - [Stage 06 LarkSuite Benchmark Audit](../08-implementation/STAGE_06_LARKSUITE_BENCHMARK_AUDIT.md)
+  - [Bitable Schema Blueprint](../03-modules/BITABLE_SCHEMA_BLUEPRINT.md)
+
+## TDR-013 Stage06 Backend Readiness Before UI
+
+- Status: accepted
+- Decision: UI implementation is deferred until the backend readiness pass is complete and the user explicitly confirms a separate UI phase.
+- Frontend target retained:
+  - React + Vite + TypeScript + Tailwind + shadcn/ui + lucide-react.
+  - Telegram Mini App first, desktop-browser-compatible route required.
+- Current backend-readiness scope:
+  - real LangGraph/OpenRouter digital employee invocation;
+  - local PostgreSQL Alembic migration smoke against real PostgreSQL;
+  - Telegram entry/backend smoke with test bot/allowlist when credentials are configured;
+  - audit and safety readback.
+- Rationale:
+  - The user explicitly directed: "UI先不做，后端接好后，在等我确认后单独做".
+  - Backend contracts and smoke evidence should stabilize before UI implementation depends on them.
+
+## TDR-014 Stage06 Telegram Ecosystem Pilot Cut
+
+- Status: accepted
+- Decision: Stage06 pilot evidence should focus on Telegram ecosystem productivity, not an advertising-agency workflow.
+- Required framing:
+  - Telegram chats, mentions, tasks, notifications, table records, digital employee collaboration and audit readback are the pilot cut.
+  - Advertising-agency examples remain optional templates/samples only.
+  - No real business external systems are connected in Stage06.
+- Rationale:
+  - The product direction is a generic Telegram-first no-code workspace.
+  - The user explicitly rejected using advertising operations as the Stage06 pilot entry.
+
+## TDR-015 Stage06 Real LLM And Local PostgreSQL Smoke
+
+- Status: accepted
+- Decision: Stage06 backend readiness must include real LLM execution through LangGraph/OpenRouter and real PostgreSQL migration smoke against local PostgreSQL.
+- LLM rules:
+  - Deterministic backend tool gateway remains a test and fallback mode.
+  - At least one real OpenRouter-compatible call must be possible when `OPENROUTER_API_KEY` is configured.
+  - Real LLM outputs may answer, summarize or create drafts, but must not directly write records or bypass permissions.
+- Database smoke rules:
+  - Local PostgreSQL is acceptable for this backend-readiness pass.
+  - SQLite or in-memory tests do not satisfy this smoke.
+  - Local PostgreSQL smoke is not remote staging/production evidence.
+- Rationale:
+  - The user explicitly accepted local PostgreSQL for the fourth unresolved item.
+  - The user explicitly required true LLM calls for the fifth unresolved item.

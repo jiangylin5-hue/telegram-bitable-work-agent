@@ -1,10 +1,11 @@
-# Telegram 多维表格和工作智能体项目文档
+# Telegram 多维表格和数字员工平台项目文档
 
 ## Status
 
 - Document status: active project document index
-- Current project mode: Stage 05 functional/staging acceptance closeout
-- Current Progress: 2026-07-08 Stage 05 functional/staging acceptance has passed with documented residual risks. Evidence covers local focused/full regression, Tencent Cloud staging migration, real OpenRouter AgentRun, real Telegram allowlisted receipt, business no-op evidence, controlled account exception, additional three-message Telegram exercise and safety close. Stage05 is not production launch and does not approve real customer/group sends, provider writes, funds movement, account production or automatic replacement. Remaining follow-up is durable commit/artifact hygiene plus optional online PostgreSQL smoke and later-stage reporting/balance support.
+- Current project mode: Stage 06 backend stage accepted; next phase requires separate confirmation
+- Current Progress: 2026-07-10 Stage06 backend-stage acceptance passed after correcting Stage06 files that had remained in the Stage05 worktree. Active top-level documents define a generic Feishu-like multidimensional table, no-code workspace and table-bound digital employee platform. Fresh verification covers 129 Stage06-focused tests, 402 full-backend tests, Alembic `20260710_0020`, real local PostgreSQL security/concurrency smoke and sanitized evidence. Retained external evidence covers real OpenRouter summarize/draft and Telegram backend entry. Mini App and production deployment remain later gates.
+- Current Progress Update: 2026-07-08 Stage 05 functional/staging acceptance has passed with documented residual risks. Evidence covers local focused/full regression, Tencent Cloud staging migration, real OpenRouter AgentRun, real Telegram allowlisted receipt, business no-op evidence, controlled account exception, additional three-message Telegram exercise and safety close. Stage05 is not production launch and does not approve real customer/group sends, provider writes, funds movement, account production or automatic replacement. Remaining follow-up is durable commit/artifact hygiene plus optional online PostgreSQL smoke and later-stage reporting/balance support.
 - Current Progress Update: 2026-07-07 Added Stage05 requirement traceability audit to the implementation document map so final acceptance can be checked requirement-by-requirement instead of inferred from local tests alone.
 - Current Progress Update: 2026-07-07 Added Stage05 pre-staging approval packet to make Task12 real staging approval scope explicit before external actions.
 - Current Progress Update: 2026-07-07 Synchronized Stage05 top-level indexes with the latest local evidence and clarified that the only remaining acceptance blockers are Task12 external staging evidence and safety close.
@@ -23,15 +24,15 @@
 
 ### Product
 
-- [迁移版立项文档：Multidimensional Table And Agent Project Initiation](01-product/MULTIDIMENSIONAL_AGENT_PROJECT_INITIATION.md)
-- [Telegram 多维表格和工作智能体新项目产品简报](01-product/TELEGRAM_MULTIDIMENSIONAL_AGENT_NEW_PROJECT_BRIEF.md)
-- [Business Scenarios Index](01-product/BUSINESS_SCENARIOS_INDEX.md)
-- [Recharge Workflow](01-product/scenarios/RECHARGE_WORKFLOW.md)
-- [Account Inventory Workflow](01-product/scenarios/ACCOUNT_INVENTORY_WORKFLOW.md)
-- [BM Invite And Account Production](01-product/scenarios/BM_INVITE_AND_ACCOUNT_PRODUCTION.md)
-- [Card Platform Workflow](01-product/scenarios/CARD_PLATFORM_WORKFLOW.md)
-- [Customer Daily Reporting](01-product/scenarios/CUSTOMER_DAILY_REPORTING.md)
-- [Spend Risk Statistics](01-product/scenarios/SPEND_RISK_STATISTICS.md)
+- [迁移版立项文档：Multidimensional Table And Agent Project Initiation](01-product/MULTIDIMENSIONAL_AGENT_PROJECT_INITIATION.md) - historical
+- [Telegram 多维表格和数字员工平台产品简报](01-product/TELEGRAM_MULTIDIMENSIONAL_AGENT_NEW_PROJECT_BRIEF.md)
+- [Templates And Scenarios Index](01-product/BUSINESS_SCENARIOS_INDEX.md)
+- [Recharge Workflow](01-product/scenarios/RECHARGE_WORKFLOW.md) - historical advertising sample input
+- [Account Inventory Workflow](01-product/scenarios/ACCOUNT_INVENTORY_WORKFLOW.md) - historical advertising sample input
+- [BM Invite And Account Production](01-product/scenarios/BM_INVITE_AND_ACCOUNT_PRODUCTION.md) - historical advertising sample input
+- [Card Platform Workflow](01-product/scenarios/CARD_PLATFORM_WORKFLOW.md) - historical advertising sample input
+- [Customer Daily Reporting](01-product/scenarios/CUSTOMER_DAILY_REPORTING.md) - historical advertising sample input
+- [Spend Risk Statistics](01-product/scenarios/SPEND_RISK_STATISTICS.md) - historical advertising sample input
 
 ### Architecture
 
@@ -47,14 +48,14 @@
 
 ### Agents
 
-- [Agents Index](04-agents/AGENTS_INDEX.md)
-- [Operations Supervisor Agent](04-agents/OPERATIONS_SUPERVISOR_AGENT.md)
-- [Message Intake Router Agent](04-agents/MESSAGE_INTAKE_ROUTER_AGENT.md)
-- [Account Inventory Agent](04-agents/ACCOUNT_INVENTORY_AGENT.md)
-- [Recharge And Binding Agent](04-agents/RECHARGE_AND_BINDING_AGENT.md)
-- [Finance Reconciliation Agent](04-agents/FINANCE_RECONCILIATION_AGENT.md)
-- [Card Resource Agent](04-agents/CARD_RESOURCE_AGENT.md)
-- [Customer Reporting Agent](04-agents/CUSTOMER_REPORTING_AGENT.md)
+- [Digital Employees Index](04-agents/AGENTS_INDEX.md)
+- [Operations Supervisor Agent](04-agents/OPERATIONS_SUPERVISOR_AGENT.md) - historical/preset reference
+- [Message Intake Router Agent](04-agents/MESSAGE_INTAKE_ROUTER_AGENT.md) - historical/preset reference
+- [Account Inventory Agent](04-agents/ACCOUNT_INVENTORY_AGENT.md) - historical/preset reference
+- [Recharge And Binding Agent](04-agents/RECHARGE_AND_BINDING_AGENT.md) - historical/preset reference
+- [Finance Reconciliation Agent](04-agents/FINANCE_RECONCILIATION_AGENT.md) - historical/preset reference
+- [Card Resource Agent](04-agents/CARD_RESOURCE_AGENT.md) - historical/preset reference
+- [Customer Reporting Agent](04-agents/CUSTOMER_REPORTING_AGENT.md) - historical/preset reference
 
 ### Data And Queue
 
@@ -125,16 +126,24 @@
 - [Stage 05 Requirement Traceability Audit](08-implementation/STAGE_05_REQUIREMENT_TRACEABILITY_AUDIT.md)
 - [Stage 05 Progress](08-implementation/STAGE_05_PROGRESS.md)
 - [Stage 05 Final Acceptance Report](08-implementation/STAGE_05_FINAL_ACCEPTANCE_REPORT.md)
+- [Stage 06 LarkSuite Benchmark Audit](08-implementation/STAGE_06_LARKSUITE_BENCHMARK_AUDIT.md)
+- [Stage 06 Source Of Truth](08-implementation/STAGE_06_SOURCE_OF_TRUTH.md)
+- [Stage 06 Implementation Plan](08-implementation/STAGE_06_IMPLEMENTATION_PLAN.md)
+- [Stage 06 SDD](08-implementation/STAGE_06_SDD.md)
+- [Stage 06 API Data Security Contract](08-implementation/STAGE_06_API_DATA_SECURITY_CONTRACT.md)
+- [Stage 06 BDD And Acceptance](08-implementation/STAGE_06_BDD_AND_ACCEPTANCE.md)
+- [Stage 06 Progress](08-implementation/STAGE_06_PROGRESS.md)
+- [Stage 06 Stage Acceptance Report](08-implementation/STAGE_06_STAGE_ACCEPTANCE_REPORT.md)
 
 ## Project Boundary
 
 本项目可以重新开发，不必严格依赖 `D:\广告saas` 的既有后端框架、Stage 文档或技术栈。
 
-迁移版立项文档只作为业务背景、场景边界和产品方向参考；本项目后续应重新确认技术选型、系统架构、权限模型、数据库 schema、Agent 编排和实现阶段。
+迁移版立项文档和 Stage02-05 广告业务文档只作为历史背景、实现证据和模板输入；Stage06 active truth 以通用平台文档为准。
 
 ## Product Constitution
 
-多维表格是本项目的底层参照。所有业务场景、Agent、工具和执行流程都必须从多维表格的 table、field、linked record、view、permission、automation 反推。
+多维表格是本项目的产品宪法。所有模板、场景、数字员工、工具和执行流程都必须从 workspace、base、table、field、record、view、permission、automation 反推。
 
 所有 workflow 的终点必须是多维表格中的记录、状态、视图、自动化、执行日志或审计事件。只停留在 Telegram 聊天、临时 Agent memory、未落表 JSON 或口头结论里的结果，不算完成。
 

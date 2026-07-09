@@ -1,82 +1,97 @@
-# Agents Index
+# Digital Employees Index
 
 ## Status
 
-- Document status: agent index draft
-- Scope: 高权限工作智能体目录、命名、职责、协作关系
-- Current Progress: 2026-07-04 根据真实岗位分工重命名并重写 Agent 架构，并要求所有 Agent 以多维表格总蓝图为起点和落点。
+- Document status: active digital employee index
+- Scope: Stage06 通用平台数字员工模型、权限、运行入口和历史 Agent 文档入口
+- Current Progress: 2026-07-09 Rewritten for the Stage06 platform pivot. The active model is now configurable table-bound digital employees. Stage02-05 role Agents remain historical capability references and optional template presets.
 
-## 1. Naming Principles
+## 1. Naming Principle
 
-Agent 命名必须贴近真实业务岗位和数据职责，而不是泛泛的技术能力。
+Stage06 no longer starts from fixed business-role Agents. It starts from user-created digital employees bound to platform resources.
 
-旧命名问题：
+Digital employee naming should describe:
 
-- `Stats Risk Agent` 不清楚具体岗位价值。
-- `Recharge Agent` 没有覆盖 Meta 绑卡、账户余额登记、一卡一户。
-- `Account Production Agent` 没有明确账户库存、未启用、已分配、给到谁、当前状态。
-- `Card Platform Agent` 没有区分卡资源管理和真实绑卡执行。
+- which base/table/view it works on;
+- what outcome it supports;
+- what actions it can perform;
+- whether writes require confirmation.
 
-新命名：
+Examples:
 
-| Agent | Chinese name | Primary role |
+| Digital employee | Bound context | Purpose |
 | --- | --- | --- |
-| Operations Supervisor Agent | 运营主管 Agent | 调度、路由、协作、确认点、执行票据 |
-| Message Intake Router Agent | 消息入口路由 Agent | Telegram 消息分类、客户识别、任务路由 |
-| Account Inventory Agent | 账户库存 Agent | 管理账户库存、生产账户、分配状态、客户归属 |
-| Recharge And Binding Agent | 充值绑卡执行 Agent | Meta 后台绑卡、充值、余额登记、一卡一户 |
-| Finance Reconciliation Agent | 财务核对 Agent | 收款、金额、币种、财务异常、充值前财务确认 |
-| Card Resource Agent | 卡资源 Agent | 卡台资源、tokenized profile、卡状态、额度和可用性 |
-| Customer Reporting Agent | 客户日报与消耗 Agent | 每个客户每日账户消耗、客户日报、公司全局日报 |
+| CRM Follow-up Assistant | CRM base, customers and follow-ups views | Summarize customers and draft follow-up updates |
+| Project Coordinator | Project/task base, task kanban and calendar | Summarize overdue work and draft status changes |
+| Ticket Triage Assistant | Customer service base, ticket queue | Classify tickets and draft replies/status changes |
+| Inventory Clerk | Inventory/asset base, stock and exception views | Summarize stock and draft allocation/status changes |
+| Advertising Ops Assistant | Advertising sample base | Historical vertical sample, not default platform center |
 
-## 2. Global Agent Authority
+## 2. Required Configuration
 
-Agent 可以：
+Every digital employee must have:
 
-- 通过授权 database/query tools 查客户、账户、库存、余额、消耗、绑卡、充值、服务记录。
-- 通过 statistics tools 聚合客户日报、公司日报、账户库存状态。
-- 通过 mutation tools 写草稿、任务、日报、风险事件、账户库存状态。
-- 通过 execution ticket 调用 controlled execution tools 执行真实动作。
+| Field | Meaning |
+| --- | --- |
+| `id` | digital employee id |
+| `workspace_id` | owning workspace |
+| `base_id` | default base |
+| `name` | display name |
+| `description` | user-facing purpose |
+| `telegram_alias` | optional `@` alias |
+| `accessible_tables` | max table scope |
+| `accessible_views` | max view scope |
+| `field_policy` | field visibility and masking |
+| `allowed_actions` | query, summarize, draft_create, draft_update, status_advance, notify |
+| `confirmation_policy` | which actions require confirmation |
+| `response_style` | concise, operational, formal, support-oriented |
+| `status` | active, disabled, draft |
 
-Agent 不可以：
+## 3. Runtime Permission Rule
 
-- 裸连数据库。
-- 裸写 SQL。
-- 裸调 Meta、卡台、充值 provider。
-- 无人工确认执行高风险动作。
-- 读取 raw card / CVV / 未脱敏支付凭证。
-
-## 2.1 Bitable Endpoint Rule
-
-每个 Agent 必须说明：
-
-- 读取哪些多维表格 table/view。
-- 更新哪些多维表格 record/status。
-- 触发哪些 automation/job。
-- 输出最终落到哪个 table/view。
-
-Agent 的最终价值不是“回答了什么”，而是“让多维表格中的业务记录、状态、视图、日报或审计发生了什么可追踪变化”。
-
-每个 Agent 的 start view、read tables、write tables、automation 和 landing point 必须与 [Bitable Schema Blueprint](../03-modules/BITABLE_SCHEMA_BLUEPRINT.md) 保持一致。
-
-## 3. Collaboration Map
+Effective scope is always:
 
 ```text
-Message Intake Router
-    -> Account Inventory Agent
-    -> Recharge And Binding Agent
-    -> Finance Reconciliation Agent
-    -> Card Resource Agent
-    -> Customer Reporting Agent
-
-Operations Supervisor
-    -> decides collaboration sequence
-    -> requests human confirmation
-    -> issues or validates execution ticket
-    -> monitors execution and reporting
+agent_configured_scope
+∩ caller_user_scope
+∩ telegram_chat_scope
 ```
 
-## 4. Agent Documents
+If any layer does not permit a read or action, the digital employee must return a permission-safe response and write an audit event.
+
+## 4. Allowed Actions
+
+Stage06 allows:
+
+- `schema.inspect`
+- `record.query`
+- `record.summarize`
+- `record_change_draft.create`
+- `record_change_draft.update`
+- `queue.status_advance_draft`
+- `notification_request.create`
+
+Stage06 does not allow by default:
+
+- raw SQL;
+- direct database writes by LLM;
+- permission mutation by digital employee;
+- broad Telegram sends;
+- real external provider writes;
+- funds/account operations.
+
+## 5. Interaction Surfaces
+
+| Surface | Role |
+| --- | --- |
+| Telegram group/private chat | `@digital_employee` mention, quick questions, confirmation prompts |
+| Telegram Mini App | workspace/base/table UI, confirmation, permission-aware views |
+| Desktop browser route | import, table building, template installation, permission configuration |
+| Backend API | controlled tool surface and audit |
+
+## 6. Historical Agent Documents
+
+These documents remain useful as Stage02-05 implementation history and future template presets:
 
 - [Operations Supervisor Agent](OPERATIONS_SUPERVISOR_AGENT.md)
 - [Message Intake Router Agent](MESSAGE_INTAKE_ROUTER_AGENT.md)
@@ -86,13 +101,16 @@ Operations Supervisor
 - [Card Resource Agent](CARD_RESOURCE_AGENT.md)
 - [Customer Reporting Agent](CUSTOMER_REPORTING_AGENT.md)
 
-## 5. Legacy Documents
+They are not the default Stage06 architecture. If reused, they should be expressed as digital employee presets installed by a template.
 
-以下旧文档保留为兼容入口，但已不再作为主设计：
+## 7. Completion Definition
 
-- `TELEGRAM_TRIAGE_AGENT.md`
-- `RECHARGE_AGENT.md`
-- `FINANCE_AGENT.md`
-- `ACCOUNT_PRODUCTION_AGENT.md`
-- `CARD_PLATFORM_AGENT.md`
-- `STATS_RISK_AGENT.md`
+A digital employee action is complete only when:
+
+- the base/table/view context is resolved;
+- effective scope is computed;
+- all reads use permission-filtered records;
+- any write-like output becomes a `record_change_draft` unless explicitly direct-safe;
+- confirmation is recorded where required;
+- final record/status/audit change is persisted;
+- Telegram response references persisted state rather than unsupported claims.

@@ -26,6 +26,29 @@ from app.models.reporting import (
 )
 from app.models.service import ExecutionLog, ExecutionTicket, ServiceRecord
 from app.models.service_drafts import ServiceDraft
+from app.models.stage06_hardening import Stage06IdempotencyRecord
+from app.models.stage06_platform import (
+    BitableBase,
+    PlatformField,
+    PlatformForm,
+    PlatformRecord,
+    PlatformTable,
+    PlatformView,
+    RecordLink,
+    Stage06TelegramBinding,
+    Workspace,
+    WorkspaceMember,
+)
+from app.models.stage06_runtime import (
+    DigitalEmployee,
+    NotificationRequest,
+    RecordChangeDraft,
+)
+from app.models.stage06_templates import (
+    ImportJob,
+    PlatformTemplate,
+    TemplateInstallation,
+)
 from app.models.telegram import (
     Message,
     TelegramCustomerBinding,
@@ -50,8 +73,11 @@ __all__ = [
     "Customer",
     "CustomerGroup",
     "CustomerDailyReport",
+    "DigitalEmployee",
     "FieldPermission",
+    "ImportJob",
     "Message",
+    "NotificationRequest",
     "OpsAuditEvent",
     "OutboxEvent",
     "PaymentProfile",
@@ -62,12 +88,26 @@ __all__ = [
     "RiskEvent",
     "ServiceRecord",
     "ServiceDraft",
+    "BitableBase",
+    "PlatformField",
+    "PlatformForm",
+    "PlatformRecord",
+    "PlatformTable",
+    "PlatformView",
+    "PlatformTemplate",
+    "RecordChangeDraft",
+    "RecordLink",
+    "Stage06TelegramBinding",
+    "Stage06IdempotencyRecord",
     "TableView",
     "TelegramCustomerBinding",
     "TelegramIdentity",
     "TelegramSendRequest",
+    "TemplateInstallation",
     "User",
     "ViewColumn",
     "ViewFilter",
+    "Workspace",
+    "WorkspaceMember",
     "metadata",
 ]

@@ -3,92 +3,137 @@
 ## Status
 
 - Document status: active project collaboration rule
-- Scope: Telegram 多维表格和工作智能体项目
-- Current Progress: 2026-07-04 建立项目级协作规则，写入多维表格宪法、高权限 Agent 边界、文档优先和逐项验收规则。
+- Scope: Generic Telegram-first multidimensional table, no-code workspace and table-bound digital employee platform
+- Current Progress: 2026-07-10 Stage06 backend-stage acceptance passed after correcting Stage06 work that remained in the Stage05 worktree. Fresh evidence: 129 Stage06-focused tests, 402 full-backend tests with 17 historical Stage02 skips, one Alembic head `20260710_0020`, real local PostgreSQL isolation/redaction/concurrency smoke, retained real OpenRouter and Telegram entry evidence, and sanitized machine-readable security evidence. Mini App and production deployment remain separate gates.
 
-## 1. 项目定位
+## 1. Project Positioning
 
-本项目是一个面向广告代理商业务的 Telegram 多维表格和工作智能体系统。目标是效仿飞书多维表格和多维表格智能体的成熟机制，把 Telegram 消息、多维业务数据、AI 工作智能体、权限、人工确认、后端受控执行和审计日志结合起来。
+This project is a generic multidimensional table and no-code workspace platform with Telegram as the primary entry and table-bound digital employees as the AI operating layer.
 
-本项目不是通用飞书竞品，不是纯聊天机器人，不是 AI 自动投放系统，也不是允许 AI 直接执行真实充值、绑卡、下户或账户写入的 autopilot。
-
-## 2. Bitable Constitution
-
-多维表格是本项目的底层参照和产品宪法。所有设计必须从飞书多维表格和多维表格智能体的核心机制反推，而不是凭空创造需求。
-
-设计顺序必须是：
+The target product shape is:
 
 ```text
-业务对象
--> 多维表格 table
--> 字段和字段类型
--> 关联记录
--> 视图
--> 权限
--> 自动化
--> Agent 能力
--> 执行工具
+workspace
+-> base
+-> table
+-> field schema
+-> record
+-> view / form / dashboard-lite
+-> permission
+-> template / import
+-> digital employee
+-> draft confirmation
+-> audit
 ```
 
-禁止的设计方式：
+Telegram is the primary ecosystem and productivity surface. The Telegram Mini App should provide the main workspace UI, while the same frontend should also be usable in a desktop browser for heavier table building, imports and permission configuration.
+
+The project should heavily imitate Feishu Base / Lark Base product grammar and the official `larksuite/cli` capability organization, but it is an isolated platform. It must not depend on Feishu API integration or Feishu API compatibility.
+
+Advertising-agency operations from Stage02 to Stage05 are now:
+
+- historical implementation evidence;
+- a useful capability source;
+- one optional official template/sample workspace.
+
+They are no longer the top-level product definition.
+
+## 2. Product Constitution
+
+Multidimensional tables are the product constitution. All platform and business design must start from the table system, not from free-form chat.
+
+Design order:
 
 ```text
-先凭空设计 Agent
--> 再想它应该做什么
--> 最后找地方存结果
+workspace
+-> base
+-> table
+-> field and field type
+-> linked records
+-> view / form / dashboard-lite
+-> permission
+-> automation or queue
+-> digital employee capability
+-> draft / controlled action
+-> audit
 ```
 
-所有业务场景和工作流的终点必须回到多维表格，具体表现为：
+Forbidden design order:
 
-- 新增或更新一条业务记录，例如客户、账户库存、服务草稿、服务记录、充值记录、日报、审计事件。
-- 改变一条记录的状态，例如 `unused`、`allocated`、`pending_confirmation`、`executing`、`succeeded`、`readback_failed`。
-- 进入一个明确视图，例如 Telegram 收件箱、账户库存表、充值视图、客户日报视图、公司日报视图、审计视图。
-- 触发一个基于表格记录的自动化，例如提醒、日报发送、人工确认、执行 ticket、异常升级。
+```text
+invent an Agent
+-> invent what it might do
+-> find somewhere to store the result later
+```
 
-任何停留在 Telegram 聊天、临时 Agent 记忆、口头结论、未落表 JSON、未审计工具调用里的结果，都不算完成。
+Every workflow must land back into the table platform. A result counts as complete only when at least one of these is true:
 
-Agent 不是独立于多维表格之外的机器人。Agent 是运行在多维表格业务数据、视图、权限和自动化之上的数字员工：
+- a record is created or updated;
+- a record status changes;
+- a record appears in a defined view or queue;
+- a template/base/table/import operation is persisted;
+- a draft is created and waits for confirmation;
+- a digital employee action is recorded;
+- an audit event is written;
+- a controlled notification or external action is linked to a record.
 
-- Agent 的输入来自多维表格记录、Telegram 消息记录、视图上下文和授权检索。
-- Agent 的中间状态必须能关联到 workflow、record、view、audit event。
-- Agent 的输出必须落回多维表格记录、状态、视图、日报或执行日志。
-- Agent 的能力边界由多维表格权限、字段权限、动作权限和执行 ticket 决定。
+Telegram messages, temporary Agent memory, unpersisted JSON and oral answers are not durable business results.
 
-新增业务需求前必须先回答：
+## 3. Digital Employee Model
 
-- 它对应哪张表？
-- 需要哪些字段？
-- 和哪些记录关联？
-- 由哪个视图承载？
-- 谁能看、谁能改、谁能确认、谁能执行？
-- 是否需要 Agent？
-- Agent 输出落到哪条记录或哪个视图？
-- 成功/失败如何在多维表格中表现？
+Agents are digital employees running on top of tables, views, permissions and automations.
 
-具体落地以 `project-docs/03-modules/BITABLE_SCHEMA_BLUEPRINT.md` 为多维表格总蓝图。后续业务场景、Agent、数据库、API、队列和前端视图设计都必须能追溯到该蓝图。
+A digital employee must have:
 
-## 3. Language
+- `name`
+- `description`
+- accessible workspaces, bases, tables and views
+- allowed field visibility
+- allowed actions
+- response style
+- confirmation policy
+- Telegram `@` alias or entry rule
+- audit policy
+
+Effective runtime authority is always:
+
+```text
+agent_configured_scope
+-> caller_user_scope
+-> telegram_chat_scope
+```
+
+Agent writes default to draft-confirmation:
+
+```text
+Agent proposes change
+-> record_change_draft
+-> user confirms in Mini App or Telegram
+-> backend writes record
+-> audit event
+```
+
+Digital employees may query, summarize, classify, draft record changes, advance controlled statuses and create controlled notifications. They may not bypass permissions, confirmation, audit or backend service boundaries.
+
+## 4. Language
 
 - 默认使用中文沟通。
 - 代码、API、数据库表名、字段名、命令、技术名词保持英文。
 - 文档中文为主，但稳定状态字段使用英文，例如 `Status`、`Scope`、`Current Progress`、`Acceptance Criteria`。
 
-## 4. Documentation First
+## 5. Documentation First
 
-本项目当前阶段是后端开发前的顶层文档设计阶段。任何后端实现、依赖安装、代码脚手架、数据库迁移、真实外部系统写入之前，必须先完成并确认对应文档。
+Architecture changes, product-boundary changes, schema changes, permission model changes, API contract changes and stage transitions must be written into local Markdown documents before implementation.
 
-必须先写文档的内容包括：
+Current Stage06 rule:
 
-- 技术选型和架构方案。
-- Agent 编排、context、memory、state、tool、MCP、vector retrieval 方案。
-- 数据库 schema、权限模型、事务、唯一值、敏感字段。
-- Redis queue、job id、失败处理、worker 设计。
-- 业务场景和业务边界，且必须说明对应的多维表格 table、view、record、automation endpoint。
-- 每个 Agent / 子 Agent 的职责边界和工具边界。
+- First rewrite active top-level truth documents to platform-first wording.
+- Then write Stage06 source, design, plan, contract and acceptance docs.
+- Only after user confirmation should code implementation begin.
 
-## 5. Confirmed Technical Baseline
+Stage02 to Stage05 documents remain historical evidence. They must not override the Stage06 platform-first source of truth.
 
-已确认采用方案 A：
+## 6. Confirmed Technical Baseline
 
 | Layer | Decision |
 | --- | --- |
@@ -97,95 +142,90 @@ Agent 不是独立于多维表格之外的机器人。Agent 是运行在多维�
 | ORM | SQLAlchemy 2.x |
 | Migration | Alembic |
 | Primary database | PostgreSQL |
+| Generic record storage | PostgreSQL JSONB plus typed field metadata |
 | Vector search | pgvector |
 | Queue/cache | Redis |
 | Agent orchestration | LangGraph-first |
-| LLM provider | OpenRouter-compatible API |
+| LLM provider | OpenRouter-compatible API with real Stage06 smoke required |
 | Telegram | Bot API + Webhook + Mini App |
+| Mini App frontend | React + Vite + TypeScript + Tailwind + shadcn/ui + lucide-react; implementation waits for separate user confirmation after backend readiness |
 
-这些是当前项目后续后端开发的默认基线。若要更改，需要先写入技术决策文档并由用户确认。
+Changing this baseline requires a technical decision document and user confirmation.
 
-## 6. Agent Authority And Safety Boundaries
+## 7. Safety Boundaries
 
-本项目的 Agent 不是弱助手，而是带权限边界的数字员工。Agent 可以通过后端授权工具访问数据库读模型、统计视图、检索索引和受控执行工具，但不能裸连数据库、不能裸写 SQL、不能裸调 Meta/卡台/充值 provider。
+Digital employees may use backend-authorized tools. They must not receive raw database credentials, raw SQL access, external provider keys or unrestricted send rights.
 
-Agent 允许：
+Allowed:
 
-- 通过 Tool Gateway 查询客户、账户、账户库存、余额、消耗、充值、绑卡、服务记录、审计记录。
-- 统计客户每日账户消耗、账户余额、客户日报、公司全局日报。
-- 生成和更新服务草稿、任务建议、日报草稿、风险提示。
-- 在人工确认后，使用带过期时间和权限快照的 `execution_ticket` 调用受控执行工具。
-- 执行通过确认的 Meta、卡台、充值、绑卡、BM invite 等动作。
-- 写入执行结果、回读状态、执行日志和审计事件，但必须通过后端 service/tool 完成。
+- inspect table schema through authorized tools;
+- read permitted records and views;
+- summarize or classify permitted data;
+- call real LLMs through LangGraph/OpenRouter only with permission-filtered context;
+- create record-change drafts;
+- update low-risk internal state through explicit backend services when permitted;
+- create controlled notifications;
+- after confirmation, call controlled backend tools with an execution ticket when such a capability is in scope;
+- write audit events through backend services.
 
-Agent 禁止：
+Forbidden:
 
-- 裸连接 PostgreSQL 或使用未授权 SQL。
-- 绕过 Tool Gateway 直接拿数据库账号、Meta token、卡台 key 或充值 provider key。
-- 自己判断“已确认”并执行真实动作。
-- 绕过人工确认、权限校验、策略校验、幂等检查、execution ticket 和审计日志。
-- 接触 raw card number、CVV、完整卡图或未脱敏支付凭证。
-- 把 unknown、stale data、missing permission 编造成确定事实。
-- 在没有 execution log 的情况下声称真实操作成功。
+- raw PostgreSQL access;
+- unapproved SQL execution;
+- bypassing Tool Gateway/service layer;
+- bypassing user permission, chat scope or agent scope;
+- self-confirming high-risk writes;
+- treating Telegram identity as sufficient system permission;
+- reading sensitive fields without field permission;
+- claiming success without a persisted record, send log, execution log or audit event;
+- broad Telegram group send, provider write, funds movement or account operation without explicit later-stage approval.
 
-技术表达：
+## 8. Development Rules
 
-```text
-Agent
--> authorized database/query/statistics tools
--> authorized draft/update/report tools
--> human confirmation
--> execution_ticket
--> controlled execution tools
--> execution log + audit event
-```
+- Do not write business code before the relevant documents are written and confirmed.
+- Each stage must have clear `Scope` and `Acceptance Criteria`.
+- Do not split stage work into tiny fragments when a coherent delivery package is clearer.
+- Keep changes scoped to the current stage.
+- Update `Current Progress` when modifying active documents.
+- If a workflow has no table endpoint, it cannot enter implementation.
+- If a new scenario is proposed, define its workspace/base/table/fields/views/permissions/agent landing point first.
+- Tests and acceptance must cite commands, evidence or manual verification notes.
+- Do not claim production readiness without production readiness evidence.
+- Stage06 pilot evidence should be Telegram-ecosystem productivity first, not advertising-agency first.
+- Stage06 database smoke may use local PostgreSQL, but it must be real PostgreSQL and must not be counted as remote staging/production evidence.
+- Stage06 digital employee acceptance requires at least one real LangGraph/OpenRouter LLM invocation when credentials are configured; deterministic backend tool gateway remains only a test and fallback mode.
+- Do not implement the Mini App UI in the current backend-readiness pass. Backend must be connected first; UI begins only after the user explicitly confirms a separate UI phase.
+- Temporary files, scripts, test data and artifacts created during a stage must be cleaned before deployment or documented as retained artifacts.
 
-## 7. Development Rules
+## 9. Architecture Reuse Rule
 
-- 当前阶段只写文档，不写业务代码。
-- 任何阶段开始前必须有明确 `Scope` 和 `Acceptance Criteria`。
-- 复杂业务场景必须单独建文档，并由索引文件链接。
-- 每个文档更新后必须维护 `Current Progress`。
-- 不做无关重构，不引入未讨论的新业务场景。
-- 不凭空创造业务场景；任何场景都必须能追溯到用户真实业务、迁移立项文档、飞书多维表格机制或用户当前明确指令。
-- 任何 workflow 如果没有多维表格 endpoint，不允许进入实现计划。
-- 所有真实外部系统写入必须先讨论并确认。
-- 文档中如果存在假设，必须标记为 `Assumption`。
-- 测试和验收时不能口头宣称“已做完”或“已测试”，必须对照对应文档逐项核对。
-- 每个阶段必须制定可执行验收标准，并记录哪些通过、哪些未通过、哪些未测试以及原因。
-- 验收报告必须引用文档条目、测试命令、测试结果或人工核对证据。
-- 每个阶段完成后，必须先在本地执行该阶段要求的真实全范围测试，再进入部署或外部验收。
-- 任何部署前，必须清理本阶段产生的临时接口、临时文件、临时脚本、临时测试、临时假数据和临时 artifact，避免污染项目源码或给后续阶段带来不确定性。
-- 永久回归测试、正式 fixture、正式文档和经确认要保留的验收 artifact 不属于临时项；如果无法判断，必须在验收报告中标注并询问用户。
+Prefer mature patterns and ecosystems:
 
-## 8. Architecture Reuse Rule
+- imitate Feishu Base product grammar and `larksuite/cli` capability organization;
+- reuse LangGraph graph/state/checkpoint/human-in-the-loop/supervisor patterns;
+- use OpenRouter through an OpenAI-compatible API style;
+- use FastAPI, SQLAlchemy 2.x, Alembic, PostgreSQL, JSONB, pgvector and Redis;
+- do not self-invent a general agent framework, ORM, migration system, queue system or permission engine unless a document explains why.
 
-优先复用 GitHub 和官方生态中成熟的架构与框架：
+## 10. Source Of Truth Order
 
-- Agent 编排优先复用 LangGraph 的 graph、state、checkpoint、human-in-the-loop、supervisor / sub-agent 模式。
-- LLM 访问优先使用 OpenRouter 的 OpenAI-compatible API 方式，不在业务层绑定单一模型。
-- 后端优先使用 FastAPI、SQLAlchemy 2.x、Alembic、PostgreSQL、Redis 等成熟组合。
-- 除非文档说明必要，不自研通用 agent framework、ORM、迁移系统、队列系统或权限引擎。
+1. User current explicit instruction.
+2. This file `AGENTS.md`.
+3. `project-docs/00-governance/IMPLEMENTATION_SOURCE_OF_TRUTH.md`.
+4. `project-docs/03-modules/BITABLE_SCHEMA_BLUEPRINT.md`.
+5. `project-docs/08-implementation/STAGE_06_SOURCE_OF_TRUTH.md` during Stage06.
+6. `project-docs/00-governance/TECHNICAL_DECISIONS.md`.
+7. Stage06 SDD, implementation plan, API/data/security contract and acceptance docs.
+8. Historical Stage02 to Stage05 implementation documents.
+9. Migration/original advertising-agency documents as background only.
 
-## 9. Source Of Truth Order
+## 11. Completion Rule
 
-项目内文档优先级：
+Any stage delivery summary must include:
 
-1. 用户当前明确指令。
-2. 本文件 `AGENTS.md`。
-3. `project-docs/00-governance/IMPLEMENTATION_SOURCE_OF_TRUTH.md`。
-4. `project-docs/03-modules/BITABLE_SCHEMA_BLUEPRINT.md`。
-5. `project-docs/00-governance/TECHNICAL_DECISIONS.md`。
-6. 架构、业务场景、Agent、数据库、队列等专项文档。
-7. 迁移版旧项目立项文档，仅作为背景参考。
-
-## 10. Completion Rule
-
-任何阶段交付说明必须包含：
-
-- Changed files。
-- What changed。
-- Verification。
-- Skipped tests。
-- Remaining risks。
-- Temporary cleanup：说明部署前已清理哪些临时接口/文件/测试/假数据/artifact，或说明哪些保留及原因。
+- Changed files.
+- What changed.
+- Verification.
+- Skipped tests.
+- Remaining risks.
+- Temporary cleanup.

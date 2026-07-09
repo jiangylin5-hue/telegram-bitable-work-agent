@@ -2,9 +2,10 @@
 
 ## Status
 
-- Document status: research draft
+- Document status: historical research draft
 - Scope: 飞书多维表格、AI 能力、智能体产品抽象、对 Telegram 多维表格和工作智能体项目的启发
 - Research date: 2026-07-04
+- Stage06 note: This file is historical research. For the active platform-pivot benchmark, use [Stage 06 LarkSuite Benchmark Audit](../08-implementation/STAGE_06_LARKSUITE_BENCHMARK_AUDIT.md). Any wording in this file that discourages a generic no-code platform is superseded by the user's 2026-07-09 Stage06 decision.
 - Current Progress: 2026-07-04 完成第一版公开资料调研和项目落地启发整理。
 
 ## 1. 调研结论
@@ -142,4 +143,3 @@ Telegram 群消息
 - 飞书开放平台多维表格记录 API: https://open.feishu.cn/document/server-docs/docs/bitable-v1/app-table-record/list
 - Telegram Bot API: https://core.telegram.org/bots/api
 - Telegram Mini Apps: https://core.telegram.org/bots/webapps
-

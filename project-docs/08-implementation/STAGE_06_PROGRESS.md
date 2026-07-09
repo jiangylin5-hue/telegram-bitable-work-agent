@@ -4,9 +4,21 @@
 
 - Document status: active Stage06 progress log
 - Scope: Stage06 platform pivot progress, evidence and open risks
-- Current Progress: 2026-07-10 Package 6 security hardening is complete. Backend verification passed with `401 passed, 17 skipped`; the 17 skips are historical Stage02 online tests requiring `STAGE02_ONLINE_DATABASE_URL`. Real local PostgreSQL migration, tenant denial, audit redaction and concurrent idempotency tests passed at head `20260710_0020`. Sanitized evidence is retained and backend-readiness is restored; Mini App and production deployment remain separate gates.
+- Current Progress: 2026-07-10 Whole Stage06 backend-stage acceptance passed after correcting 14 modified and 26 untracked Stage06 files that remained in the Stage05 worktree. Fresh verification: `129` Stage06-focused tests, `402 passed, 17 skipped` full backend, Alembic head `20260710_0020`, real local PostgreSQL migration/isolation/redaction/concurrency smoke and sanitized evidence. Mini App and production deployment remain separate gates.
 
 ## Progress Log
+
+### 2026-07-10: Whole Stage06 Acceptance And Branch-Lineage Correction
+
+- Identified Stage06 platform work that had been created while `codex/stage-05-development` was checked out but remained uncommitted in the shared worktree.
+- Classified all 14 modified and 26 untracked pre-acceptance files as Stage06: platform truth docs, migrations 0017-0019, router/model registration, template/runtime models, live digital employee, skills runtime, smoke/evaluator and tests.
+- Confirmed no Stage05 hotfix, credential, customer send, provider write, funds action or account production change is included.
+- Added the missing `Stage06IdempotencyRecord` unified metadata registration and a complete Stage06 metadata-table assertion.
+- Fresh Stage06 focused result: `129 passed, 173 deselected`.
+- Fresh full result with local Stage06 PostgreSQL: `402 passed, 17 skipped`.
+- Skill evaluator: 118 cases, top-1 `0.8923`, top-3 `1.0`, all safety gates passed.
+- Security smoke: 4/4 passed; head `20260710_0020`; PostgreSQL isolation/redaction/concurrency `2 passed`.
+- Added [Stage 06 Stage Acceptance Report](STAGE_06_STAGE_ACCEPTANCE_REPORT.md).
 
 ### 2026-07-10: Package 6 Security Hardening Completed
 
@@ -24,10 +36,10 @@ Completed:
 
 Verification:
 
-- `pytest tests -q` with disposable local Stage06 PostgreSQL: `401 passed, 17 skipped`.
+- `pytest tests -q` with disposable local Stage06 PostgreSQL: `402 passed, 17 skipped`.
 - `python -m compileall -q app scripts`: passed.
 - `python -m alembic heads`: `20260710_0020 (head)`.
-- `python scripts/stage06_security_hardening_smoke.py`: passed all 4 checks; Stage06 unit count `128`, PostgreSQL security count `2`.
+- `python scripts/stage06_security_hardening_smoke.py`: passed all 4 checks; Stage06 unit count `129`, PostgreSQL security count `2`.
 - `git diff --check`: passed; Windows line-ending warnings only.
 
 Retained evidence:
@@ -495,7 +507,7 @@ Verification:
 Current Stage06 status:
 
 - Package 1, Package 2, Package 3 and Package 4 backend runtime are implemented and locally full-backend-tested.
-- Mini App frontend remains pending because the repository has no existing frontend base and the frontend technology choice has not been confirmed in source documents.
+- Mini App frontend remains pending by explicit scope decision and requires separate user confirmation before implementation.
 - Historical note: at this point Package 5 still needed pilot acceptance evidence. This is superseded for backend readiness by the later Package 5 backend/API evidence, real OpenRouter smokes, local PostgreSQL smoke, real Telegram smoke and backend exit audit. Mini App/frontend and production-like deployment evidence remain future gates.
 
 ### 2026-07-09: Package 3 Template And Import System
