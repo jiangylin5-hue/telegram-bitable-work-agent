@@ -42,6 +42,7 @@ function AppContent() {
   const [state, setState] = useState<AppState>({ status: 'loading' })
   const homeRequestVersion = useRef(0)
   const canvasRequestVersion = useRef(0)
+  const recordRequestVersion = useRef(0)
   const bootstrapQuery = useQuery({
     queryKey: ['stage07', 'bootstrap'],
     queryFn: ({ signal }) => api.bootstrap({ signal }),
@@ -107,6 +108,7 @@ function AppContent() {
     if (workspaceId === activeWorkspace.id) return
     homeRequestVersion.current += 1
     canvasRequestVersion.current += 1
+    recordRequestVersion.current += 1
     setState({ status: 'loading' })
     await clearProtectedWorkspace(queryClient, { userId: readyState.bootstrap.identity.user_id, workspaceId: activeWorkspace.id })
     await loadWorkspaceHome(readyState.bootstrap, workspaceId)
@@ -152,11 +154,24 @@ function AppContent() {
   const selectedWorkspace = activeWorkspace
   async function openRecord(recordId: string) {
     if (!readyState.canvas) return
+    const requestVersion = ++recordRequestVersion.current
+    const canvasVersion = canvasRequestVersion.current
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
     try {
-      const detail = await api.recordDetail(recordId)
+      const detail = await queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'record', recordId), queryFn: ({ signal }) => api.recordDetail(recordId, { signal }) })
+      if (recordRequestVersion.current !== requestVersion || canvasRequestVersion.current !== canvasVersion) return
       setState({ ...readyState, canvas: { ...readyState.canvas, detail } })
     } catch (error) {
-      setState({ status: error instanceof ApiError && error.status === 403 ? 'denied' : 'error' })
+      if (recordRequestVersion.current !== requestVersion || canvasRequestVersion.current !== canvasVersion || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await clearAllProtectedQueries(queryClient)
+        setState({ status: 'denied' })
+      } else if (error instanceof ApiError && error.status === 403) {
+        await clearProtectedWorkspace(queryClient, scope)
+        setState({ status: 'denied' })
+      } else {
+        setState({ status: 'error' })
+      }
     }
   }
 
