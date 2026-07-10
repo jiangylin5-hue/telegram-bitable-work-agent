@@ -12,7 +12,7 @@
 
 - Document status: approved detailed implementation plan derived from the user-reviewed P3 design; implementation in progress.
 - Scope: only Stage07 Package 2 Base/Table atomic Builder; Fields, additional views, imports/templates, governance and Package 4 remain outside this plan.
-- Current Progress: 2026-07-10 Tasks 1–4 are implemented and locally verified. Task 1 has RED migration/model checks, GREEN `3 passed`, one Alembic head `20260710_0021`, and offline SQL with the additive default-view partial unique index. Task 2 has RED missing-domain-import evidence, GREEN `3 passed` focused and `10 passed` full platform-core evidence for zero-field Base/Table Grid graphs, generated table keys and sanitized parent audits. Task 3 has RED `404` endpoint evidence, GREEN `14 passed` API/security unit evidence for safe receipts, authorization, validation and idempotency; three real-PostgreSQL rollback/concurrency/index tests are present but skipped because `STAGE06_LOCAL_DATABASE_URL` is missing. Task 4 has RED missing-module/transport evidence, GREEN `7 passed` focused API/panel/capability tests, and a successful `npm.cmd run build`; it provides typed atomic-initialization calls, accessible light desktop/mobile panel behavior and server-capability-gated entry points only. Receipt-verified navigation remains Task 5.
+- Current Progress: 2026-07-10 Tasks 1–5 are implemented and locally verified. Task 1 has RED migration/model checks, GREEN `3 passed`, one Alembic head `20260710_0021`, and offline SQL with the additive default-view partial unique index. Task 2 has RED missing-domain-import evidence, GREEN `3 passed` focused and `10 passed` full platform-core evidence for zero-field Base/Table Grid graphs, generated table keys and sanitized parent audits. Task 3 has RED `404` endpoint evidence, GREEN `14 passed` API/security unit evidence for safe receipts, authorization, validation and idempotency; three real-PostgreSQL rollback/concurrency/index tests are present but skipped because `STAGE06_LOCAL_DATABASE_URL` is missing. Task 4 has RED missing-module/transport evidence, GREEN `7 passed` focused API/panel/capability tests, and a successful `npm.cmd run build`; it provides typed atomic-initialization calls, accessible light desktop/mobile panel behavior and server-capability-gated entry points only. Task 5 has RED missing-entry/list-order behavior evidence, GREEN `5 passed` Builder flow tests and `15 passed` focused Builder/Home/Base/record regressions, plus a successful build. It verifies refreshed authorized lists, exact receipt IDs, safe missing-resource behavior, `403` cleanup, workspace-switch stale-result rejection and the honest zero-field Grid. Task 6 evidence and final P3 documentation remain.
 - Source alignment: `AGENTS.md`; `STAGE_07_SOURCE_OF_TRUTH.md`; `STAGE_07_SDD.md`; `modules/STAGE_07_BITABLE_WORK_SURFACE.md`; `STAGE_07_BDD_AND_ACCEPTANCE.md`; `STAGE_07_API_DATA_SECURITY_CONTRACT.md`; `STAGE_07_SUBSTAGE_P3_BASE_TABLE_BUILDER_DESIGN.md`.
 
 ## Global Constraints
@@ -560,7 +560,7 @@
   async function createTable(values: { tableName: string }, key: string): Promise<void>
   ```
 
-- [ ] **Step 1: Write failing application tests for success, exactness and stale state**
+- [x] **Step 1: Write failing application tests for success, exactness and stale state**
 
   Create `builder-create-flow.test.tsx` with mocked fetch sequences that prove:
 
@@ -572,7 +572,7 @@
 
   Add a renderer test in `app-shell.test.tsx` or `builder-create-flow.test.tsx` asserting a zero-field Grid shows the exact helper message and does not render `新建记录`.
 
-- [ ] **Step 2: Run focused application tests and record the expected RED result**
+- [x] **Step 2: Run focused application tests and record the expected RED result**
 
   Run:
 
@@ -582,7 +582,7 @@
 
   Expected: failure because Home/BaseCanvas cannot open the panel, no mutation exists and `openBase` always chooses the first list entry.
 
-- [ ] **Step 3: Add generation-safe mutation/navigation code**
+- [x] **Step 3: Add generation-safe mutation/navigation code**
 
   In `App.tsx`:
 
@@ -602,7 +602,7 @@
 
   and omit the record-create callback/button for that canvas. Preserve the separate generic no-table/no-view state.
 
-- [ ] **Step 4: Run focused application and legacy regression tests**
+- [x] **Step 4: Run focused application and legacy regression tests**
 
   Run:
 
@@ -612,7 +612,7 @@
 
   Expected: new success/table/exactness/denial/stale-state tests pass; existing table switching and scalar record-create tests remain green.
 
-- [ ] **Step 5: Commit the application transition**
+- [x] **Step 5: Commit the application transition**
 
   ```powershell
   git add mini-app/src/app/App.tsx mini-app/src/app/BaseCanvas.tsx mini-app/src/test/builder-create-flow.test.tsx mini-app/src/test/app-shell.test.tsx

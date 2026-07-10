@@ -4,6 +4,7 @@ import { QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-q
 import { ApiError, api, type BaseSummary, type BootstrapResponse, type CreateForm, type PlatformTable, type RecordDetail, type TableSchema, type ViewPresentation, type ViewRecords, type ViewSummary, type WorkspaceHome } from './api'
 import { AppShell } from './AppShell'
 import { BaseCanvas } from './BaseCanvas'
+import { BuilderCreatePanel } from './BuilderCreatePanel'
 import { CreateRecordPanel } from './CreateRecordPanel'
 import { RecordDetailPanel } from './RecordDetail'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
@@ -30,6 +31,9 @@ type AppState =
   | { status: 'error' }
   | { status: 'ready'; bootstrap: BootstrapResponse; home: WorkspaceHome; canvas?: BaseCanvasState; canvasLoading?: boolean }
 
+type CanvasTarget = { tableId: string; viewId: string }
+type BuilderPanel = { mode: 'base' } | { mode: 'table'; base: BaseSummary }
+
 function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'AbortError'
 }
@@ -44,8 +48,11 @@ function AppContent() {
   const [state, setState] = useState<AppState>({ status: 'loading' })
   const homeRequestVersion = useRef(0)
   const canvasRequestVersion = useRef(0)
+  const activeWorkspaceId = useRef<string | undefined>(undefined)
   const recordRequestVersion = useRef(0)
   const createFormRequestVersion = useRef(0)
+  const builderRequestVersion = useRef(0)
+  const [builderPanel, setBuilderPanel] = useState<BuilderPanel>()
   const bootstrapQuery = useQuery({
     queryKey: ['stage07', 'bootstrap'],
     queryFn: ({ signal }) => api.bootstrap({ signal }),
@@ -65,6 +72,7 @@ function AppContent() {
         queryFn: ({ signal }) => api.workspaceHome(workspaceId, { signal }),
       })
       if (homeRequestVersion.current !== requestVersion) return
+      activeWorkspaceId.current = workspaceId
       setState({ status: 'ready', bootstrap, home })
     } catch (error) {
       if (homeRequestVersion.current !== requestVersion || isAbortError(error)) return
@@ -113,37 +121,46 @@ function AppContent() {
     canvasRequestVersion.current += 1
     recordRequestVersion.current += 1
     createFormRequestVersion.current += 1
+    builderRequestVersion.current += 1
+    setBuilderPanel(undefined)
+    activeWorkspaceId.current = workspaceId
     setState({ status: 'loading' })
     await clearProtectedWorkspace(queryClient, { userId: readyState.bootstrap.identity.user_id, workspaceId: activeWorkspace.id })
     await loadWorkspaceHome(readyState.bootstrap, workspaceId)
   }
 
-  async function openBase(base: BaseSummary) {
+  async function openBase(base: BaseSummary, target?: CanvasTarget, homeOverride: WorkspaceHome = readyState.home, builderVersion = ++builderRequestVersion.current): Promise<boolean> {
     const requestVersion = ++canvasRequestVersion.current
     createFormRequestVersion.current += 1
-    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
-    setState({ ...readyState, canvasLoading: true, canvas: undefined })
+    if (!target) setBuilderPanel(undefined)
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: homeOverride.workspace_id }
+    const canvasState = { status: 'ready' as const, bootstrap: readyState.bootstrap, home: homeOverride }
+    const isCurrent = () => canvasRequestVersion.current === requestVersion && builderRequestVersion.current === builderVersion && activeWorkspaceId.current === homeOverride.workspace_id
+    setState({ ...canvasState, canvasLoading: true, canvas: undefined })
     try {
       const [{ tables }, { views }] = await Promise.all([
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'base', base.id, 'tables'), queryFn: ({ signal }) => api.baseTables(base.id, { signal }) }),
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'base', base.id, 'views'), queryFn: ({ signal }) => api.baseViews(base.id, { signal }) }),
       ])
-      if (canvasRequestVersion.current !== requestVersion) return
-      const table = tables[0] ?? null
-      const view = table ? views.find((item) => item.table_id === table.id) ?? null : null
+      if (!isCurrent()) return false
+      const table = target ? tables.find((item) => item.id === target.tableId) ?? null : tables[0] ?? null
+      const view = target
+        ? views.find((item) => item.id === target.viewId && item.table_id === table?.id) ?? null
+        : table ? views.find((item) => item.table_id === table.id) ?? null : null
       if (!table || !view) {
-        setState({ ...readyState, canvas: { base, tables, views, table, view, schema: null, records: null, presentation: null } })
-        return
+        setState({ ...canvasState, canvas: { base, tables, views, table, view, schema: null, records: null, presentation: null } })
+        return true
       }
       const [schema, presentation, records] = await Promise.all([
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'table', table.id, 'schema'), queryFn: ({ signal }) => api.tableSchema(table.id, { signal }) }),
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'presentation'), queryFn: ({ signal }) => api.viewPresentation(view.id, { signal }) }),
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'records', null), queryFn: ({ signal }) => api.viewRecords(view.id, undefined, { signal }) }),
       ])
-      if (canvasRequestVersion.current !== requestVersion) return
-      setState({ ...readyState, canvas: { base, tables, views, table, view, schema, presentation, records } })
+      if (!isCurrent()) return false
+      setState({ ...canvasState, canvas: { base, tables, views, table, view, schema, presentation, records } })
+      return true
     } catch (error) {
-      if (canvasRequestVersion.current !== requestVersion || isAbortError(error)) return
+      if (!isCurrent() || isAbortError(error)) return false
       if (error instanceof ApiError && error.status === 401) {
         await clearAllProtectedQueries(queryClient)
         setState({ status: 'denied' })
@@ -153,6 +170,77 @@ function AppContent() {
       } else {
         setState({ status: 'error' })
       }
+      return false
+    }
+  }
+
+  async function refreshBuilderHome(scope: { userId: string; workspaceId: string }): Promise<WorkspaceHome> {
+    const homeKey = protectedQueryKey(scope, 'home')
+    await queryClient.cancelQueries({ queryKey: homeKey })
+    queryClient.removeQueries({ queryKey: homeKey })
+    return queryClient.fetchQuery({ queryKey: homeKey, queryFn: ({ signal }) => api.workspaceHome(scope.workspaceId, { signal }) })
+  }
+
+  async function createBase(values: { baseName: string; tableName: string }, idempotencyKey: string) {
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = builderRequestVersion.current
+    const canvasVersion = canvasRequestVersion.current
+    const isCurrent = () => builderRequestVersion.current === requestVersion && canvasRequestVersion.current === canvasVersion && activeWorkspaceId.current === workspaceId
+    try {
+      const receipt = await api.initializeBase(workspaceId, values, idempotencyKey)
+      if (!isCurrent()) return
+      queryClient.removeQueries({ queryKey: protectedQueryKey(scope, 'home') })
+      const refreshedHome = await refreshBuilderHome(scope)
+      if (!isCurrent()) return
+      const opened = await openBase(receipt.base, { tableId: receipt.table.id, viewId: receipt.default_view.id }, refreshedHome, requestVersion)
+      if (opened && builderRequestVersion.current === requestVersion && activeWorkspaceId.current === workspaceId) setBuilderPanel(undefined)
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await clearAllProtectedQueries(queryClient)
+        setState({ status: 'denied' })
+        return
+      }
+      if (error instanceof ApiError && error.status === 403) {
+        await clearProtectedWorkspace(queryClient, scope)
+        setState({ status: 'denied' })
+        return
+      }
+      setState({ status: 'error' })
+      throw error
+    }
+  }
+
+  async function createTable(base: BaseSummary, values: { tableName: string }, idempotencyKey: string) {
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = builderRequestVersion.current
+    const canvasVersion = canvasRequestVersion.current
+    const isCurrent = () => builderRequestVersion.current === requestVersion && canvasRequestVersion.current === canvasVersion && activeWorkspaceId.current === workspaceId
+    try {
+      const receipt = await api.initializeTable(base.id, values, idempotencyKey)
+      if (!isCurrent()) return
+      queryClient.removeQueries({ queryKey: protectedQueryKey(scope, 'home') })
+      queryClient.removeQueries({ queryKey: protectedQueryKey(scope, 'base', base.id) })
+      const refreshedHome = await refreshBuilderHome(scope)
+      if (!isCurrent()) return
+      const opened = await openBase(receipt.base, { tableId: receipt.table.id, viewId: receipt.default_view.id }, refreshedHome, requestVersion)
+      if (opened && builderRequestVersion.current === requestVersion && activeWorkspaceId.current === workspaceId) setBuilderPanel(undefined)
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await clearAllProtectedQueries(queryClient)
+        setState({ status: 'denied' })
+        return
+      }
+      if (error instanceof ApiError && error.status === 403) {
+        await clearProtectedWorkspace(queryClient, scope)
+        setState({ status: 'denied' })
+        return
+      }
+      setState({ status: 'error' })
+      throw error
     }
   }
 
@@ -391,7 +479,12 @@ function AppContent() {
   const content = readyState.canvasLoading
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
-      ? <><BaseCanvas {...readyState.canvas} onBack={() => setState({ ...readyState, canvas: undefined })} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={openCreateRecord} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} onConflict={refreshRecordAfterConflict} onClose={() => setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } })} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => setState((current) => current.status === 'ready' && current.canvas ? { ...current, canvas: { ...current.canvas, createForm: undefined } } : current)} />}</>
-      : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} />
-  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace}>{content}</AppShell>
+      ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} onConflict={refreshRecordAfterConflict} onClose={() => setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } })} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => setState((current) => current.status === 'ready' && current.canvas ? { ...current, canvas: { ...current.canvas, createForm: undefined } } : current)} />}</>
+      : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} />
+  const builderOverlay = builderPanel?.mode === 'base'
+    ? <BuilderCreatePanel mode="base" onSubmit={(values, idempotencyKey) => createBase(values as { baseName: string; tableName: string }, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
+    : builderPanel?.mode === 'table'
+      ? <BuilderCreatePanel mode="table" onSubmit={(values, idempotencyKey) => createTable(builderPanel.base, values as { tableName: string }, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
+      : null
+  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace}>{content}{builderOverlay}</AppShell>
 }
