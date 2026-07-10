@@ -1065,7 +1065,7 @@ def get_table_schema(
             "key": table.key,
             "status": table.status,
         },
-        "fields": [_field_to_schema(field) for field in fields],
+        "fields": [safe_table_schema_field(field) for field in fields],
     }
 
 
@@ -1352,6 +1352,15 @@ def _lookup_field_value(
     return values
 
 
+def _safe_field_options(field: PlatformField) -> dict[str, Any]:
+    if field.field_type not in {"status", "single_select", "multi_select"}:
+        return {}
+    choices = field.options.get("choices")
+    if not isinstance(choices, list) or not all(isinstance(choice, str) for choice in choices):
+        return {}
+    return {"choices": list(choices)}
+
+
 def _field_to_schema(field: PlatformField) -> dict[str, Any]:
     return {
         "id": str(field.id),
@@ -1362,6 +1371,19 @@ def _field_to_schema(field: PlatformField) -> dict[str, Any]:
         "required": field.required,
         "options": field.options,
         "permission_policy": field.permission_policy,
+        "order_index": field.order_index,
+    }
+
+
+def safe_table_schema_field(field: PlatformField) -> dict[str, Any]:
+    return {
+        "id": str(field.id),
+        "table_id": str(field.table_id),
+        "name": field.name,
+        "key": field.key,
+        "field_type": field.field_type,
+        "required": field.required,
+        "options": _safe_field_options(field),
         "order_index": field.order_index,
     }
 

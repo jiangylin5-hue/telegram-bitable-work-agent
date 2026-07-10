@@ -192,9 +192,20 @@ class RecordDetailResponse(RecordResponse):
     pass
 
 
+class SafeTableFieldResponse(BaseModel):
+    id: str
+    table_id: str
+    name: str
+    key: str
+    field_type: str
+    required: bool
+    options: dict[str, Any]
+    order_index: int
+
+
 class TableSchemaResponse(BaseModel):
     table: dict[str, Any]
-    fields: list[dict[str, Any]]
+    fields: list[SafeTableFieldResponse]
 
 
 class CreateViewRequest(BaseModel):

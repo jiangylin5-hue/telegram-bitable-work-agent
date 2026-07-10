@@ -35,7 +35,17 @@ export type BaseSummary = { id: string; name: string; source_type: string; statu
 export type PlatformTable = { id: string; base_id: string; name: string; key: string; status: string }
 export type ViewSummary = { id: string; base_id: string; table_id: string | null; name: string; view_type: string; status: string }
 export type BuilderInitializationReceipt = { base: BaseSummary; table: PlatformTable; default_view: ViewSummary }
-export type TableSchema = { table: { id: string; name: string; key: string }; fields: { id: string; name: string; key: string; field_type: string; required: boolean; order_index: number }[] }
+export type SafeTableField = {
+  id: string
+  table_id: string
+  name: string
+  key: string
+  field_type: string
+  required: boolean
+  options: { choices?: string[] }
+  order_index: number
+}
+export type TableSchema = { table: { id: string; name: string; key: string }; fields: SafeTableField[] }
 export type ViewRecords = { view_id: string; records: { id: string; fields: Record<string, unknown> }[]; next_cursor: string | null; has_more: boolean }
 export type ViewPresentation = { view_id: string; table_id: string; view_type: string; visible_field_keys: string[]; group_by_field_key: string | null; date_field_key: string | null; form_field_keys: string[] }
 export type RecordDetail = { id: string; table_id: string; values: Record<string, unknown>; record_status: string; version: number }

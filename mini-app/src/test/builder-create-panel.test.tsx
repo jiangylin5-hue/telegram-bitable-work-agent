@@ -94,7 +94,7 @@ test('creation entries are shown only when the server capability permits schema 
   const home = { workspace_id: 'workspace-1', recent_bases: [], queue: [] }
   const table = { id: 'table-1', base_id: 'base-1', name: '客户', key: 'customers', status: 'active' }
   const view = { id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: '所有记录', view_type: 'grid', status: 'active' }
-  const schema = { table: { id: 'table-1', name: '客户', key: 'customers' }, fields: [{ id: 'field-1', name: '名称', key: 'name', field_type: 'text', required: false, order_index: 0 }] }
+  const schema = { table: { id: 'table-1', name: '客户', key: 'customers' }, fields: [{ id: 'field-1', table_id: 'table-1', name: '名称', key: 'name', field_type: 'text', required: false, options: {}, order_index: 0 }] }
   const records = { view_id: 'view-1', records: [], next_cursor: null, has_more: false }
   const presentation = { view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: ['name'], group_by_field_key: null, date_field_key: null, form_field_keys: ['name'] }
 

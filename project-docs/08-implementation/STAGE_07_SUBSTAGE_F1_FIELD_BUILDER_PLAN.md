@@ -131,7 +131,7 @@ git commit -m "docs(stage07): plan F1 field builder"
 - Consumes: current `PlatformField`, Stage06 field-read permission and `/tables/{table_id}/schema` ownership authorization.
 - Produces: `SafeTableFieldResponse`, `safe_table_schema_field(field)` and a Canvas schema response which contains only allowed field metadata and validated `choices`.
 
-- [ ] **Step 1: Write failing schema-leak tests**
+- [x] **Step 1: Write failing schema-leak tests**
 
 ```python
 def test_canvas_schema_removes_policy_and_non_choice_options(client, seeded_table):
@@ -145,7 +145,7 @@ def test_canvas_schema_removes_policy_and_non_choice_options(client, seeded_tabl
 
 Add a hidden-field counterpart asserting both its key and policy are absent for a reader without permission.
 
-- [ ] **Step 2: Run the focused test and verify it fails**
+- [x] **Step 2: Run the focused test and verify it fails**
 
 Run:
 
@@ -155,7 +155,7 @@ cd backend; python -m pytest -q tests/unit/test_stage07_mini_app_api.py -k "sche
 
 Expected: FAIL because the current `_field_to_schema` exposes `permission_policy` and raw `options`.
 
-- [ ] **Step 3: Define explicit safe response models and projection**
+- [x] **Step 3: Define explicit safe response models and projection**
 
 Implement the response model and helper with this complete boundary:
 
@@ -190,7 +190,7 @@ def safe_table_schema_field(field: PlatformField) -> dict[str, Any]:
 
 Make `get_table_schema(uow, table_id, actor=actor)` use this helper after the existing field-read filter, and make `TableSchemaResponse.fields` typed as `list[SafeTableFieldResponse]`. Do not alter primitive `FieldResponse` or its backend/admin endpoint.
 
-- [ ] **Step 4: Align the Mini App type**
+- [x] **Step 4: Align the Mini App type**
 
 Replace the current minimal `TableSchema` field type with:
 
@@ -207,7 +207,7 @@ export type TableSchema = {
 
 Only existing consumers that need choice rendering may read `options.choices`.
 
-- [ ] **Step 5: Run focused tests and type build**
+- [x] **Step 5: Run focused tests and type build**
 
 Run:
 
@@ -218,7 +218,7 @@ cd ..\mini-app; npm.cmd test -- --run; npm.cmd run build
 
 Expected: schema tests pass; all current frontend tests and TypeScript build pass with the richer safe type.
 
-- [ ] **Step 6: Commit the safe read correction**
+- [x] **Step 6: Commit the safe read correction**
 
 ```powershell
 git add backend/app/schemas/stage06_platform.py backend/app/services/stage06_platform.py backend/app/api/routes/stage06_platform.py backend/tests/unit/test_stage07_mini_app_api.py mini-app/src/app/api.ts

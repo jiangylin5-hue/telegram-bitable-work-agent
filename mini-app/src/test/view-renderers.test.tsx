@@ -8,9 +8,9 @@ const table = { id: 'table-1', base_id: 'base-1', name: '项目表', key: 'proje
 const schema = {
   table: { id: 'table-1', name: '项目表', key: 'projects' },
   fields: [
-    { id: 'field-1', name: '任务', key: 'name', field_type: 'text', required: true, order_index: 0 },
-    { id: 'field-2', name: '状态', key: 'status', field_type: 'status', required: false, order_index: 1 },
-    { id: 'field-3', name: '截止日', key: 'due', field_type: 'date', required: false, order_index: 2 },
+    { id: 'field-1', table_id: 'table-1', name: '任务', key: 'name', field_type: 'text', required: true, options: {}, order_index: 0 },
+    { id: 'field-2', table_id: 'table-1', name: '状态', key: 'status', field_type: 'status', required: false, options: {}, order_index: 1 },
+    { id: 'field-3', table_id: 'table-1', name: '截止日', key: 'due', field_type: 'date', required: false, options: {}, order_index: 2 },
   ],
 }
 const records = { view_id: 'view-1', records: [{ id: 'record-1', fields: { name: '发布计划', status: '进行中', due: '2026-07-10' } }], next_cursor: null, has_more: false }
