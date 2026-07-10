@@ -2,7 +2,7 @@
 
 ## Status
 
-- Decision status: proposal; implementation is prohibited until explicit user approval
+- Decision status: approved by user on 2026-07-10; implementation may begin only within this document's scope
 - Scope: Mini App/desktop record creation and saved Form submission for existing Stage06 tables
 - Non-scope: field schema editing, new field types, client-side permission inference, Bot writes, imports, drafts or Telegram actions
 
@@ -23,7 +23,7 @@ Add one server-composed, read-only model before using the existing create mutati
 GET /tables/{table_id}/create-form
 ```
 
-Response (proposal):
+Response:
 
 ```json
 {
@@ -86,4 +86,4 @@ Rules:
 
 ## 7. Approval Request
 
-Approve this dedicated server-filtered `GET /tables/{table_id}/create-form` contract as the prerequisite for the first Form/create slice, or provide a different product boundary. This approval would authorize the contract, tests and first scalar create UI only; it would not authorize builder, imports, governance or Bot/Telegram work.
+The user approved this dedicated server-filtered `GET /tables/{table_id}/create-form` contract on 2026-07-10. The approval authorizes the contract, tests and first scalar create UI only; it does not authorize builder, imports, governance or Bot/Telegram work.

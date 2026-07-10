@@ -768,6 +768,26 @@ def create_record(
     return record
 
 
+def get_create_form(uow: Stage06PlatformUnitOfWork, table_id: UUID, *, actor: Actor) -> dict[str, Any]:
+    _require_exists(uow.get_table(table_id), "table_not_found")
+    fields = [field for field in uow.list_fields(table_id) if _can_actor_write_field(actor, field)]
+    return {
+        "table_id": str(table_id),
+        "can_create": True,
+        "fields": [
+            {
+                "key": field.key,
+                "name": field.name,
+                "field_type": field.field_type,
+                "required": field.required,
+                "options": field.options,
+                "order_index": field.order_index,
+            }
+            for field in fields
+        ],
+    }
+
+
 def update_record(
     uow: Stage06PlatformUnitOfWork,
     record_id: UUID,

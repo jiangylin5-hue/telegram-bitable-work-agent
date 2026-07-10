@@ -151,6 +151,21 @@ class CreateRecordRequest(BaseModel):
     values: dict[str, Any]
 
 
+class CreateFormFieldResponse(BaseModel):
+    key: str
+    name: str
+    field_type: str
+    required: bool
+    options: dict[str, Any]
+    order_index: int
+
+
+class CreateFormResponse(BaseModel):
+    table_id: str
+    can_create: bool
+    fields: list[CreateFormFieldResponse]
+
+
 class UpdateRecordRequest(BaseModel):
     values: dict[str, Any]
     expected_version: int = Field(ge=1)

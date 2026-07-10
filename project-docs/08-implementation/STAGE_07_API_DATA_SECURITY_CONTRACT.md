@@ -59,6 +59,12 @@ The Base Canvas composes these summaries with authorized `GET /tables/{table_id}
 | user memory partition | isolate personal conversation memory per caller | schema, security, retention |
 | Mini App bootstrap/deep link | verify Telegram proof and resolve target safely | identity/API contract |
 
+## 5.1 Approved Form/Create Contract
+
+`GET /tables/{table_id}/create-form` is approved for the first scalar Form/create slice. It requires existing `record.create` authorization and returns only `{ table_id, can_create, fields[] }`, where every field is server-filtered for the actor's writable scope and exposes only `key`, `name`, `field_type`, `required`, filtered `options` and `order_index`. It never returns raw `permission_policy`, hidden field metadata, view config, inaccessible linked values or a role claim.
+
+The existing `POST /tables/{table_id}/records` remains the only create mutation. The browser submits only returned field keys; Stage06 remains authoritative for validation, normalization, audit and version-1 record creation. This approval does not cover complex field editors, builder, imports, drafts, Bot writes or Telegram actions.
+
 ## 6. Client Security Rules
 
 - Do not derive permissions from navigation visibility or cached role strings.

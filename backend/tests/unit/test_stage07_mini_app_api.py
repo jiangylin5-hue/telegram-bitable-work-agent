@@ -312,3 +312,27 @@ def test_view_presentation_record_detail_and_schema_hide_inaccessible_fields() -
     assert record_response.status_code == 200
     assert record_response.json()["values"] == {"name": "Ada", "due": "2026-07-10"}
     assert "secret" not in record_response.text
+
+
+def test_create_form_returns_only_server_writable_fields_without_policy() -> None:
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "owner-1"
+        workspace_id = client.post("/workspaces", json={"name": "Acme", "owner_user_id": "owner-1"}).json()["id"]
+        base_id = client.post(f"/workspaces/{workspace_id}/bases", json={"name": "Operations"}).json()["id"]
+        table_id = client.post(f"/bases/{base_id}/tables", json={"name": "Projects", "key": "projects"}).json()["id"]
+        client.post(f"/tables/{table_id}/fields", json={"name": "Title", "key": "title", "field_type": "text", "required": True, "permission_policy": {"operator": "write"}})
+        client.post(f"/tables/{table_id}/fields", json={"name": "Internal", "key": "internal", "field_type": "text", "permission_policy": {"operator": "read"}})
+        uow.add_workspace_member(WorkspaceMember(id=uuid4(), workspace_id=UUID(workspace_id), user_id="operator-1", role="operator", status="active"))
+        client.headers["X-Stage06-User-Id"] = "operator-1"
+        response = client.get(f"/tables/{table_id}/create-form")
+
+    assert response.status_code == 200
+    assert response.json()["table_id"] == table_id
+    assert response.json()["can_create"] is True
+    assert response.json()["fields"] == [{"key": "title", "name": "Title", "field_type": "text", "required": True, "options": {}, "order_index": 0}]
+    assert "permission_policy" not in response.text
+    assert "internal" not in response.text

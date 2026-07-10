@@ -11,6 +11,7 @@ from app.schemas.stage06_platform import (
     BaseListResponse,
     CreateBaseRequest,
     CreateFieldRequest,
+    CreateFormResponse,
     CreateRecordRequest,
     CreateTableRequest,
     CreateViewRequest,
@@ -50,6 +51,7 @@ from app.services.stage06_platform import (
     Stage06PlatformUnitOfWork,
     create_base,
     create_field,
+    get_create_form,
     create_record,
     create_table,
     create_workspace,
@@ -437,6 +439,21 @@ def create_record_endpoint(
         record_status=record.record_status,
         version=record.version,
     )
+
+
+@router.get("/tables/{table_id}/create-form", response_model=CreateFormResponse)
+def get_create_form_endpoint(
+    table_id: UUID,
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> CreateFormResponse:
+    try:
+        workspace_id = workspace_id_for_table(uow, table_id)
+        actor = authorize_workspace_action(uow, identity, workspace_id, "record.create")
+        form = get_create_form(uow, table_id, actor=actor)
+    except (PlatformValidationError, Stage06AuthorizationError) as exc:
+        raise _http_error(exc) from exc
+    return CreateFormResponse(**form)
 
 
 @router.patch("/records/{record_id}", response_model=RecordResponse)
