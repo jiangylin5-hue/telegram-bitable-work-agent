@@ -627,7 +627,7 @@ git commit -m "feat(stage07): add field builder panel"
 - Consumes: `api.initializeField`, `FieldBuilderPanel`, `SafeTableField`, current `openTableView`/canvas generation logic and protected query keys.
 - Produces: `onCreateField`, exact safe receipt verification and a real capability-gated `添加字段`/`添加第一个字段` surface.
 
-- [ ] **Step 1: Write failing protected-flow tests**
+- [x] **Step 1: Write failing protected-flow tests**
 
 ```tsx
 fireEvent.click(screen.getByRole('button', { name: '添加第一个字段' }))
@@ -641,7 +641,7 @@ expect(await screen.findByRole('columnheader', { name: '客户阶段' })).toBeIn
 
 Add tests that `403` clears the workspace scope and shows no field preview; a response whose field ID is absent from the fresh schema never renders; old workspace/view responses cannot restore the panel or column; and a successful receipt rereads schema, presentation, records and create form.
 
-- [ ] **Step 2: Run the App-flow test and verify it fails**
+- [x] **Step 2: Run the App-flow test and verify it fails**
 
 Run:
 
@@ -651,13 +651,13 @@ cd mini-app; npm.cmd test -- --run src/test/field-builder-flow.test.tsx
 
 Expected: FAIL because there is no capability-gated field entry or initialization request.
 
-- [ ] **Step 3: Add query keys and exact invalidation**
+- [x] **Step 3: Add query keys and exact invalidation**
 
 Use existing keys such as `protectedQueryKey(scope, 'table', table.id, 'schema')` and `protectedQueryKey(scope, 'view', view.id, 'presentation')`. On a safe receipt, cancel/remove the active table schema, every affected view presentation/record window, current table create form and open record details. Then reread the current authorised table/view through `openTableView`; independently fetch the safe schema and verify `receipt.field.id` is present before closing the panel.
 
 The mutation owner must map errors exactly as P3: `401` calls full protected cleanup, `403` removes the current workspace scope, `409` is rethrown to lock the panel, and network/5xx is rethrown to preserve its key/values.
 
-- [ ] **Step 4: Replace the inert F1 empty state**
+- [x] **Step 4: Replace the inert F1 empty state**
 
 Extend `BaseCanvasProps` with `onCreateField?: () => void`. Render a real button only when `canManageSchema` and the callback exist:
 
@@ -672,7 +672,7 @@ if (presentation.view_type === 'grid' && schema.fields.length === 0) {
 
 Pass the same callback to a table-toolbar `添加字段` action for nonempty tables. A viewer receives no disabled button or protected metadata.
 
-- [ ] **Step 5: Run focused application tests and build**
+- [x] **Step 5: Run focused application tests and build**
 
 Run:
 

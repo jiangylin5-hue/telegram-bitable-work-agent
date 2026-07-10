@@ -103,8 +103,10 @@ test('creation entries are shown only when the server capability permits schema 
   rerender(<WorkspaceHome home={home} workspace={{ ...workspace, capabilities: { ...workspace.capabilities, can_manage_schema: true } }} onOpenBase={() => undefined} onCreateBase={() => undefined} />)
   expect(screen.getByRole('button', { name: '新建 Base' })).toBeInTheDocument()
 
-  rerender(<BaseCanvas base={{ id: 'base-1', name: 'CRM', source_type: 'blank' }} tables={[table]} views={[view]} table={table} view={view} schema={schema} records={records} presentation={presentation} onBack={() => undefined} onOpenRecord={() => undefined} onSelectView={() => undefined} canManageSchema={false} onCreateTable={() => undefined} />)
+  rerender(<BaseCanvas base={{ id: 'base-1', name: 'CRM', source_type: 'blank' }} tables={[table]} views={[view]} table={table} view={view} schema={schema} records={records} presentation={presentation} onBack={() => undefined} onOpenRecord={() => undefined} onSelectView={() => undefined} canManageSchema={false} onCreateTable={() => undefined} onCreateField={() => undefined} />)
   expect(screen.queryByRole('button', { name: '新建表' })).not.toBeInTheDocument()
-  rerender(<BaseCanvas base={{ id: 'base-1', name: 'CRM', source_type: 'blank' }} tables={[table]} views={[view]} table={table} view={view} schema={schema} records={records} presentation={presentation} onBack={() => undefined} onOpenRecord={() => undefined} onSelectView={() => undefined} canManageSchema onCreateTable={() => undefined} />)
+  expect(screen.queryByRole('button', { name: '添加字段' })).not.toBeInTheDocument()
+  rerender(<BaseCanvas base={{ id: 'base-1', name: 'CRM', source_type: 'blank' }} tables={[table]} views={[view]} table={table} view={view} schema={schema} records={records} presentation={presentation} onBack={() => undefined} onOpenRecord={() => undefined} onSelectView={() => undefined} canManageSchema onCreateTable={() => undefined} onCreateField={() => undefined} />)
   expect(screen.getByRole('button', { name: '新建表' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '添加字段' })).toBeInTheDocument()
 })

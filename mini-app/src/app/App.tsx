@@ -5,10 +5,11 @@ import { ApiError, api, type BaseSummary, type BootstrapResponse, type CreateFor
 import { AppShell } from './AppShell'
 import { BaseCanvas } from './BaseCanvas'
 import { BuilderCreatePanel } from './BuilderCreatePanel'
+import { FieldBuilderPanel, type FieldBuilderValues } from './FieldBuilderPanel'
 import { CreateRecordPanel } from './CreateRecordPanel'
 import { RecordDetailPanel } from './RecordDetail'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
-import { clearAllProtectedQueries, clearProtectedWorkspace, createProtectedQueryClient, protectedQueryKey } from './protectedQuery'
+import { clearAllProtectedQueries, clearFieldMutationQueries, clearProtectedWorkspace, createProtectedQueryClient, protectedQueryKey } from './protectedQuery'
 
 type BaseCanvasState = {
   base: BaseSummary
@@ -32,7 +33,7 @@ type AppState =
   | { status: 'ready'; bootstrap: BootstrapResponse; home: WorkspaceHome; canvas?: BaseCanvasState; canvasLoading?: boolean }
 
 type CanvasTarget = { tableId: string; viewId: string }
-type BuilderPanel = { mode: 'base' } | { mode: 'table'; base: BaseSummary }
+type BuilderPanel = { mode: 'base' } | { mode: 'table'; base: BaseSummary } | { mode: 'field'; tableId: string; viewId: string }
 
 function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'AbortError'
@@ -243,6 +244,72 @@ function AppContent() {
         return
       }
       if (error instanceof ApiError && error.status === 404) {
+        setState({ status: 'error' })
+        return
+      }
+      throw error
+    }
+  }
+
+  async function createField(
+    tableId: string,
+    viewId: string,
+    values: FieldBuilderValues,
+    idempotencyKey: string,
+  ) {
+    const canvas = readyState.canvas
+    if (!canvas?.table || !canvas.view || canvas.table.id !== tableId || canvas.view.id !== viewId) {
+      throw new Error('Table is not available')
+    }
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = builderRequestVersion.current
+    const canvasVersion = canvasRequestVersion.current
+    const isCurrent = () => builderRequestVersion.current === requestVersion
+      && canvasRequestVersion.current === canvasVersion
+      && activeWorkspaceId.current === workspaceId
+    try {
+      const receipt = await api.initializeField(tableId, values, idempotencyKey)
+      if (!isCurrent()) return
+      const affectedViewIds = [...new Set([viewId, ...receipt.affected_view_ids])]
+      await clearFieldMutationQueries(queryClient, scope, tableId, affectedViewIds)
+      if (!isCurrent()) return
+      const schema = await queryClient.fetchQuery({
+        queryKey: protectedQueryKey(scope, 'table', tableId, 'schema'),
+        queryFn: ({ signal }) => api.tableSchema(tableId, { signal }),
+      })
+      if (!schema.fields.some((field) => field.id === receipt.field.id)) {
+        throw new Error('Created field is unavailable')
+      }
+      const [presentation, records] = await Promise.all([
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', viewId, 'presentation'), queryFn: ({ signal }) => api.viewPresentation(viewId, { signal }) }),
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', viewId, 'records', null), queryFn: ({ signal }) => api.viewRecords(viewId, undefined, { signal }) }),
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'table', tableId, 'create-form'), queryFn: ({ signal }) => api.createForm(tableId, { signal }) }),
+      ])
+      if (!isCurrent()) return
+      setState((current) => current.status === 'ready'
+        && current.home.workspace_id === workspaceId
+        && current.canvas?.table?.id === tableId
+        && current.canvas.view?.id === viewId
+        ? { ...current, canvas: { ...current.canvas, schema, presentation, records, detail: undefined, createForm: undefined } }
+        : current)
+      setBuilderPanel(undefined)
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await clearAllProtectedQueries(queryClient)
+        setBuilderPanel(undefined)
+        setState({ status: 'denied' })
+        return
+      }
+      if (error instanceof ApiError && error.status === 403) {
+        await clearProtectedWorkspace(queryClient, scope)
+        setBuilderPanel(undefined)
+        setState({ status: 'denied' })
+        return
+      }
+      if (error instanceof ApiError && error.status === 404) {
+        setBuilderPanel(undefined)
         setState({ status: 'error' })
         return
       }
@@ -485,12 +552,14 @@ function AppContent() {
   const content = readyState.canvasLoading
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
-      ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} onConflict={refreshRecordAfterConflict} onClose={() => setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } })} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => setState((current) => current.status === 'ready' && current.canvas ? { ...current, canvas: { ...current.canvas, createForm: undefined } } : current)} />}</>
+      ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} onConflict={refreshRecordAfterConflict} onClose={() => setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } })} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => setState((current) => current.status === 'ready' && current.canvas ? { ...current, canvas: { ...current.canvas, createForm: undefined } } : current)} />}</>
       : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} />
   const builderOverlay = builderPanel?.mode === 'base'
     ? <BuilderCreatePanel mode="base" onSubmit={(values, idempotencyKey) => createBase(values as { baseName: string; tableName: string }, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
     : builderPanel?.mode === 'table'
       ? <BuilderCreatePanel mode="table" onSubmit={(values, idempotencyKey) => createTable(builderPanel.base, values as { tableName: string }, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
-      : null
+      : builderPanel?.mode === 'field'
+        ? <FieldBuilderPanel onSubmit={(values, idempotencyKey) => createField(builderPanel.tableId, builderPanel.viewId, values, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
+        : null
   return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace}>{content}{builderOverlay}</AppShell>
 }

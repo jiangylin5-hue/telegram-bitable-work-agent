@@ -34,3 +34,22 @@ export async function clearAllProtectedQueries(queryClient: QueryClient): Promis
   await queryClient.cancelQueries({ queryKey })
   queryClient.removeQueries({ queryKey })
 }
+
+export async function clearFieldMutationQueries(
+  queryClient: QueryClient,
+  scope: ProtectedScope,
+  tableId: string,
+  viewIds: string[],
+): Promise<void> {
+  const queryKeys: QueryKey[] = [
+    protectedQueryKey(scope, 'table', tableId, 'schema'),
+    protectedQueryKey(scope, 'table', tableId, 'create-form'),
+    protectedQueryKey(scope, 'record'),
+    ...viewIds.flatMap((viewId) => [
+      protectedQueryKey(scope, 'view', viewId, 'presentation'),
+      protectedQueryKey(scope, 'view', viewId, 'records'),
+    ]),
+  ]
+  await Promise.all(queryKeys.map((queryKey) => queryClient.cancelQueries({ queryKey })))
+  for (const queryKey of queryKeys) queryClient.removeQueries({ queryKey })
+}
