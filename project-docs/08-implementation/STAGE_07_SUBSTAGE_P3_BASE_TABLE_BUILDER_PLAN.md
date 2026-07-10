@@ -12,7 +12,7 @@
 
 - Document status: detailed implementation plan derived from the user-reviewed P3 design; awaiting user approval before test or production-code changes.
 - Scope: only Stage07 Package 2 Base/Table atomic Builder; Fields, additional views, imports/templates, governance and Package 4 remain outside this plan.
-- Current Progress: 2026-07-10 plan written after design review. No implementation task has started and no acceptance item is checked.
+- Current Progress: 2026-07-10 Task 1 is implemented and locally verified: RED migration/model checks, GREEN `3 passed`, one Alembic head `20260710_0021`, and offline SQL containing only the additive default-view partial unique index. Task 2 has not started.
 - Source alignment: `AGENTS.md`; `STAGE_07_SOURCE_OF_TRUTH.md`; `STAGE_07_SDD.md`; `modules/STAGE_07_BITABLE_WORK_SURFACE.md`; `STAGE_07_BDD_AND_ACCEPTANCE.md`; `STAGE_07_API_DATA_SECURITY_CONTRACT.md`; `STAGE_07_SUBSTAGE_P3_BASE_TABLE_BUILDER_DESIGN.md`.
 
 ## Global Constraints
@@ -69,7 +69,7 @@
 - Consumes: `PlatformView.table_id`, `PlatformView.is_default`, Alembic revision `20260710_0020`.
 - Produces: model index `uq_views_one_default_per_table`; migration revision `20260710_0021`; SQL condition `is_default IS TRUE`.
 
-- [ ] **Step 1: Write the failing migration/model checks**
+- [x] **Step 1: Write the failing migration/model checks**
 
   Create `backend/tests/unit/test_stage06_builder_default_view_migration.py` with the following assertions:
 
@@ -106,7 +106,7 @@
       assert 'op.drop_index("uq_views_one_default_per_table", table_name="views")' in downgrade
   ```
 
-- [ ] **Step 2: Run the focused test and record the expected RED result**
+- [x] **Step 2: Run the focused test and record the expected RED result**
 
   Run:
 
@@ -116,7 +116,7 @@
 
   Expected: collection or assertions fail because revision `20260710_0021` and the model index do not exist.
 
-- [ ] **Step 3: Add the ORM and Alembic index with no data mutation**
+- [x] **Step 3: Add the ORM and Alembic index with no data mutation**
 
   In `PlatformView`, import `Index` and `text`, then set `__table_args__` to the equivalent of:
 
@@ -154,7 +154,7 @@
 
   Do not add `UPDATE views`, do not set defaults at schema level, and do not alter primitive `create_form_view` behavior in this task.
 
-- [ ] **Step 4: Run the focused test and Alembic graph checks**
+- [x] **Step 4: Run the focused test and Alembic graph checks**
 
   Run:
 
@@ -166,7 +166,7 @@
 
   Expected: focused test passes; `alembic heads` reports only `20260710_0021`; offline SQL contains the partial unique index without any data update.
 
-- [ ] **Step 5: Commit the database guard**
+- [x] **Step 5: Commit the database guard**
 
   ```powershell
   git add backend/app/models/stage06_platform.py backend/alembic/versions/20260710_0021_stage07_builder_defaults.py backend/tests/unit/test_stage06_builder_default_view_migration.py

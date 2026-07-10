@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Index, Integer, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Uuid
@@ -185,6 +185,14 @@ class RecordLink(UuidPrimaryKeyMixin, TimestampMixin, Base):
 
 class PlatformView(UuidPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "views"
+    __table_args__ = (
+        Index(
+            "uq_views_one_default_per_table",
+            "table_id",
+            unique=True,
+            postgresql_where=text("is_default IS TRUE"),
+        ),
+    )
 
     base_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True),
