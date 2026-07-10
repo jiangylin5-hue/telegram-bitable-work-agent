@@ -484,6 +484,7 @@ class SqlAlchemyStage06PlatformUnitOfWork:
 
     def add_base(self, base: BitableBase) -> None:
         self.session.add(base)
+        self.session.flush()
 
     def get_base(self, base_id: UUID) -> BitableBase | None:
         return self.session.get(BitableBase, base_id)
@@ -497,6 +498,7 @@ class SqlAlchemyStage06PlatformUnitOfWork:
 
     def add_table(self, table: PlatformTable) -> None:
         self.session.add(table)
+        self.session.flush()
 
     def get_table(self, table_id: UUID) -> PlatformTable | None:
         return self.session.get(PlatformTable, table_id)

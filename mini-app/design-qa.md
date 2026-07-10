@@ -2,7 +2,7 @@
 
 ## Result
 
-partial-local
+passed (F1 visual scope)
 
 ## Scope and reference
 
@@ -23,4 +23,4 @@ partial-local
 
 - The source reference includes a populated Workspace Ledger plus assistant rail, which belongs to wider Package 2/4 work and is intentionally not claimed as F1 parity.
 - The delayed workspace/view replacement remains an application-level scope-isolation test because the modal correctly blocks the impossible background interaction. It is covered by the delayed-receipt application test, rather than by a forced browser interaction that the UI correctly makes impossible.
-- The three F1 real-PostgreSQL proof cases remain skipped until an authorised disposable `STAGE06_LOCAL_DATABASE_URL` is available.
+- The three F1 real-PostgreSQL proof cases ran and passed on 2026-07-11 against an authorised disposable local database. This supports F1's implementation evidence; it does not extend this visual-QA result to wider Stage07 scope.

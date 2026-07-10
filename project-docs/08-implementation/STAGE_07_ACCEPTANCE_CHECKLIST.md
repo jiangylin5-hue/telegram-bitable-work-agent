@@ -28,7 +28,7 @@ These checks cover only the approved P3 atomic Base/Table creation slice. They d
 - [x] New tables are visibly zero-field and do not expose fake record or field mutation; the next Field Builder substage is stated honestly.
 - [x] Inline validation, retryable network/5xx error, same-key retry, `409` conflict lock, `403` denied cleanup and stale workspace-result rejection have focused automated evidence.
 - [x] Disposable synthetic Browser QA verified P3 desktop behavior at actual `1280x720`, mobile sheet controls at actual `390x844`, and zero relevant final console warnings/errors; the fixture was stopped/deleted.
-- [ ] The P3 real-PostgreSQL rollback/concurrency/default-index tests run against a configured `STAGE06_LOCAL_DATABASE_URL`; they are present but currently skipped, so this is an explicit remaining evidence gap.
+- [x] The P3 real-PostgreSQL rollback/concurrency/default-index tests ran against the authorised disposable `STAGE06_LOCAL_DATABASE_URL` on 2026-07-11 and passed. This is local database evidence only, not a Stage07 or production acceptance claim.
 
 ### F1 Independent Field Builder Evidence
 
@@ -39,8 +39,8 @@ These checks cover only approved independent field creation and its immediate re
 - [x] Safe Canvas schema, F1 receipt and create-form metadata contain no policy, raw non-choice options, default value, technical status or hidden field metadata.
 - [x] The server generates the key/order/default policy, updates eligible explicit saved-view field lists atomically, writes sanitized audit and leaves existing record values empty.
 - [x] Configured status/single/multi choices are validated server-side; multi-select works in record create and direct edit; legacy option-less fields preserve their documented compatibility.
-- [x] Same-key replay and changed-payload `409` have automated evidence; in-memory rollback/order tests pass, while the three matching real-PostgreSQL cases remain explicitly unchecked until an authorised local URL runs them.
-- [x] Browser QA has F1-scoped Workspace Ledger comparison and zero-console-error evidence at 1440/1280/430/390 for fieldless-to-first-field, nonempty-table add, validation/retry/denial, allowed-choice record creation and direct-edit success; the sanitized direct-edit screenshot is retained at `artifacts/stage07/f1-direct-edit-success-1440.png`. At all four widths, the duplicate-name allowlist feedback preserves the typed name and suppresses the server message, while a pending request disables create/close/cancel and keeps the dialog visible. Delayed workspace replacement remains covered by the application scope-isolation test. This browser item does not satisfy the explicitly unchecked real-PostgreSQL item above.
+- [x] Same-key replay and changed-payload `409` have automated evidence; the three matching real-PostgreSQL rollback/replay/concurrent-order cases ran and passed on the authorised disposable local database.
+- [x] Browser QA has F1-scoped Workspace Ledger comparison and zero-console-error evidence at 1440/1280/430/390 for fieldless-to-first-field, nonempty-table add, validation/retry/denial, allowed-choice record creation and direct-edit success; the sanitized direct-edit screenshot is retained at `artifacts/stage07/f1-direct-edit-success-1440.png`. At all four widths, the duplicate-name allowlist feedback preserves the typed name and suppresses the server message, while a pending request disables create/close/cancel and keeps the dialog visible. Delayed workspace replacement remains covered by the application scope-isolation test. The matching real-PostgreSQL item above also passed.
 
 ## Governance And Security
 

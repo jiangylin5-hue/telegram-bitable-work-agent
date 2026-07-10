@@ -10,9 +10,9 @@
 
 ## Status
 
-- Document status: approved detailed implementation plan derived from the user-reviewed P3 design; code and local P3 evidence recorded, with one explicit real-PostgreSQL acceptance gap.
+- Document status: approved detailed implementation plan derived from the user-reviewed P3 design; code and local P3 evidence recorded, including real disposable-PostgreSQL acceptance evidence.
 - Scope: only Stage07 Package 2 Base/Table atomic Builder; Fields, additional views, imports/templates, governance and Package 4 remain outside this plan.
-- Current Progress: 2026-07-10 Tasks 1–6 have RED/GREEN implementation evidence, fresh full gates and synthetic Browser QA. Task 1 has RED migration/model checks, GREEN `3 passed`, one Alembic head `20260710_0021`, and offline SQL with the additive default-view partial unique index. Task 2 has RED missing-domain-import evidence, GREEN `3 passed` focused and `10 passed` full platform-core evidence for zero-field Base/Table Grid graphs, generated table keys and sanitized parent audits. Task 3 has RED `404` endpoint evidence, GREEN `14 passed` API/security unit evidence for safe receipts, authorization, validation and idempotency; three real-PostgreSQL rollback/concurrency/index tests are present but skipped because `STAGE06_LOCAL_DATABASE_URL` is missing. Task 4 has RED missing-module/transport evidence, GREEN `7 passed` focused API/panel/capability tests, and typed atomic-initialization calls, accessible light desktop/mobile panel behavior and server-capability-gated entry points only. Task 5 has RED missing-entry/list-order behavior evidence, GREEN Builder flow coverage for refreshed authorized lists, exact receipt IDs, safe missing-resource behavior, `403` cleanup, workspace-switch stale-result rejection and the honest zero-field Grid. Task 6 used a disposable synthetic fixture for all five Browser cases at actual `1280x720` and `390x844`, reported zero feature console warnings/errors, stopped/deleted the fixture, and updated the bounded evidence documents. Fresh final gates are backend `417 passed, 22 skipped`; frontend `10` files / `41 passed`; Vite build passed; one Alembic head and offline partial-index SQL passed. P3 remains `partial-local`, not accepted as a full database proof, until the three real-PostgreSQL tests can run with `STAGE06_LOCAL_DATABASE_URL`.
+- Current Progress: 2026-07-11 Tasks 1–6 have RED/GREEN implementation evidence, fresh full gates and synthetic Browser QA. Task 1 has RED migration/model checks, GREEN `3 passed`, one Alembic head `20260710_0021`, and offline SQL with the additive default-view partial unique index. Task 2 has RED missing-domain-import evidence, GREEN `3 passed` focused and `10 passed` full platform-core evidence for zero-field Base/Table Grid graphs, generated table keys and sanitized parent audits. Task 3 has RED `404` endpoint evidence, GREEN `14 passed` API/security unit evidence for safe receipts, authorization, validation and idempotency; its three real-PostgreSQL rollback/concurrency/index tests now passed on the authorised disposable local database. The real run exposed a missing same-transaction SQLAlchemy flush for newly staged Base/Table objects; the minimal UoW repair and the test-file import corrections are covered by the passing command. Task 4 has RED missing-module/transport evidence, GREEN `7 passed` focused API/panel/capability tests, and typed atomic-initialization calls, accessible light desktop/mobile panel behavior and server-capability-gated entry points only. Task 5 has RED missing-entry/list-order behavior evidence, GREEN Builder flow coverage for refreshed authorized lists, exact receipt IDs, safe missing-resource behavior, `403` cleanup, workspace-switch stale-result rejection and the honest zero-field Grid. Task 6 used a disposable synthetic fixture for all five Browser cases at actual `1280x720` and `390x844`, reported zero feature console warnings/errors, stopped/deleted the fixture, and updated the bounded evidence documents. Fresh backend evidence is `440 passed, 17 skipped`; the remaining skips are historical Stage02 online-PostgreSQL cases only. P3 is `implemented-local`; this is not Stage07 or production acceptance.
 - Source alignment: `AGENTS.md`; `STAGE_07_SOURCE_OF_TRUTH.md`; `STAGE_07_SDD.md`; `modules/STAGE_07_BITABLE_WORK_SURFACE.md`; `STAGE_07_BDD_AND_ACCEPTANCE.md`; `STAGE_07_API_DATA_SECURITY_CONTRACT.md`; `STAGE_07_SUBSTAGE_P3_BASE_TABLE_BUILDER_DESIGN.md`.
 
 ## Global Constraints
@@ -662,7 +662,7 @@
 
   Also run the migration checks from Task 1 and, if `STAGE06_LOCAL_DATABASE_URL` is configured, the exact PostgreSQL integration command from Task 3. Record real pass/fail/skip counts; do not use earlier counts.
 
-  Final fresh output: backend `417 passed, 22 skipped`; `alembic heads` returned only `20260710_0021 (head)`; offline SQL emitted `CREATE UNIQUE INDEX uq_views_one_default_per_table ON views (table_id) WHERE is_default IS TRUE;` and no `UPDATE views`; frontend `10 passed` files / `41 passed` tests; `npm.cmd run build` passed. `STAGE06_LOCAL_DATABASE_URL` was absent, so the exact real-PostgreSQL integration command was not executed and the five Stage06-local PostgreSQL tests remain environment-bound skips in the full suite.
+  Prior local-only output: backend `417 passed, 22 skipped`; `alembic heads` returned only `20260710_0021 (head)`; offline SQL emitted `CREATE UNIQUE INDEX uq_views_one_default_per_table ON views (table_id) WHERE is_default IS TRUE;` and no `UPDATE views`; frontend `10 passed` files / `41 passed` tests; `npm.cmd run build` passed. The subsequent 2026-07-11 authorised local database run supersedes its environment-gap status: the six P3/F1 PostgreSQL cases passed and the full backend suite reported `440 passed, 17 skipped`.
 
 - [x] **Step 3: Execute desktop/mobile Browser QA and inspect runtime state**
 
@@ -686,7 +686,7 @@
   - traceability changes Base/Table initialization to `implemented-local` only if every listed acceptance criterion has evidence; otherwise it records the more accurate `partial-local` state while field/view/import builder rows stay incomplete.
   - acceptance checklist marks only verifiably covered Base/Table builder items, never the whole Builder/import/template package.
 
-  Completed. The fixture process/source were stopped/deleted. API contract, Package 2 plan, progress, traceability, acceptance checklist and this P3 plan record only observed P3 evidence. Because real PostgreSQL was unavailable, traceability correctly retains `partial-local` rather than overstating acceptance.
+  Completed. The fixture process/source were stopped/deleted. API contract, Package 2 plan, progress, traceability, acceptance checklist and this P3 plan record only observed P3 evidence. The 2026-07-11 real PostgreSQL pass promotes the bounded P3 traceability row to `implemented-local`; this still does not overstate wider Builder or Stage07 acceptance.
 
 ### P3 Design §12 Line-By-Line Review
 
@@ -695,13 +695,13 @@
 | Authorized Builder creates blank Base + initial table/default Grid from Home | Initialization route/service tests, capability-gated Home entry, Builder flow test and `1280x720` Browser flow for `客户运营` / `客户` / default Grid | Verified locally |
 | Authorized Builder creates table + default Grid from open Base | Route/service tests, Base capability entry, exact-list-order Builder flow test and Browser `待办` flow retaining an older table | Verified locally |
 | Browser submits names only | Typed transport request assertions, panel inputs and safe receipt schema/route tests | Verified locally |
-| Exactly one default Grid per table; PostgreSQL rejects a second | model/migration checks and offline PostgreSQL SQL prove the declared invariant; real enforcement test is present but cannot connect locally | **Evidence gap: real PostgreSQL** |
-| Validation/auth/injected transaction failure leaves no partial durable graph | In-memory domain/API rollback, validation and denial coverage passes; real PostgreSQL rollback test is present but skipped | **Partial: real PostgreSQL rollback gap** |
+| Exactly one default Grid per table; PostgreSQL rejects a second | model/migration checks, offline PostgreSQL SQL and the authorised local real-enforcement test prove the invariant | Verified locally |
+| Validation/auth/injected transaction failure leaves no partial durable graph | In-memory domain/API rollback, validation and denial coverage plus the authorised local real-PostgreSQL rollback test pass | Verified locally |
 | Same-key receipt replay; changed payload conflicts safely | Backend replay/conflict tests plus Mini App same-key retry and `409` lock tests | Verified locally |
 | Raw policy/config/field/role/audit/idempotency internals excluded | Safe receipt models, API security tests and client type boundary | Verified locally |
 | Receipt navigation rereads authorized lists and never chooses unrelated first resource | App flow tests cover exact receipt IDs/list ordering/stale workspace response; Browser confirms exact created table/view | Verified locally |
 | Accessible desktop/mobile creation with loading, validation, denial, retry and zero-field states | Focus/label/pending/error panel tests; `1280x720` and `390x844` Browser checks; validation/503/403/zero-field evidence | Verified locally for P3 interaction; not a whole-stage visual-fidelity claim |
-| Fresh RED/GREEN, full gates, migration and Browser evidence | Fresh backend `417/22 skipped`, frontend `41/41`, build, one Alembic head, offline SQL and sanitized Browser QA | Verified except real PostgreSQL environment gate |
+| Fresh RED/GREEN, full gates, migration and Browser evidence | Fresh backend `440/17 skipped`, real P3/F1 PostgreSQL evidence, frontend `41/41` at the prior bounded checkpoint, build, one Alembic head, offline SQL and sanitized Browser QA | Verified locally; later UI packages remain separate |
 | Documentation distinguishes P3 from unimplemented work | Contract, plan, progress, traceability and checklist explicitly retain Field/View, import/template, governance, Package 4 and Stage07 exit gaps | Verified locally |
 
 The original selected visual images are not preserved as repository assets. P3 records the implemented light drawer/mobile-sheet interaction and actual responsive QA only; it does not claim pixel-level fidelity to a non-retained image reference.
@@ -722,16 +722,16 @@ The original selected visual images are not preserved as repository assets. P3 r
   git commit -m "docs(stage07): record Base table Builder evidence"
   ```
 
-  Completed review: the §12 table above maps each acceptance item to fresh source/test/browser evidence and identifies the real-PostgreSQL-only gaps. `git diff --check` is clean; the only working-tree changes are the six evidence documents listed in this task, with no fixture or generated artifact.
+  Completed review: the §12 table above maps each acceptance item to fresh source/test/browser evidence. The former real-PostgreSQL-only gap was closed on 2026-07-11; the current worktree/verification records the real database repair and evidence update separately, with no fixture or generated artifact retained.
 
 ## Execution Exit Criteria
 
-The six tasks have RED/GREEN evidence and reviewable commits. The P3 implementation and its local browser/in-memory evidence are complete; it remains `partial-local` rather than fully accepted until the real-PostgreSQL row below can run with a configured local database:
+The six tasks have RED/GREEN evidence and reviewable commits. The P3 implementation has local browser, in-memory and authorised real-PostgreSQL evidence, so it is `implemented-local`; it is not a full Stage07 or production acceptance:
 
 - [x] `20260710_0021` is the single Alembic head and offline PostgreSQL SQL emits the additive partial unique index.
 - [x] Domain creation produces exactly the specified Base/table/default Grid graph, no fields and the correct granular plus parent audit events in covered local tests.
 - [x] Both endpoints independently authorize, validate, replay safely and return only the defined receipt model in covered local tests.
-- [ ] Real-PostgreSQL tests prove transaction rollback, same-key concurrency and default-view uniqueness. They are present but unavailable because `STAGE06_LOCAL_DATABASE_URL` is not configured.
+- [x] Real-PostgreSQL tests prove transaction rollback, same-key concurrency and default-view uniqueness. They passed on the authorised disposable local database on 2026-07-11.
 - [x] The Mini App has capability-gated desktop/mobile entry, labelled panel, same-key retry, `409` conflict lock and `401`/`403` safe cleanup.
 - [x] Receipt navigation uses fresh authorized lists and cannot select another table/view by list order or stale response.
 - [x] Zero-field Grid state is honest and has no fake record/field mutation affordance.

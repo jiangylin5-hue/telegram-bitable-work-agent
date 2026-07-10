@@ -866,11 +866,11 @@ At `1440px`, `1280px`, `430px` and `390px`, run these real interactions against 
 
 Capture the rendered screen beside `assets/stage07/workspace-ledger-reference.png` at the matching desktop widths. Inspect visible differences in shell proportions, dense toolbar placement, drawer/sheet spacing, type scale, borders/radii, selection blue and right-rail treatment. Stop/remove the fixture and delete unsanctioned test artifacts after inspection.
 
-2026-07-11 correction: fieldless/add/choice/create/503/409/403 and four-width runs exist; direct-edit success is retained in `artifacts/stage07/f1-direct-edit-success-1440.png`. A disposable error fixture now proves the duplicate-name `422` allowlist mapping and the pending-dialog disabled-control state at 1440px, 1280px, 430px and 390px, with an empty final error/warning log. The delayed workspace replacement remains an application-level scope-isolation proof because the modal correctly prevents forcing that background interaction. The three PostgreSQL cases remain separately environment-gated.
+2026-07-11 correction: fieldless/add/choice/create/503/409/403 and four-width runs exist; direct-edit success is retained in `artifacts/stage07/f1-direct-edit-success-1440.png`. A disposable error fixture now proves the duplicate-name `422` allowlist mapping and the pending-dialog disabled-control state at 1440px, 1280px, 430px and 390px, with an empty final error/warning log. The delayed workspace replacement remains an application-level scope-isolation proof because the modal correctly prevents forcing that background interaction. The three PostgreSQL cases subsequently ran and passed on the authorised disposable local database; F1 is `implemented-local` only, never a production claim.
 
 - [x] **Step 3: Update evidence documents accurately**
 
-Change the F1 traceability row to `implemented-local` only when all non-PostgreSQL requirements and browser cases have evidence. If the local URL is absent, keep F1 `partial-local` with the exact three real-PostgreSQL cases as a visible gap. State that F2, V1, imports, governance and Package 4 remain unimplemented/contract-gated.
+Change the F1 traceability row to `implemented-local` only when all non-PostgreSQL requirements and browser cases have evidence. If the local URL is absent, keep F1 `partial-local` with the exact three real-PostgreSQL cases as a visible gap. On 2026-07-11 the authorised disposable local URL ran all three cases successfully, so traceability is now `implemented-local`. State that F2, V1, imports, governance and Package 4 remain unimplemented/contract-gated.
 
 - [x] **Step 4: Re-run final checks after documentation updates**
 

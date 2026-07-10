@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Barrier
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from alembic import command
@@ -15,6 +15,7 @@ from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.database import get_session
@@ -209,7 +210,7 @@ def test_stage07_postgres_builder_initialization_rolls_back_every_resource_on_fa
             json={"base_name": "Rollback Base", "table_name": "Rollback Table"},
         )
 
-    assert failed.status_code == 422
+    assert failed.status_code == 422, failed.text
     with stage06_postgres.session_factory() as session:
         assert session.scalar(select(func.count()).select_from(BitableBase)) == 0
         assert session.scalar(select(func.count()).select_from(PlatformTable)) == 0
@@ -264,7 +265,7 @@ def test_stage07_postgres_builder_initialization_has_one_graph_for_concurrent_sa
     with ThreadPoolExecutor(max_workers=2) as executor:
         results = list(executor.map(lambda _index: initialize_base(), range(2)))
 
-    assert {status for status, _body in results} == {200, 201}
+    assert {status for status, _body in results} == {200, 201}, results
     assert results[0][1] == results[1][1]
     with stage06_postgres.session_factory() as session:
         assert session.scalar(select(func.count()).select_from(BitableBase)) == 1

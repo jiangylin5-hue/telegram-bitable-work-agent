@@ -15,7 +15,7 @@
 | security | hidden fields, workspace boundaries, revoked membership, chat/Bot scope | negative tests plus cache-clear assertions |
 | visual | selected white design system, desktop/mobile layout and state screens | reviewed screenshots at target viewports |
 | manual | Telegram entry/deep link and approved real identity path | sanitized run note only |
-| F1 PostgreSQL | field-init rollback, same-key replay, distinct-key order and view visibility | disposable local PostgreSQL only; an unavailable `STAGE06_LOCAL_DATABASE_URL` is an explicit skip/gap |
+| F1 PostgreSQL | field-init rollback, same-key replay, distinct-key order and view visibility | disposable local PostgreSQL only; 2026-07-11 real-local run passed and does not constitute staging/production evidence |
 
 ## 2. Required Matrices
 
@@ -39,14 +39,13 @@
 
 ### F1 Automated Current Evidence
 
-- 2026-07-10: fresh full backend regression: `432 passed, 25 skipped in 13.27s`. The 25 skips comprise 17 historical Stage02 online-PostgreSQL cases, five Stage06 local-PostgreSQL security cases and three F1 disposable-PostgreSQL cases; no skipped test is counted as passed evidence.
+- 2026-07-11: fresh full backend regression with the authorised disposable local URL: `440 passed, 17 skipped in 23.10s`. The only skips are 17 historical Stage02 online-PostgreSQL cases requiring `STAGE02_ONLINE_DATABASE_URL`; the five Stage06-local security cases and three F1 disposable-PostgreSQL cases ran and passed.
 - 2026-07-11: fresh Mini App regression after the duplicate-feedback refinement: `13 passed` test files and `55 passed` tests; `npm.cmd run build` passed.
 - 2026-07-10: `alembic heads` reports only `20260710_0021 (head)`; `alembic upgrade head --sql` exited successfully.
 
 ### F1 PostgreSQL Current Evidence
 
-- 2026-07-10: `python -m pytest -q tests/integration/test_stage07_field_builder_postgres.py` collected the rollback, same-key replay and distinct-key concurrent-order cases, then reported `3 skipped` because `STAGE06_LOCAL_DATABASE_URL` is absent.
-- The skipped result is not real PostgreSQL proof. An authorised disposable local URL remains required before F1 can claim database rollback, row-lock ordering or concurrent view-configuration evidence.
+- 2026-07-11: after `scripts/stage06_local_postgres_migration_smoke.py` reset and migrated the authorised disposable local database to `20260710_0021`, `python -m pytest -q tests/integration/test_stage07_field_builder_postgres.py` passed all three F1 cases. The combined P3/F1 real-PostgreSQL command passed `6` cases with `2` unrelated cases deselected; it proves the documented local rollback, replay, row-lock ordering, view-append and default-view invariants. It is not staging or production evidence.
 
 ### F1 Browser Current Evidence
 
