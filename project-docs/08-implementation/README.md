@@ -3,8 +3,8 @@
 ## Status
 
 - Document status: active implementation index
-- Scope: Stage 02 / Stage 03 / Stage 04 / Stage 05 historical implementation entrypoints and Stage06 platform planning entrypoint
-- Current Progress: 2026-07-10 Stage06 backend-stage acceptance passed after correcting Stage06 work that remained in the Stage05 worktree. The Stage06 document set includes source, plan, SDD, contract, BDD, progress, backend exit and final stage acceptance. Fresh evidence is 129 Stage06-focused tests, 402 full-backend tests, Alembic `20260710_0020`, real local PostgreSQL isolation/redaction/concurrency smoke and sanitized evidence. Real OpenRouter and Telegram entry evidence is retained. Stage05 LarkSuite documents remain historical.
+- Scope: Stage 02 / Stage 03 / Stage 04 / Stage 05 historical implementation entrypoints, Stage06 backend-stage evidence and Stage07 Mini App UI design entrypoint
+- Current Progress: 2026-07-10 Stage06 backend-stage acceptance passed after correcting Stage06 work that remained in the Stage05 worktree. The Stage06 document set includes source, plan, SDD, contract, BDD, progress, backend exit and final stage acceptance. Fresh evidence is 129 Stage06-focused tests, 402 full-backend tests, Alembic `20260710_0020`, real local PostgreSQL isolation/redaction/concurrency smoke and sanitized evidence. Real OpenRouter and Telegram entry evidence is retained. Stage07 Mini App UI discovery and visual direction are approved and documented; written-spec review, implementation plan and explicit contract approval remain required before code. Stage05 LarkSuite documents remain historical.
 - Current Progress Update: 2026-07-08 Stage 05 functional/staging acceptance has passed. Evidence includes local focused/full regression, staging migration `20260707_0016`, real OpenRouter AgentRun, service drafts, customer reply allowlisted send, business no-op evidence, controlled account exception, additional three-message Telegram exercise and safety close. Stage05 still is not production launch and does not approve real customer/group sends, provider writes, funds movement, account production or automatic replacement. Remaining follow-up is durable commit/artifact hygiene plus optional online smoke and later-stage reporting/balance support.
 - Current Progress Update: 2026-07-07 Added Stage05 requirement traceability audit to distinguish locally verified requirements from pending Tencent Cloud staging, real OpenRouter, real Telegram receipt and safety-close evidence.
 - Current Progress Update: 2026-07-07 Added Stage05 pre-staging approval packet as the single review entry before Task12 real staging rehearsal.
@@ -136,6 +136,11 @@ Stage 06 planning docs:
 10. [Stage 06 LarkSuite Skills Integration Design](STAGE_06_LARKSUITE_SKILLS_INTEGRATION_DESIGN.md)
 11. [Stage 06 LarkSuite Skills Runtime Implementation Plan](STAGE_06_LARKSUITE_SKILLS_RUNTIME_IMPLEMENTATION_PLAN.md)
 12. [Stage 06 Stage Acceptance Report](STAGE_06_STAGE_ACCEPTANCE_REPORT.md)
+
+Stage 07 design docs:
+
+1. [Stage 07 Mini App UI Design](STAGE_07_MINI_APP_UI_DESIGN.md)
+2. [Stage07 Mini App UI Design Specification](../../docs/superpowers/specs/2026-07-10-stage07-mini-app-ui-design.md)
 
 Stage 02 已于 2026-07-06 冻结关闭。Stage 03 已由用户于 2026-07-06 确认转为 active，补充决策：Telegram 只收不发、Worker 使用 PostgreSQL Outbox + Redis Streams、Stage 03 暂不调用 LLM、第一批业务场景为 Telegram 收件箱 / 客户消息登记、Webhook 使用 secret token + optional allowlist、做最小客户绑定、部署到腾讯云 CVM staging、HTTPS 使用 Caddy。当前 Tasks 1-7 已完成验收；真实 staging 环境已接收 Telegram 测试消息并在 `telegram_inbox`、`outbox_events`、`ops_audit_events` 中形成证据。
 
