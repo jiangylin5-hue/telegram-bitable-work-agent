@@ -68,6 +68,19 @@ class PlatformValidationError(ValueError):
         self.code = code
 
 
+@dataclass(frozen=True)
+class BaseInitializationResult:
+    base: BitableBase
+    table: PlatformTable
+    default_view: PlatformView
+
+
+@dataclass(frozen=True)
+class TableInitializationResult:
+    table: PlatformTable
+    default_view: PlatformView
+
+
 class Stage06PlatformUnitOfWork(Protocol):
     def add_workspace(self, workspace: Workspace) -> None:
         pass
@@ -864,6 +877,7 @@ def create_form_view(
     view_type: str,
     config: dict[str, Any],
     permission_policy: dict[str, Any] | None = None,
+    is_default: bool = False,
     actor: Actor | None = None,
 ) -> PlatformView:
     _require_exists(uow.get_base(base_id), "base_not_found")
@@ -880,7 +894,7 @@ def create_form_view(
         view_type=view_type,
         config=config,
         permission_policy=permission_policy or {},
-        is_default=False,
+        is_default=is_default,
         status="active",
     )
     uow.add_view(view)
@@ -893,6 +907,93 @@ def create_form_view(
         after_state={"table_id": str(table_id), "name": view.name, "view_type": view_type},
     )
     return view
+
+
+def initialize_base(
+    uow: Stage06PlatformUnitOfWork,
+    workspace_id: UUID,
+    *,
+    base_name: str,
+    table_name: str,
+    actor: Actor,
+) -> BaseInitializationResult:
+    normalized_base_name = _normalized_builder_name(base_name, label="base_name")
+    normalized_table_name = _normalized_builder_name(table_name, label="table_name")
+    base = create_base(
+        uow,
+        workspace_id,
+        name=normalized_base_name,
+        actor=actor,
+    )
+    initialized_table = initialize_table(
+        uow,
+        base.id,
+        table_name=normalized_table_name,
+        actor=actor,
+    )
+    _record_stage06_audit(
+        uow,
+        actor=actor,
+        event_type="stage06.base_initialized",
+        entity_type="base",
+        entity_id=base.id,
+        after_state={
+            "resource_map": {
+                "base_id": str(base.id),
+                "table_id": str(initialized_table.table.id),
+                "view_id": str(initialized_table.default_view.id),
+            }
+        },
+    )
+    return BaseInitializationResult(
+        base=base,
+        table=initialized_table.table,
+        default_view=initialized_table.default_view,
+    )
+
+
+def initialize_table(
+    uow: Stage06PlatformUnitOfWork,
+    base_id: UUID,
+    *,
+    table_name: str,
+    actor: Actor,
+) -> TableInitializationResult:
+    base = _require_exists(uow.get_base(base_id), "base_not_found")
+    normalized_table_name = _normalized_builder_name(table_name, label="table_name")
+    table = create_table(
+        uow,
+        base.id,
+        name=normalized_table_name,
+        key=_generated_builder_table_key(),
+        actor=actor,
+    )
+    default_view = create_form_view(
+        uow,
+        base.id,
+        table.id,
+        name="所有记录",
+        view_type="grid",
+        config={"fields": []},
+        permission_policy={},
+        is_default=True,
+        actor=actor,
+    )
+    _record_stage06_audit(
+        uow,
+        actor=actor,
+        event_type="stage06.table_initialized",
+        entity_type="table",
+        entity_id=table.id,
+        after_state={
+            "resource_map": {
+                "base_id": str(base.id),
+                "table_id": str(table.id),
+                "view_id": str(default_view.id),
+            }
+        },
+    )
+    return TableInitializationResult(table=table, default_view=default_view)
 
 
 def read_workspace(
@@ -1377,6 +1478,17 @@ def _find_by_id(items: list[Any], item_id: UUID) -> Any | None:
 def _slugify(value: str) -> str:
     slug = "".join(char.lower() if char.isalnum() else "-" for char in value)
     return "-".join(part for part in slug.split("-") if part) or "workspace"
+
+
+def _normalized_builder_name(value: str, *, label: str) -> str:
+    normalized = value.strip()
+    if not normalized or len(normalized) > 160:
+        raise PlatformValidationError("invalid_builder_name", label)
+    return normalized
+
+
+def _generated_builder_table_key() -> str:
+    return f"tbl_{uuid4().hex}"
 
 
 def _optional_uuid(value: Any) -> UUID | None:

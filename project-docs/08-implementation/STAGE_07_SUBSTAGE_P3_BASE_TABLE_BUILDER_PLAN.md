@@ -12,7 +12,7 @@
 
 - Document status: detailed implementation plan derived from the user-reviewed P3 design; awaiting user approval before test or production-code changes.
 - Scope: only Stage07 Package 2 Base/Table atomic Builder; Fields, additional views, imports/templates, governance and Package 4 remain outside this plan.
-- Current Progress: 2026-07-10 Task 1 is implemented and locally verified: RED migration/model checks, GREEN `3 passed`, one Alembic head `20260710_0021`, and offline SQL containing only the additive default-view partial unique index. Task 2 has not started.
+- Current Progress: 2026-07-10 Tasks 1–2 are implemented and locally verified. Task 1 has RED migration/model checks, GREEN `3 passed`, one Alembic head `20260710_0021`, and offline SQL with the additive default-view partial unique index. Task 2 has RED missing-domain-import evidence, GREEN `3 passed` focused and `10 passed` full platform-core evidence for zero-field Base/Table Grid graphs, generated table keys and sanitized parent audits. Task 3 has not started.
 - Source alignment: `AGENTS.md`; `STAGE_07_SOURCE_OF_TRUTH.md`; `STAGE_07_SDD.md`; `modules/STAGE_07_BITABLE_WORK_SURFACE.md`; `STAGE_07_BDD_AND_ACCEPTANCE.md`; `STAGE_07_API_DATA_SECURITY_CONTRACT.md`; `STAGE_07_SUBSTAGE_P3_BASE_TABLE_BUILDER_DESIGN.md`.
 
 ## Global Constraints
@@ -201,7 +201,7 @@
   def initialize_table(uow, base_id, *, table_name: str, actor: Actor) -> TableInitializationResult: ...
   ```
 
-- [ ] **Step 1: Write domain tests before adding the service functions**
+- [x] **Step 1: Write domain tests before adding the service functions**
 
   Append focused tests to `backend/tests/unit/test_stage06_platform_core.py`:
 
@@ -247,7 +247,7 @@
       assert uow.audit_events[-1].event_type == "stage06.table_initialized"
   ```
 
-- [ ] **Step 2: Run the new tests and record the expected RED result**
+- [x] **Step 2: Run the new tests and record the expected RED result**
 
   Run:
 
@@ -257,7 +257,7 @@
 
   Expected: import/collection failure because the initialization result types and functions do not exist.
 
-- [ ] **Step 3: Add the smallest domain implementation**
+- [x] **Step 3: Add the smallest domain implementation**
 
   In `backend/app/services/stage06_platform.py`:
 
@@ -270,7 +270,7 @@
 
   Use the same supplied `actor` for every child creation/audit call. Never add a field, record, policy or client-derived key.
 
-- [ ] **Step 4: Run focused unit tests and the existing platform-core suite**
+- [x] **Step 4: Run focused unit tests and the existing platform-core suite**
 
   Run:
 
@@ -280,7 +280,7 @@
 
   Expected: all platform-core tests, including the two new graph tests, pass; existing primitive views remain `is_default=False` unless explicitly initialized.
 
-- [ ] **Step 5: Commit the domain graph**
+- [x] **Step 5: Commit the domain graph**
 
   ```powershell
   git add backend/app/services/stage06_platform.py backend/tests/unit/test_stage06_platform_core.py

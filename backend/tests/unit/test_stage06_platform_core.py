@@ -11,6 +11,8 @@ from app.services.stage06_platform import (
     create_table,
     create_workspace,
     get_table_schema,
+    initialize_base,
+    initialize_table,
     list_view_records,
     update_record,
 )
@@ -278,3 +280,76 @@ def test_stage06_view_permission_denial_writes_audit_without_record_values() -> 
     assert denied.value.code == "permission_denied"
     assert uow.audit_events[-1].event_type == "permission_denied"
     assert "Ada Co" not in str(uow.audit_events[-1].permission_snapshot)
+
+
+def test_initialize_base_creates_one_zero_field_default_grid_and_parent_audit() -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    workspace = create_workspace(uow, name="Acme", owner_user_id="owner-1")
+    actor = Actor(actor_type="user", actor_id="owner-1", role="owner")
+
+    result = initialize_base(
+        uow,
+        workspace.id,
+        base_name="客户运营",
+        table_name="客户",
+        actor=actor,
+    )
+
+    assert result.base.workspace_id == workspace.id
+    assert result.table.base_id == result.base.id
+    assert result.table.key.startswith("tbl_")
+    assert uow.list_fields(result.table.id) == []
+    assert result.default_view.table_id == result.table.id
+    assert result.default_view.name == "所有记录"
+    assert result.default_view.view_type == "grid"
+    assert result.default_view.config == {"fields": []}
+    assert result.default_view.permission_policy == {}
+    assert result.default_view.is_default is True
+    assert uow.audit_events[-1].event_type == "stage06.base_initialized"
+    assert uow.audit_events[-1].after_state == {
+        "resource_map": {
+            "base_id": str(result.base.id),
+            "table_id": str(result.table.id),
+            "view_id": str(result.default_view.id),
+        }
+    }
+
+
+def test_initialize_table_adds_only_its_own_default_grid() -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    workspace = create_workspace(uow, name="Acme", owner_user_id="owner-1")
+    base = create_base(uow, workspace.id, name="CRM")
+    actor = Actor(actor_type="user", actor_id="owner-1", role="owner")
+
+    result = initialize_table(uow, base.id, table_name="待办", actor=actor)
+
+    assert uow.list_tables(base.id) == [result.table]
+    assert uow.list_views(result.table.id) == [result.default_view]
+    assert result.default_view.is_default is True
+    assert uow.list_fields(result.table.id) == []
+    assert uow.audit_events[-1].event_type == "stage06.table_initialized"
+    assert uow.audit_events[-1].after_state == {
+        "resource_map": {
+            "base_id": str(base.id),
+            "table_id": str(result.table.id),
+            "view_id": str(result.default_view.id),
+        }
+    }
+
+
+def test_initialize_base_rejects_blank_display_name_without_creating_resources() -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    workspace = create_workspace(uow, name="Acme", owner_user_id="owner-1")
+    actor = Actor(actor_type="user", actor_id="owner-1", role="owner")
+
+    with raises(PlatformValidationError) as invalid:
+        initialize_base(
+            uow,
+            workspace.id,
+            base_name="  ",
+            table_name="客户",
+            actor=actor,
+        )
+
+    assert invalid.value.code == "invalid_builder_name"
+    assert uow.list_bases(workspace.id) == []
