@@ -34,6 +34,7 @@ export type WorkspaceHome = {
 export type BaseSummary = { id: string; name: string; source_type: string; status?: string }
 export type PlatformTable = { id: string; base_id: string; name: string; key: string; status: string }
 export type ViewSummary = { id: string; base_id: string; table_id: string | null; name: string; view_type: string; status: string }
+export type BuilderInitializationReceipt = { base: BaseSummary; table: PlatformTable; default_view: ViewSummary }
 export type TableSchema = { table: { id: string; name: string; key: string }; fields: { id: string; name: string; key: string; field_type: string; required: boolean; order_index: number }[] }
 export type ViewRecords = { view_id: string; records: { id: string; fields: Record<string, unknown> }[]; next_cursor: string | null; has_more: boolean }
 export type ViewPresentation = { view_id: string; table_id: string; view_type: string; visible_field_keys: string[]; group_by_field_key: string | null; date_field_key: string | null; form_field_keys: string[] }
@@ -56,9 +57,24 @@ async function getJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>
 }
 
+async function postJson<T>(path: string, payload: unknown, idempotencyKey: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers)
+  headers.set('Accept', 'application/json')
+  headers.set('Content-Type', 'application/json')
+  headers.set('Idempotency-Key', idempotencyKey)
+  return getJson<T>(path, {
+    ...init,
+    method: 'POST',
+    headers: Object.fromEntries(headers.entries()),
+    body: JSON.stringify(payload),
+  })
+}
+
 export const api = {
   bootstrap: (init?: RequestInit) => getJson<BootstrapResponse>('/mini-app/bootstrap', init),
   workspaceHome: (workspaceId: string, init?: RequestInit) => getJson<WorkspaceHome>(`/workspaces/${workspaceId}/home`, init),
+  initializeBase: (workspaceId: string, values: { baseName: string; tableName: string }, idempotencyKey: string) => postJson<BuilderInitializationReceipt>(`/workspaces/${workspaceId}/base-initializations`, { base_name: values.baseName, table_name: values.tableName }, idempotencyKey),
+  initializeTable: (baseId: string, values: { tableName: string }, idempotencyKey: string) => postJson<BuilderInitializationReceipt>(`/bases/${baseId}/table-initializations`, { table_name: values.tableName }, idempotencyKey),
   baseTables: (baseId: string, init?: RequestInit) => getJson<{ tables: PlatformTable[] }>(`/bases/${baseId}/tables`, init),
   baseViews: (baseId: string, init?: RequestInit) => getJson<{ views: ViewSummary[] }>(`/bases/${baseId}/views`, init),
   tableSchema: (tableId: string, init?: RequestInit) => getJson<TableSchema>(`/tables/${tableId}/schema`, init),

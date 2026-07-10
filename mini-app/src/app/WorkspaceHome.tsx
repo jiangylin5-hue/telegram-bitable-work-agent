@@ -1,13 +1,13 @@
-import { ArrowUpRight, Bot, CheckCircle2, ChevronRight, CircleDot, Search } from 'lucide-react'
+import { ArrowUpRight, Bot, CheckCircle2, ChevronRight, CircleDot, Plus, Search } from 'lucide-react'
 
 import type { BaseSummary, Workspace, WorkspaceHome as WorkspaceHomeData } from './api'
 
-type WorkspaceHomeProps = { home: WorkspaceHomeData; workspace: Workspace; onOpenBase: (base: BaseSummary) => void }
+type WorkspaceHomeProps = { home: WorkspaceHomeData; workspace: Workspace; onOpenBase: (base: BaseSummary) => void; onCreateBase?: () => void }
 
-export function WorkspaceHome({ home, workspace, onOpenBase }: WorkspaceHomeProps) {
+export function WorkspaceHome({ home, workspace, onOpenBase, onCreateBase }: WorkspaceHomeProps) {
   return <main className="workspace-home" aria-label="工作区首页">
     <section className="queue-surface" aria-labelledby="today-work-heading">
-      <header className="page-toolbar"><div><h1 id="today-work-heading">今天工作</h1><p>{workspace.name} · 当前需处理的持久化事项</p></div><div className="toolbar-actions"><button type="button"><Search size={17} /> 搜索</button><button type="button">按时间排序 <ChevronRight size={15} /></button></div></header>
+      <header className="page-toolbar"><div><h1 id="today-work-heading">今天工作</h1><p>{workspace.name} · 当前需处理的持久化事项</p></div><div className="toolbar-actions">{workspace.capabilities.can_manage_schema && onCreateBase && <button type="button" onClick={onCreateBase}><Plus size={17} /> 新建 Base</button>}<button type="button"><Search size={17} /> 搜索</button><button type="button">按时间排序 <ChevronRight size={15} /></button></div></header>
       <div className="queue-section-title"><span className="section-icon blue"><CircleDot size={16} /></span><h2>待确认</h2><span className="count">{home.queue.length}</span></div>
       {home.queue.length > 0 ? <div className="queue-list" aria-label="待确认队列">{home.queue.map((item) => <article className="queue-row" key={item.id}><span className="row-check" aria-hidden="true" /><span className="record-icon"><CheckCircle2 size={16} /></span><div className="queue-row-main"><strong>{item.title}</strong><span>草稿 #{item.destination.draft_id.slice(0, 8)}</span></div><span className="queue-status">等待你的决定</span><a href={`#draft/${item.destination.draft_id}`} className="row-link">查看草稿 <ArrowUpRight size={14} /></a></article>)}</div> : <div className="empty-queue">没有待确认的变更。</div>}
     </section>

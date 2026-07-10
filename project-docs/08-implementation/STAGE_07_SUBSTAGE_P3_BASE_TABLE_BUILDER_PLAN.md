@@ -10,9 +10,9 @@
 
 ## Status
 
-- Document status: detailed implementation plan derived from the user-reviewed P3 design; awaiting user approval before test or production-code changes.
+- Document status: approved detailed implementation plan derived from the user-reviewed P3 design; implementation in progress.
 - Scope: only Stage07 Package 2 Base/Table atomic Builder; Fields, additional views, imports/templates, governance and Package 4 remain outside this plan.
-- Current Progress: 2026-07-10 Tasks 1–3 are implemented and locally verified. Task 1 has RED migration/model checks, GREEN `3 passed`, one Alembic head `20260710_0021`, and offline SQL with the additive default-view partial unique index. Task 2 has RED missing-domain-import evidence, GREEN `3 passed` focused and `10 passed` full platform-core evidence for zero-field Base/Table Grid graphs, generated table keys and sanitized parent audits. Task 3 has RED `404` endpoint evidence, GREEN `14 passed` API/security unit evidence for safe receipts, authorization, validation and idempotency; three real-PostgreSQL rollback/concurrency/index tests are present but skipped because `STAGE06_LOCAL_DATABASE_URL` is missing. Task 4 has not started.
+- Current Progress: 2026-07-10 Tasks 1–4 are implemented and locally verified. Task 1 has RED migration/model checks, GREEN `3 passed`, one Alembic head `20260710_0021`, and offline SQL with the additive default-view partial unique index. Task 2 has RED missing-domain-import evidence, GREEN `3 passed` focused and `10 passed` full platform-core evidence for zero-field Base/Table Grid graphs, generated table keys and sanitized parent audits. Task 3 has RED `404` endpoint evidence, GREEN `14 passed` API/security unit evidence for safe receipts, authorization, validation and idempotency; three real-PostgreSQL rollback/concurrency/index tests are present but skipped because `STAGE06_LOCAL_DATABASE_URL` is missing. Task 4 has RED missing-module/transport evidence, GREEN `7 passed` focused API/panel/capability tests, and a successful `npm.cmd run build`; it provides typed atomic-initialization calls, accessible light desktop/mobile panel behavior and server-capability-gated entry points only. Receipt-verified navigation remains Task 5.
 - Source alignment: `AGENTS.md`; `STAGE_07_SOURCE_OF_TRUTH.md`; `STAGE_07_SDD.md`; `modules/STAGE_07_BITABLE_WORK_SURFACE.md`; `STAGE_07_BDD_AND_ACCEPTANCE.md`; `STAGE_07_API_DATA_SECURITY_CONTRACT.md`; `STAGE_07_SUBSTAGE_P3_BASE_TABLE_BUILDER_DESIGN.md`.
 
 ## Global Constraints
@@ -458,7 +458,7 @@
   />
   ```
 
-- [ ] **Step 1: Write failing API/panel/component tests**
+- [x] **Step 1: Write failing API/panel/component tests**
 
   In `api.test.ts`, add a request assertion:
 
@@ -487,7 +487,7 @@
   4. a pending submission disables the submit button; a rejected promise shows generic `创建失败，请稍后重试。` and a second submit retains the exact idempotency key.
   5. `WorkspaceHome` has no `新建 Base` button when `can_manage_schema=false`; `BaseCanvas` has no `新建表` button under the same condition.
 
-- [ ] **Step 2: Run focused frontend tests and record the expected RED result**
+- [x] **Step 2: Run focused frontend tests and record the expected RED result**
 
   Run:
 
@@ -497,7 +497,7 @@
 
   Expected: import/render failures because the receipt transport and panel do not exist; existing canvas still exposes the plus button unconditionally.
 
-- [ ] **Step 3: Implement only typed transport and presentational behavior**
+- [x] **Step 3: Implement only typed transport and presentational behavior**
 
   In `api.ts`, preserve the existing `getJson` transport but add an explicit `postJson<T>` helper that merges headers via `new Headers(init.headers)`, then sets `Accept`, `Content-Type` and `Idempotency-Key`. Do not let a passed `headers` object erase `Accept`.
 
@@ -522,7 +522,7 @@
 
   Add light CSS classes `builder-create-panel`, `builder-create-backdrop`, `builder-create-form` and a `max-width: 900px` rule that makes the panel full width/full height above the mobile navigation. Reuse existing light borders, azure active color and current detail form controls; do not add dark fills, glow effects or card stacks.
 
-- [ ] **Step 4: Run focused component/API tests**
+- [x] **Step 4: Run focused component/API tests**
 
   Run:
 
@@ -532,7 +532,7 @@
 
   Expected: API body/header test and all five panel/visibility/focus/retry tests pass.
 
-- [ ] **Step 5: Commit the typed UI boundary**
+- [x] **Step 5: Commit the typed UI boundary**
 
   ```powershell
   git add mini-app/src/app/api.ts mini-app/src/app/BuilderCreatePanel.tsx mini-app/src/app/WorkspaceHome.tsx mini-app/src/app/BaseCanvas.tsx mini-app/src/styles.css mini-app/src/test/api.test.ts mini-app/src/test/builder-create-panel.test.tsx
