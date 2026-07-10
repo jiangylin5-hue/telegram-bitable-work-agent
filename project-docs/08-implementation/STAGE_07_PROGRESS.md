@@ -35,6 +35,15 @@
 - Verification so far: 5 Stage07 backend API/security tests and 3 frontend interaction tests pass. Full backend regression and final Stage07 acceptance are still pending this slice's checkpoint.
 - Not implemented in this slice: saved Kanban/Calendar/Form renderers. The safe navigation summary correctly excludes view presentation configuration, so choosing grouping/date/form fields in the browser would violate the approved contract. This requires a later separately approved, permission-filtered view-presentation contract.
 
+### 2026-07-10: Field-Filtered View Presentation And Record Detail Slice Verified
+
+- User approved the read-only View Presentation and Record Detail contract. Added `GET /views/{view_id}/presentation` and `GET /records/{record_id}` without schema, migration or write-permission changes.
+- Corrected the pre-existing frontend contract leak in `GET /tables/{table_id}/schema`: route-level schemas now use the same field-read decision as view records, view presentation and record detail. Hidden field keys, metadata and values no longer reach a caller who cannot read them.
+- Presentation returns normalized, permission-filtered field semantics only: visible field order; optional visible Kanban group field; optional visible Calendar date field; and Form field order. It never returns raw `config` or `permission_policy`.
+- Base Canvas now permits switching saved views on the active table, renders Grid/Kanban/Calendar/Form according to normalized server semantics, and opens a field-filtered, versioned Record Detail panel from a record.
+- Verification: 16 focused backend tests passed; 6 frontend interaction/render tests passed; browser QA confirmed desktop Grid -> Kanban -> Record Detail and `390x844` full-screen mobile Record Detail with no relevant console warnings/errors.
+- Still incomplete: Form submission/editing workflow, filter/sort/group mutations, cursor pagination controls, conflict recovery, cache invalidation, imports/templates, governance and all Digital Employee/draft confirmation surfaces. Those must continue to use explicit authorized contracts and are not claimed by this slice.
+
 ### 2026-07-10: Detailed Stage Documentation Package Requested
 
 - User required Stage07 to follow prior-stage documentation depth, including SDD, BDD, contract, module index, test plan, risks and explicit component interactions.

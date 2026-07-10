@@ -19,11 +19,13 @@ from app.schemas.stage06_platform import (
     MiniAppBootstrapResponse,
     MiniAppWorkspaceHomeResponse,
     RecordResponse,
+    RecordDetailResponse,
     TableResponse,
     TableListResponse,
     TableSchemaResponse,
     UpdateRecordRequest,
     ViewResponse,
+    ViewPresentationResponse,
     ViewListResponse,
     ViewSummaryResponse,
     ViewRecordsResponse,
@@ -53,12 +55,14 @@ from app.services.stage06_platform import (
     create_workspace,
     create_form_view,
     get_table_schema,
+    get_view_presentation,
     list_workspace_members,
     list_bases_for_workspace,
     list_tables_for_base,
     list_views_for_base,
     list_view_records,
     read_base,
+    read_record_for_actor,
     read_workspace,
     update_record,
 )
@@ -473,11 +477,44 @@ def get_table_schema_endpoint(
 ) -> TableSchemaResponse:
     try:
         workspace_id = workspace_id_for_table(uow, table_id)
-        authorize_workspace_action(uow, identity, workspace_id, "table.read")
-        schema = get_table_schema(uow, table_id)
+        actor = authorize_workspace_action(uow, identity, workspace_id, "table.read")
+        schema = get_table_schema(uow, table_id, actor=actor)
     except (PlatformValidationError, Stage06AuthorizationError) as exc:
         raise _http_error(exc) from exc
     return TableSchemaResponse(**schema)
+
+
+@router.get(
+    "/views/{view_id}/presentation",
+    response_model=ViewPresentationResponse,
+)
+def get_view_presentation_endpoint(
+    view_id: UUID,
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> ViewPresentationResponse:
+    try:
+        workspace_id = workspace_id_for_view(uow, view_id)
+        actor = authorize_workspace_action(uow, identity, workspace_id, "record.read")
+        presentation = get_view_presentation(uow, view_id, actor=actor)
+    except (PlatformValidationError, Stage06AuthorizationError) as exc:
+        raise _http_error(exc) from exc
+    return ViewPresentationResponse(**presentation)
+
+
+@router.get("/records/{record_id}", response_model=RecordDetailResponse)
+def read_record_detail_endpoint(
+    record_id: UUID,
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> RecordDetailResponse:
+    try:
+        workspace_id = workspace_id_for_record(uow, record_id)
+        actor = authorize_workspace_action(uow, identity, workspace_id, "record.read")
+        record = read_record_for_actor(uow, record_id, actor=actor)
+    except (PlatformValidationError, Stage06AuthorizationError) as exc:
+        raise _http_error(exc) from exc
+    return RecordDetailResponse(**record)
 
 
 @router.get("/views/{view_id:uuid}/records", response_model=ViewRecordsResponse)

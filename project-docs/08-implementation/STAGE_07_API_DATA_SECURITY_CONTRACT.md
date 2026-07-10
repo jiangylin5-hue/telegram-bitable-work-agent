@@ -38,12 +38,16 @@ The following endpoints are approved for Package 1 and the beginning of Package 
 | `GET /workspaces/{workspace_id}/bases` | permitted Base summaries `{ id, name, source_type, status }` | requires active membership plus `base.read`; does not return Base description/settings |
 | `GET /bases/{base_id}/tables` | permitted Table summaries `{ id, base_id, name, key, status }` | resolves Base ownership then requires `table.read` |
 | `GET /bases/{base_id}/views` | saved-view summaries `{ id, base_id, table_id, name, view_type, status }` | resolves Base ownership then requires `table.read`; excludes view config and permission policy |
+| `GET /views/{view_id}/presentation` | normalized saved-view semantics `{ view_type, visible_field_keys, group_by_field_key?, date_field_key?, form_field_keys }` | requires `record.read` plus view-resource visibility; every returned field key must pass field read policy; raw config and policy are excluded |
+| `GET /records/{record_id}` | detail `{ id, table_id, values, record_status, version }` | resolves record ownership then requires `record.read`; values contain only field-read-permitted keys |
 
 `/mini-app/bootstrap` response identity is `{ user_id, source }`; it does not contain Telegram init data, headers, raw membership records or a client-supplied role claim. Workspace capability names are stable UI hints only: `can_read_bases`, `can_manage_workspace`, `can_manage_schema`, `can_review_drafts`. Every later resource request must still pass its normal server authorization check.
 
 `/workspaces/{workspace_id}/home` queue rows are limited to `{ id, kind, title, status, destination, action_availability }`. `destination` contains only durable resource IDs. The initial Stage06-compatible queue only exposes pending draft-confirmation items; assigned records and `@` mentions wait for durable backend models rather than being inferred from arbitrary record fields.
 
-The Base Canvas composes these three summaries with existing authorized `GET /tables/{table_id}/schema` and `GET /views/{view_id}/records` calls. A view's configuration and permission policy never travel in its navigation-summary response; the browser cannot reconstruct an unapproved field scope from list metadata.
+The Base Canvas composes these summaries with authorized `GET /tables/{table_id}/schema` and `GET /views/{view_id}/records` calls. Table schema, view presentation, record list and record detail must all use the same field-read filter. A view's raw configuration and permission policy never travel to the browser; the browser cannot reconstruct an unapproved field scope from list metadata.
+
+`group_by_field_key` and `date_field_key` are returned only when the configured field is visible to the caller. A non-visible or invalid configured key is omitted rather than replaced with a guessed client-side field. `form_field_keys` preserves the authorized view field order; it is not a raw form configuration or arbitrary layout payload.
 
 ## 5. Proposed Contract Extensions
 

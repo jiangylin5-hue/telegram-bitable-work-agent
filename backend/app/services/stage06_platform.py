@@ -911,8 +911,13 @@ def list_views_for_base(
 def get_table_schema(
     uow: Stage06PlatformUnitOfWork,
     table_id: UUID,
+    *,
+    actor: Actor | None = None,
 ) -> dict[str, Any]:
     table = _require_exists(uow.get_table(table_id), "table_not_found")
+    fields = uow.list_fields(table_id)
+    if actor is not None:
+        fields = [field for field in fields if _can_actor_read_field(actor, field)]
     return {
         "table": {
             "id": str(table.id),
@@ -921,7 +926,79 @@ def get_table_schema(
             "key": table.key,
             "status": table.status,
         },
-        "fields": [_field_to_schema(field) for field in uow.list_fields(table_id)],
+        "fields": [_field_to_schema(field) for field in fields],
+    }
+
+
+def get_view_presentation(
+    uow: Stage06PlatformUnitOfWork,
+    view_id: UUID,
+    *,
+    actor: Actor,
+) -> dict[str, Any]:
+    view = _require_exists(uow.get_view(view_id), "view_not_found")
+    if not _can_actor_read_resource(actor, view.permission_policy):
+        _deny_permission(
+            uow,
+            actor=actor,
+            action="read_view_presentation",
+            entity_type="view",
+            entity_id=view.id,
+        )
+    if view.table_id is None:
+        raise PlatformValidationError("view_has_no_table", str(view_id))
+    fields = uow.list_fields(view.table_id)
+    field_by_key = {field.key: field for field in fields}
+    configured_fields = view.config.get("fields")
+    candidate_keys = configured_fields if isinstance(configured_fields, list) else list(field_by_key)
+    visible_field_keys = [
+        key
+        for key in candidate_keys
+        if isinstance(key, str) and _can_actor_read_field(actor, field_by_key.get(key))
+    ]
+    group_by_field_key = _visible_configured_field_key(
+        view.config.get("group_by_field_key"),
+        field_by_key,
+        actor,
+    )
+    date_field_key = _visible_configured_field_key(
+        view.config.get("date_field_key"),
+        field_by_key,
+        actor,
+        field_type="date",
+    )
+    return {
+        "view_id": str(view.id),
+        "table_id": str(view.table_id),
+        "view_type": view.view_type,
+        "visible_field_keys": visible_field_keys,
+        "group_by_field_key": group_by_field_key,
+        "date_field_key": date_field_key,
+        "form_field_keys": visible_field_keys,
+    }
+
+
+def read_record_for_actor(
+    uow: Stage06PlatformUnitOfWork,
+    record_id: UUID,
+    *,
+    actor: Actor,
+) -> dict[str, Any]:
+    record = _require_exists(uow.get_record(record_id), "record_not_found")
+    fields = uow.list_fields(record.table_id)
+    values: dict[str, Any] = {}
+    for field in fields:
+        if not _can_actor_read_field(actor, field):
+            continue
+        value = _view_field_value(uow, record, fields, field, actor)
+        if value is not _MISSING:
+            values[field.key] = value
+    return {
+        "id": str(record.id),
+        "table_id": str(record.table_id),
+        "values": values,
+        "record_status": record.record_status,
+        "version": record.version,
     }
 
 
@@ -1156,6 +1233,23 @@ def _can_actor_read_field(actor: Actor, field: PlatformField | None) -> bool:
     policy = field.permission_policy or {}
     mode = policy.get(actor.role, policy.get("default", "read"))
     return mode not in {"hidden", "none"}
+
+
+def _visible_configured_field_key(
+    key: object,
+    field_by_key: dict[str, PlatformField],
+    actor: Actor,
+    *,
+    field_type: str | None = None,
+) -> str | None:
+    if not isinstance(key, str):
+        return None
+    field = field_by_key.get(key)
+    if field is None or not _can_actor_read_field(actor, field):
+        return None
+    if field_type is not None and field.field_type != field_type:
+        return None
+    return key
 
 
 def _can_actor_write_field(actor: Actor, field: PlatformField | None) -> bool:

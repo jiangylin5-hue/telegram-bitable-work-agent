@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react'
 
-import { ApiError, api, type BaseSummary, type BootstrapResponse, type PlatformTable, type TableSchema, type ViewRecords, type ViewSummary, type WorkspaceHome } from './api'
+import { ApiError, api, type BaseSummary, type BootstrapResponse, type PlatformTable, type RecordDetail, type TableSchema, type ViewPresentation, type ViewRecords, type ViewSummary, type WorkspaceHome } from './api'
 import { AppShell } from './AppShell'
 import { BaseCanvas } from './BaseCanvas'
+import { RecordDetailPanel } from './RecordDetail'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
 
 type BaseCanvasState = {
   base: BaseSummary
+  tables: PlatformTable[]
+  views: ViewSummary[]
   table: PlatformTable | null
   view: ViewSummary | null
   schema: TableSchema | null
   records: ViewRecords | null
+  presentation: ViewPresentation | null
+  detail?: RecordDetail
 }
 
 type AppState =
@@ -67,21 +72,47 @@ export function App() {
       const table = tables[0] ?? null
       const view = table ? views.find((item) => item.table_id === table.id) ?? null : null
       if (!table || !view) {
-        setState({ ...readyState, canvas: { base, table, view, schema: null, records: null } })
+        setState({ ...readyState, canvas: { base, tables, views, table, view, schema: null, records: null, presentation: null } })
         return
       }
-      const [schema, records] = await Promise.all([api.tableSchema(table.id), api.viewRecords(view.id)])
-      setState({ ...readyState, canvas: { base, table, view, schema, records } })
+      const [schema, presentation, records] = await Promise.all([api.tableSchema(table.id), api.viewPresentation(view.id), api.viewRecords(view.id)])
+      setState({ ...readyState, canvas: { base, tables, views, table, view, schema, presentation, records } })
     } catch (error) {
       setState({ status: error instanceof ApiError && error.status === 403 ? 'denied' : 'error' })
     }
   }
 
   const selectedWorkspace = activeWorkspace
+  async function openRecord(recordId: string) {
+    if (!readyState.canvas) return
+    try {
+      const detail = await api.recordDetail(recordId)
+      setState({ ...readyState, canvas: { ...readyState.canvas, detail } })
+    } catch (error) {
+      setState({ status: error instanceof ApiError && error.status === 403 ? 'denied' : 'error' })
+    }
+  }
+
+  async function selectView(viewId: string) {
+    const canvas = readyState.canvas
+    if (!canvas || canvas.view?.id === viewId) return
+    const view = canvas.views.find((item) => item.id === viewId)
+    const table = view?.table_id ? canvas.tables.find((item) => item.id === view.table_id) ?? null : null
+    if (!view || !table) return
+    setState({ ...readyState, canvasLoading: true, canvas: undefined })
+    try {
+      const schema = canvas.table?.id === table.id && canvas.schema ? canvas.schema : await api.tableSchema(table.id)
+      const [presentation, records] = await Promise.all([api.viewPresentation(view.id), api.viewRecords(view.id)])
+      setState({ ...readyState, canvas: { ...canvas, table, view, schema, presentation, records, detail: undefined } })
+    } catch (error) {
+      setState({ status: error instanceof ApiError && error.status === 403 ? 'denied' : 'error' })
+    }
+  }
+
   const content = readyState.canvasLoading
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
-      ? <BaseCanvas {...readyState.canvas} onBack={() => setState({ ...readyState, canvas: undefined })} />
+      ? <><BaseCanvas {...readyState.canvas} onBack={() => setState({ ...readyState, canvas: undefined })} onOpenRecord={openRecord} onSelectView={selectView} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onClose={() => setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } })} />}</>
       : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} />
   return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace}>{content}</AppShell>
 }

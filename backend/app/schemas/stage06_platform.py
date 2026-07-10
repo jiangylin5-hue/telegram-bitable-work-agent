@@ -164,6 +164,10 @@ class RecordResponse(BaseModel):
     version: int
 
 
+class RecordDetailResponse(RecordResponse):
+    pass
+
+
 class TableSchemaResponse(BaseModel):
     table: dict[str, Any]
     fields: list[dict[str, Any]]
@@ -199,6 +203,16 @@ class ViewSummaryResponse(BaseModel):
 
 class ViewListResponse(BaseModel):
     views: list[ViewSummaryResponse]
+
+
+class ViewPresentationResponse(BaseModel):
+    view_id: str
+    table_id: str
+    view_type: str
+    visible_field_keys: list[str]
+    group_by_field_key: str | None = None
+    date_field_key: str | None = None
+    form_field_keys: list[str]
 
 
 class ViewRecordsResponse(BaseModel):

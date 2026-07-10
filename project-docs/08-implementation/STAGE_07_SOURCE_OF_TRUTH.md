@@ -67,6 +67,7 @@ Approved Package 1/2 read-model boundary:
 - `GET /mini-app/bootstrap` may expose only verified identity, active memberships and server-derived navigation capabilities.
 - `GET /workspaces/{workspace_id}/home` may expose only authorized Base metadata and sanitized pending-draft queue summaries.
 - `GET /workspaces/{workspace_id}/bases`, `GET /bases/{base_id}/tables` and `GET /bases/{base_id}/views` may expose only the safe navigation summaries defined in the API Data Security Contract. Base Canvas reuses existing authorized schema and view-record endpoints for the selected resource.
+- `GET /views/{view_id}/presentation` and `GET /records/{record_id}` may expose only the normalized, field-read-filtered models defined in the API Data Security Contract. Schema, presentation, list and detail must make the same hidden-field decision.
 - Both endpoints are read-only and must reuse Stage06 membership and action authorization. The client does not receive raw record values, draft before/proposed values, trace data, policies, or a role it can submit back to the server.
 
 The following remain a separate, unapproved Package 4 contract gate:
