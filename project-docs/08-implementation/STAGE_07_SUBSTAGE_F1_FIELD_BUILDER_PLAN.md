@@ -707,7 +707,7 @@ git commit -m "feat(stage07): refresh canvas after field creation"
 - Consumes: server-filtered `options.choices` in `CreateForm`/`SafeTableField`, existing record create/update callbacks and server value validation.
 - Produces: choice-safe native controls that send only strings or distinct string arrays from returned choices.
 
-- [ ] **Step 1: Write failing create/edit tests**
+- [x] **Step 1: Write failing create/edit tests**
 
 ```tsx
 render(<CreateRecordPanel form={{ table_id: 't1', can_create: true, fields: [
@@ -722,7 +722,7 @@ expect(onCreate).toHaveBeenCalledWith({ tags: ['vip', 'trial'] })
 
 Add direct-detail tests showing single-choice selects and multi-choice checkboxes, changing only visible values and never rendering a choice not supplied by the safe schema.
 
-- [ ] **Step 2: Run focused UI tests and verify they fail**
+- [x] **Step 2: Run focused UI tests and verify they fail**
 
 Run:
 
@@ -732,7 +732,7 @@ cd mini-app; npm.cmd test -- --run src/test/create-record.test.tsx src/test/reco
 
 Expected: FAIL because current supported field types omit `multi_select` and direct edit treats select-like values as plain text.
 
-- [ ] **Step 3: Implement choice controls**
+- [x] **Step 3: Implement choice controls**
 
 Add `multi_select` to the CreateRecordPanel support set. Use a checked-array update that is deterministic and distinct:
 
@@ -744,7 +744,7 @@ function toggleChoice(values: string[], choice: string): string[] {
 
 For `status`/`single_select`, render a native `<select>` only from `options.choices`. For `multi_select`, render one labelled checkbox per choice. RecordDetail follows the same server-derived controls; it never constructs an option from current raw record text.
 
-- [ ] **Step 4: Run UI tests, full Mini App suite and build**
+- [x] **Step 4: Run UI tests, full Mini App suite and build**
 
 Run:
 

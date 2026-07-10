@@ -24,6 +24,18 @@ test('renders server-filtered status choices as a select control', async () => {
   await waitFor(() => expect(onCreate).toHaveBeenCalledWith({ status: 'active' }))
 })
 
+test('submits a distinct multi-select array built only from server choices', async () => {
+  const onCreate = vi.fn().mockResolvedValue(undefined)
+  render(<CreateRecordPanel form={{ table_id: 'table-1', can_create: true, fields: [{ key: 'tags', name: '标签', field_type: 'multi_select', required: true, options: { choices: ['vip', 'trial'] }, order_index: 0 }] }} onCreate={onCreate} onClose={() => undefined} />)
+
+  fireEvent.click(screen.getByRole('checkbox', { name: 'vip' }))
+  fireEvent.click(screen.getByRole('checkbox', { name: 'trial' }))
+  fireEvent.click(screen.getByRole('button', { name: '创建记录' }))
+
+  await waitFor(() => expect(onCreate).toHaveBeenCalledWith({ tags: ['vip', 'trial'] }))
+  expect(screen.queryByRole('checkbox', { name: 'unknown' })).not.toBeInTheDocument()
+})
+
 test('explains when the server marks a form as unavailable for this first slice', () => {
   render(<CreateRecordPanel form={{ table_id: 'table-1', can_create: false, fields: [] }} onCreate={vi.fn()} onClose={() => undefined} />)
 

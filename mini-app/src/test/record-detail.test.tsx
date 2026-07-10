@@ -46,3 +46,24 @@ test('normalizes a number field before submitting the changed value', async () =
 
   await waitFor(() => expect(onSave).toHaveBeenCalledWith({ score: 42 }))
 })
+
+test('edits configured select fields from their safe options without constructing unknown choices', async () => {
+  const choiceDetail: RecordDetail = { ...detail, values: { status: '新建', tags: ['vip'] } }
+  const choiceSchema = {
+    table: schema.table,
+    fields: [
+      { id: 'field-status', table_id: 'table-1', name: '状态', key: 'status', field_type: 'status', required: false, options: { choices: ['新建', '跟进中'] }, order_index: 0 },
+      { id: 'field-tags', table_id: 'table-1', name: '标签', key: 'tags', field_type: 'multi_select', required: false, options: { choices: ['vip', 'trial'] }, order_index: 1 },
+    ],
+  }
+  const onSave = vi.fn().mockResolvedValue({ ...choiceDetail, values: { status: '跟进中', tags: ['vip', 'trial'] }, version: 4 })
+  render(<RecordDetailPanel detail={choiceDetail} schema={choiceSchema} onClose={() => undefined} onSave={onSave} />)
+
+  fireEvent.click(screen.getByRole('button', { name: '编辑记录' }))
+  fireEvent.change(screen.getByRole('combobox', { name: '状态' }), { target: { value: '跟进中' } })
+  fireEvent.click(screen.getByRole('checkbox', { name: 'trial' }))
+  fireEvent.click(screen.getByRole('button', { name: '保存更改' }))
+
+  await waitFor(() => expect(onSave).toHaveBeenCalledWith({ status: '跟进中', tags: ['vip', 'trial'] }))
+  expect(screen.queryByRole('checkbox', { name: 'unknown' })).not.toBeInTheDocument()
+})
