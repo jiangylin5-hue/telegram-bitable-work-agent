@@ -7,6 +7,13 @@
 
 ## Progress Log
 
+### 2026-07-10: F1 Independent Field Builder Design Approved
+
+- The user approved F1 as the first safe schema-builder substage: independent fields `text`, `number`, `date`, `status`, `single_select`, `multi_select`, `user`, `checkbox`, `url`, `email` and `phone`; F2 retains relations/lookup and V1 retains additional views. The exact design is recorded in `docs/superpowers/specs/2026-07-10-stage07-f1-field-builder-design.md`.
+- The design requires a new atomic, idempotent Mini App field-initialization endpoint, server-generated keys, default field policy, validated choice lists, table-row ordering serialization, server-owned safe saved-view visibility updates and a safe receipt/re-read flow. It explicitly forbids browser submission or receipt of raw policies, arbitrary options, raw view configuration or technical keys.
+- The design also aligns the existing Canvas schema response with the Stage07 security contract by removing `permission_policy` and unrecognised options before they reach the browser. Choice-aware `multi_select` create/direct-edit support is part of F1 so a builder cannot create a required field that the app cannot use.
+- This is a design/documentation checkpoint only. No F1 route, service, model, migration, client component or test has been changed yet; implementation-plan, TDD and browser evidence remain required.
+
 ### 2026-07-10: Original Stage07 Visual References Retained
 
 - The user re-provided the three selected desktop reference images that were previously unavailable as repository assets. They are now retained as `Work Queue Atlas`, `Conversation Desk` and `Workspace Ledger` references under `project-docs/08-implementation/assets/stage07/`.

@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 planning source of truth
 - Scope: Telegram Mini App and desktop browser UI for the generic workspace, Bitable and digital-employee platform
-- Current Progress: 2026-07-10 Package 1 and a bounded Package 2 vertical path are implemented locally: approved bootstrap/Home/navigation, field-filtered Base/view/record reads, server-filtered scalar record creation, responsive renderers, scalar version-aware edit and authorized in-Base table switching. The current requirement-by-requirement gap is recorded in `STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md`; Package 3 and Package 4 remain incomplete or contract-gated.
+- Current Progress: 2026-07-10 Package 1 and a bounded Package 2 vertical path are implemented locally: approved bootstrap/Home/navigation, field-filtered Base/view/record reads, server-filtered scalar record creation, responsive renderers, scalar version-aware edit and authorized in-Base table switching. F1 independent Field Builder has an approved design specification but no implementation evidence yet. The current requirement-by-requirement gap is recorded in `STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md`; Package 3 and Package 4 remain incomplete or contract-gated.
 
 ## 1. Stage Goal
 
@@ -30,17 +30,18 @@ verified identity -> workspace member -> permission-filtered UI
 2. [Stage 07 Mini App UI Design](STAGE_07_MINI_APP_UI_DESIGN.md)
 3. [Stage 07 Visual Reference Manifest](STAGE_07_VISUAL_REFERENCE_MANIFEST.md)
 4. [Stage07 Mini App UI Design Specification](../../docs/superpowers/specs/2026-07-10-stage07-mini-app-ui-design.md)
-5. [Stage 07 SDD](STAGE_07_SDD.md)
-6. [Stage 07 API Data Security Contract](STAGE_07_API_DATA_SECURITY_CONTRACT.md)
-7. [Stage 07 BDD And Acceptance](STAGE_07_BDD_AND_ACCEPTANCE.md)
-8. [Stage 07 Module Index](STAGE_07_MODULE_INDEX.md)
-9. [Stage 07 Test Plan](STAGE_07_TEST_PLAN.md)
-10. [Stage 07 Risk Register](STAGE_07_RISK_REGISTER.md)
-11. [Stage 07 Implementation Plan](STAGE_07_IMPLEMENTATION_PLAN.md)
-12. [Stage 07 Acceptance Checklist](STAGE_07_ACCEPTANCE_CHECKLIST.md)
-13. [Stage 07 Progress](STAGE_07_PROGRESS.md)
-14. [Stage 07 Requirement Traceability Audit](STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md)
-15. [Technical Decision 001: Protected Query State](STAGE_07_TECHNICAL_DECISION_001_PROTECTED_QUERY_STATE.md)
+5. [Stage07 F1 Field Builder Design](../../docs/superpowers/specs/2026-07-10-stage07-f1-field-builder-design.md)
+6. [Stage 07 SDD](STAGE_07_SDD.md)
+7. [Stage 07 API Data Security Contract](STAGE_07_API_DATA_SECURITY_CONTRACT.md)
+8. [Stage 07 BDD And Acceptance](STAGE_07_BDD_AND_ACCEPTANCE.md)
+9. [Stage 07 Module Index](STAGE_07_MODULE_INDEX.md)
+10. [Stage 07 Test Plan](STAGE_07_TEST_PLAN.md)
+11. [Stage 07 Risk Register](STAGE_07_RISK_REGISTER.md)
+12. [Stage 07 Implementation Plan](STAGE_07_IMPLEMENTATION_PLAN.md)
+13. [Stage 07 Acceptance Checklist](STAGE_07_ACCEPTANCE_CHECKLIST.md)
+14. [Stage 07 Progress](STAGE_07_PROGRESS.md)
+15. [Stage 07 Requirement Traceability Audit](STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md)
+16. [Technical Decision 001: Protected Query State](STAGE_07_TECHNICAL_DECISION_001_PROTECTED_QUERY_STATE.md)
 
 Stage06 is the backend contract baseline. Stage02-05 documents are historical capability evidence only.
 

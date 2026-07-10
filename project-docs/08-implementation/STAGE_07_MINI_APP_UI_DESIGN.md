@@ -4,7 +4,7 @@
 
 - Document status: approved design, awaiting written-spec review
 - Scope: React/Vite Telegram Mini App and desktop-browser UI design for the generic workspace, Bitable and digital-employee platform
-- Current Progress: 2026-07-10 user-approved visual direction is active and its three original reference images are retained in the Stage07 visual manifest. A bounded Package 1/2 implementation uses the approved light visual system and read-only contract extensions; its exact evidence and remaining work are tracked by `STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md`. No unapproved Package 4 schema, API or permission change has started.
+- Current Progress: 2026-07-10 user-approved visual direction is active and its three original reference images are retained in the Stage07 visual manifest. The approved F1 independent Field Builder design now defines its safe API, visible field types and verification boundary; implementation-plan work remains next. A bounded Package 1/2 implementation uses the approved light visual system and read-only contract extensions; its exact evidence and remaining work are tracked by `STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md`. No unapproved Package 4 schema, API or permission change has started.
 
 ## Purpose
 
@@ -34,6 +34,8 @@ The Stage06 backend currently supports base-bound employees. Team-shared workspa
 ## Primary Specification And Detailed Package
 
 Read [Stage07 Mini App UI Design Specification](../../docs/superpowers/specs/2026-07-10-stage07-mini-app-ui-design.md) before planning or implementing Stage07.
+
+For the current Package 2 schema substage, read [Stage07 F1 Field Builder Design](../../docs/superpowers/specs/2026-07-10-stage07-f1-field-builder-design.md). It is the approved boundary for independent field creation; relationship, lookup, advanced JSON and additional-view work remain outside it.
 
 The detailed Stage07 source, SDD, BDD, API/data/security contract, module index, test plan, risk register, implementation plan and progress log are indexed from [Stage 07 Source Of Truth](STAGE_07_SOURCE_OF_TRUTH.md).
 
