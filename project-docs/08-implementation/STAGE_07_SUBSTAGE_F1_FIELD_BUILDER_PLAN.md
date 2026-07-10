@@ -317,7 +317,7 @@ cd backend; python -m pytest -q tests/unit/test_stage07_field_builder.py tests/u
 
 Expected: F1 service tests and existing platform core tests pass.
 
-- [ ] **Step 6: Commit the domain transaction**
+- [x] **Step 6: Commit the domain transaction**
 
 ```powershell
 git add backend/app/services/stage06_platform.py backend/tests/unit/test_stage07_field_builder.py
@@ -437,7 +437,7 @@ python -m pytest -q
 
 Expected: all focused tests pass; full-suite output reports only the documented environment-gated PostgreSQL skips.
 
-- [ ] **Step 6: Commit the API boundary**
+- [x] **Step 6: Commit the API boundary**
 
 ```powershell
 git add backend/app/schemas/stage06_platform.py backend/app/api/routes/stage06_platform.py backend/app/services/stage06_platform.py backend/tests/unit/test_stage07_field_builder.py
@@ -511,7 +511,7 @@ cd backend; python -m pytest -q tests/unit/test_stage07_field_builder.py tests/u
 
 Expected: configured choice constraints pass; legacy option-less fields retain existing behavior.
 
-- [ ] **Step 5: Commit typed-value support**
+- [x] **Step 5: Commit typed-value support**
 
 ```powershell
 git add backend/app/services/stage06_platform.py backend/tests/unit/test_stage07_field_builder.py backend/tests/unit/test_stage07_mini_app_api.py
@@ -604,7 +604,7 @@ npm.cmd run build
 
 Expected: panel tests pass and TypeScript/Vite build exits `0`.
 
-- [ ] **Step 6: Commit panel and transport**
+- [x] **Step 6: Commit panel and transport**
 
 ```powershell
 git add mini-app/src/app/FieldBuilderPanel.tsx mini-app/src/app/api.ts mini-app/src/styles.css mini-app/src/test/field-builder-panel.test.tsx
@@ -683,7 +683,7 @@ npm.cmd run build
 
 Expected: exact receipt navigation, stale rejection and denial tests pass; build exits `0`.
 
-- [ ] **Step 6: Commit protected integration**
+- [x] **Step 6: Commit protected integration**
 
 ```powershell
 git add mini-app/src/app/App.tsx mini-app/src/app/BaseCanvas.tsx mini-app/src/app/protectedQuery.ts mini-app/src/test/field-builder-flow.test.tsx
@@ -756,7 +756,7 @@ npm.cmd run build
 
 Expected: focused and full frontend test suites pass; build exits `0`.
 
-- [ ] **Step 5: Commit record usability support**
+- [x] **Step 5: Commit record usability support**
 
 ```powershell
 git add mini-app/src/app/CreateRecordPanel.tsx mini-app/src/app/RecordDetail.tsx mini-app/src/styles.css mini-app/src/test/create-record.test.tsx mini-app/src/test/record-detail.test.tsx
@@ -818,7 +818,7 @@ cd backend; $env:STAGE06_LOCAL_DATABASE_URL = '<authorised-disposable-url>'; pyt
 
 Expected: all real PostgreSQL cases pass. If no URL is authorised, retain the skipped result as an explicit acceptance gap; do not create, inspect or alter a user database.
 
-- [ ] **Step 4: Commit the integration proof**
+- [x] **Step 4: Commit the integration proof**
 
 ```powershell
 git add backend/tests/integration/test_stage07_field_builder_postgres.py project-docs/08-implementation/STAGE_07_TEST_PLAN.md project-docs/08-implementation/STAGE_07_RISK_REGISTER.md
@@ -841,7 +841,7 @@ git commit -m "test(stage07): cover field builder postgres safety"
 - Consumes: focused/full tests, browser screenshots, console output, PostgreSQL result/skip status and retained visual reference.
 - Produces: evidence-backed F1 status only; it must not mark Package 2 or Stage07 complete.
 
-- [ ] **Step 1: Run fresh complete automated gates**
+- [x] **Step 1: Run fresh complete automated gates**
 
 Run:
 
@@ -854,7 +854,7 @@ cd ..; git diff --check
 
 Expected: backend/frontend/build/migration commands report their actual result; any skipped PostgreSQL test count and reason are retained verbatim.
 
-- [ ] **Step 2: Create and inspect the disposable browser fixture**
+- [x] **Step 2: Create and inspect the disposable browser fixture**
 
 At `1440px`, `1280px`, `430px` and `390px`, run these real interactions against a disposable fixture:
 
@@ -866,11 +866,11 @@ At `1440px`, `1280px`, `430px` and `390px`, run these real interactions against 
 
 Capture the rendered screen beside `assets/stage07/workspace-ledger-reference.png` at the matching desktop widths. Inspect visible differences in shell proportions, dense toolbar placement, drawer/sheet spacing, type scale, borders/radii, selection blue and right-rail treatment. Stop/remove the fixture and delete unsanctioned test artifacts after inspection.
 
-- [ ] **Step 3: Update evidence documents accurately**
+- [x] **Step 3: Update evidence documents accurately**
 
 Change the F1 traceability row to `implemented-local` only when all non-PostgreSQL requirements and browser cases have evidence. If the local URL is absent, keep F1 `partial-local` with the exact three real-PostgreSQL cases as a visible gap. State that F2, V1, imports, governance and Package 4 remain unimplemented/contract-gated.
 
-- [ ] **Step 4: Re-run final checks after documentation updates**
+- [x] **Step 4: Re-run final checks after documentation updates**
 
 Run:
 

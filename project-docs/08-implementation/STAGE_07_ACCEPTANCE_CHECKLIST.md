@@ -34,13 +34,13 @@ These checks cover only the approved P3 atomic Base/Table creation slice. They d
 
 These checks cover only approved independent field creation and its immediate record/form follow-through. They do not accept F2 relation/lookup, additional View Builder, import/template, governance or Stage07.
 
-- [ ] Authorised builders can create only the eleven approved F1 field types through a labelled desktop drawer/mobile full-screen sheet; the browser sends display data and choices only.
-- [ ] The F1 endpoint independently requires active membership + `field.manage`, rejects cross-workspace/extra/raw-policy/key/configuration inputs and returns only a safe receipt.
-- [ ] Safe Canvas schema, F1 receipt and create-form metadata contain no policy, raw non-choice options, default value, technical status or hidden field metadata.
-- [ ] The server generates the key/order/default policy, updates eligible explicit saved-view field lists atomically, writes sanitized audit and leaves existing record values empty.
-- [ ] Configured status/single/multi choices are validated server-side; multi-select works in record create and direct edit; legacy option-less fields preserve their documented compatibility.
-- [ ] Same-key replay, changed-payload `409`, rollback and distinct-concurrent-order tests have automated evidence; real PostgreSQL cases remain explicitly unchecked until an authorised local URL runs them.
-- [ ] Browser QA compares Workspace Ledger at 1440/1280/430/390 for fieldless-to-first-field, nonempty-table add, validation/retry/denial and choice-record flows with zero relevant console errors.
+- [x] Authorised builders can create only the eleven approved F1 field types through a labelled desktop drawer/mobile full-screen sheet; the browser sends display data and choices only.
+- [x] The F1 endpoint independently requires active membership + `field.manage`, rejects cross-workspace/extra/raw-policy/key/configuration inputs and returns only a safe receipt.
+- [x] Safe Canvas schema, F1 receipt and create-form metadata contain no policy, raw non-choice options, default value, technical status or hidden field metadata.
+- [x] The server generates the key/order/default policy, updates eligible explicit saved-view field lists atomically, writes sanitized audit and leaves existing record values empty.
+- [x] Configured status/single/multi choices are validated server-side; multi-select works in record create and direct edit; legacy option-less fields preserve their documented compatibility.
+- [x] Same-key replay and changed-payload `409` have automated evidence; in-memory rollback/order tests pass, while the three matching real-PostgreSQL cases remain explicitly unchecked until an authorised local URL runs them.
+- [ ] Browser QA has F1-scoped Workspace Ledger comparison and zero-console-error evidence at 1440/1280/430/390 for fieldless-to-first-field, nonempty-table add, validation/retry/denial and allowed-choice record creation. The corrected disposable direct-edit success capture remains an explicit visual-evidence follow-up.
 
 ## Governance And Security
 

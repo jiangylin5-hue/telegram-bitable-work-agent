@@ -37,10 +37,22 @@
 - frontend panel/application tests prove drawer/sheet accessibility, retry/409 handling, exact schema reread, stale response rejection and protected-scope cleanup;
 - Browser QA compares the retained Workspace Ledger source at 1440/1280/430/390 and records zero relevant console errors.
 
+### F1 Automated Current Evidence
+
+- 2026-07-10: fresh full backend regression: `432 passed, 25 skipped in 13.27s`. The 25 skips comprise 17 historical Stage02 online-PostgreSQL cases, five Stage06 local-PostgreSQL security cases and three F1 disposable-PostgreSQL cases; no skipped test is counted as passed evidence.
+- 2026-07-10: fresh Mini App regression: `13 passed` test files and `52 passed` tests; `npm.cmd run build` passed.
+- 2026-07-10: `alembic heads` reports only `20260710_0021 (head)`; `alembic upgrade head --sql` exited successfully.
+
 ### F1 PostgreSQL Current Evidence
 
 - 2026-07-10: `python -m pytest -q tests/integration/test_stage07_field_builder_postgres.py` collected the rollback, same-key replay and distinct-key concurrent-order cases, then reported `3 skipped` because `STAGE06_LOCAL_DATABASE_URL` is absent.
 - The skipped result is not real PostgreSQL proof. An authorised disposable local URL remains required before F1 can claim database rollback, row-lock ordering or concurrent view-configuration evidence.
+
+### F1 Browser Current Evidence
+
+- 2026-07-10: a disposable local fixture exercised 1440px, 1280px, 430px and 390px. It covered fieldless-to-status, visible header re-read, `multi_select`, allowed-choice record creation, blank-name feedback, same-key 503 retry, 409 lock and 403 denied-state cleanup. The retained Workspace Ledger reference and the 1440px rendered F1 state were reviewed together; all final fixture console warnings/errors were empty.
+- The 390px nonempty-table trigger initially exposed a responsive defect: the generic toolbar rule hid the authorised field action. A test was written red, the explicit mobile field/record action override was added, and a fresh 390px fixture run opened the field sheet from its visible `添加字段` trigger.
+- The original full fixture put its generic record read ahead of its test-only PATCH handler. It could not therefore provide a direct-edit-success screenshot; component/application tests provide that behaviour evidence. Re-run that one disposable visual state with corrected fixture route ordering before claiming the full F1 browser matrix complete.
 
 ## 3. Completion Rule
 
