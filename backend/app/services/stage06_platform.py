@@ -56,6 +56,9 @@ STAGE06_FIELD_TYPES = frozenset(
 STAGE06_DEFAULT_WRITE_ROLES = frozenset(
     {"admin", "owner", "manager", "operator", "builder"}
 )
+CREATE_FORM_SCALAR_FIELD_TYPES = frozenset(
+    {"text", "number", "date", "status", "single_select", "user", "checkbox", "url", "email", "phone"}
+)
 _MISSING = object()
 
 
@@ -770,22 +773,37 @@ def create_record(
 
 def get_create_form(uow: Stage06PlatformUnitOfWork, table_id: UUID, *, actor: Actor) -> dict[str, Any]:
     _require_exists(uow.get_table(table_id), "table_not_found")
-    fields = [field for field in uow.list_fields(table_id) if _can_actor_write_field(actor, field)]
+    all_fields = uow.list_fields(table_id)
+    writable_fields = [field for field in all_fields if _can_actor_write_field(actor, field)]
+    fields = [field for field in writable_fields if field.field_type in CREATE_FORM_SCALAR_FIELD_TYPES]
+    can_create = not any(
+        field.required and (field not in writable_fields or field.field_type not in CREATE_FORM_SCALAR_FIELD_TYPES)
+        for field in all_fields
+    )
     return {
         "table_id": str(table_id),
-        "can_create": True,
+        "can_create": can_create,
         "fields": [
             {
                 "key": field.key,
                 "name": field.name,
                 "field_type": field.field_type,
                 "required": field.required,
-                "options": field.options,
+                "options": _create_form_options(field),
                 "order_index": field.order_index,
             }
             for field in fields
         ],
     }
+
+
+def _create_form_options(field: PlatformField) -> dict[str, Any]:
+    if field.field_type not in {"status", "single_select"}:
+        return {}
+    choices = field.options.get("choices")
+    if not isinstance(choices, list) or not all(isinstance(choice, str) for choice in choices):
+        return {}
+    return {"choices": choices}
 
 
 def update_record(

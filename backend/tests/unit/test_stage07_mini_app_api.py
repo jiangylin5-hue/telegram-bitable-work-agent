@@ -325,6 +325,8 @@ def test_create_form_returns_only_server_writable_fields_without_policy() -> Non
         base_id = client.post(f"/workspaces/{workspace_id}/bases", json={"name": "Operations"}).json()["id"]
         table_id = client.post(f"/bases/{base_id}/tables", json={"name": "Projects", "key": "projects"}).json()["id"]
         client.post(f"/tables/{table_id}/fields", json={"name": "Title", "key": "title", "field_type": "text", "required": True, "permission_policy": {"operator": "write"}})
+        client.post(f"/tables/{table_id}/fields", json={"name": "Status", "key": "status", "field_type": "status", "options": {"choices": ["new", "active"], "internal_rule": "must-not-leak"}, "permission_policy": {"operator": "write"}})
+        client.post(f"/tables/{table_id}/fields", json={"name": "Related accounts", "key": "accounts", "field_type": "linked_record", "required": True, "options": {"target_table_id": str(uuid4())}, "permission_policy": {"operator": "write"}})
         client.post(f"/tables/{table_id}/fields", json={"name": "Internal", "key": "internal", "field_type": "text", "permission_policy": {"operator": "read"}})
         uow.add_workspace_member(WorkspaceMember(id=uuid4(), workspace_id=UUID(workspace_id), user_id="operator-1", role="operator", status="active"))
         client.headers["X-Stage06-User-Id"] = "operator-1"
@@ -332,7 +334,11 @@ def test_create_form_returns_only_server_writable_fields_without_policy() -> Non
 
     assert response.status_code == 200
     assert response.json()["table_id"] == table_id
-    assert response.json()["can_create"] is True
-    assert response.json()["fields"] == [{"key": "title", "name": "Title", "field_type": "text", "required": True, "options": {}, "order_index": 0}]
+    assert response.json()["can_create"] is False
+    assert response.json()["fields"] == [
+        {"key": "title", "name": "Title", "field_type": "text", "required": True, "options": {}, "order_index": 0},
+        {"key": "status", "name": "Status", "field_type": "status", "required": False, "options": {"choices": ["new", "active"]}, "order_index": 1},
+    ]
     assert "permission_policy" not in response.text
     assert "internal" not in response.text
+    assert "accounts" not in response.text

@@ -2,7 +2,7 @@
 
 ## Status
 
-- Decision status: approved by user on 2026-07-10; implementation may begin only within this document's scope
+- Decision status: approved by user on 2026-07-10; first scalar implementation is `partial-local` with desktop browser evidence; 390px browser evidence remains pending
 - Scope: Mini App/desktop record creation and saved Form submission for existing Stage06 tables
 - Non-scope: field schema editing, new field types, client-side permission inference, Bot writes, imports, drafts or Telegram actions
 
@@ -84,6 +84,16 @@ Rules:
 - Success creates one audited version-1 record and re-renders an authorized server view window.
 - Browser QA covers desktop and `390x844` create success, validation failure and denied state using a disposable safe fixture; full backend/frontend regression passes.
 
-## 7. Approval Request
+## 7. Implemented First-Slice Boundary (2026-07-10)
+
+- `GET /tables/{table_id}/create-form` returns only server-writable first-slice scalar fields. For `status` and `single_select`, it exposes only a validated string-array `options.choices`; all other field options are an empty object. Raw relation/configuration keys are never returned.
+- `can_create` is `false` when any required table field is not writable by the actor or is outside the first-slice scalar editor set. The safe field list remains filtered, and the client shows an unavailable-state drawer instead of offering a submission that Stage06 must reject for a missing required field.
+- The Mini App supports `text`, `number`, `date`, `checkbox`, `status`, `single_select`, `url`, `email`, `phone` and `user`. A non-empty server-provided `choices` list renders as a native select; otherwise the existing Stage06-compatible scalar input is used.
+- The create-form query uses the verified user/workspace/table protected key. It is discarded on workspace/Base/view generation change, and no form model is persisted locally.
+- After a successful `POST`, every cached cursor window for the active view is removed and only the authorized first window is read again. The drawer closes only after that read succeeds.
+- Required-field validation is shown locally before submission. Existing Stage06 errors do not yet expose a separately mapped safe field key, so other server validation failures remain a generic drawer error; no client-side inference is used.
+- Disposable-fixture browser evidence covers desktop create panel rendering, required-field failure, status selection, successful view refresh and a `403` boundary. The active in-app browser did not honor a `390x844` viewport request, so mobile create-browser evidence remains an explicit exit-gap.
+
+## 8. Approval Request
 
 The user approved this dedicated server-filtered `GET /tables/{table_id}/create-form` contract on 2026-07-10. The approval authorizes the contract, tests and first scalar create UI only; it does not authorize builder, imports, governance or Bot/Telegram work.

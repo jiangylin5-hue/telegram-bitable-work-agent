@@ -3,9 +3,17 @@
 ## Status
 
 - Document status: active progress log
-- Current Progress: 2026-07-10 Package 1/2 has an implemented, verified vertical path: approved Mini App bootstrap, authorization-filtered Workspace Home, responsive App Shell and workspace switching; permission-filtered Base/table/view canvas; read-only Grid/Kanban/Calendar/Form presentation; Record Detail; and version-aware scalar direct edits. Protected Query now covers bootstrap, Workspace Home, Base/view opening, record detail and cursor continuation. Governance, imports/templates, Bot surface, draft confirmation and final Stage07 acceptance remain incomplete.
+- Current Progress: 2026-07-10 Package 1/2 has an implemented, verified vertical path: approved Mini App bootstrap, authorization-filtered Workspace Home, responsive App Shell and workspace switching; permission-filtered Base/table/view canvas; read-only Grid/Kanban/Calendar/Form presentation; Record Detail; version-aware scalar direct edits; and a server-filtered scalar record-create drawer. Protected Query now covers bootstrap, Workspace Home, Base/view opening, record detail, cursor continuation and create-form loading. Governance, imports/templates, Bot surface, draft confirmation, mobile create browser evidence and final Stage07 acceptance remain incomplete.
 
 ## Progress Log
+
+### 2026-07-10: Server-Filtered Scalar Record Create Is Partial-Local
+
+- Added the approved `GET /tables/{table_id}/create-form` contract to the Mini App and connected its only mutation path to existing `POST /tables/{table_id}/records`.
+- The server filters writable first-slice scalar fields and removes raw options. Only validated `status` / `single_select` string choices may reach the browser; all other options are empty. If a required field is inaccessible or unsupported, `can_create: false` renders an unavailable state instead of an inevitably failing POST. This preserves the rule that browser schema visibility never becomes write authority.
+- The Base view toolbar exposes the entry only through the application callback. The app loads the protected server model, discards stale workspace/Base/view responses, clears protected state on `401` / `403`, and clears all active-view cursor windows before it reads the authoritative first window after creation.
+- Added backend options-redaction/unsupported-required regression coverage; frontend component, integration and renderer tests cover permitted form rendering, unavailable state, required validation, status choice submission, POST payload and view reload. Fresh full checks: backend `407 passed, 19 skipped`; frontend `26 passed`; production build passed.
+- Disposable local browser fixture evidence covered desktop create-form rendering, required-field feedback, status select, successful record appearance after reload and the denied create boundary. Fixture server/code were stopped/deleted. The in-app browser did not apply a `390x844` viewport request (reported `1280x720`), therefore mobile create browser QA remains pending and is not counted as acceptance evidence.
 
 ### 2026-07-10: Package 1 Frontend Scaffold Verified
 

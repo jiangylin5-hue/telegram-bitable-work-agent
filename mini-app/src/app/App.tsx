@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { ApiError, api, type BaseSummary, type BootstrapResponse, type PlatformTable, type RecordDetail, type TableSchema, type ViewPresentation, type ViewRecords, type ViewSummary, type WorkspaceHome } from './api'
+import { ApiError, api, type BaseSummary, type BootstrapResponse, type CreateForm, type PlatformTable, type RecordDetail, type TableSchema, type ViewPresentation, type ViewRecords, type ViewSummary, type WorkspaceHome } from './api'
 import { AppShell } from './AppShell'
 import { BaseCanvas } from './BaseCanvas'
+import { CreateRecordPanel } from './CreateRecordPanel'
 import { RecordDetailPanel } from './RecordDetail'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
 import { clearAllProtectedQueries, clearProtectedWorkspace, createProtectedQueryClient, protectedQueryKey } from './protectedQuery'
@@ -18,6 +19,7 @@ type BaseCanvasState = {
   records: ViewRecords | null
   presentation: ViewPresentation | null
   detail?: RecordDetail
+  createForm?: CreateForm
   loadingMore?: boolean
   loadMoreError?: boolean
 }
@@ -43,6 +45,7 @@ function AppContent() {
   const homeRequestVersion = useRef(0)
   const canvasRequestVersion = useRef(0)
   const recordRequestVersion = useRef(0)
+  const createFormRequestVersion = useRef(0)
   const bootstrapQuery = useQuery({
     queryKey: ['stage07', 'bootstrap'],
     queryFn: ({ signal }) => api.bootstrap({ signal }),
@@ -109,6 +112,7 @@ function AppContent() {
     homeRequestVersion.current += 1
     canvasRequestVersion.current += 1
     recordRequestVersion.current += 1
+    createFormRequestVersion.current += 1
     setState({ status: 'loading' })
     await clearProtectedWorkspace(queryClient, { userId: readyState.bootstrap.identity.user_id, workspaceId: activeWorkspace.id })
     await loadWorkspaceHome(readyState.bootstrap, workspaceId)
@@ -116,6 +120,7 @@ function AppContent() {
 
   async function openBase(base: BaseSummary) {
     const requestVersion = ++canvasRequestVersion.current
+    createFormRequestVersion.current += 1
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
     setState({ ...readyState, canvasLoading: true, canvas: undefined })
     try {
@@ -253,6 +258,66 @@ function AppContent() {
     }
   }
 
+  async function openCreateRecord() {
+    const canvas = readyState.canvas
+    if (!canvas?.table || !canvas.view) return
+    const requestVersion = ++createFormRequestVersion.current
+    const canvasVersion = canvasRequestVersion.current
+    const tableId = canvas.table.id
+    const viewId = canvas.view.id
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    try {
+      const form = await queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'table', tableId, 'create-form'), queryFn: ({ signal }) => api.createForm(tableId, { signal }) })
+      if (createFormRequestVersion.current !== requestVersion || canvasRequestVersion.current !== canvasVersion) return
+      setState((current) => current.status === 'ready' && current.home.workspace_id === workspaceId && current.canvas?.table?.id === tableId && current.canvas.view?.id === viewId
+        ? { ...current, canvas: { ...current.canvas, createForm: form } }
+        : current)
+    } catch (error) {
+      if (createFormRequestVersion.current !== requestVersion || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await clearAllProtectedQueries(queryClient)
+        setState({ status: 'denied' })
+      } else if (error instanceof ApiError && error.status === 403) {
+        await clearProtectedWorkspace(queryClient, scope)
+        setState({ status: 'denied' })
+      } else {
+        setState({ status: 'error' })
+      }
+    }
+  }
+
+  async function createRecord(values: Record<string, unknown>) {
+    const canvas = readyState.canvas
+    if (!canvas?.table || !canvas.view) throw new Error('Table is not available')
+    const canvasVersion = canvasRequestVersion.current
+    const tableId = canvas.table.id
+    const viewId = canvas.view.id
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    try {
+      await api.createRecord(tableId, values)
+      if (canvasRequestVersion.current !== canvasVersion) return
+      const recordsKey = protectedQueryKey(scope, 'view', viewId, 'records')
+      await queryClient.invalidateQueries({ queryKey: recordsKey })
+      queryClient.removeQueries({ queryKey: recordsKey })
+      const records = await queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', viewId, 'records', null), queryFn: ({ signal }) => api.viewRecords(viewId, undefined, { signal }) })
+      if (canvasRequestVersion.current !== canvasVersion) return
+      setState((current) => current.status === 'ready' && current.home.workspace_id === workspaceId && current.canvas?.table?.id === tableId && current.canvas.view?.id === viewId
+        ? { ...current, canvas: { ...current.canvas, records, createForm: undefined } }
+        : current)
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        await clearAllProtectedQueries(queryClient)
+        setState({ status: 'denied' })
+      } else if (error instanceof ApiError && error.status === 403) {
+        await clearProtectedWorkspace(queryClient, scope)
+        setState({ status: 'denied' })
+      }
+      throw error
+    }
+  }
+
   async function selectView(viewId: string) {
     const canvas = readyState.canvas
     if (!canvas || canvas.view?.id === viewId) return
@@ -260,6 +325,7 @@ function AppContent() {
     const table = view?.table_id ? canvas.tables.find((item) => item.id === view.table_id) ?? null : null
     if (!view || !table) return
     const requestVersion = ++canvasRequestVersion.current
+    createFormRequestVersion.current += 1
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
     setState({ ...readyState, canvasLoading: true, canvas: undefined })
     try {
@@ -289,7 +355,7 @@ function AppContent() {
   const content = readyState.canvasLoading
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
-      ? <><BaseCanvas {...readyState.canvas} onBack={() => setState({ ...readyState, canvas: undefined })} onOpenRecord={openRecord} onSelectView={selectView} onLoadMore={loadMoreRecords} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} onConflict={refreshRecordAfterConflict} onClose={() => setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } })} />}</>
+      ? <><BaseCanvas {...readyState.canvas} onBack={() => setState({ ...readyState, canvas: undefined })} onOpenRecord={openRecord} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={openCreateRecord} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} onConflict={refreshRecordAfterConflict} onClose={() => setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } })} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => setState((current) => current.status === 'ready' && current.canvas ? { ...current, canvas: { ...current.canvas, createForm: undefined } } : current)} />}</>
       : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} />
   return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace}>{content}</AppShell>
 }
