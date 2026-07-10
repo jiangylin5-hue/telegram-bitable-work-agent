@@ -122,6 +122,12 @@
 - The existing active workspace/view/cursor guard, record-ID deduplication and failure-retry surface remain authoritative. A new red/green integration assertion proves the cursor request carries the cancellation signal.
 - Verification: targeted App shell tests passed `7 passed`; full frontend suite passed `20 passed`; production build and `git diff --check` passed. Mutation invalidation and conflict-refresh migration are deliberately still unimplemented.
 
+### 2026-07-10: Protected Query Mutation Refresh Slice Verified
+
+- Existing `PATCH /records/{id}` success now invalidates/removes the exact protected record and active-view first-window keys, then rereads both through the protected transport before replacing the UI. Existing `409` recovery uses the same authority path.
+- TDD evidence: a success-save regression first failed because no record/view reread occurred. The green path proves an additional exact record read and updates both grid and detail to the authoritative value; no optimistic write, API, schema or permission change was added.
+- Verification: targeted App shell tests passed `7 passed`; full frontend suite passed `20 passed`; production build and `git diff --check` passed.
+
 ## Next Step
 
 Complete targeted mutation invalidation/refetch for the existing direct-edit/conflict flow in an independently tested slice. Afterwards, prepare and seek approval for the workspace-level Bot, knowledge, memory and Telegram lifecycle contract; complex typed field editors remain a separate, documented work item.

@@ -5,7 +5,7 @@
 - Decision status: approved by user on 2026-07-10 — implementation may begin only within this document's scope
 - Scope: Mini App/desktop React server-state cache, request cancellation, workspace/session/revocation clearing and mutation refresh
 - Non-scope: backend schema/API/role/permission changes; local persistence; Bot/knowledge/memory implementation
-- Implementation progress: bootstrap, Workspace Home, the initial Base-open dependency tree, saved-view switching, record-detail opening and cursor follow-up pages are migrated. The Base-open tree covers Base tables/views, the default table schema, the default view presentation and every fetched cursor window. Mutations remain an explicit later slice; this decision is not yet fully implemented.
+- Implementation progress: bootstrap, Workspace Home, the initial Base-open dependency tree, saved-view switching, record-detail opening, cursor follow-up pages and direct-edit/conflict refresh are migrated. The Base-open tree covers Base tables/views, the default table schema, the default view presentation and every fetched cursor window. This decision is implemented for the approved existing Package 1/2 read/edit path; later Package 2/3/4 contracts remain separate.
 
 ## 1. Problem
 
@@ -125,5 +125,6 @@ The user approved Option A on 2026-07-10. The approval authorizes only adding `@
 - Saved-view switching now applies the same protected keys and canvas request generation. A red/green application test proves delayed view presentation/record responses cannot restore the prior Base after a workspace switch.
 - Record detail opening now uses the same protected scope with an exact record key and a dedicated request generation. A red/green application test proves a delayed record response cannot reopen the old workspace's detail panel after a workspace switch.
 - Cursor continuation now uses a protected view-record key containing the opaque server cursor and forwards the cancellation signal. Its existing record-ID deduplication and active-view/cursor state guard remain intact.
+- Existing direct record edits and `409` conflict recovery now invalidate/remove the exact record and active-view first-window keys before authority is reread through the protected query transport. No optimistic client write or new mutation contract was introduced.
 - `npm.cmd run test:run` passed with 18 tests, and `npm.cmd run build` passed after the slice. Browser QA against a disposable local fixture confirmed the authorized Home -> Base -> Grid path and reported no console warning/error. The fixture and test server were removed/stopped after the check.
 - This evidence does **not** claim mutation invalidation. Write-refresh paths still use their existing local state until independently covered by a red/green slice.

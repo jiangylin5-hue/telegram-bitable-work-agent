@@ -178,11 +178,20 @@ function AppContent() {
   async function saveRecord(values: Record<string, unknown>) {
     const canvas = readyState.canvas
     const detail = canvas?.detail
-    if (!canvas || !detail) throw new Error('Record is not available')
-    const updated = await api.updateRecord(detail.id, values, detail.version)
+    if (!canvas || !detail || !canvas.view) throw new Error('Record is not available')
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
+    await api.updateRecord(detail.id, values, detail.version)
+    const recordKey = protectedQueryKey(scope, 'record', detail.id)
+    const recordsKey = protectedQueryKey(scope, 'view', canvas.view.id, 'records', null)
+    await Promise.all([queryClient.invalidateQueries({ queryKey: recordKey }), queryClient.invalidateQueries({ queryKey: recordsKey })])
+    queryClient.removeQueries({ queryKey: recordKey })
+    queryClient.removeQueries({ queryKey: recordsKey })
+    const [updated, records] = await Promise.all([
+      queryClient.fetchQuery({ queryKey: recordKey, queryFn: ({ signal }) => api.recordDetail(detail.id, { signal }) }),
+      queryClient.fetchQuery({ queryKey: recordsKey, queryFn: ({ signal }) => api.viewRecords(canvas.view!.id, undefined, { signal }) }),
+    ])
     const readableKeys = new Set(canvas.schema?.fields.map((field) => field.key) ?? [])
     const safeUpdated = { ...updated, values: Object.fromEntries(Object.entries(updated.values).filter(([key]) => readableKeys.has(key))) }
-    const records = canvas.records && { ...canvas.records, records: canvas.records.records.map((record) => record.id === safeUpdated.id ? { ...record, fields: safeUpdated.values } : record) }
     setState({ ...readyState, canvas: { ...canvas, records, detail: safeUpdated } })
     return safeUpdated
   }
@@ -191,8 +200,17 @@ function AppContent() {
     const canvas = readyState.canvas
     const detail = canvas?.detail
     if (!canvas || !detail || !canvas.view) throw new Error('Record is not available')
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
+    const recordKey = protectedQueryKey(scope, 'record', detail.id)
+      const recordsKey = protectedQueryKey(scope, 'view', canvas.view.id, 'records', null)
     try {
-      const [updated, records] = await Promise.all([api.recordDetail(detail.id), api.viewRecords(canvas.view.id)])
+      await Promise.all([queryClient.invalidateQueries({ queryKey: recordKey }), queryClient.invalidateQueries({ queryKey: recordsKey })])
+      queryClient.removeQueries({ queryKey: recordKey })
+      queryClient.removeQueries({ queryKey: recordsKey })
+      const [updated, records] = await Promise.all([
+        queryClient.fetchQuery({ queryKey: recordKey, queryFn: ({ signal }) => api.recordDetail(detail.id, { signal }) }),
+        queryClient.fetchQuery({ queryKey: recordsKey, queryFn: ({ signal }) => api.viewRecords(canvas.view!.id, undefined, { signal }) }),
+      ])
       const readableKeys = new Set(canvas.schema?.fields.map((field) => field.key) ?? [])
       const safeUpdated = { ...updated, values: Object.fromEntries(Object.entries(updated.values).filter(([key]) => readableKeys.has(key))) }
       setState({ ...readyState, canvas: { ...canvas, detail: safeUpdated, records } })

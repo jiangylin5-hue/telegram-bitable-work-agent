@@ -105,6 +105,8 @@ test('opening a Base loads its authorized table schema and saved-view records as
     .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-1', records: [{ id: 'record-1', fields: { name: 'Ada Co' } }, { id: 'record-2', fields: { name: 'Northstar' } }], has_more: false, next_cursor: null }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'record-1', table_id: 'table-1', values: { name: 'Ada Co' }, record_status: 'active', version: 3 }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'record-1', table_id: 'table-1', values: { name: 'Ada Ltd' }, record_status: 'active', version: 4 }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'record-1', table_id: 'table-1', values: { name: 'Ada Ltd' }, record_status: 'active', version: 4 }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-1', records: [{ id: 'record-1', fields: { name: 'Ada Ltd' } }, { id: 'record-2', fields: { name: 'Northstar' } }], has_more: false, next_cursor: null }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-2', table_id: 'table-1', view_type: 'kanban', visible_field_keys: ['name', 'status'], group_by_field_key: 'status', date_field_key: null, form_field_keys: ['name', 'status'] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-2', records: [{ id: 'record-2', fields: { name: 'Northstar', status: '进行中' } }], has_more: false, next_cursor: null }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
 
@@ -137,6 +139,8 @@ test('opening a Base loads its authorized table schema and saved-view records as
   fireEvent.click(screen.getByRole('button', { name: '保存更改' }))
   expect(await screen.findByText('版本 4')).toBeInTheDocument()
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/records/record-1', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ values: { name: 'Ada Ltd' }, expected_version: 3 }) })))
+  await waitFor(() => expect(fetchMock.mock.calls.filter(([path]) => path === '/records/record-1').length).toBeGreaterThanOrEqual(2))
+  expect(screen.getAllByText('Ada Ltd')).toHaveLength(2)
 
   fireEvent.click(screen.getByRole('button', { name: '关闭记录详情' }))
   fireEvent.click(screen.getByRole('tab', { name: '按状态' }))
