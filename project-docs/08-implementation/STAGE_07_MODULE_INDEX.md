@@ -13,3 +13,5 @@
 | [Governance And Permission UI](modules/STAGE_07_GOVERNANCE_AND_PERMISSION_UI.md) | members, roles, field permissions, audit and Bot administration | AppShell, Bitable schema and server authorization |
 
 No module may bypass `AppShell` route context, server permission results, shared error states or the controlled draft lifecycle.
+
+Current state and package-level evidence are tracked in [Stage 07 Requirement Traceability Audit](STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md); it is the required companion for implementation and acceptance claims.

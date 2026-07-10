@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 design detail
 - Scope: UI architecture, module boundaries and interaction flows
-- Current Progress: planned; no code implementation has started
+- Current Progress: AppShell, WorkspaceHome, BaseCanvas, field-filtered read models, RecordDetail and limited scalar direct edits are implemented. The requirement traceability audit identifies all incomplete SDD paths and contract gates; this SDD remains the design boundary for later packages.
 
 ## 1. Architecture Overview
 

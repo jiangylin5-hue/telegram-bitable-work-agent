@@ -21,14 +21,17 @@ test('submits a versioned direct human edit and shows the authoritative response
 
 test('shows a conflict state instead of a false successful save', async () => {
   const onSave = vi.fn().mockRejectedValue(new ApiError(409))
-  render(<RecordDetailPanel detail={detail} schema={schema} onClose={() => undefined} onSave={onSave} />)
+  const onConflict = vi.fn().mockResolvedValue({ ...detail, values: { ...detail.values, name: 'Ada Global' }, version: 4 })
+  render(<RecordDetailPanel detail={detail} schema={schema} onClose={() => undefined} onSave={onSave} onConflict={onConflict} />)
 
   fireEvent.click(screen.getByRole('button', { name: '编辑记录' }))
   fireEvent.change(screen.getByLabelText('客户名称'), { target: { value: 'Ada Labs' } })
   fireEvent.click(screen.getByRole('button', { name: '保存更改' }))
 
-  expect(await screen.findByText('记录已被更新，请刷新后重试。')).toBeInTheDocument()
-  expect(screen.queryByText('版本 4')).not.toBeInTheDocument()
+  expect(await screen.findByText('记录已被更新，已刷新最新版本，请重新编辑。')).toBeInTheDocument()
+  expect(onConflict).toHaveBeenCalledOnce()
+  expect(screen.getByText('版本 4')).toBeInTheDocument()
+  expect(screen.getByText('Ada Global')).toBeInTheDocument()
 })
 
 test('normalizes a number field before submitting the changed value', async () => {

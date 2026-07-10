@@ -60,6 +60,19 @@
 - The approved design remains queue-first Home, table-first Base canvas, contextual Bot/draft surface, responsive desktop/mobile behavior and fail-closed UI safety.
 - Contract extensions for workspace Bot contacts, knowledge sources, memory partitions and Mini App identity remain pending explicit approval.
 
+### 2026-07-10: Requirement Traceability Audit Added
+
+- Added `STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md`, mapping each required Stage07 package, BDD flow, contract gate, safety requirement and acceptance evidence to actual current source and tests.
+- The audit corrects stale planning wording in earlier design documents: a limited Package 1/2 vertical path exists, but it does not prove Package 2 completion and does not authorize Package 3/4 work.
+- The audit explicitly records the remaining non-negotiable gates: protected-state/cache architecture decision; typed Form/create and builder interaction specifications; governance permission contract; field-filtered draft review contract; Package 4 Bot/knowledge/memory/Telegram decision; four-width visual QA; and approved real Telegram Mini App smoke.
+
+### 2026-07-10: Authoritative Record Conflict Recovery Verified
+
+- The Stage07 direct-edit path now treats `409` as stale local state: it rereads the authorized record detail and the active saved-view record window, then replaces the drawer/grid with the server-returned version before allowing another edit.
+- `403` or `404` during this recovery enters the generic denied boundary instead of retaining the stale record surface. The refreshed record is filtered through the already field-filtered schema before it becomes client state.
+- TDD evidence: an application integration test initially exposed a real mount-effect race that could close the editor immediately after an edit click. The synchronization effect now runs only after the record ID/version actually changes. The new application test proves one failed `PATCH`, a detail reread, a view-window reread and authoritative version `4` rendering.
+- Verification: `npm.cmd run test:run` => `10 passed`; `npm.cmd run build` passed. Browser QA through a disposable local contract fixture produced `409`, reread `Ada Global`/version `4` into both Grid and Record Detail, displayed the retry notice and had no relevant console warning/error. The fixture/server were deleted/stopped after the run.
+
 ## Next Step
 
 Run the full frontend/backend regression and browser QA for the version-aware edit path. Then prepare and seek approval for the workspace-level Bot, knowledge, memory and Telegram lifecycle contract; complex typed field editors, conflict reload and cache invalidation remain separate, documented work items.

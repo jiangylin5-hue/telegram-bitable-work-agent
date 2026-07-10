@@ -4,7 +4,7 @@
 
 - Document status: active acceptance design
 - Scope: user-visible UI behavior, safety and responsive acceptance
-- Current Progress: scenarios are specified; execution awaits implementation
+- Current Progress: Scenarios 1, 3, 4 and 5 have bounded local evidence for implemented slices; no scenario is accepted end-to-end. Scenarios 6-12 remain incomplete or contract-gated as recorded in the requirement traceability audit.
 
 ## 1. BDD Scenarios
 

@@ -1,0 +1,115 @@
+# Stage 07 Requirement Traceability Audit
+
+## Status
+
+- Document status: active current-state requirement audit
+- Scope: Stage07 source of truth, SDD, BDD, API/data/security contract, module documents, implementation plan, test plan and acceptance checklist mapped to current source, tests and browser evidence
+- Current Progress: 2026-07-10 baseline audit completed after the version-aware direct-edit slice. Package 1 and a limited Package 2 vertical path have evidence; Package 2 builders/imports, Package 3 governance and all Package 4 Digital Employee scope remain incomplete or contract-gated.
+
+## 1. Purpose
+
+This audit prevents three incorrect conclusions:
+
+1. a rendered Home or Base Canvas means Stage07 is accepted;
+2. a frontend mock test proves backend authorization or Telegram identity;
+3. an endpoint existing in Stage06 automatically authorizes a safe, complete Stage07 screen.
+
+For every requirement the audit records the source, current evidence, status and the next action. It is the current decision ledger for Stage07 implementation; it does not replace the final Stage07 acceptance report.
+
+## 2. Status Vocabulary
+
+| Status | Meaning |
+| --- | --- |
+| `implemented-local` | Code and local automated/browser evidence prove the stated bounded behavior. |
+| `partial-local` | Some path is implemented, but required states, semantics or security evidence are missing. |
+| `existing-contract-unimplemented` | A suitable Stage06 endpoint exists but no Stage07 UI/service integration currently consumes it. |
+| `contract-gated` | The requirement needs an unapproved schema, API, authorization, identity or retention decision. No implementation may start. |
+| `external-evidence-pending` | Local implementation may exist, but approved Telegram/Mini App or production-like evidence is missing. |
+| `not-implemented` | Neither safe implementation nor sufficient contract/evidence exists. |
+| `guarded-out-of-scope` | The behavior is deliberately forbidden by the Stage07 source of truth. |
+
+## 3. Current Evidence Snapshot
+
+| Evidence | Result | Coverage limit |
+| --- | --- | --- |
+| Frontend unit/integration tests | `npm.cmd run test:run` in `mini-app`: 9 passed | uses mocked server responses; does not prove backend authorization. |
+| Frontend production build | `npm.cmd run build`: passed | proves TypeScript/Vite build only. |
+| Full backend regression | `python -m pytest -q` in `backend`: 406 passed, 19 skipped | 17 historical online PostgreSQL skips require `STAGE02_ONLINE_DATABASE_URL`; 2 Stage06 local PostgreSQL security skips require `STAGE06_LOCAL_DATABASE_URL`. |
+| Stage07 backend contract tests | `backend/tests/unit/test_stage07_mini_app_api.py` plus related Stage06 platform tests are included in full regression | current suite proves approved read models and hidden-field filtering, not all UI packages. |
+| Browser desktop QA | disposable local contract fixture: Home -> Base -> record detail -> `PATCH` update advances version 3 to 4 | fixture is not a real Telegram or backend environment; it was removed after use. |
+| Browser mobile QA | `390x844` direct-record detail opened full width and showed authoritative version 4 | only this record detail path was exercised in the latest slice. |
+| Git state | `0f59307 feat(stage07): add versioned record editing`; clean worktree at audit start | a commit is traceability evidence, not acceptance. |
+
+## 4. Package 1: Foundation And Session Boundary
+
+| Requirement | Source | Status | Evidence | Remaining work / acceptance condition |
+| --- | --- | --- | --- | --- |
+| React/Vite/TypeScript/Tailwind/lucide baseline | Source §7; Plan cross-package gate | `implemented-local` | `mini-app/package.json`, build pass | Keep baseline unchanged. |
+| Light Work Queue Atlas visual system and responsive shell | UI spec; Source §2 | `partial-local` | `AppShell.tsx`, `styles.css`, desktop/mobile QA at selected paths | Must compare 1440/1280/430/390 screenshots to accepted concepts; current no full visual fidelity ledger. |
+| Server-verified bootstrap and active memberships only | Source §6; API Contract §4 | `implemented-local` | `GET /mini-app/bootstrap`, `stage07_mini_app_api` tests, App bootstrap flow | Real Mini App identity proof remains external-evidence-pending. |
+| Workspace switch removes old protected model | SDD §3; App Shell module | `partial-local` | `App.tsx` replaces `home` and clears canvas; frontend workspace switch test | No central protected-query cache, cancellation or explicit session-revocation test. |
+| Desktop/mobile navigation derives from server capability | Source §5; BDD 1/2 | `partial-local` | management entries conditionally render from `capabilities` | Primary links are presentation anchors; Bases/Bots/More routes and management route behavior are incomplete. |
+| Loading, denied and network states | Source §5; SDD §8 | `partial-local` | `App.tsx` loading/denied/error branches | No density-matched skeleton, retry, expired-session recovery or 401 cache purge. |
+| Safe deep-link resolver | SDD §3; BDD 10 | `contract-gated` | no Mini App verified deep-link contract | Requires approved identity/deep-link decision and test-environment evidence. |
+
+## 5. Package 2: Workspace And Bitable Work Surface
+
+| Requirement | Source | Status | Evidence | Remaining work / acceptance condition |
+| --- | --- | --- | --- | --- |
+| Queue-first Home and recent Bases | Source §5; BDD 1 | `partial-local` | `WorkspaceHome.tsx`, approved Home endpoint | Only pending confirmation summaries and recent Bases exist. Assigned records, mentions and controlled notification queues await durable models. Queue rows do not yet resolve to DraftConfirmation. |
+| Authorized Base/table/view navigation | API Contract §4; Bitable module | `implemented-local` | approved navigation endpoints; `App.tsx`/`BaseCanvas.tsx`; route tests | Must add cursor/page UX and Base/table selection beyond first table. |
+| Grid field filtering and record navigation | BDD 3/5; API Contract §4 | `implemented-local` | filtered schema/presentation/list/detail read models; hidden-field tests; browser path | Repeat negative browser/cache inspection after later state architecture changes. |
+| Saved Grid/Kanban/Calendar/Form rendering | BDD 4 | `partial-local` | `ViewSurface` dispatches all four renderers and tests cover renderer shapes | Current Kanban/Calendar are display groupings; Form is a single-record detail preview. No parity proof for saved filter/sort semantics across breakpoints. |
+| Cursor-safe paging | Plan Package 2; Acceptance checklist | `existing-contract-unimplemented` | `ViewRecords` carries `next_cursor`/`has_more` | UI never requests a later cursor or exposes load-more/recovery controls. |
+| Server-recognized filter/sort/group actions | Bitable module; BDD 3/4 | `not-implemented` | toolbar buttons are inert in `BaseCanvas.tsx` | Existing read endpoint only accepts a saved view and cursor. Any mutation/query operation needs a documented contract decision; client-only filtering is forbidden. |
+| Direct version-aware scalar edit | SDD §5; Plan Package 2 | `partial-local` | `RecordDetail.tsx`, `PATCH /records/{id}`, component/application conflict tests and browser QA | A 409 now refetches the permitted detail and current saved-view window before allowing a retry. There is still no central protected-query cache, cancellation or general invalidation strategy. Complex typed fields remain read-only. |
+| Record create / Form submission | Source §5; BDD 4 | `existing-contract-unimplemented` | existing `POST /tables/{table_id}/records` | UI lacks create flow. A safe editor also needs server-provided writable-field capability/type editor specification; do not infer write access from field readability. |
+| Desktop builder: Base/table/field/view | Source §5; Plan Package 2; Bitable module | `existing-contract-unimplemented` | Stage06 creates Base/table/field/view with server authorization | Current buttons are inert. Existing primitive schema/view responses contain policy/config fields unsuitable for routine client navigation; builder read/edit model and interaction decision must be documented before implementation. |
+| Templates and import | Source §5; Plan Package 2 | `existing-contract-unimplemented` | `stage06_templates.py`: list, install, create/read/commit import, save Base template | No UI exists. Upload/preview/retry/error/Idempotency-Key UX and safe resource refresh must be specified; no contract expansion is assumed. |
+| Mobile table preserves grid semantics | UI spec responsive rules | `partial-local` | grid remains horizontally scrollable; 390 detail QA | Needs explicit field-priority behavior, 430 QA and all four view parity QA. |
+
+## 6. Package 3: Governance, Permissions And Audit
+
+| Requirement | Source | Status | Evidence | Remaining work / acceptance condition |
+| --- | --- | --- | --- | --- |
+| Capability-gated management entry | Source Package 3; Governance module | `partial-local` | `AppShell` hides management entries without capabilities | Links target an unimplemented route and have no independent server read / denied-state flow. |
+| Member readback | Plan Package 3 | `existing-contract-unimplemented` | `GET /workspaces/{workspace_id}/members` requires `member.read` | No UI, pagination or role/permission mutation path. |
+| Role/permission editor | Source §5; BDD 11 | `contract-gated` | Stage06 exposes authorization enforcement but no approved management mutation/read model for roles or field/view policies | Requires a dedicated authorization/API decision; client must not reconstruct policy semantics. |
+| Audit readback | Source Package 3; Acceptance checklist | `existing-contract-unimplemented` | `GET /bases/{base_id}/audit-events` paginates sanitized state | No UI, pagination, empty/denied handling or browser redaction evidence. |
+| Management mutation cache refresh | Governance module | `not-implemented` | no management mutations/UI cache | Depends on approved management capability and a selected cache architecture. |
+
+## 7. Package 4: Digital Employee, Draft And Telegram
+
+| Requirement | Source | Status | Evidence | Remaining work / acceptance condition |
+| --- | --- | --- | --- | --- |
+| Team Bot contact directory and published lifecycle | Source §6; UI spec; BDD 6 | `contract-gated` | current Stage06 DigitalEmployee is base-bound | Requires approved workspace-scoped employee, lifecycle and contact/group binding decision. |
+| Personal assistant with opt-in context | UI spec; BDD 7 | `contract-gated` | Home contains only a nonfunctional explanatory dock | Requires approved personal assistant/context/memory model; may not simulate workspace search in client state. |
+| Knowledge source selection and retrieval filtering | Source §6; UI spec | `contract-gated` | no Stage07 model/evidence | Requires scope, retrieval-time permission, retention and audit decision. |
+| Per-user memory partition and clear controls | Source §6; BDD 6/7 | `contract-gated` | no model/evidence | Requires schema, ownership, retention/deletion and cross-user denial decision. |
+| Record-change draft review/confirm/reject | BDD 8/9; Digital Employee module | `partial-local` | Home safe queue has draft IDs/action availability; Stage06 runtime has draft endpoints | No approved Stage07 draft detail read model/UI. Primitive runtime response carries before/proposed values and trace data; direct browser use needs an explicit field-filtered contract. |
+| Telegram `@` deep link/handoff | BDD 10; UI spec | `contract-gated` | Stage06 has mention/binding primitives | Mini App identity/deep-link and group/chat scope UI contract is explicitly unapproved. |
+
+## 8. Cross-Cutting Security And Quality Gates
+
+| Requirement | Source | Status | Evidence | Remaining work / acceptance condition |
+| --- | --- | --- | --- | --- |
+| Hidden fields never rendered or retained | BDD 5; API Contract §4/6 | `partial-local` | schema/presentation/list/detail share field-read filtering; App filters raw update response against schema | No central cache/telemetry implementation to audit; add revocation and error-state client-memory tests when cache layer is chosen. |
+| Fail closed on denied/revoked/expired session | SDD §3/8; BDD 12 | `partial-local` | 403 becomes denied on key current routes | 401/expiry, cancellation, retry, stale view removal and revocation test missing. |
+| No raw audit/Bot/knowledge/Telegram content in client telemetry | SDD §9; API Contract §6 | `partial-local` | no telemetry integration exists | Preserve this by design; audit any future SDK/logger before use. |
+| Idempotent operations | API Contract §1 | `partial-local` | backend import/template/draft endpoints support idempotency where defined | Frontend currently does not consume idempotent import/template/draft mutation paths. |
+| Visual QA at 1440, 1280, 430 and 390 | Test Plan §2; Acceptance checklist | `not-implemented` | limited desktop/390 fixture checks only | Need selected-concept comparison ledger and sanitized screenshots for every primary state. |
+| Telegram Mini App real identity/deep-link smoke | BDD evidence; Test Plan manual | `external-evidence-pending` | none | Requires approved test environment and user authority; do not use production evidence. |
+| Forbidden direct AI writes/self-confirm/audit bypass | Source §7; UI spec | `guarded-out-of-scope` | no Bot mutation UI was implemented; Stage06 remains server-controlled | Keep the guard in all future Package 4 work. |
+
+## 9. Next Work Sequencing
+
+1. **Completed existing-contract slice:** direct record conflicts now discard stale detail/current-window state and refetch permitted authoritative data; 403/404 transition to the generic denied boundary. The component/application regression and browser fixture evidence are retained in the progress log.
+2. **Architecture decision required:** select a protected client-state/query boundary (current hand-managed in-memory state versus a mature query library). The decision affects workspace cache keys, cancellation, revocation and management refresh; it must be discussed and approved before widespread refactoring.
+3. **Interaction/contract specification required before UI:** Form create/typed fields; builder schema/view read/edit model; import/template user flow; governance role/permission model; field-filtered draft detail.
+4. **Dedicated Package 4 approval required:** workspace Bot contacts, personal assistant, knowledge, memory, Telegram proof/deep link and lifecycle.
+
+## 10. Exit Gate Audit
+
+Stage07 acceptance is **not proven**. The following required exit items currently lack evidence: complete Package 2, all Package 3, all Package 4, protected-state revocation/expiry handling, four-width visual QA, approved Telegram smoke and requirement-by-requirement automated/negative tests.
+
+No Stage07 document, commit or test result may be used to claim stage completion until this audit's incomplete and contract-gated rows have explicit implementation/evidence or a revised, user-approved scope decision.

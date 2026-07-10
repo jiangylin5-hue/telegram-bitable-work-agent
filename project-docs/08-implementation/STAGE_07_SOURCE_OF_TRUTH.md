@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 planning source of truth
 - Scope: Telegram Mini App and desktop browser UI for the generic workspace, Bitable and digital-employee platform
-- Current Progress: 2026-07-10 Package 1 frontend scaffold is verified. The user approved the narrowly scoped, read-only Mini App bootstrap and Workspace Home contract; it adds no schema migration and does not change Stage06 roles or authorization rules.
+- Current Progress: 2026-07-10 Package 1 and a bounded Package 2 vertical path are implemented locally: approved bootstrap/Home/navigation, field-filtered Base/view/record reads, responsive renderers and scalar version-aware edit. The current requirement-by-requirement gap is recorded in `STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md`; Package 3 and Package 4 remain incomplete or contract-gated.
 
 ## 1. Stage Goal
 
@@ -38,6 +38,7 @@ verified identity -> workspace member -> permission-filtered UI
 10. [Stage 07 Implementation Plan](STAGE_07_IMPLEMENTATION_PLAN.md)
 11. [Stage 07 Acceptance Checklist](STAGE_07_ACCEPTANCE_CHECKLIST.md)
 12. [Stage 07 Progress](STAGE_07_PROGRESS.md)
+13. [Stage 07 Requirement Traceability Audit](STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md)
 
 Stage06 is the backend contract baseline. Stage02-05 documents are historical capability evidence only.
 

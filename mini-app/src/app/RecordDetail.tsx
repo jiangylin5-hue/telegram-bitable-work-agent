@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Pencil, X } from 'lucide-react'
 
 import { ApiError, type RecordDetail, type TableSchema } from './api'
@@ -8,25 +8,29 @@ type RecordDetailPanelProps = {
   schema: TableSchema | null
   onClose: () => void
   onSave: (values: Record<string, unknown>) => Promise<RecordDetail>
+  onConflict?: () => Promise<RecordDetail>
 }
 
 type Field = TableSchema['fields'][number]
 
 const directFieldTypes = new Set(['text', 'status', 'single_select', 'user', 'url', 'email', 'phone', 'date', 'number', 'checkbox'])
 
-export function RecordDetailPanel({ detail, schema, onClose, onSave }: RecordDetailPanelProps) {
+export function RecordDetailPanel({ detail, schema, onClose, onSave, onConflict }: RecordDetailPanelProps) {
   const [current, setCurrent] = useState(detail)
   const [editing, setEditing] = useState(false)
   const [values, setValues] = useState(detail.values)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const synchronizedDetailKey = useRef(`${detail.id}:${detail.version}`)
   const fields = schema?.fields.filter((field) => Object.hasOwn(current.values, field.key)) ?? []
 
   useEffect(() => {
+    const nextKey = `${detail.id}:${detail.version}`
+    if (synchronizedDetailKey.current === nextKey) return
+    synchronizedDetailKey.current = nextKey
     setCurrent(detail)
     setValues(detail.values)
     setEditing(false)
-    setError(null)
   }, [detail])
 
   function beginEditing() {
@@ -54,7 +58,19 @@ export function RecordDetailPanel({ detail, schema, onClose, onSave }: RecordDet
       setValues(updated.values)
       setEditing(false)
     } catch (caught) {
-      setError(caught instanceof ApiError && caught.status === 409 ? '记录已被更新，请刷新后重试。' : '保存失败，请稍后重试。')
+      if (caught instanceof ApiError && caught.status === 409 && onConflict) {
+        try {
+          const latest = await onConflict()
+          setCurrent(latest)
+          setValues(latest.values)
+          setEditing(false)
+          setError('记录已被更新，已刷新最新版本，请重新编辑。')
+        } catch {
+          setError('记录已被更新，请刷新后重试。')
+        }
+      } else {
+        setError(caught instanceof ApiError && caught.status === 409 ? '记录已被更新，请刷新后重试。' : '保存失败，请稍后重试。')
+      }
     } finally {
       setSaving(false)
     }

@@ -138,3 +138,33 @@ test('opening a Base loads its authorized table schema and saved-view records as
   expect(fetchMock).toHaveBeenCalledWith('/views/view-2/presentation', expect.any(Object))
   expect(fetchMock).toHaveBeenCalledWith('/views/view-2/records', expect.any(Object))
 })
+
+test('a record version conflict reloads the authoritative detail and current view window', async () => {
+  const fetchMock = vi.fn()
+  vi.stubGlobal('fetch', fetchMock)
+  fetchMock
+    .mockResolvedValueOnce(new Response(JSON.stringify({ identity: { user_id: 'operator-1', source: 'verified_adapter' }, workspaces: [{ id: 'workspace-1', name: '运营中心', slug: 'operations', role: 'operator', capabilities: { can_read_bases: true, can_manage_workspace: false, can_manage_schema: false, can_review_drafts: true } }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ workspace_id: 'workspace-1', recent_bases: [{ id: 'base-1', name: '客户管理', source_type: 'blank' }], queue: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ tables: [{ id: 'table-1', base_id: 'base-1', name: '客户表', key: 'customers', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ views: [{ id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: '全部客户', view_type: 'grid', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ table: { id: 'table-1', name: '客户表', key: 'customers' }, fields: [{ id: 'field-1', name: '客户名称', key: 'name', field_type: 'text', required: true, order_index: 0 }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: ['name'], group_by_field_key: null, date_field_key: null, form_field_keys: ['name'] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-1', records: [{ id: 'record-1', fields: { name: 'Ada Co' } }], next_cursor: null, has_more: false }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'record-1', table_id: 'table-1', values: { name: 'Ada Co' }, record_status: 'active', version: 3 }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ detail: 'record_version_conflict' }), { status: 409, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'record-1', table_id: 'table-1', values: { name: 'Ada Global' }, record_status: 'active', version: 4 }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-1', records: [{ id: 'record-1', fields: { name: 'Ada Global' } }], next_cursor: null, has_more: false }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+
+  render(<App />)
+  fireEvent.click(await screen.findByRole('link', { name: '客户管理' }))
+  fireEvent.click(await screen.findByRole('cell', { name: 'Ada Co' }))
+  fireEvent.click(await screen.findByRole('button', { name: '编辑记录' }))
+  fireEvent.change(screen.getByLabelText('客户名称'), { target: { value: 'Ada Ltd' } })
+  fireEvent.click(screen.getByRole('button', { name: '保存更改' }))
+
+  expect(await screen.findByText('记录已被更新，已刷新最新版本，请重新编辑。')).toBeInTheDocument()
+  expect(screen.getByText('版本 4')).toBeInTheDocument()
+  expect(screen.getAllByText('Ada Global')).toHaveLength(2)
+  await waitFor(() => expect(fetchMock.mock.calls.filter(([path]) => path === '/views/view-1/records')).toHaveLength(2))
+  expect(fetchMock.mock.calls.filter(([path]) => path === '/records/record-1')).toHaveLength(3)
+})

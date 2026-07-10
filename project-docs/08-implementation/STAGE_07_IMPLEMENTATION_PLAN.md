@@ -2,7 +2,7 @@
 
 ## Status
 
-- Document status: detailed plan draft awaiting document-package review
+- Document status: active implementation plan; package completion remains subject to the linked requirement traceability audit
 - Scope: sequence, dependencies and verification for the approved Stage07 UI
 - Hard gate: no package may begin until this document package is user-reviewed; proposed schema/API/permission work needs separate explicit approval
 

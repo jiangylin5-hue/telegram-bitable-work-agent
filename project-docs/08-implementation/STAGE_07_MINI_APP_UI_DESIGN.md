@@ -4,7 +4,7 @@
 
 - Document status: approved design, awaiting written-spec review
 - Scope: React/Vite Telegram Mini App and desktop-browser UI design for the generic workspace, Bitable and digital-employee platform
-- Current Progress: 2026-07-10 user-approved discovery and visual direction are recorded. No frontend code, schema change, API-contract change or permission-model change has started.
+- Current Progress: 2026-07-10 user-approved visual direction is active. A bounded Package 1/2 implementation uses the approved light visual system and read-only contract extensions; its exact evidence and remaining work are tracked by `STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md`. No unapproved Package 4 schema, API or permission change has started.
 
 ## Purpose
 

@@ -105,6 +105,22 @@ export function App() {
     return safeUpdated
   }
 
+  async function refreshRecordAfterConflict() {
+    const canvas = readyState.canvas
+    const detail = canvas?.detail
+    if (!canvas || !detail || !canvas.view) throw new Error('Record is not available')
+    try {
+      const [updated, records] = await Promise.all([api.recordDetail(detail.id), api.viewRecords(canvas.view.id)])
+      const readableKeys = new Set(canvas.schema?.fields.map((field) => field.key) ?? [])
+      const safeUpdated = { ...updated, values: Object.fromEntries(Object.entries(updated.values).filter(([key]) => readableKeys.has(key))) }
+      setState({ ...readyState, canvas: { ...canvas, detail: safeUpdated, records } })
+      return safeUpdated
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 403 || error.status === 404)) setState({ status: 'denied' })
+      throw error
+    }
+  }
+
   async function selectView(viewId: string) {
     const canvas = readyState.canvas
     if (!canvas || canvas.view?.id === viewId) return
@@ -124,7 +140,7 @@ export function App() {
   const content = readyState.canvasLoading
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
-      ? <><BaseCanvas {...readyState.canvas} onBack={() => setState({ ...readyState, canvas: undefined })} onOpenRecord={openRecord} onSelectView={selectView} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} onClose={() => setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } })} />}</>
+      ? <><BaseCanvas {...readyState.canvas} onBack={() => setState({ ...readyState, canvas: undefined })} onOpenRecord={openRecord} onSelectView={selectView} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} onConflict={refreshRecordAfterConflict} onClose={() => setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } })} />}</>
       : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} />
   return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace}>{content}</AppShell>
 }
