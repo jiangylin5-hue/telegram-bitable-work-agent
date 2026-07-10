@@ -85,3 +85,32 @@ test('switching workspace discards the previous Home and loads the selected auth
   expect(screen.queryByRole('link', { name: '客户管理' })).not.toBeInTheDocument()
   expect(fetchMock).toHaveBeenCalledWith('/workspaces/workspace-2/home', expect.any(Object))
 })
+
+test('opening a Base loads its authorized table schema and saved-view records as a grid', async () => {
+  const fetchMock = vi.fn()
+  vi.stubGlobal('fetch', fetchMock)
+  fetchMock
+    .mockResolvedValueOnce(new Response(JSON.stringify({
+      identity: { user_id: 'operator-1', source: 'verified_adapter' },
+      workspaces: [{ id: 'workspace-1', name: '运营中心', slug: 'operations', role: 'operator', capabilities: { can_read_bases: true, can_manage_workspace: false, can_manage_schema: false, can_review_drafts: true } }],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({
+      workspace_id: 'workspace-1', recent_bases: [{ id: 'base-1', name: '客户管理', source_type: 'blank' }], queue: [],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ tables: [{ id: 'table-1', base_id: 'base-1', name: '客户表', key: 'customers', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ views: [{ id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: '全部客户', view_type: 'grid', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ table: { id: 'table-1', name: '客户表', key: 'customers' }, fields: [{ id: 'field-1', name: '客户名称', key: 'name', field_type: 'text', required: true, order_index: 0 }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-1', records: [{ id: 'record-1', fields: { name: 'Ada Co' } }], trace_id: 'redacted', has_more: false, next_cursor: null }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+
+  render(<App />)
+  fireEvent.click(await screen.findByRole('link', { name: '客户管理' }))
+
+  expect(await screen.findByRole('heading', { name: '客户管理' })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: '全部客户' })).toBeInTheDocument()
+  expect(screen.getByRole('columnheader', { name: '客户名称' })).toBeInTheDocument()
+  expect(screen.getByRole('cell', { name: 'Ada Co' })).toBeInTheDocument()
+  expect(fetchMock).toHaveBeenCalledWith('/bases/base-1/tables', expect.any(Object))
+  expect(fetchMock).toHaveBeenCalledWith('/bases/base-1/views', expect.any(Object))
+  expect(fetchMock).toHaveBeenCalledWith('/tables/table-1/schema', expect.any(Object))
+  expect(fetchMock).toHaveBeenCalledWith('/views/view-1/records', expect.any(Object))
+})

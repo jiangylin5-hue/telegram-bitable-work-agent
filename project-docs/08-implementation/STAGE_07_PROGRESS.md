@@ -26,6 +26,15 @@
 - Rendered UI QA: the in-app Browser loaded the local contract fixture at desktop and `390x844` mobile viewport. Both displayed meaningful Home content with no Vite overlay or relevant console warnings/errors. Desktop and mobile workspace pickers were each exercised; selecting `项目中心` removed `客户管理` and rendered only `项目追踪`.
 - Still not complete: browser screenshot comparison at desktop/mobile dimensions, protected query cache invalidation, Base/table/view canvas, record detail, templates/imports, governance, final draft review, Team Bot/personal assistant contract gate and live Telegram identity verification.
 
+### 2026-07-10: Base Canvas Grid Slice Verified
+
+- User approved the documented, read-only Base navigation extension. Added `GET /workspaces/{workspace_id}/bases`, `GET /bases/{base_id}/tables` and `GET /bases/{base_id}/views`; all reuse Stage06 membership/resource authorization and add no migration or write capability.
+- Navigation summaries are deliberately narrower than primitive resources: Base lists exclude description/settings, and saved-view lists exclude `config` and `permission_policy`. Cross-workspace callers receive denial before any summary is returned.
+- Home now opens a Base Canvas, loads authorized table/view navigation, then reuses existing schema and paginated view-record APIs to render the selected Grid with field labels and permission-filtered record values.
+- Rendered UI QA: Home -> `客户管理` -> `客户表` -> `全部客户` produced the expected Grid at desktop and `390x844`; mobile retains a horizontally scrollable table instead of replacing it with cards. No relevant console warnings/errors were observed.
+- Verification so far: 5 Stage07 backend API/security tests and 3 frontend interaction tests pass. Full backend regression and final Stage07 acceptance are still pending this slice's checkpoint.
+- Not implemented in this slice: saved Kanban/Calendar/Form renderers. The safe navigation summary correctly excludes view presentation configuration, so choosing grouping/date/form fields in the browser would violate the approved contract. This requires a later separately approved, permission-filtered view-presentation contract.
+
 ### 2026-07-10: Detailed Stage Documentation Package Requested
 
 - User required Stage07 to follow prior-stage documentation depth, including SDD, BDD, contract, module index, test plan, risks and explicit component interactions.

@@ -8,6 +8,7 @@ from app.core.database import get_session
 from app.core.errors import error_detail
 from app.schemas.stage06_platform import (
     BaseResponse,
+    BaseListResponse,
     CreateBaseRequest,
     CreateFieldRequest,
     CreateRecordRequest,
@@ -19,9 +20,12 @@ from app.schemas.stage06_platform import (
     MiniAppWorkspaceHomeResponse,
     RecordResponse,
     TableResponse,
+    TableListResponse,
     TableSchemaResponse,
     UpdateRecordRequest,
     ViewResponse,
+    ViewListResponse,
+    ViewSummaryResponse,
     ViewRecordsResponse,
     WorkspaceMemberListResponse,
     WorkspaceMemberResponse,
@@ -50,6 +54,9 @@ from app.services.stage06_platform import (
     create_form_view,
     get_table_schema,
     list_workspace_members,
+    list_bases_for_workspace,
+    list_tables_for_base,
+    list_views_for_base,
     list_view_records,
     read_base,
     read_workspace,
@@ -198,6 +205,30 @@ def create_base_endpoint(
     )
 
 
+@router.get("/workspaces/{workspace_id}/bases", response_model=BaseListResponse)
+def list_bases_endpoint(
+    workspace_id: UUID,
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> BaseListResponse:
+    try:
+        authorize_workspace_action(uow, identity, workspace_id, "base.read")
+        bases = list_bases_for_workspace(uow, workspace_id)
+    except (PlatformValidationError, Stage06AuthorizationError) as exc:
+        raise _http_error(exc) from exc
+    return BaseListResponse(
+        bases=[
+            {
+                "id": str(base.id),
+                "name": base.name,
+                "source_type": base.source_type,
+                "status": base.status,
+            }
+            for base in bases
+        ]
+    )
+
+
 @router.get("/bases/{base_id}", response_model=BaseResponse)
 def read_base_endpoint(
     base_id: UUID,
@@ -217,6 +248,59 @@ def read_base_endpoint(
         description=base.description,
         source_type=base.source_type,
         status=base.status,
+    )
+
+
+@router.get("/bases/{base_id}/tables", response_model=TableListResponse)
+def list_tables_endpoint(
+    base_id: UUID,
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> TableListResponse:
+    try:
+        workspace_id = workspace_id_for_base(uow, base_id)
+        authorize_workspace_action(uow, identity, workspace_id, "table.read")
+        tables = list_tables_for_base(uow, base_id)
+    except (PlatformValidationError, Stage06AuthorizationError) as exc:
+        raise _http_error(exc) from exc
+    return TableListResponse(
+        tables=[
+            TableResponse(
+                id=str(table.id),
+                base_id=str(table.base_id),
+                name=table.name,
+                key=table.key,
+                status=table.status,
+            )
+            for table in tables
+        ]
+    )
+
+
+@router.get("/bases/{base_id}/views", response_model=ViewListResponse)
+def list_views_endpoint(
+    base_id: UUID,
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> ViewListResponse:
+    try:
+        workspace_id = workspace_id_for_base(uow, base_id)
+        authorize_workspace_action(uow, identity, workspace_id, "table.read")
+        views = list_views_for_base(uow, base_id)
+    except (PlatformValidationError, Stage06AuthorizationError) as exc:
+        raise _http_error(exc) from exc
+    return ViewListResponse(
+        views=[
+            ViewSummaryResponse(
+                id=str(view.id),
+                base_id=str(view.base_id),
+                table_id=None if view.table_id is None else str(view.table_id),
+                name=view.name,
+                view_type=view.view_type,
+                status=view.status,
+            )
+            for view in views
+        ]
     )
 
 

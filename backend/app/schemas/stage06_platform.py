@@ -98,6 +98,17 @@ class BaseResponse(BaseModel):
     status: str
 
 
+class BaseSummaryResponse(BaseModel):
+    id: str
+    name: str
+    source_type: str
+    status: str
+
+
+class BaseListResponse(BaseModel):
+    bases: list[BaseSummaryResponse]
+
+
 class CreateTableRequest(BaseModel):
     name: str
     key: str
@@ -109,6 +120,10 @@ class TableResponse(BaseModel):
     name: str
     key: str
     status: str
+
+
+class TableListResponse(BaseModel):
+    tables: list[TableResponse]
 
 
 class CreateFieldRequest(BaseModel):
@@ -171,6 +186,19 @@ class ViewResponse(BaseModel):
     config: dict[str, Any]
     permission_policy: dict[str, Any]
     status: str
+
+
+class ViewSummaryResponse(BaseModel):
+    id: str
+    base_id: str
+    table_id: str | None = None
+    name: str
+    view_type: str
+    status: str
+
+
+class ViewListResponse(BaseModel):
+    views: list[ViewSummaryResponse]
 
 
 class ViewRecordsResponse(BaseModel):

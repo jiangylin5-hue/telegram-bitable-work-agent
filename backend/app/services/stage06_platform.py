@@ -879,6 +879,35 @@ def read_base(
     return _require_exists(uow.get_base(base_id), "base_not_found")
 
 
+def list_bases_for_workspace(
+    uow: Stage06PlatformUnitOfWork,
+    workspace_id: UUID,
+) -> list[BitableBase]:
+    _require_exists(uow.get_workspace(workspace_id), "workspace_not_found")
+    return [base for base in uow.list_bases(workspace_id) if base.status == "active"]
+
+
+def list_tables_for_base(
+    uow: Stage06PlatformUnitOfWork,
+    base_id: UUID,
+) -> list[PlatformTable]:
+    _require_exists(uow.get_base(base_id), "base_not_found")
+    return [table for table in uow.list_tables(base_id) if table.status == "active"]
+
+
+def list_views_for_base(
+    uow: Stage06PlatformUnitOfWork,
+    base_id: UUID,
+) -> list[PlatformView]:
+    tables = list_tables_for_base(uow, base_id)
+    return [
+        view
+        for table in tables
+        for view in uow.list_views(table.id)
+        if view.status == "active"
+    ]
+
+
 def get_table_schema(
     uow: Stage06PlatformUnitOfWork,
     table_id: UUID,

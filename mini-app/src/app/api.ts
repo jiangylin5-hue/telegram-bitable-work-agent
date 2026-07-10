@@ -31,6 +31,12 @@ export type WorkspaceHome = {
   }[]
 }
 
+export type BaseSummary = { id: string; name: string; source_type: string; status?: string }
+export type PlatformTable = { id: string; base_id: string; name: string; key: string; status: string }
+export type ViewSummary = { id: string; base_id: string; table_id: string | null; name: string; view_type: string; status: string }
+export type TableSchema = { table: { id: string; name: string; key: string }; fields: { id: string; name: string; key: string; field_type: string; required: boolean; order_index: number }[] }
+export type ViewRecords = { view_id: string; records: { id: string; fields: Record<string, unknown> }[]; next_cursor: string | null; has_more: boolean }
+
 export class ApiError extends Error {
   constructor(public readonly status: number) {
     super(`请求失败 (${status})`)
@@ -49,4 +55,8 @@ async function getJson<T>(path: string): Promise<T> {
 export const api = {
   bootstrap: () => getJson<BootstrapResponse>('/mini-app/bootstrap'),
   workspaceHome: (workspaceId: string) => getJson<WorkspaceHome>(`/workspaces/${workspaceId}/home`),
+  baseTables: (baseId: string) => getJson<{ tables: PlatformTable[] }>(`/bases/${baseId}/tables`),
+  baseViews: (baseId: string) => getJson<{ views: ViewSummary[] }>(`/bases/${baseId}/views`),
+  tableSchema: (tableId: string) => getJson<TableSchema>(`/tables/${tableId}/schema`),
+  viewRecords: (viewId: string) => getJson<ViewRecords>(`/views/${viewId}/records`),
 }

@@ -133,3 +133,102 @@ def test_workspace_home_denies_non_members() -> None:
 
     assert response.status_code == 403
     assert response.json()["detail"]["code"] == "stage06_membership_required"
+
+
+def test_base_canvas_navigation_lists_only_authorized_safe_summaries() -> None:
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "owner-1"
+        workspace_id = client.post(
+            "/workspaces",
+            json={"name": "Acme", "owner_user_id": "owner-1"},
+        ).json()["id"]
+        base_id = client.post(
+            f"/workspaces/{workspace_id}/bases",
+            json={"name": "Operations", "description": "must not be listed"},
+        ).json()["id"]
+        table_id = client.post(
+            f"/bases/{base_id}/tables",
+            json={"name": "Projects", "key": "projects"},
+        ).json()["id"]
+        view_id = client.post(
+            f"/bases/{base_id}/views",
+            json={
+                "table_id": table_id,
+                "name": "Project Grid",
+                "view_type": "grid",
+                "config": {"fields": ["hidden-from-navigation"]},
+                "permission_policy": {"viewer": "hidden"},
+            },
+        ).json()["id"]
+
+        bases_response = client.get(f"/workspaces/{workspace_id}/bases")
+        tables_response = client.get(f"/bases/{base_id}/tables")
+        views_response = client.get(f"/bases/{base_id}/views")
+
+    assert bases_response.status_code == 200
+    assert bases_response.json() == {
+        "bases": [
+            {
+                "id": base_id,
+                "name": "Operations",
+                "source_type": "blank",
+                "status": "active",
+            }
+        ]
+    }
+    assert tables_response.status_code == 200
+    assert tables_response.json() == {
+        "tables": [
+            {
+                "id": table_id,
+                "base_id": base_id,
+                "name": "Projects",
+                "key": "projects",
+                "status": "active",
+            }
+        ]
+    }
+    assert views_response.status_code == 200
+    assert views_response.json() == {
+        "views": [
+            {
+                "id": view_id,
+                "base_id": base_id,
+                "table_id": table_id,
+                "name": "Project Grid",
+                "view_type": "grid",
+                "status": "active",
+            }
+        ]
+    }
+    assert "hidden-from-navigation" not in views_response.text
+    assert "permission_policy" not in views_response.text
+
+
+def test_base_canvas_navigation_denies_cross_workspace_access() -> None:
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "owner-1"
+        workspace_id = client.post(
+            "/workspaces",
+            json={"name": "Acme", "owner_user_id": "owner-1"},
+        ).json()["id"]
+        base_id = client.post(
+            f"/workspaces/{workspace_id}/bases",
+            json={"name": "Operations"},
+        ).json()["id"]
+        client.headers["X-Stage06-User-Id"] = "outsider-1"
+        bases_response = client.get(f"/workspaces/{workspace_id}/bases")
+        tables_response = client.get(f"/bases/{base_id}/tables")
+        views_response = client.get(f"/bases/{base_id}/views")
+
+    assert bases_response.status_code == 403
+    assert tables_response.status_code == 403
+    assert views_response.status_code == 403
