@@ -213,4 +213,4 @@ The packages are a coherent Stage07 delivery but may be accepted independently. 
 
 ## Review Gate
 
-This design is approved by the user as a product and visual specification. The next action is user review of this written document. After that review, create a detailed implementation plan. Do not start frontend or backend implementation before that plan and any required schema/API/permission confirmation.
+This design is approved by the user as a product and visual specification. The detailed Stage07 plan is drafted as part of the requested documentation package, but remains review-only. Do not start frontend or backend implementation before the user reviews this package and separately confirms any required schema/API/permission change.

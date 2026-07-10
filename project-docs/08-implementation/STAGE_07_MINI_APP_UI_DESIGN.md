@@ -29,9 +29,11 @@ Stage07 is the separate UI phase authorized after Stage06 backend-readiness acce
 
 The Stage06 backend currently supports base-bound employees. Team-shared workspace Bot contacts, personal assistants, multiple resource scopes, curated knowledge sources, user-isolated memory and Telegram contact/group publication are proposed extensions. They require a dedicated technical decision plus user approval before schema/API/permission implementation.
 
-## Primary Specification
+## Primary Specification And Detailed Package
 
 Read [Stage07 Mini App UI Design Specification](../../docs/superpowers/specs/2026-07-10-stage07-mini-app-ui-design.md) before planning or implementing Stage07.
+
+The detailed Stage07 source, SDD, BDD, API/data/security contract, module index, test plan, risk register, implementation plan and progress log are indexed from [Stage 07 Source Of Truth](STAGE_07_SOURCE_OF_TRUTH.md).
 
 ## Acceptance Criteria
 

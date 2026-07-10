@@ -4,7 +4,7 @@
 
 - Document status: active project collaboration rule
 - Scope: Generic Telegram-first multidimensional table, no-code workspace and table-bound digital employee platform
-- Current Progress: 2026-07-10 Stage06 backend-stage acceptance passed after correcting Stage06 work that remained in the Stage05 worktree. Fresh evidence: 129 Stage06-focused tests, 402 full-backend tests with 17 historical Stage02 skips, one Alembic head `20260710_0020`, real local PostgreSQL isolation/redaction/concurrency smoke, retained real OpenRouter and Telegram entry evidence, and sanitized machine-readable security evidence. The separate Stage07 Mini App UI design is now documented and awaits written-spec review, implementation planning and explicit approval for its proposed schema/API/permission extensions. Production deployment remains a separate gate.
+- Current Progress: 2026-07-10 Stage06 backend-stage acceptance passed after correcting Stage06 work that remained in the Stage05 worktree. Fresh evidence: 129 Stage06-focused tests, 402 full-backend tests with 17 historical Stage02 skips, one Alembic head `20260710_0020`, real local PostgreSQL isolation/redaction/concurrency smoke, retained real OpenRouter and Telegram entry evidence, and sanitized machine-readable security evidence. The separate Stage07 Mini App UI design and detailed documentation package are ready for user review; explicit approval for its proposed schema/API/permission extensions remains required before code. Production deployment remains a separate gate.
 
 ## 1. Project Positioning
 
@@ -220,7 +220,7 @@ Prefer mature patterns and ecosystems:
 3. `project-docs/00-governance/IMPLEMENTATION_SOURCE_OF_TRUTH.md`.
 4. `project-docs/03-modules/BITABLE_SCHEMA_BLUEPRINT.md`.
 5. `project-docs/08-implementation/STAGE_06_SOURCE_OF_TRUTH.md` during Stage06.
-5a. `project-docs/08-implementation/STAGE_07_MINI_APP_UI_DESIGN.md` and its linked specification during Stage07 design/planning.
+5a. `project-docs/08-implementation/STAGE_07_SOURCE_OF_TRUTH.md`, `STAGE_07_MINI_APP_UI_DESIGN.md` and their linked specification during Stage07 design/planning.
 6. `project-docs/00-governance/TECHNICAL_DECISIONS.md`.
 7. Stage06 SDD, implementation plan, API/data/security contract and acceptance docs.
 8. Historical Stage02 to Stage05 implementation documents.
