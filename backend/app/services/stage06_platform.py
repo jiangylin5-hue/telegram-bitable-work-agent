@@ -53,6 +53,22 @@ STAGE06_FIELD_TYPES = frozenset(
         "lookup",
     }
 )
+F1_FIELD_TYPES = frozenset(
+    {
+        "text",
+        "number",
+        "date",
+        "status",
+        "single_select",
+        "multi_select",
+        "user",
+        "checkbox",
+        "url",
+        "email",
+        "phone",
+    }
+)
+F1_CHOICE_FIELD_TYPES = frozenset({"status", "single_select", "multi_select"})
 STAGE06_DEFAULT_WRITE_ROLES = frozenset(
     {"admin", "owner", "manager", "operator", "builder"}
 )
@@ -79,6 +95,12 @@ class BaseInitializationResult:
 class TableInitializationResult:
     table: PlatformTable
     default_view: PlatformView
+
+
+@dataclass(frozen=True)
+class FieldInitializationResult:
+    field: PlatformField
+    affected_view_ids: list[UUID]
 
 
 class Stage06PlatformUnitOfWork(Protocol):
@@ -113,6 +135,9 @@ class Stage06PlatformUnitOfWork(Protocol):
         pass
 
     def get_table(self, table_id: UUID) -> PlatformTable | None:
+        pass
+
+    def lock_table_for_schema_mutation(self, table_id: UUID) -> PlatformTable | None:
         pass
 
     def list_tables(self, base_id: UUID) -> list[PlatformTable]:
@@ -284,6 +309,9 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def get_table(self, table_id: UUID) -> PlatformTable | None:
         return _find_by_id(self.tables, table_id)
+
+    def lock_table_for_schema_mutation(self, table_id: UUID) -> PlatformTable | None:
+        return self.get_table(table_id)
 
     def list_tables(self, base_id: UUID) -> list[PlatformTable]:
         return [table for table in self.tables if table.base_id == base_id]
@@ -460,6 +488,13 @@ class SqlAlchemyStage06PlatformUnitOfWork:
 
     def get_table(self, table_id: UUID) -> PlatformTable | None:
         return self.session.get(PlatformTable, table_id)
+
+    def lock_table_for_schema_mutation(self, table_id: UUID) -> PlatformTable | None:
+        return self.session.scalar(
+            select(PlatformTable)
+            .where(PlatformTable.id == table_id)
+            .with_for_update()
+        )
 
     def list_tables(self, base_id: UUID) -> list[PlatformTable]:
         return list(
@@ -749,6 +784,84 @@ def create_field(
         after_state=_field_to_schema(field),
     )
     return field
+
+
+def initialize_field(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID,
+    *,
+    name: str,
+    field_type: str,
+    required: bool,
+    choices: list[str] | None,
+    actor: Actor,
+) -> FieldInitializationResult:
+    normalized_name = _normalized_f1_field_name(name)
+    normalized_choices = _validated_f1_choices(field_type, choices)
+    table = _require_exists(
+        uow.lock_table_for_schema_mutation(table_id),
+        "table_not_found",
+    )
+    existing_fields = uow.list_fields(table.id)
+    normalized_existing_names = {
+        field.name.strip().casefold()
+        for field in existing_fields
+    }
+    if normalized_name.casefold() in normalized_existing_names:
+        raise PlatformValidationError("duplicate_field_name", "field_name")
+
+    field_key = _generated_f1_field_key({field.key for field in existing_fields})
+    next_order_index = max(
+        (field.order_index for field in existing_fields),
+        default=-1,
+    ) + 1
+    field = PlatformField(
+        id=uuid4(),
+        table_id=table.id,
+        name=normalized_name,
+        key=field_key,
+        field_type=field_type,
+        required=required,
+        unique=False,
+        options=(
+            {"choices": normalized_choices}
+            if normalized_choices is not None
+            else {}
+        ),
+        permission_policy={},
+        order_index=next_order_index,
+        status="active",
+    )
+    uow.add_field(field)
+
+    affected_view_ids: list[UUID] = []
+    for view in uow.list_views(table.id):
+        configured_fields = view.config.get("fields")
+        if view.status != "active" or not isinstance(configured_fields, list):
+            continue
+        if field.key in configured_fields:
+            continue
+        next_config = dict(view.config)
+        next_config["fields"] = [*configured_fields, field.key]
+        view.config = next_config
+        affected_view_ids.append(view.id)
+
+    _record_stage06_audit(
+        uow,
+        actor=actor,
+        event_type="stage07.field_initialized",
+        entity_type="field",
+        entity_id=field.id,
+        after_state={
+            "table_id": str(table.id),
+            "field_key": field.key,
+            "field_type": field.field_type,
+            "required": field.required,
+            "order_index": field.order_index,
+            "affected_view_ids": [str(view_id) for view_id in affected_view_ids],
+        },
+    )
+    return FieldInitializationResult(field=field, affected_view_ids=affected_view_ids)
 
 
 def create_record(
@@ -1507,6 +1620,53 @@ def _normalized_builder_name(value: str, *, label: str) -> str:
     if not normalized or len(normalized) > 160:
         raise PlatformValidationError("invalid_builder_name", label)
     return normalized
+
+
+def _normalized_f1_field_name(value: str) -> str:
+    if not isinstance(value, str):
+        raise PlatformValidationError("invalid_field_name", "field_name")
+    normalized = value.strip()
+    if not normalized or len(normalized) > 160:
+        raise PlatformValidationError("invalid_field_name", "field_name")
+    return normalized
+
+
+def _validated_f1_choices(
+    field_type: str,
+    choices: list[str] | None,
+) -> list[str] | None:
+    if field_type not in F1_FIELD_TYPES:
+        raise PlatformValidationError("unsupported_field_type", field_type)
+    if field_type not in F1_CHOICE_FIELD_TYPES:
+        if choices is not None:
+            raise PlatformValidationError("unexpected_field_choices", field_type)
+        return None
+    if not isinstance(choices, list) or not 1 <= len(choices) <= 100:
+        raise PlatformValidationError("invalid_field_choices", field_type)
+
+    normalized_choices: list[str] = []
+    normalized_choice_keys: set[str] = set()
+    for choice in choices:
+        if not isinstance(choice, str):
+            raise PlatformValidationError("invalid_field_choices", field_type)
+        normalized_choice = choice.strip()
+        normalized_choice_key = normalized_choice.casefold()
+        if (
+            not normalized_choice
+            or len(normalized_choice) > 64
+            or normalized_choice_key in normalized_choice_keys
+        ):
+            raise PlatformValidationError("invalid_field_choices", field_type)
+        normalized_choices.append(normalized_choice)
+        normalized_choice_keys.add(normalized_choice_key)
+    return normalized_choices
+
+
+def _generated_f1_field_key(existing_keys: set[str]) -> str:
+    while True:
+        key = f"fld_{uuid4().hex}"
+        if key not in existing_keys:
+            return key
 
 
 def _generated_builder_table_key() -> str:

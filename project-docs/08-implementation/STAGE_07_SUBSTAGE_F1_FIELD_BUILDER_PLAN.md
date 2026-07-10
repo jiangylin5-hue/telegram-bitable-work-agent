@@ -239,7 +239,7 @@ git commit -m "fix(stage07): project safe table schema"
 - Consumes: `PlatformField`, `PlatformView`, `Actor`, `Stage06PlatformUnitOfWork`, existing audit helper and idempotency storage.
 - Produces: `FieldInitializationResult`, `initialize_field(uow, table_id, name, field_type, required, choices, actor)`, `lock_table_for_schema_mutation(table_id)`, validated F1 choice helpers and a view-visibility update result.
 
-- [ ] **Step 1: Write failing service tests**
+- [x] **Step 1: Write failing service tests**
 
 ```python
 def test_initialize_field_generates_key_default_policy_order_and_view_visibility():
@@ -255,7 +255,7 @@ def test_initialize_field_generates_key_default_policy_order_and_view_visibility
 
 Add tests for rejected F2/JSON types, missing/duplicate choices, duplicate normalized names, one append only, untouched implicit field lists, sanitised audit payload and two distinct fields receiving orders `0` then `1`.
 
-- [ ] **Step 2: Run the service tests and verify they fail**
+- [x] **Step 2: Run the service tests and verify they fail**
 
 Run:
 
@@ -265,7 +265,7 @@ cd backend; python -m pytest -q tests/unit/test_stage07_field_builder.py
 
 Expected: FAIL because `initialize_field`, F1 type validation and table locking do not exist.
 
-- [ ] **Step 3: Extend the UoW with a table lock**
+- [x] **Step 3: Extend the UoW with a table lock**
 
 Add this protocol operation and matching implementations:
 
@@ -288,7 +288,7 @@ def lock_table_for_schema_mutation(self, table_id: UUID) -> PlatformTable | None
 
 The production operation must run inside the route-owned transaction before computing `max(order_index) + 1`.
 
-- [ ] **Step 4: Implement F1 validation and initialization**
+- [x] **Step 4: Implement F1 validation and initialization**
 
 Add these stable constants/helpers and result shape:
 
@@ -307,7 +307,7 @@ class FieldInitializationResult:
 
 `initialize_field` must normalize a `1..160` display name, validate the exact F1 set, require/order-safe choices for the three choice types, reject all choices for other types, call `lock_table_for_schema_mutation`, reject a normalized duplicate display name, generate an opaque `fld_` key, write `{}` policy, append once to each active explicit `config.fields` list and record a sanitized `stage07.field_initialized` event. It must not call the raw `create_field` endpoint or accept a client key/policy.
 
-- [ ] **Step 5: Run service tests and platform regression**
+- [x] **Step 5: Run service tests and platform regression**
 
 Run:
 
