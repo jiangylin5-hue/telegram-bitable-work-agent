@@ -778,7 +778,7 @@ git commit -m "feat(stage07): support builder choice fields"
 - Consumes: disposable `STAGE06_LOCAL_DATABASE_URL`, Alembic head, F1 endpoint and SQLAlchemy UoW.
 - Produces: real database evidence for rollback, idempotent replay and table-lock ordering; it does not become staging/production evidence.
 
-- [ ] **Step 1: Write the environment-gated integration tests**
+- [x] **Step 1: Write the environment-gated integration tests**
 
 ```python
 @pytest.mark.skipif(not os.getenv("STAGE06_LOCAL_DATABASE_URL"), reason="requires disposable local PostgreSQL")
@@ -798,7 +798,7 @@ def test_concurrent_distinct_field_initializations_receive_consecutive_order(pos
 
 Write three executable cases: a forced exception after field add leaves no field/view/audit/idempotency record; same-key replay produces one field and one audit; and distinct keys serialize order/append once. Use the local integration test fixture's schema reset and Alembic upgrade rather than an existing user database.
 
-- [ ] **Step 2: Run tests without the local URL and record the expected skip**
+- [x] **Step 2: Run tests without the local URL and record the expected skip**
 
 Run:
 

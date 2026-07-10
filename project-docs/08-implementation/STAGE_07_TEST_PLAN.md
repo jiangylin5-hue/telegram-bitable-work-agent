@@ -2,7 +2,7 @@
 
 ## Status
 
-- Document status: planned verification matrix
+- Document status: active verification matrix
 - Scope: unit, integration, contract, visual and manual Mini App evidence
 
 ## 1. Test Layers
@@ -36,6 +36,11 @@
 - real PostgreSQL tests prove table-row serialization and all-or-nothing rollback when an approved disposable URL is configured;
 - frontend panel/application tests prove drawer/sheet accessibility, retry/409 handling, exact schema reread, stale response rejection and protected-scope cleanup;
 - Browser QA compares the retained Workspace Ledger source at 1440/1280/430/390 and records zero relevant console errors.
+
+### F1 PostgreSQL Current Evidence
+
+- 2026-07-10: `python -m pytest -q tests/integration/test_stage07_field_builder_postgres.py` collected the rollback, same-key replay and distinct-key concurrent-order cases, then reported `3 skipped` because `STAGE06_LOCAL_DATABASE_URL` is absent.
+- The skipped result is not real PostgreSQL proof. An authorised disposable local URL remains required before F1 can claim database rollback, row-lock ordering or concurrent view-configuration evidence.
 
 ## 3. Completion Rule
 
