@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 planning source of truth
 - Scope: Telegram Mini App and desktop browser UI for the generic workspace, Bitable and digital-employee platform
-- Current Progress: 2026-07-10 Package 1 and a bounded Package 2 vertical path are implemented locally: approved bootstrap/Home/navigation, field-filtered Base/view/record reads, responsive renderers and scalar version-aware edit. The current requirement-by-requirement gap is recorded in `STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md`; Package 3 and Package 4 remain incomplete or contract-gated.
+- Current Progress: 2026-07-10 Package 1 and a bounded Package 2 vertical path are implemented locally: approved bootstrap/Home/navigation, field-filtered Base/view/record reads, server-filtered scalar record creation, responsive renderers, scalar version-aware edit and authorized in-Base table switching. The current requirement-by-requirement gap is recorded in `STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md`; Package 3 and Package 4 remain incomplete or contract-gated.
 
 ## 1. Stage Goal
 

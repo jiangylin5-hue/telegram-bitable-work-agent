@@ -35,6 +35,10 @@ Deliver one responsive React/Vite Mini App and desktop browser surface that expo
 
 ## Package 2: Workspace Home And Bitable Work Surface
 
+### Active approved-scope substage
+
+`STAGE_07_SUBSTAGE_P2_TABLE_SWITCH_PLAN.md` defines the current existing-contract implementation: selection among already-authorized tables inside an open Base. It introduces no new contract and must complete its own test/browser/documentation gate before any builder/import/governance work begins.
+
 ### Deliverables
 
 - queue-first Workspace Home, recent Base rail and durable deep links;

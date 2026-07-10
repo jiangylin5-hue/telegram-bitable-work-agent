@@ -318,6 +318,42 @@ function AppContent() {
     }
   }
 
+  async function selectTable(tableId: string) {
+    const canvas = readyState.canvas
+    if (!canvas || canvas.table?.id === tableId) return
+    const table = canvas.tables.find((item) => item.id === tableId)
+    if (!table) return
+    const view = canvas.views.find((item) => item.table_id === table.id) ?? null
+    const requestVersion = ++canvasRequestVersion.current
+    createFormRequestVersion.current += 1
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
+    if (!view) {
+      setState({ ...readyState, canvas: { ...canvas, table, view: null, schema: null, presentation: null, records: null, detail: undefined, createForm: undefined } })
+      return
+    }
+    setState({ ...readyState, canvasLoading: true, canvas: undefined })
+    try {
+      const [schema, presentation, records] = await Promise.all([
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'table', table.id, 'schema'), queryFn: ({ signal }) => api.tableSchema(table.id, { signal }) }),
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'presentation'), queryFn: ({ signal }) => api.viewPresentation(view.id, { signal }) }),
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'records', null), queryFn: ({ signal }) => api.viewRecords(view.id, undefined, { signal }) }),
+      ])
+      if (canvasRequestVersion.current !== requestVersion) return
+      setState({ ...readyState, canvas: { ...canvas, table, view, schema, presentation, records, detail: undefined, createForm: undefined } })
+    } catch (error) {
+      if (canvasRequestVersion.current !== requestVersion || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await clearAllProtectedQueries(queryClient)
+        setState({ status: 'denied' })
+      } else if (error instanceof ApiError && error.status === 403) {
+        await clearProtectedWorkspace(queryClient, scope)
+        setState({ status: 'denied' })
+      } else {
+        setState({ status: 'error' })
+      }
+    }
+  }
+
   async function selectView(viewId: string) {
     const canvas = readyState.canvas
     if (!canvas || canvas.view?.id === viewId) return
@@ -355,7 +391,7 @@ function AppContent() {
   const content = readyState.canvasLoading
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
-      ? <><BaseCanvas {...readyState.canvas} onBack={() => setState({ ...readyState, canvas: undefined })} onOpenRecord={openRecord} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={openCreateRecord} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} onConflict={refreshRecordAfterConflict} onClose={() => setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } })} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => setState((current) => current.status === 'ready' && current.canvas ? { ...current, canvas: { ...current.canvas, createForm: undefined } } : current)} />}</>
+      ? <><BaseCanvas {...readyState.canvas} onBack={() => setState({ ...readyState, canvas: undefined })} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={openCreateRecord} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} onConflict={refreshRecordAfterConflict} onClose={() => setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } })} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => setState((current) => current.status === 'ready' && current.canvas ? { ...current, canvas: { ...current.canvas, createForm: undefined } } : current)} />}</>
       : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} />
   return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace}>{content}</AppShell>
 }

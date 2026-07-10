@@ -56,6 +56,19 @@ test('exposes a create-record entry only when the canvas supplies an authorized 
   expect(onCreateRecord).toHaveBeenCalledOnce()
 })
 
+test('renders supplied authorized tables as selectable tabs', () => {
+  const onSelectTable = vi.fn()
+  const tasks = { id: 'table-2', base_id: 'base-1', name: 'Tasks', key: 'tasks', status: 'active' }
+  const view = { id: 'view-2', base_id: 'base-1', table_id: 'table-2', name: 'All tasks', view_type: 'grid', status: 'active' }
+  const taskSchema = { ...schema, table: { id: 'table-2', name: 'Tasks', key: 'tasks' } }
+  render(<BaseCanvas base={base} tables={[table, tasks]} views={[view]} table={tasks} view={view} schema={taskSchema} records={{ ...records, view_id: 'view-2' }} presentation={{ view_id: 'view-2', table_id: 'table-2', view_type: 'grid', visible_field_keys: ['name'], group_by_field_key: null, date_field_key: null, form_field_keys: ['name'] }} onBack={() => undefined} onOpenRecord={() => undefined} onSelectView={() => undefined} onSelectTable={onSelectTable} />)
+
+  expect(screen.getByRole('tab', { name: table.name })).toHaveAttribute('aria-selected', 'false')
+  expect(screen.getByRole('tab', { name: 'Tasks' })).toHaveAttribute('aria-selected', 'true')
+  fireEvent.click(screen.getByRole('tab', { name: table.name }))
+  expect(onSelectTable).toHaveBeenCalledWith(table.id)
+})
+
 test('retains the authorized record window and offers retry after a next-page failure', () => {
   const onLoadMore = vi.fn()
   const view = { id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: '当前视图', view_type: 'grid', status: 'active' }

@@ -4,7 +4,7 @@
 
 - Document status: active current-state requirement audit
 - Scope: Stage07 source of truth, SDD, BDD, API/data/security contract, module documents, implementation plan, test plan and acceptance checklist mapped to current source, tests and browser evidence
-- Current Progress: 2026-07-10 audit updated after the server-filtered scalar record-create slice. Package 1 and a limited Package 2 vertical path have evidence; Package 2 builders/imports, Package 3 governance and all Package 4 Digital Employee scope remain incomplete or contract-gated.
+- Current Progress: 2026-07-10 audit updated after the authorized in-Base table-switch slice. Package 1 and a limited Package 2 vertical path have evidence; Package 2 builders/imports, Package 3 governance and all Package 4 Digital Employee scope remain incomplete or contract-gated.
 
 ## 1. Purpose
 
@@ -32,11 +32,11 @@ For every requirement the audit records the source, current evidence, status and
 
 | Evidence | Result | Coverage limit |
 | --- | --- | --- |
-| Frontend unit/integration tests | `npm.cmd run test:run` in `mini-app`: 9 passed | uses mocked server responses; does not prove backend authorization. |
+| Frontend unit/integration tests | `npm.cmd test -- --run` in `mini-app`: 29 passed | uses mocked server responses; does not prove backend authorization. |
 | Frontend production build | `npm.cmd run build`: passed | proves TypeScript/Vite build only. |
-| Full backend regression | `python -m pytest -q` in `backend`: 406 passed, 19 skipped | 17 historical online PostgreSQL skips require `STAGE02_ONLINE_DATABASE_URL`; 2 Stage06 local PostgreSQL security skips require `STAGE06_LOCAL_DATABASE_URL`. |
+| Full backend regression | `python -m pytest -q` in `backend`: 407 passed, 19 skipped | 17 historical online PostgreSQL skips require `STAGE02_ONLINE_DATABASE_URL`; 2 Stage06 local PostgreSQL security skips require `STAGE06_LOCAL_DATABASE_URL`. |
 | Stage07 backend contract tests | `backend/tests/unit/test_stage07_mini_app_api.py` plus related Stage06 platform tests are included in full regression | current suite proves approved read models and hidden-field filtering, not all UI packages. |
-| Browser desktop QA | disposable local contract fixture: Home -> Base -> record detail -> `PATCH` update advances version 3 to 4 | fixture is not a real Telegram or backend environment; it was removed after use. |
+| Browser desktop QA | disposable local fixtures: Home -> Base -> record detail -> `PATCH` update advances version 3 to 4; authorized Customers -> Projects table switch replaces All customers/Ada Co with All projects/Apollo | fixtures are not real Telegram or backend environments; they were removed after use. |
 | Browser mobile QA | `390x844` direct-record detail opened full width and showed authoritative version 4 | only this record detail path was exercised in the latest slice. |
 | Git state | `0f59307 feat(stage07): add versioned record editing`; clean worktree at audit start | a commit is traceability evidence, not acceptance. |
 
@@ -57,7 +57,7 @@ For every requirement the audit records the source, current evidence, status and
 | Requirement | Source | Status | Evidence | Remaining work / acceptance condition |
 | --- | --- | --- | --- | --- |
 | Queue-first Home and recent Bases | Source §5; BDD 1 | `partial-local` | `WorkspaceHome.tsx`, approved Home endpoint | Only pending confirmation summaries and recent Bases exist. Assigned records, mentions and controlled notification queues await durable models. Queue rows do not yet resolve to DraftConfirmation. |
-| Authorized Base/table/view navigation | API Contract §4; Bitable module | `implemented-local` | approved navigation endpoints; Base-open and saved-view reads are protected-query keyed by verified user/workspace; route/application tests and browser Grid path | Must add Base/table selection beyond the initial table. |
+| Authorized Base/table/view navigation | API Contract §4; Bitable module | `implemented-local` | approved navigation endpoints; Base-open and saved-view reads are protected-query keyed by verified user/workspace; `BaseCanvas` server-returned table tabs; table-switch component/application tests and browser fixture path | Table creation and schema/view building remain separate contract-gated builder work. |
 | Grid field filtering and record navigation | BDD 3/5; API Contract §4 | `implemented-local` | filtered schema/presentation/list/detail read models; hidden-field tests; browser path | Repeat negative browser/cache inspection after later state architecture changes. |
 | Saved Grid/Kanban/Calendar/Form rendering | BDD 4 | `partial-local` | `ViewSurface` dispatches all four renderers and tests cover renderer shapes | Current Kanban/Calendar are display groupings; Form is a single-record detail preview. No parity proof for saved filter/sort semantics across breakpoints. |
 | Cursor-safe paging | Plan Package 2; Acceptance checklist | `implemented-local` | protected `api.viewRecords(viewId, cursor)` queries, BaseCanvas load-more control, component/application tests and desktop/390px browser QA | Cursor comes only from the server response; every fetched window receives a verified user/workspace/view/cursor key, and pages are deduplicated by record ID. |
@@ -105,7 +105,7 @@ For every requirement the audit records the source, current evidence, status and
 
 1. **Completed existing-contract slice:** direct record conflicts now discard stale detail/current-window state and refetch permitted authoritative data; 403/404 transition to the generic denied boundary. The component/application regression and browser fixture evidence are retained in the progress log.
 2. **Approved architecture implementation complete for its approved path:** Technical Decision 001 now has a memory-only QueryClient, user/workspace key contract, cancellation/removal helpers, Base/view/record/cursor reads and direct-edit/conflict refresh. Do not expand it into persistence, governance or Package 4.
-3. **Interaction/contract specification required before UI:** Form create/typed fields; builder schema/view read/edit model; import/template user flow; governance role/permission model; field-filtered draft detail.
+3. **Form/create first slice is implemented; further interaction/contract specification required before UI:** complex typed field editors; builder schema/view read/edit model; import/template user flow; governance role/permission model; field-filtered draft detail.
 4. **Dedicated Package 4 approval required:** workspace Bot contacts, personal assistant, knowledge, memory, Telegram proof/deep link and lifecycle.
 
 ## 10. Exit Gate Audit

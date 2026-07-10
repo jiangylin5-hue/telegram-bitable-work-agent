@@ -3,9 +3,16 @@
 ## Status
 
 - Document status: active progress log
-- Current Progress: 2026-07-10 Package 1/2 has an implemented, verified vertical path: approved Mini App bootstrap, authorization-filtered Workspace Home, responsive App Shell and workspace switching; permission-filtered Base/table/view canvas; read-only Grid/Kanban/Calendar/Form presentation; Record Detail; version-aware scalar direct edits; and a server-filtered scalar record-create drawer. Protected Query now covers bootstrap, Workspace Home, Base/view opening, record detail, cursor continuation and create-form loading. Governance, imports/templates, Bot surface, draft confirmation, mobile create browser evidence and final Stage07 acceptance remain incomplete.
+- Current Progress: 2026-07-10 Package 1/2 has an implemented, verified vertical path: approved Mini App bootstrap, authorization-filtered Workspace Home, responsive App Shell and workspace switching; permission-filtered Base/table/view canvas including authorized in-Base table switching; read-only Grid/Kanban/Calendar/Form presentation; Record Detail; version-aware scalar direct edits; and a server-filtered scalar record-create drawer. Protected Query now covers bootstrap, Workspace Home, Base/view opening, table/view/record selection, cursor continuation and create-form loading. Governance, imports/templates, Bot surface, draft confirmation, mobile create browser evidence and final Stage07 acceptance remain incomplete.
 
 ## Progress Log
+
+### 2026-07-10: Authorized In-Base Table Switch Is Implemented-Local
+
+- Added an explicit Package 2 substage plan, `STAGE_07_SUBSTAGE_P2_TABLE_SWITCH_PLAN.md`, before code. It uses only the already-approved table/view/schema/presentation/record read contracts; builder, table creation, filters/sorts/groups, import/template, governance and Package 4 remain out of scope.
+- `BaseCanvas` now renders only server-returned table summaries as accessible table tabs. Selecting a table chooses only that table's first server-returned saved view, then reads its schema, presentation and first authorized record window under the established protected-query keys.
+- If no server-returned saved view belongs to the selected table, the UI enters the existing safe empty canvas without guessing a view ID or issuing schema/presentation/record reads. A table transition clears record-detail/create-drawer state and discards stale responses through the existing canvas/create-form generations.
+- Tests cover tab selection, second-table authorized data replacement and the no-saved-view no-request boundary. Fresh checks: backend `407 passed, 19 skipped`; frontend `29 passed`; production build passed. A disposable desktop browser fixture confirmed Customers/All customers/Ada Co becomes Projects/All projects/Apollo, with the old cell absent. The fixture source/server were deleted/stopped.
 
 ### 2026-07-10: Server-Filtered Scalar Record Create Is Partial-Local
 
