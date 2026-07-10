@@ -124,6 +124,8 @@ test('opening a Base loads its authorized table schema and saved-view records as
   fireEvent.click(screen.getByRole('button', { name: '加载更多记录' }))
   expect(await screen.findByRole('cell', { name: 'Northstar' })).toBeInTheDocument()
   expect(fetchMock).toHaveBeenCalledWith('/views/view-1/records?cursor=cursor-2', expect.any(Object))
+  const cursorRequest = fetchMock.mock.calls.find(([path]) => path === '/views/view-1/records?cursor=cursor-2')
+  expect(cursorRequest?.[1]).toEqual(expect.objectContaining({ signal: expect.any(AbortSignal) }))
 
   fireEvent.click(screen.getByRole('cell', { name: 'Ada Co' }))
   expect(await screen.findByRole('heading', { name: '记录详情' })).toBeInTheDocument()

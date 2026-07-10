@@ -208,10 +208,11 @@ function AppContent() {
     if (!canvas?.view || !canvas.records || canvas.records.next_cursor !== cursor || canvas.loadingMore) return
     const workspaceId = readyState.home.workspace_id
     const viewId = canvas.view.id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
     const matchesActiveView = (current: AppState): current is Extract<AppState, { status: 'ready' }> & { canvas: BaseCanvasState } => current.status === 'ready' && current.home.workspace_id === workspaceId && current.canvas?.view?.id === viewId && current.canvas.records?.next_cursor === cursor
     setState((current) => matchesActiveView(current) ? { ...current, canvas: { ...current.canvas, loadingMore: true, loadMoreError: false } } : current)
     try {
-      const page = await api.viewRecords(viewId, cursor)
+      const page = await queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', viewId, 'records', cursor), queryFn: ({ signal }) => api.viewRecords(viewId, cursor, { signal }) })
       setState((current) => {
         if (!matchesActiveView(current)) return current
         const currentRecords = current.canvas.records!
@@ -219,6 +220,13 @@ function AppContent() {
         return { ...current, canvas: { ...current.canvas, records: { ...page, records: [...currentRecords.records, ...page.records.filter((record) => !knownRecordIds.has(record.id))] }, loadingMore: false, loadMoreError: false } }
       })
     } catch (error) {
+      if (isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await clearAllProtectedQueries(queryClient)
+        setState({ status: 'denied' })
+        return
+      }
+      if (error instanceof ApiError && error.status === 403) await clearProtectedWorkspace(queryClient, scope)
       setState((current) => {
         if (!matchesActiveView(current)) return current
         if (error instanceof ApiError && error.status === 403) return { status: 'denied' }
