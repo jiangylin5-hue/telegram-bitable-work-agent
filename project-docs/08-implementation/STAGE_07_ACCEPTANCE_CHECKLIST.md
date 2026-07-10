@@ -19,6 +19,17 @@
 - [ ] Builder/import/template controls are visible and executable only when authorized.
 - [ ] Record conflicts and errors refresh authoritative state without false success.
 
+### Bounded P3 Base/Table Builder Evidence
+
+These checks cover only the approved P3 atomic Base/Table creation slice. They do not satisfy the broader unchecked Builder/import/template requirement above and do not accept Stage07.
+
+- [x] An authorized Home capability opens a labelled Base panel that submits only Base and first-table display names and creates the exact Base/initial-table/default-Grid receipt path.
+- [x] An authorized in-Base capability opens a labelled table panel and creates the exact new table/default-Grid path without choosing an older first list item.
+- [x] New tables are visibly zero-field and do not expose fake record or field mutation; the next Field Builder substage is stated honestly.
+- [x] Inline validation, retryable network/5xx error, same-key retry, `409` conflict lock, `403` denied cleanup and stale workspace-result rejection have focused automated evidence.
+- [x] Disposable synthetic Browser QA verified P3 desktop behavior at actual `1280x720`, mobile sheet controls at actual `390x844`, and zero relevant final console warnings/errors; the fixture was stopped/deleted.
+- [ ] The P3 real-PostgreSQL rollback/concurrency/default-index tests run against a configured `STAGE06_LOCAL_DATABASE_URL`; they are present but currently skipped, so this is an explicit remaining evidence gap.
+
 ## Governance And Security
 
 - [ ] Management routes and data reject unauthorized users independently of client navigation.
@@ -39,3 +50,8 @@
 - [ ] Visual QA passes at 1440px, 1280px, 430px and 390px against selected design direction.
 - [ ] Telegram deep-link smoke is recorded only in an approved test environment.
 - [ ] Evidence is sanitized and production launch is not claimed.
+
+### P3 Evidence Boundary
+
+- [x] P3 documentation records a synthetic-only fixture, safe receipts and cleanup, and explicitly excludes production/Telegram claims, raw policies/configuration, audit bodies, credentials, field data and real user records.
+- [ ] Stage07-wide evidence remains incomplete: all Package 2 deliverables, Package 3, Package 4, four-width visual fidelity, approved Telegram smoke and the final exit audit still require their own evidence.

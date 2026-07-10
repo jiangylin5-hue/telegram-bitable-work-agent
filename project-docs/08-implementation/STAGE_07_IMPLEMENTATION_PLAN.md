@@ -39,11 +39,17 @@ Deliver one responsive React/Vite Mini App and desktop browser surface that expo
 
 `STAGE_07_SUBSTAGE_P2_TABLE_SWITCH_PLAN.md` defines the current existing-contract implementation: selection among already-authorized tables inside an open Base. It introduces no new contract and must complete its own test/browser/documentation gate before any builder/import/governance work begins.
 
+### Implemented bounded P3: Base/Table Atomic Builder
+
+`STAGE_07_SUBSTAGE_P3_BASE_TABLE_BUILDER_DESIGN.md` and `STAGE_07_SUBSTAGE_P3_BASE_TABLE_BUILDER_PLAN.md` define the separately approved P3 creation path. It is implemented with two atomic, idempotent endpoints: authorized Workspace Home creation of `Base + initial table + default Grid`, and authorized in-Base creation of `table + default Grid`. The Mini App submits only names, refetches authorized lists before receipt-driven navigation, shows an honest zero-field Grid and exposes entry points only from server capabilities.
+
+This is deliberately narrower than the Package 2 deliverables: field creation/editing, extra view creation/editing, import/template UX, general schema administration and Package 3 governance are not completed or implied. Local full-suite/browser evidence is recorded in the P3 plan and progress log; the real-PostgreSQL P3 rollback/concurrency/index command is an explicitly retained evidence gap until `STAGE06_LOCAL_DATABASE_URL` is configured.
+
 ### Deliverables
 
 - queue-first Workspace Home, recent Base rail and durable deep links;
 - Base/table/view canvas, Grid/Kanban/Calendar/Form renderers and record detail;
-- desktop schema/view builder and import/template entry paths;
+- the bounded P3 Base/Table initializer above; separately specified field/view builder and import/template entry paths;
 - mobile table field priority, horizontal access and full-screen detail/editor.
 
 ### Interaction Sequence

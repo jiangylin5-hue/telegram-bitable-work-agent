@@ -65,12 +65,38 @@ The Base Canvas composes these summaries with authorized `GET /tables/{table_id}
 
 The existing `POST /tables/{table_id}/records` remains the only create mutation. The browser submits only returned field keys; Stage06 remains authoritative for validation, normalization, audit and version-1 record creation. This approval does not cover complex field editors, builder, imports, drafts, Bot writes or Telegram actions.
 
+## 5.2 Approved P3 Atomic Base/Table Builder Contract
+
+This bounded P3 contract is implemented for the creation of an empty Base or one empty table only. It is not a Field Builder, additional View Builder, import/template contract, permission editor or general-purpose schema mutation surface.
+
+| Endpoint | Browser request boundary | Server authority and atomic result |
+| --- | --- | --- |
+| `POST /workspaces/{workspace_id}/base-initializations` | body `{ base_name, table_name }`; required `Idempotency-Key` header | resolves active workspace membership, then independently checks `base.create`, `table.create` and `view.manage`; one transaction creates the Base, first table and its default Grid view, the required parent/resource audit events and the idempotency record |
+| `POST /bases/{base_id}/table-initializations` | body `{ table_name }`; required `Idempotency-Key` header | resolves parent Base ownership before independently checking `table.create` and `view.manage`; one transaction creates the table, its default Grid view, required audit events and the idempotency record |
+
+Both endpoints return only the safe receipt below. They never return a raw view configuration, permission policy, fields, audit bodies, idempotency storage details, role/capability claims or provider credentials.
+
+```ts
+type BuilderInitializationReceipt = {
+  base: { id: string; name: string; source_type: string; status: string }
+  table: { id: string; base_id: string; name: string; key: string; status: string }
+  default_view: { id: string; base_id: string; table_id: string; name: string; view_type: 'grid'; status: string }
+}
+```
+
+The server normalizes names, derives the table key and default Grid configuration itself, and keeps the new table fieldless. PostgreSQL migration `20260710_0021` adds the partial unique invariant `uq_views_one_default_per_table` so later code cannot create two default views for one table. The Mini App sends display names only and has no parameter for a key, default flag, configuration, policy, audit payload or permission claim.
+
+The idempotency key is scoped to the endpoint/actor/resource context by the server. A first success returns `201`; the same key with the same normalized payload returns the original safe receipt; the same key with a different payload returns `409`. The client preserves the same key only for an explicit network/5xx retry. A `409` locks the current panel and requires the user to close it before a new attempt receives a new key. Validation errors remain in the panel; `401` clears all protected state, while `403` clears the affected workspace scope and shows a generic denied boundary without a resource preview.
+
+A receipt is a navigation pointer, never optimistic client state. After a success the client invalidates Home and the affected Base table/view lists, rereads those authorized lists, verifies the exact receipt IDs and their Base/table relationship, and only then opens the new Grid. It must not choose the first item in a list, cache a synthetic resource or offer fake field/record creation in a zero-field table.
+
 ## 6. Client Security Rules
 
 - Do not derive permissions from navigation visibility or cached role strings.
 - Do not store raw Bot context, hidden fields, audit values or knowledge content in local storage, analytics or error reports.
 - On `401`, expired bootstrap or membership revocation, remove protected query cache before re-authentication.
 - On `403`, show a generic denied state; do not infer resource existence from client retries.
+- For P3 Builder initialization, preserve one idempotency key only across explicit network/5xx retry; lock a `409` conflict until the panel is closed, and never retry a denied request.
 - Confirmation controls require server-provided draft/action state and the current user confirmation action. A stale action result is discarded and reloaded.
 
 ## 7. Acceptance Contract
