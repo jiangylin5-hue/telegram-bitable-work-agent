@@ -12,7 +12,7 @@
 
 - Document status: detailed implementation plan derived from the user-reviewed P3 design; awaiting user approval before test or production-code changes.
 - Scope: only Stage07 Package 2 Base/Table atomic Builder; Fields, additional views, imports/templates, governance and Package 4 remain outside this plan.
-- Current Progress: 2026-07-10 Tasks 1–2 are implemented and locally verified. Task 1 has RED migration/model checks, GREEN `3 passed`, one Alembic head `20260710_0021`, and offline SQL with the additive default-view partial unique index. Task 2 has RED missing-domain-import evidence, GREEN `3 passed` focused and `10 passed` full platform-core evidence for zero-field Base/Table Grid graphs, generated table keys and sanitized parent audits. Task 3 has not started.
+- Current Progress: 2026-07-10 Tasks 1–3 are implemented and locally verified. Task 1 has RED migration/model checks, GREEN `3 passed`, one Alembic head `20260710_0021`, and offline SQL with the additive default-view partial unique index. Task 2 has RED missing-domain-import evidence, GREEN `3 passed` focused and `10 passed` full platform-core evidence for zero-field Base/Table Grid graphs, generated table keys and sanitized parent audits. Task 3 has RED `404` endpoint evidence, GREEN `14 passed` API/security unit evidence for safe receipts, authorization, validation and idempotency; three real-PostgreSQL rollback/concurrency/index tests are present but skipped because `STAGE06_LOCAL_DATABASE_URL` is missing. Task 4 has not started.
 - Source alignment: `AGENTS.md`; `STAGE_07_SOURCE_OF_TRUTH.md`; `STAGE_07_SDD.md`; `modules/STAGE_07_BITABLE_WORK_SURFACE.md`; `STAGE_07_BDD_AND_ACCEPTANCE.md`; `STAGE_07_API_DATA_SECURITY_CONTRACT.md`; `STAGE_07_SUBSTAGE_P3_BASE_TABLE_BUILDER_DESIGN.md`.
 
 ## Global Constraints
@@ -321,7 +321,7 @@
   POST /bases/{base_id}/table-initializations
   ```
 
-- [ ] **Step 1: Write failing API/security tests**
+- [x] **Step 1: Write failing API/security tests**
 
   Add API tests with the existing `TestClient` plus `InMemoryStage06PlatformUnitOfWork` override. Each test uses a real `Idempotency-Key` header:
 
@@ -349,7 +349,7 @@
   2. run two threads with identical Base-initialization payload/key and assert both responses are `201`/`200`, then one graph/one idempotency row exists;
   3. create one `is_default=True` view and assert a second default for the same table raises `IntegrityError` on commit while the first stays default.
 
-- [ ] **Step 2: Run focused commands and record the expected RED result**
+- [x] **Step 2: Run focused commands and record the expected RED result**
 
   Run:
 
@@ -360,7 +360,7 @@
 
   Expected: unit tests fail with `404`/missing schema and integration tests are either failing or skipped only when `STAGE06_LOCAL_DATABASE_URL` is unavailable.
 
-- [ ] **Step 3: Add narrow schemas, routes and transaction/replay handling**
+- [x] **Step 3: Add narrow schemas, routes and transaction/replay handling**
 
   Add the request and response models in `stage06_platform.py` schemas. The response must be composed manually from safe summary fields, not from primitive `ViewResponse`.
 
@@ -404,7 +404,7 @@
   )
   ```
 
-- [ ] **Step 4: Run focused API and real-PostgreSQL verification**
+- [x] **Step 4: Run focused API and real-PostgreSQL verification**
 
   Run:
 
@@ -415,7 +415,7 @@
 
   Expected: all focused unit tests pass. If `STAGE06_LOCAL_DATABASE_URL` is configured, the three integration tests pass against real PostgreSQL; otherwise pytest explicitly reports the environment-bound skip and it is recorded in progress, not treated as proof.
 
-- [ ] **Step 5: Commit the safe HTTP contract**
+- [x] **Step 5: Commit the safe HTTP contract**
 
   ```powershell
   git add backend/app/schemas/stage06_platform.py backend/app/api/routes/stage06_platform.py backend/tests/unit/test_stage06_platform_api.py backend/tests/unit/test_stage07_mini_app_api.py backend/tests/integration/test_stage06_postgres_security.py

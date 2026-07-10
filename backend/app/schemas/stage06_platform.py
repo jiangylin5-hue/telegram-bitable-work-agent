@@ -89,6 +89,11 @@ class CreateBaseRequest(BaseModel):
     description: str | None = None
 
 
+class InitializeBaseRequest(BaseModel):
+    base_name: str
+    table_name: str
+
+
 class BaseResponse(BaseModel):
     id: str
     workspace_id: str
@@ -112,6 +117,10 @@ class BaseListResponse(BaseModel):
 class CreateTableRequest(BaseModel):
     name: str
     key: str
+
+
+class InitializeTableRequest(BaseModel):
+    table_name: str
 
 
 class TableResponse(BaseModel):
@@ -218,6 +227,12 @@ class ViewSummaryResponse(BaseModel):
 
 class ViewListResponse(BaseModel):
     views: list[ViewSummaryResponse]
+
+
+class BuilderInitializationResponse(BaseModel):
+    base: BaseSummaryResponse
+    table: TableResponse
+    default_view: ViewSummaryResponse
 
 
 class ViewPresentationResponse(BaseModel):
