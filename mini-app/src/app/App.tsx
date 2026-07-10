@@ -218,13 +218,30 @@ function AppContent() {
     const view = canvas.views.find((item) => item.id === viewId)
     const table = view?.table_id ? canvas.tables.find((item) => item.id === view.table_id) ?? null : null
     if (!view || !table) return
+    const requestVersion = ++canvasRequestVersion.current
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
     setState({ ...readyState, canvasLoading: true, canvas: undefined })
     try {
-      const schema = canvas.table?.id === table.id && canvas.schema ? canvas.schema : await api.tableSchema(table.id)
-      const [presentation, records] = await Promise.all([api.viewPresentation(view.id), api.viewRecords(view.id)])
+      const schema = canvas.table?.id === table.id && canvas.schema
+        ? canvas.schema
+        : await queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'table', table.id, 'schema'), queryFn: ({ signal }) => api.tableSchema(table.id, { signal }) })
+      const [presentation, records] = await Promise.all([
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'presentation'), queryFn: ({ signal }) => api.viewPresentation(view.id, { signal }) }),
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'records', null), queryFn: ({ signal }) => api.viewRecords(view.id, undefined, { signal }) }),
+      ])
+      if (canvasRequestVersion.current !== requestVersion) return
       setState({ ...readyState, canvas: { ...canvas, table, view, schema, presentation, records, detail: undefined } })
     } catch (error) {
-      setState({ status: error instanceof ApiError && error.status === 403 ? 'denied' : 'error' })
+      if (canvasRequestVersion.current !== requestVersion || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await clearAllProtectedQueries(queryClient)
+        setState({ status: 'denied' })
+      } else if (error instanceof ApiError && error.status === 403) {
+        await clearProtectedWorkspace(queryClient, scope)
+        setState({ status: 'denied' })
+      } else {
+        setState({ status: 'error' })
+      }
     }
   }
 

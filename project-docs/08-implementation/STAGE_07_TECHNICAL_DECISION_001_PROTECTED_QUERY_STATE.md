@@ -5,7 +5,7 @@
 - Decision status: approved by user on 2026-07-10 — implementation may begin only within this document's scope
 - Scope: Mini App/desktop React server-state cache, request cancellation, workspace/session/revocation clearing and mutation refresh
 - Non-scope: backend schema/API/role/permission changes; local persistence; Bot/knowledge/memory implementation
-- Implementation progress: bootstrap, Workspace Home and the initial Base-open dependency tree are migrated. The Base-open tree covers Base tables/views, the default table schema, the default view presentation and its first cursor window. Saved-view switching, record detail, cursor follow-up pages and mutations remain explicit later slices; this decision is not yet fully implemented.
+- Implementation progress: bootstrap, Workspace Home, the initial Base-open dependency tree and saved-view switching are migrated. The Base-open tree covers Base tables/views, the default table schema, the default view presentation and its first cursor window. Record detail, cursor follow-up pages and mutations remain explicit later slices; this decision is not yet fully implemented.
 
 ## 1. Problem
 
@@ -122,5 +122,6 @@ The user approved Option A on 2026-07-10. The approval authorizes only adding `@
 
 - The first Base-open query migration uses the approved verified-user/workspace keys for Base tables, Base views, table schema, view presentation and the first view-record window. Each query function receives and forwards TanStack Query's `AbortSignal` to the existing typed transport.
 - A test first demonstrated the actual race: delayed tables/views for `workspace-1` could restore the previous Base canvas after a user selected `workspace-2`. The migration adds a canvas request generation boundary and query cancellation/removal on the old workspace scope; the test now proves the new workspace Home remains visible when the delayed responses resolve.
+- Saved-view switching now applies the same protected keys and canvas request generation. A red/green application test proves delayed view presentation/record responses cannot restore the prior Base after a workspace switch.
 - `npm.cmd run test:run` passed with 18 tests, and `npm.cmd run build` passed after the slice. Browser QA against a disposable local fixture confirmed the authorized Home -> Base -> Grid path and reported no console warning/error. The fixture and test server were removed/stopped after the check.
-- This evidence does **not** claim migration of record detail, saved-view switching, cursor continuation or mutation invalidation. Those paths still use their existing local state until independently covered by a red/green slice.
+- This evidence does **not** claim migration of record detail, cursor continuation or mutation invalidation. Those paths still use their existing local state until independently covered by a red/green slice.

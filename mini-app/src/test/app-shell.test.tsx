@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import { App } from '../app/App'
@@ -201,4 +201,41 @@ test('discarding an in-flight Base open cannot restore the previous workspace af
 
   await waitFor(() => expect(screen.getByRole('link', { name: '项目跟踪' })).toBeInTheDocument())
   expect(screen.queryByRole('heading', { name: '客户管理' })).not.toBeInTheDocument()
+})
+
+test('discarding an in-flight saved-view selection cannot restore the previous Base after a workspace switch', async () => {
+  const fetchMock = vi.fn()
+  vi.stubGlobal('fetch', fetchMock)
+  let resolvePresentation: (response: Response) => void = () => undefined
+  let resolveRecords: (response: Response) => void = () => undefined
+  let resolveWorkspaceHome: (response: Response) => void = () => undefined
+  const viewPresentation = new Promise<Response>((resolve) => { resolvePresentation = resolve })
+  const viewRecords = new Promise<Response>((resolve) => { resolveRecords = resolve })
+  const workspaceHome = new Promise<Response>((resolve) => { resolveWorkspaceHome = resolve })
+  fetchMock
+    .mockResolvedValueOnce(new Response(JSON.stringify({ identity: { user_id: 'operator-1', source: 'verified_adapter' }, workspaces: [{ id: 'workspace-1', name: '运营中心', slug: 'operations', role: 'operator', capabilities: { can_read_bases: true, can_manage_workspace: false, can_manage_schema: false, can_review_drafts: true } }, { id: 'workspace-2', name: '项目中心', slug: 'projects', role: 'viewer', capabilities: { can_read_bases: true, can_manage_workspace: false, can_manage_schema: false, can_review_drafts: false } }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ workspace_id: 'workspace-1', recent_bases: [{ id: 'base-1', name: '客户管理', source_type: 'blank' }], queue: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ tables: [{ id: 'table-1', base_id: 'base-1', name: '客户表', key: 'customers', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ views: [{ id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: '全部客户', view_type: 'grid', status: 'active' }, { id: 'view-2', base_id: 'base-1', table_id: 'table-1', name: '按状态', view_type: 'kanban', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ table: { id: 'table-1', name: '客户表', key: 'customers' }, fields: [{ id: 'field-name', name: '客户名称', key: 'name', field_type: 'text', required: true, order_index: 0 }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: ['name'], group_by_field_key: null, date_field_key: null, form_field_keys: ['name'] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-1', records: [{ id: 'record-1', fields: { name: 'Ada Co' } }], next_cursor: null, has_more: false }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockImplementationOnce(() => viewPresentation)
+    .mockImplementationOnce(() => viewRecords)
+    .mockImplementationOnce(() => workspaceHome)
+
+  render(<App />)
+  fireEvent.click(await screen.findByRole('link', { name: '客户管理' }))
+  fireEvent.click(await screen.findByRole('tab', { name: '按状态' }))
+  fireEvent.change(screen.getByLabelText('切换工作区（桌面）'), { target: { value: 'workspace-2' } })
+
+  await act(async () => {
+    resolvePresentation(new Response(JSON.stringify({ view_id: 'view-2', table_id: 'table-1', view_type: 'kanban', visible_field_keys: ['name'], group_by_field_key: 'status', date_field_key: null, form_field_keys: ['name'] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    resolveRecords(new Response(JSON.stringify({ view_id: 'view-2', records: [{ id: 'record-1', fields: { name: 'Ada Co', status: '进行中' } }], next_cursor: null, has_more: false }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    await Promise.resolve()
+  })
+
+  expect(screen.queryByRole('heading', { name: '客户管理' })).not.toBeInTheDocument()
+  resolveWorkspaceHome(new Response(JSON.stringify({ workspace_id: 'workspace-2', recent_bases: [{ id: 'base-2', name: '项目跟踪', source_type: 'blank' }], queue: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+  expect(await screen.findByRole('link', { name: '项目跟踪' })).toBeInTheDocument()
 })

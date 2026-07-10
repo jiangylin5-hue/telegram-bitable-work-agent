@@ -3,7 +3,7 @@
 ## Status
 
 - Document status: active progress log
-- Current Progress: 2026-07-10 Package 1/2 has an implemented, verified vertical path: approved Mini App bootstrap, authorization-filtered Workspace Home, responsive App Shell and workspace switching; permission-filtered Base/table/view canvas; read-only Grid/Kanban/Calendar/Form presentation; Record Detail; and version-aware scalar direct edits. Protected Query now covers bootstrap, Workspace Home and the initial Base-open dependency tree. Governance, imports/templates, Bot surface, draft confirmation and final Stage07 acceptance remain incomplete.
+- Current Progress: 2026-07-10 Package 1/2 has an implemented, verified vertical path: approved Mini App bootstrap, authorization-filtered Workspace Home, responsive App Shell and workspace switching; permission-filtered Base/table/view canvas; read-only Grid/Kanban/Calendar/Form presentation; Record Detail; and version-aware scalar direct edits. Protected Query now covers bootstrap, Workspace Home, initial Base open and saved-view switching. Governance, imports/templates, Bot surface, draft confirmation and final Stage07 acceptance remain incomplete.
 
 ## Progress Log
 
@@ -102,8 +102,14 @@
 - Migrated only the initial Base-open dependency tree to the approved memory-only query boundary: Base tables, Base views, the default table schema, default view presentation and the first cursor record window. All keys retain the verified `userId`/`workspaceId` prefix and each query forwards its cancellation signal to the existing transport; no backend/API/schema/permission change was made.
 - A new red application test reproduced an actual stale-data risk: delayed Base tables/views from `workspace-1` could complete after a switch to `workspace-2` and restore the old Base canvas. The test now passes because the canvas request generation is invalidated on workspace switch and the old protected scope is cancelled/removed before the target Home loads.
 - Verification: targeted App shell test passed `5 passed`; full frontend suite passed `18 passed`; `npm.cmd run build` and `git diff --check` passed. Browser QA used a disposable fixture to confirm `运营中心` Home -> `客户管理` Base -> `全部客户` Grid, including `Northstar / 进行中`, with no console warning/error. The test fixture and local server were removed/stopped after the check.
-- Not yet migrated: saved-view switching, record detail, cursor follow-up pages, direct-edit mutation refresh and conflict recovery. These remain deliberately scoped follow-up migrations, not implied by this Base-open slice.
+- Not yet migrated: record detail, cursor follow-up pages, direct-edit mutation refresh and conflict recovery. These remain deliberately scoped follow-up migrations, not implied by this Base-open slice.
+
+### 2026-07-10: Protected Query Saved-View Slice Verified
+
+- Migrated saved-view selection to the same verified user/workspace query-key contract. A different table receives its protected schema query; every selected view receives protected presentation and first-window record queries with forwarded cancellation signals.
+- A red application test showed that delayed view presentation/records could restore `客户管理` after the user selected another workspace. The canvas request generation and workspace-scope removal now keep the old Base absent until the new workspace Home renders.
+- Verification: targeted App shell tests passed `6 passed`; full frontend suite passed `19 passed`; production build and `git diff --check` passed. This slice has no backend/API/schema/permission change and does not imply record-detail, cursor continuation or mutation invalidation migration.
 
 ## Next Step
 
-Complete the remaining protected-query migration in independently tested slices: saved-view switching, record detail and cursor follow-up pages, then targeted mutation invalidation/refetch for the existing direct-edit/conflict flow. Afterwards, prepare and seek approval for the workspace-level Bot, knowledge, memory and Telegram lifecycle contract; complex typed field editors remain a separate, documented work item.
+Complete the remaining protected-query migration in independently tested slices: record detail and cursor follow-up pages, then targeted mutation invalidation/refetch for the existing direct-edit/conflict flow. Afterwards, prepare and seek approval for the workspace-level Bot, knowledge, memory and Telegram lifecycle contract; complex typed field editors remain a separate, documented work item.
