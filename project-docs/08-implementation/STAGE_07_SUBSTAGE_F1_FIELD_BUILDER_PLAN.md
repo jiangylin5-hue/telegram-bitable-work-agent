@@ -866,7 +866,7 @@ At `1440px`, `1280px`, `430px` and `390px`, run these real interactions against 
 
 Capture the rendered screen beside `assets/stage07/workspace-ledger-reference.png` at the matching desktop widths. Inspect visible differences in shell proportions, dense toolbar placement, drawer/sheet spacing, type scale, borders/radii, selection blue and right-rail treatment. Stop/remove the fixture and delete unsanctioned test artifacts after inspection.
 
-2026-07-11 correction: fieldless/add/choice/create/503/409/403 and four-width runs exist; direct-edit success is retained in `artifacts/stage07/f1-direct-edit-success-1440.png`. A disposable 1440px error fixture now proves the duplicate-name `422` allowlist mapping and the pending-dialog disabled-control state with an empty final error/warning log. Repeat those two states at 1280px/430px/390px before completing this four-width step. The delayed workspace replacement remains an application-level scope-isolation proof because the modal correctly prevents forcing that background interaction. The three PostgreSQL cases remain separately environment-gated.
+2026-07-11 correction: fieldless/add/choice/create/503/409/403 and four-width runs exist; direct-edit success is retained in `artifacts/stage07/f1-direct-edit-success-1440.png`. A disposable error fixture now proves the duplicate-name `422` allowlist mapping and the pending-dialog disabled-control state at 1440px, 1280px, 430px and 390px, with an empty final error/warning log. The delayed workspace replacement remains an application-level scope-isolation proof because the modal correctly prevents forcing that background interaction. The three PostgreSQL cases remain separately environment-gated.
 
 - [x] **Step 3: Update evidence documents accurately**
 

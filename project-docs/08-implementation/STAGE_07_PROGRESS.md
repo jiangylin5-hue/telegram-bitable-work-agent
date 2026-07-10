@@ -3,22 +3,28 @@
 ## Status
 
 - Document status: active progress log
-- Current Progress: 2026-07-11 Package 1/2 has an implemented, verified vertical path: approved Mini App bootstrap, authorization-filtered Workspace Home, responsive App Shell and workspace switching; permission-filtered Base/table/view canvas including authorized in-Base table switching; read-only Grid/Kanban/Calendar/Form presentation; Record Detail; version-aware scalar direct edits; a server-filtered scalar record-create drawer; bounded P3 atomic Base/Table Builder; and bounded F1 Independent Field Builder. F1 spans safe Canvas schema/receipt projection, atomic idempotent field initialization, choice-aware record flows, protected re-read/cache cleanup and desktop/mobile UI. Direct-edit browser success is now retained; its real-PostgreSQL proof and two explicit browser cases remain incomplete. F2/V1, imports/templates, governance, Bot surface, draft confirmation and final Stage07 acceptance remain incomplete.
+- Current Progress: 2026-07-11 Package 1/2 has an implemented, verified vertical path: approved Mini App bootstrap, authorization-filtered Workspace Home, responsive App Shell and workspace switching; permission-filtered Base/table/view canvas including authorized in-Base table switching; read-only Grid/Kanban/Calendar/Form presentation; Record Detail; version-aware scalar direct edits; a server-filtered scalar record-create drawer; bounded P3 atomic Base/Table Builder; and bounded F1 Independent Field Builder. F1 spans safe Canvas schema/receipt projection, atomic idempotent field initialization, choice-aware record flows, protected re-read/cache cleanup and desktop/mobile UI. Its direct-edit, duplicate-name feedback and pending-dialog lock browser cases are now complete at all four required widths; only its real-PostgreSQL proof remains incomplete. F2/V1, imports/templates, governance, Bot surface, draft confirmation and final Stage07 acceptance remain incomplete.
 
 ## Progress Log
 
-### 2026-07-11: F1 Duplicate Feedback and Pending Lock Verified at 1440px
+### 2026-07-11: F1 Duplicate Feedback and Pending Lock Initial Evidence at 1440px
 
 - User-approved error presentation is deliberately narrow: the Mini App transport parses only `422.detail.code = duplicate_field_name`; `FieldBuilderPanel` maps that one allowlisted value to `字段名称已存在，请使用其他名称。`. It ignores `detail.message` and every unknown code, leaving the generic safe error path intact. No request parameter, response resource shape, authorization decision or policy data was added.
 - Test-first evidence: the transport and panel tests were first red because `ApiError` retained only the status and the panel chose its generic message. The minimal transport allowlist and local mapping made the focused two-file run green (`10 passed`); the fresh full Mini App suite then reported `13` files / `55` tests passing and the production build passed.
 - Disposable 1440px Browser QA used the real fixture transport chain. It retained `客户阶段`, rendered the fixed duplicate feedback without `field_name`, then held a request pending and observed `创建中…`, `关闭` and `取消` disabled while the modal stayed visible. The final console error/warning check was empty. The fixture was deleted and local server stopped after the run.
-- This is not a four-width close: repeat the two new states at `1280px`, `430px` and `390px`; delayed workspace replacement remains covered by the already-existing application scope-isolation test. F1 therefore remains `partial-local`, and its three PostgreSQL proof cases remain environment-gated.
+- This was the initial 1440px observation. The four-width closure is recorded in the newer entry below; delayed workspace replacement remains covered by the already-existing application scope-isolation test. F1 remains `partial-local` solely because its three PostgreSQL proof cases remain environment-gated.
+
+### 2026-07-11: F1 Four-Width Error and Pending Browser Matrix Closed
+
+- The disposable F1 error fixture was rerun at `1440px`, `1280px`, `430px` and `390px` through the actual Mini App transport chain. Each duplicate-name run retained `客户阶段`, showed exactly `字段名称已存在，请使用其他名称。` and did not render the server-only `field_name` message.
+- The companion pending-request run at each width kept the drawer/sheet visible while `创建中…`, `关闭` and `取消` were disabled. This is the correct scope behavior: a background workspace/view switch cannot be forced while the modal safely prevents it; the separate application test proves a delayed old-scope receipt cannot restore a stale field.
+- Every final browser console query returned `[]`. The local Vite server, disposable fixture source/import and browser session were stopped/deleted after inspection. This closes the F1 browser matrix, but does not replace the three skipped real-PostgreSQL rollback/replay/concurrency proofs.
 
 ### 2026-07-11: F1 Direct-Edit Visual Evidence Corrected
 
 - Replaced the original disposable fixture's route ordering with a short-lived direct-edit fixture that handles `PATCH /records/{id}` before the generic read path. On the 1440px F1 Canvas, `客户阶段` changed from `新建` to `跟进中`, `续费关注` was removed from the tag list, and both Grid and Record Detail reread version `2`.
 - The sanitized screenshot was saved and visually inspected at `project-docs/08-implementation/artifacts/stage07/f1-direct-edit-success-1440.png`; the final browser console contained no warning/error. The temporary fixture source/import and local port-4173 server were removed/stopped after the run.
-- This improves only the direct-edit browser evidence. The F1 browser checklist deliberately remains incomplete for duplicate-name server feedback and an in-flight field request interrupted by workspace/view replacement; the PostgreSQL rollback/replay/concurrency evidence remains gated by the absent authorised disposable URL.
+- This improved the direct-edit browser evidence. The later same-day four-width matrix closes duplicate-name and pending-dialog browser evidence; delayed workspace/view replacement is correctly retained as an application scope-isolation proof. The PostgreSQL rollback/replay/concurrency evidence remains gated by the absent authorised disposable URL.
 
 ### 2026-07-10: F1 Independent Field Builder Is Partial-Local
 
@@ -195,4 +201,4 @@
 
 ## Next Step
 
-F1 remains an active partial-local substage: run its and P3's exact disposable PostgreSQL suites only after an authorised `STAGE06_LOCAL_DATABASE_URL` is available, and retain explicit browser evidence for duplicate-name feedback plus an in-flight field request interrupted by workspace/view replacement. Do not begin F2 relation/lookup, V1 additional views, imports/templates, governance or Package 4 implementation while F1 is open. F2/V1 require a separately discussed and approved safe browser/API/permission contract before any code starts.
+F1 remains an active partial-local substage: run its and P3's exact disposable PostgreSQL suites only after an authorised `STAGE06_LOCAL_DATABASE_URL` is available. Its four-width browser matrix is complete; delayed workspace/view replacement remains covered by the application scope-isolation test because the modal correctly prevents an unsafe forced switch. Do not begin F2 relation/lookup, V1 additional views, imports/templates, governance or Package 4 implementation while F1 is open. F2/V1 require a separately discussed and approved safe browser/API/permission contract before any code starts.
