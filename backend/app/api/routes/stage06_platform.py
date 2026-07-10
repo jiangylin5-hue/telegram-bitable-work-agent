@@ -1,8 +1,9 @@
 from collections.abc import Callable
-from typing import Any
+from typing import Any, TypeVar
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
+from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -22,6 +23,8 @@ from app.schemas.stage06_platform import (
     CreateViewRequest,
     CreateWorkspaceRequest,
     FieldResponse,
+    FieldInitializationResponse,
+    InitializeFieldRequest,
     MiniAppBootstrapResponse,
     MiniAppWorkspaceHomeResponse,
     InitializeBaseRequest,
@@ -30,6 +33,7 @@ from app.schemas.stage06_platform import (
     RecordDetailResponse,
     TableResponse,
     TableListResponse,
+    SafeTableFieldResponse,
     TableSchemaResponse,
     UpdateRecordRequest,
     ViewResponse,
@@ -66,6 +70,7 @@ from app.services.stage06_platform import (
     get_table_schema,
     get_view_presentation,
     initialize_base,
+    initialize_field,
     initialize_table,
     list_workspace_members,
     list_bases_for_workspace,
@@ -76,6 +81,8 @@ from app.services.stage06_platform import (
     read_record_for_actor,
     read_workspace,
     update_record,
+    safe_table_schema_field,
+    _validated_f1_choices,
 )
 from app.services.stage06_idempotency import (
     begin_idempotent_operation,
@@ -85,6 +92,7 @@ from app.services.stage06_idempotency import (
 from app.services.stage07_mini_app import get_mini_app_bootstrap, get_workspace_home
 
 router = APIRouter(tags=["stage06-platform"])
+ResponseModel = TypeVar("ResponseModel", bound=BaseModel)
 
 
 def get_stage06_platform_uow(
@@ -258,6 +266,7 @@ def initialize_base_endpoint(
                     "table_name": table_name,
                 }
             ),
+            response_model=BuilderInitializationResponse,
             build=lambda: _builder_initialization_response(
                 initialize_base(
                     uow,
@@ -436,6 +445,7 @@ def initialize_table_endpoint(
                     "table_name": table_name,
                 }
             ),
+            response_model=BuilderInitializationResponse,
             build=lambda: _builder_initialization_response(
                 initialize_table(
                     uow,
@@ -553,6 +563,61 @@ def create_record_endpoint(
         record_status=record.record_status,
         version=record.version,
     )
+
+
+@router.post(
+    "/tables/{table_id}/field-initializations",
+    response_model=FieldInitializationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def initialize_field_endpoint(
+    table_id: UUID,
+    request: InitializeFieldRequest,
+    response: Response,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=160),
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> FieldInitializationResponse:
+    try:
+        workspace_id = workspace_id_for_table(uow, table_id)
+        actor = authorize_workspace_action(uow, identity, workspace_id, "field.manage")
+        name = _validated_field_name(request.name)
+        choices = _validated_f1_choices(request.field_type, request.choices)
+        initialization, replayed = _run_atomic_builder_initialization(
+            uow,
+            workspace_id=workspace_id,
+            operation="stage07.field.initialize",
+            idempotency_key=idempotency_key,
+            request_fingerprint=fingerprint_request(
+                {
+                    "workspace_id": workspace_id,
+                    "operation": "stage07.field.initialize",
+                    "actor_user_id": identity.user_id,
+                    "table_id": table_id,
+                    "name": name,
+                    "field_type": request.field_type,
+                    "required": request.required,
+                    "choices": choices,
+                }
+            ),
+            response_model=FieldInitializationResponse,
+            build=lambda: _field_initialization_response(
+                initialize_field(
+                    uow,
+                    table_id,
+                    name=name,
+                    field_type=request.field_type,
+                    required=request.required,
+                    choices=choices,
+                    actor=actor,
+                )
+            ),
+        )
+    except (PlatformValidationError, Stage06AuthorizationError) as exc:
+        raise _http_error(exc) from exc
+    if replayed:
+        response.status_code = status.HTTP_200_OK
+    return initialization
 
 
 @router.get("/tables/{table_id}/create-form", response_model=CreateFormResponse)
@@ -697,6 +762,13 @@ def _validated_builder_name(value: str, *, label: str) -> str:
     return normalized
 
 
+def _validated_field_name(value: str) -> str:
+    normalized = value.strip()
+    if not normalized or len(normalized) > 160:
+        raise PlatformValidationError("invalid_field_name", "field_name")
+    return normalized
+
+
 def _builder_initialization_response(
     result: Any,
     *,
@@ -730,6 +802,13 @@ def _builder_initialization_response(
     )
 
 
+def _field_initialization_response(result: Any) -> FieldInitializationResponse:
+    return FieldInitializationResponse(
+        field=SafeTableFieldResponse(**safe_table_schema_field(result.field)),
+        affected_view_ids=[str(view_id) for view_id in result.affected_view_ids],
+    )
+
+
 def _run_atomic_builder_initialization(
     uow: Stage06PlatformUnitOfWork,
     *,
@@ -737,8 +816,9 @@ def _run_atomic_builder_initialization(
     operation: str,
     idempotency_key: str,
     request_fingerprint: str,
-    build: Callable[[], BuilderInitializationResponse],
-) -> tuple[BuilderInitializationResponse, bool]:
+    response_model: type[ResponseModel],
+    build: Callable[[], ResponseModel],
+) -> tuple[ResponseModel, bool]:
     trace_id = f"idempotency:{operation}:{request_fingerprint[:24]}"
     for attempt in range(2):
         try:
@@ -753,7 +833,7 @@ def _run_atomic_builder_initialization(
             if decision.status == "replay":
                 if decision.response_ref is None:
                     raise PlatformValidationError("idempotency_in_progress", operation)
-                return BuilderInitializationResponse(**decision.response_ref), True
+                return response_model(**decision.response_ref), True
             initialization = build()
             complete_idempotent_operation(
                 decision.record,
@@ -765,6 +845,9 @@ def _run_atomic_builder_initialization(
             if not _rollback_if_sqlalchemy(uow) or attempt == 1:
                 raise PlatformValidationError("idempotency_in_progress", operation) from exc
         except PlatformValidationError:
+            _rollback_if_sqlalchemy(uow)
+            raise
+        except Exception:
             _rollback_if_sqlalchemy(uow)
             raise
     raise PlatformValidationError("idempotency_in_progress", operation)

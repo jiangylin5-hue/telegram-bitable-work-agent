@@ -1,8 +1,10 @@
 from fastapi.testclient import TestClient
 import pytest
+from uuid import UUID, uuid4
 
 from app.api.routes.stage06_platform import get_stage06_platform_uow
 from app.main import create_app
+from app.models.stage06_platform import WorkspaceMember
 from app.services.permissions import Actor
 from app.services.stage06_platform import (
     InMemoryStage06PlatformUnitOfWork,
@@ -231,3 +233,224 @@ def test_initialize_field_only_updates_explicit_views_and_emits_safe_audit() -> 
         "order_index": 1,
         "affected_view_ids": [str(explicit_view.id)],
     }
+
+
+def test_field_initialization_endpoint_replays_same_key_and_rejects_payload_change() -> None:
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "owner-1"
+        workspace_id = client.post(
+            "/workspaces",
+            json={"name": "Acme", "owner_user_id": "owner-1"},
+        ).json()["id"]
+        base_id = client.post(
+            f"/workspaces/{workspace_id}/bases",
+            json={"name": "Operations"},
+        ).json()["id"]
+        table_id = client.post(
+            f"/bases/{base_id}/tables",
+            json={"name": "Projects", "key": "projects"},
+        ).json()["id"]
+        headers = {"Idempotency-Key": "field-initialization-1"}
+        payload = {
+            "name": "Stage",
+            "field_type": "status",
+            "required": False,
+            "choices": ["new", "active"],
+        }
+
+        created = client.post(
+            f"/tables/{table_id}/field-initializations",
+            headers=headers,
+            json=payload,
+        )
+        replayed = client.post(
+            f"/tables/{table_id}/field-initializations",
+            headers=headers,
+            json=payload,
+        )
+        conflict = client.post(
+            f"/tables/{table_id}/field-initializations",
+            headers=headers,
+            json={**payload, "name": "Priority"},
+        )
+
+    assert created.status_code == 201
+    assert replayed.status_code == 200
+    assert replayed.json() == created.json()
+    assert conflict.status_code == 409
+    assert conflict.json()["detail"]["code"] == "idempotency_conflict"
+    assert len(uow.list_fields(UUID(table_id))) == 1
+    assert len(uow.idempotency_records) == 1
+    assert set(created.json()) == {"field", "affected_view_ids"}
+    assert set(created.json()["field"]) == {
+        "id",
+        "table_id",
+        "name",
+        "key",
+        "field_type",
+        "required",
+        "options",
+        "order_index",
+    }
+    assert "permission_policy" not in created.text
+    assert "config" not in created.text
+
+
+def test_field_initialization_endpoint_denies_viewer_and_forbids_raw_keys() -> None:
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "owner-1"
+        workspace_id = client.post(
+            "/workspaces",
+            json={"name": "Acme", "owner_user_id": "owner-1"},
+        ).json()["id"]
+        base_id = client.post(
+            f"/workspaces/{workspace_id}/bases",
+            json={"name": "Operations"},
+        ).json()["id"]
+        table_id = client.post(
+            f"/bases/{base_id}/tables",
+            json={"name": "Projects", "key": "projects"},
+        ).json()["id"]
+        uow.add_workspace_member(
+            WorkspaceMember(
+                id=uuid4(),
+                workspace_id=UUID(workspace_id),
+                user_id="viewer-1",
+                role="viewer",
+                status="active",
+            )
+        )
+        client.headers["X-Stage06-User-Id"] = "viewer-1"
+        denied = client.post(
+            f"/tables/{table_id}/field-initializations",
+            headers={"Idempotency-Key": "field-initialization-denied"},
+            json={"name": "Stage", "field_type": "text", "required": False},
+        )
+        client.headers["X-Stage06-User-Id"] = "owner-1"
+        rejected = client.post(
+            f"/tables/{table_id}/field-initializations",
+            headers={"Idempotency-Key": "field-initialization-extra"},
+            json={
+                "name": "Stage",
+                "field_type": "text",
+                "required": False,
+                "key": "browser-controlled-key",
+            },
+        )
+
+    assert denied.status_code == 403
+    assert rejected.status_code == 422
+    assert uow.list_fields(UUID(table_id)) == []
+    assert uow.idempotency_records == []
+
+
+def test_field_initialization_endpoint_denies_a_table_in_another_workspace() -> None:
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "owner-2"
+        workspace_id = client.post(
+            "/workspaces",
+            json={"name": "Other workspace", "owner_user_id": "owner-2"},
+        ).json()["id"]
+        base_id = client.post(
+            f"/workspaces/{workspace_id}/bases",
+            json={"name": "Other operations"},
+        ).json()["id"]
+        table_id = client.post(
+            f"/bases/{base_id}/tables",
+            json={"name": "Other projects", "key": "other-projects"},
+        ).json()["id"]
+        client.headers["X-Stage06-User-Id"] = "owner-1"
+        denied = client.post(
+            f"/tables/{table_id}/field-initializations",
+            headers={"Idempotency-Key": "field-initialization-cross-workspace"},
+            json={"name": "Stage", "field_type": "text", "required": False},
+        )
+
+    assert denied.status_code == 403
+    assert uow.list_fields(UUID(table_id)) == []
+    assert uow.idempotency_records == []
+
+
+def test_field_initialization_rolls_back_field_audit_and_idempotency_on_view_failure() -> None:
+    class SnapshotSession:
+        def __init__(self, uow: InMemoryStage06PlatformUnitOfWork) -> None:
+            self.uow = uow
+            self.snapshot()
+
+        def add(self, value: object) -> None:
+            self.uow.add(value)
+
+        def commit(self) -> None:
+            self.snapshot()
+
+        def rollback(self) -> None:
+            self.uow.fields = list(self.fields)
+            self.uow.audit_events = list(self.audit_events)
+            self.uow.idempotency_records = list(self.idempotency_records)
+            for view, config in self.view_configs:
+                view.config = config
+
+        def snapshot(self) -> None:
+            self.fields = list(self.uow.fields)
+            self.audit_events = list(self.uow.audit_events)
+            self.idempotency_records = list(self.uow.idempotency_records)
+            self.view_configs = [
+                (view, None if view.config is None else dict(view.config))
+                for view in self.uow.views
+            ]
+
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    uow.session = SnapshotSession(uow)
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        client.headers["X-Stage06-User-Id"] = "owner-1"
+        workspace_id = client.post(
+            "/workspaces",
+            json={"name": "Acme", "owner_user_id": "owner-1"},
+        ).json()["id"]
+        base_id = client.post(
+            f"/workspaces/{workspace_id}/bases",
+            json={"name": "Operations"},
+        ).json()["id"]
+        table_id = client.post(
+            f"/bases/{base_id}/tables",
+            json={"name": "Projects", "key": "projects"},
+        ).json()["id"]
+        client.post(
+            f"/bases/{base_id}/views",
+            json={
+                "table_id": table_id,
+                "name": "Broken view",
+                "view_type": "grid",
+                "config": {"fields": []},
+            },
+        )
+        uow.views[0].config = None
+        uow.session.snapshot()
+        audit_count = len(uow.audit_events)
+
+        failed = client.post(
+            f"/tables/{table_id}/field-initializations",
+            headers={"Idempotency-Key": "field-initialization-rollback"},
+            json={"name": "Stage", "field_type": "text", "required": False},
+        )
+
+    assert failed.status_code == 500
+    assert uow.list_fields(UUID(table_id)) == []
+    assert len(uow.audit_events) == audit_count
+    assert uow.idempotency_records == []
+    assert uow.views[0].config is None

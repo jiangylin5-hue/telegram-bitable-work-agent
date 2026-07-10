@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CreateWorkspaceRequest(BaseModel):
@@ -201,6 +201,20 @@ class SafeTableFieldResponse(BaseModel):
     required: bool
     options: dict[str, Any]
     order_index: int
+
+
+class InitializeFieldRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    field_type: str
+    required: bool = False
+    choices: list[str] | None = None
+
+
+class FieldInitializationResponse(BaseModel):
+    field: SafeTableFieldResponse
+    affected_view_ids: list[str]
 
 
 class TableSchemaResponse(BaseModel):

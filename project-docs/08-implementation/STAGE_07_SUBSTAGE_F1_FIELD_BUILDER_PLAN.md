@@ -340,7 +340,7 @@ git commit -m "feat(stage07): initialize fields atomically"
 - Consumes: `initialize_field`, `workspace_id_for_table`, `authorize_workspace_action`, P3 fingerprint/idempotency helper and `safe_table_schema_field`.
 - Produces: `POST /tables/{table_id}/field-initializations` returning `FieldInitializationResponse`.
 
-- [ ] **Step 1: Write failing route tests**
+- [x] **Step 1: Write failing route tests**
 
 ```python
 def test_field_initialization_replays_same_key_and_rejects_payload_change(client, table_id):
@@ -359,7 +359,7 @@ def test_field_initialization_replays_same_key_and_rejects_payload_change(client
 
 Add tests for `403` before write, cross-workspace denial, `extra` raw keys rejected with `422`, receipt contains no policy/raw config, and a forced view-update failure rolls back field/audit/idempotency.
 
-- [ ] **Step 2: Run the route tests and verify they fail**
+- [x] **Step 2: Run the route tests and verify they fail**
 
 Run:
 
@@ -369,7 +369,7 @@ cd backend; python -m pytest -q tests/unit/test_stage07_field_builder.py -k "end
 
 Expected: FAIL with `404` because the endpoint has not been registered.
 
-- [ ] **Step 3: Define strict request and receipt models**
+- [x] **Step 3: Define strict request and receipt models**
 
 ```python
 class InitializeFieldRequest(BaseModel):
@@ -386,7 +386,7 @@ class FieldInitializationResponse(BaseModel):
 
 No fallback `dict[str, Any]` is allowed in either F1 browser model.
 
-- [ ] **Step 4: Register the route using the P3 idempotency discipline**
+- [x] **Step 4: Register the route using the P3 idempotency discipline**
 
 Implement the route with this shape:
 
@@ -426,7 +426,7 @@ def initialize_field_endpoint(
 
 The fingerprint includes workspace, operation, actor user ID, table ID and normalized user-visible request values. Reuse `_commit_if_sqlalchemy` only through the atomic helper; no early commit is permitted.
 
-- [ ] **Step 5: Run focused route tests and full backend regression**
+- [x] **Step 5: Run focused route tests and full backend regression**
 
 Run:
 
