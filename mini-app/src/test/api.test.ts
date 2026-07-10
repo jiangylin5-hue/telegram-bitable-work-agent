@@ -52,3 +52,23 @@ test('submits an atomic Base initialization with its explicit idempotency key', 
   expect(headers.get('Content-Type')).toBe('application/json')
   expect(headers.get('Idempotency-Key')).toBe('idempotency-1')
 })
+
+test('submits field initialization with only its safe browser payload', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    field: { id: 'field-1', table_id: 'table-1', name: '客户阶段', key: 'fld_server', field_type: 'status', required: true, options: { choices: ['新建', '跟进中'] }, order_index: 0 },
+    affected_view_ids: ['view-1'],
+  }), { status: 201, headers: { 'Content-Type': 'application/json' } }))
+  vi.stubGlobal('fetch', fetchMock)
+
+  await api.initializeField('table-1', { name: '客户阶段', fieldType: 'status', required: true, choices: ['新建', '跟进中'] }, 'field-idempotency-1')
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/tables/table-1/field-initializations',
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ name: '客户阶段', field_type: 'status', required: true, choices: ['新建', '跟进中'] }),
+    }),
+  )
+  const [, request] = fetchMock.mock.calls[0] as [string, RequestInit]
+  expect(new Headers(request.headers).get('Idempotency-Key')).toBe('field-idempotency-1')
+})

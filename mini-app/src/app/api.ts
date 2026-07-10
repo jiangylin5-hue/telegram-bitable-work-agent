@@ -45,6 +45,7 @@ export type SafeTableField = {
   options: { choices?: string[] }
   order_index: number
 }
+export type FieldInitializationReceipt = { field: SafeTableField; affected_view_ids: string[] }
 export type TableSchema = { table: { id: string; name: string; key: string }; fields: SafeTableField[] }
 export type ViewRecords = { view_id: string; records: { id: string; fields: Record<string, unknown> }[]; next_cursor: string | null; has_more: boolean }
 export type ViewPresentation = { view_id: string; table_id: string; view_type: string; visible_field_keys: string[]; group_by_field_key: string | null; date_field_key: string | null; form_field_keys: string[] }
@@ -56,6 +57,12 @@ export class ApiError extends Error {
     super(`请求失败 (${status})`)
   }
 }
+
+const choiceFieldTypes = new Set<FieldBuilderValues['fieldType']>([
+  'status',
+  'single_select',
+  'multi_select',
+])
 
 async function getJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(path, {
@@ -85,6 +92,12 @@ export const api = {
   workspaceHome: (workspaceId: string, init?: RequestInit) => getJson<WorkspaceHome>(`/workspaces/${workspaceId}/home`, init),
   initializeBase: (workspaceId: string, values: { baseName: string; tableName: string }, idempotencyKey: string) => postJson<BuilderInitializationReceipt>(`/workspaces/${workspaceId}/base-initializations`, { base_name: values.baseName, table_name: values.tableName }, idempotencyKey),
   initializeTable: (baseId: string, values: { tableName: string }, idempotencyKey: string) => postJson<BuilderInitializationReceipt>(`/bases/${baseId}/table-initializations`, { table_name: values.tableName }, idempotencyKey),
+  initializeField: (tableId: string, values: FieldBuilderValues, idempotencyKey: string) => postJson<FieldInitializationReceipt>(`/tables/${tableId}/field-initializations`, {
+    name: values.name,
+    field_type: values.fieldType,
+    required: values.required,
+    ...(choiceFieldTypes.has(values.fieldType) ? { choices: values.choices } : {}),
+  }, idempotencyKey),
   baseTables: (baseId: string, init?: RequestInit) => getJson<{ tables: PlatformTable[] }>(`/bases/${baseId}/tables`, init),
   baseViews: (baseId: string, init?: RequestInit) => getJson<{ views: ViewSummary[] }>(`/bases/${baseId}/views`, init),
   tableSchema: (tableId: string, init?: RequestInit) => getJson<TableSchema>(`/tables/${tableId}/schema`, init),
@@ -103,3 +116,4 @@ export const api = {
     body: JSON.stringify({ values, expected_version: expectedVersion }),
   }),
 }
+import type { FieldBuilderValues } from './FieldBuilderPanel'

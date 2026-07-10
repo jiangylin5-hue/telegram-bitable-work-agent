@@ -534,7 +534,7 @@ git commit -m "feat(stage07): validate builder choice values"
 - Consumes: `FieldInitializationReceipt`, `ApiError`, `crypto.randomUUID`, existing Builder drawer classes and `can_manage_schema` presentation hint.
 - Produces: `FieldBuilderPanel` with `onSubmit(values, idempotencyKey)` and `onClose()`.
 
-- [ ] **Step 1: Write failing panel tests**
+- [x] **Step 1: Write failing panel tests**
 
 ```tsx
 render(<FieldBuilderPanel onSubmit={onSubmit} onClose={onClose} />)
@@ -547,7 +547,7 @@ expect(screen.getByRole('button', { name: '添加选项' })).toBeInTheDocument()
 
 Add tests for first-input focus, type-dependent choice editor, pending state, same key after `503`, `409` lock, Cancel/Close and no visible technical key/policy/JSON control.
 
-- [ ] **Step 2: Run the panel test and verify it fails**
+- [x] **Step 2: Run the panel test and verify it fails**
 
 Run:
 
@@ -557,7 +557,7 @@ cd mini-app; npm.cmd test -- --run src/test/field-builder-panel.test.tsx
 
 Expected: FAIL because `FieldBuilderPanel` does not exist.
 
-- [ ] **Step 3: Implement the focused controlled panel**
+- [x] **Step 3: Implement the focused controlled panel**
 
 Define these public types and state rules:
 
@@ -578,7 +578,7 @@ type FieldBuilderPanelProps = {
 
 Generate a fresh key once per newly opened panel. Preserve it only for a network/5xx retry. Normalize duplicate local choices for feedback, but submit only after server-facing values are valid. Use semantic labels, native form controls and the existing light drawer/full-screen mobile sheet styling; do not add a package.
 
-- [ ] **Step 4: Add typed transport**
+- [x] **Step 4: Add typed transport**
 
 Add to `api.ts`:
 
@@ -593,7 +593,7 @@ initializeField: (tableId: string, values: FieldBuilderValues, idempotencyKey: s
 
 `choiceFieldTypes` must be a local immutable `Set` containing only `status`, `single_select` and `multi_select`.
 
-- [ ] **Step 5: Run panel tests and production build**
+- [x] **Step 5: Run panel tests and production build**
 
 Run:
 
