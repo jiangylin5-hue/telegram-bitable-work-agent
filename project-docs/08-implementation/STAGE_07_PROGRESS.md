@@ -7,6 +7,13 @@
 
 ## Progress Log
 
+### 2026-07-11: F1 Duplicate Feedback and Pending Lock Verified at 1440px
+
+- User-approved error presentation is deliberately narrow: the Mini App transport parses only `422.detail.code = duplicate_field_name`; `FieldBuilderPanel` maps that one allowlisted value to `字段名称已存在，请使用其他名称。`. It ignores `detail.message` and every unknown code, leaving the generic safe error path intact. No request parameter, response resource shape, authorization decision or policy data was added.
+- Test-first evidence: the transport and panel tests were first red because `ApiError` retained only the status and the panel chose its generic message. The minimal transport allowlist and local mapping made the focused two-file run green (`10 passed`); the fresh full Mini App suite then reported `13` files / `55` tests passing and the production build passed.
+- Disposable 1440px Browser QA used the real fixture transport chain. It retained `客户阶段`, rendered the fixed duplicate feedback without `field_name`, then held a request pending and observed `创建中…`, `关闭` and `取消` disabled while the modal stayed visible. The final console error/warning check was empty. The fixture was deleted and local server stopped after the run.
+- This is not a four-width close: repeat the two new states at `1280px`, `430px` and `390px`; delayed workspace replacement remains covered by the already-existing application scope-isolation test. F1 therefore remains `partial-local`, and its three PostgreSQL proof cases remain environment-gated.
+
 ### 2026-07-11: F1 Direct-Edit Visual Evidence Corrected
 
 - Replaced the original disposable fixture's route ordering with a short-lived direct-edit fixture that handles `PATCH /records/{id}` before the generic read path. On the 1440px F1 Canvas, `客户阶段` changed from `新建` to `跟进中`, `续费关注` was removed from the tag list, and both Grid and Record Detail reread version `2`.
@@ -188,4 +195,4 @@
 
 ## Next Step
 
-Complete targeted mutation invalidation/refetch for the existing direct-edit/conflict flow in an independently tested slice. Afterwards, prepare and seek approval for the workspace-level Bot, knowledge, memory and Telegram lifecycle contract; complex typed field editors remain a separate, documented work item.
+F1 remains an active partial-local substage: run its and P3's exact disposable PostgreSQL suites only after an authorised `STAGE06_LOCAL_DATABASE_URL` is available, and retain explicit browser evidence for duplicate-name feedback plus an in-flight field request interrupted by workspace/view replacement. Do not begin F2 relation/lookup, V1 additional views, imports/templates, governance or Package 4 implementation while F1 is open. F2/V1 require a separately discussed and approved safe browser/API/permission contract before any code starts.

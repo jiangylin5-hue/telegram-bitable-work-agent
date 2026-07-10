@@ -26,7 +26,7 @@
 - Bot classes: team contact and personal assistant;
 - write outcomes: confirm/reject/replay/conflict/expired.
 - F1 field types: `text`, `number`, `date`, `status`, `single_select`, `multi_select`, `user`, `checkbox`, `url`, `email`, `phone`; relation/lookup/JSON remain negative cases.
-- F1 failure states: blank/duplicate name, invalid/missing choices, raw request extras, schema-policy leak, 401/403/404/409/5xx and failed view update rollback.
+- F1 failure states: blank/duplicate name with the allowlisted local feedback only, invalid/missing choices, raw request extras, schema-policy leak, 401/403/404/409/5xx and failed view update rollback.
 
 ## 2.1 F1 Required Evidence
 
@@ -40,7 +40,7 @@
 ### F1 Automated Current Evidence
 
 - 2026-07-10: fresh full backend regression: `432 passed, 25 skipped in 13.27s`. The 25 skips comprise 17 historical Stage02 online-PostgreSQL cases, five Stage06 local-PostgreSQL security cases and three F1 disposable-PostgreSQL cases; no skipped test is counted as passed evidence.
-- 2026-07-10: fresh Mini App regression: `13 passed` test files and `52 passed` tests; `npm.cmd run build` passed.
+- 2026-07-11: fresh Mini App regression after the duplicate-feedback refinement: `13 passed` test files and `55 passed` tests; `npm.cmd run build` passed.
 - 2026-07-10: `alembic heads` reports only `20260710_0021 (head)`; `alembic upgrade head --sql` exited successfully.
 
 ### F1 PostgreSQL Current Evidence
@@ -53,7 +53,7 @@
 - 2026-07-10: a disposable local fixture exercised 1440px, 1280px, 430px and 390px. It covered fieldless-to-status, visible header re-read, `multi_select`, allowed-choice record creation, blank-name feedback, same-key 503 retry, 409 lock and 403 denied-state cleanup. The retained Workspace Ledger reference and the 1440px rendered F1 state were reviewed together; all final fixture console warnings/errors were empty.
 - The 390px nonempty-table trigger initially exposed a responsive defect: the generic toolbar rule hid the authorised field action. A test was written red, the explicit mobile field/record action override was added, and a fresh 390px fixture run opened the field sheet from its visible `添加字段` trigger.
 - 2026-07-11: a corrected disposable fixture handled `PATCH` before its generic record read. It changed a record from `新建` / `[重点客户, 续费关注]` to `跟进中` / `[重点客户]`, reread version `2` into both Grid and Record Detail, emitted an empty error/warning log and retained `artifacts/stage07/f1-direct-edit-success-1440.png` after visual inspection.
-- The full F1 browser matrix remains incomplete: duplicate-name server feedback and a pending field request interrupted by workspace/view replacement have component/application coverage but no matching browser run. Do not treat them as visually accepted.
+- 2026-07-11: a disposable 1440px local error fixture exercised the actual transport chain for `422.detail.code = duplicate_field_name`: it retained `客户阶段`, rendered only `字段名称已存在，请使用其他名称。`, rendered no `field_name` server message and had no warning/error console entries. The same fixture held a field request pending and observed the `创建中…`, `关闭` and `取消` controls disabled while the dialog stayed visible. The application test remains the authoritative scope-switch simulation: it resolves a delayed field receipt only after a workspace replacement and proves the old field does not render. Do not force an impossible background switch through the modal or treat component coverage as browser evidence. Repeat the two new visual states at 1280px/430px/390px before treating the complete four-width state matrix as accepted.
 
 ## 3. Completion Rule
 

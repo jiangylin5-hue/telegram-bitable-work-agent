@@ -21,5 +21,5 @@ blocked
 ## Blocking evidence gaps
 
 - The source reference includes a populated Workspace Ledger plus assistant rail, which belongs to wider Package 2/4 work and is intentionally not claimed as F1 parity.
-- The direct-edit screenshot is now captured, but the full browser matrix still lacks explicit duplicate-name server feedback and an in-flight field request interrupted by a workspace/view transition. Existing component/application tests cover the corresponding behaviour; they are not substituted for those browser cases.
+- A disposable 1440px fixture now verifies explicit duplicate-name server feedback: it retains the typed name, renders only the fixed local feedback and omits the server message. It also verifies the pending dialog keeps `创建中…`, close and cancel controls disabled. Repeat those two states at 1280px/430px/390px before closing the full matrix. The delayed workspace/view replacement remains an application-level scope-isolation test because the modal correctly blocks the impossible background interaction.
 - The three F1 real-PostgreSQL proof cases remain skipped until an authorised disposable `STAGE06_LOCAL_DATABASE_URL` is available.

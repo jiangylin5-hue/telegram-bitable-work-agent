@@ -52,8 +52,10 @@ export type ViewPresentation = { view_id: string; table_id: string; view_type: s
 export type RecordDetail = { id: string; table_id: string; values: Record<string, unknown>; record_status: string; version: number }
 export type CreateForm = { table_id: string; can_create: boolean; fields: { key: string; name: string; field_type: string; required: boolean; options: Record<string, unknown>; order_index: number }[] }
 
+export type SafeApiErrorCode = 'duplicate_field_name'
+
 export class ApiError extends Error {
-  constructor(public readonly status: number) {
+  constructor(public readonly status: number, public readonly code?: SafeApiErrorCode) {
     super(`请求失败 (${status})`)
   }
 }
@@ -64,13 +66,25 @@ const choiceFieldTypes = new Set<FieldBuilderValues['fieldType']>([
   'multi_select',
 ])
 
+async function safeErrorCode(response: Response): Promise<SafeApiErrorCode | undefined> {
+  try {
+    const body: unknown = await response.json()
+    if (!body || typeof body !== 'object' || !('detail' in body)) return undefined
+    const detail = body.detail
+    if (!detail || typeof detail !== 'object' || !('code' in detail)) return undefined
+    return detail.code === 'duplicate_field_name' ? detail.code : undefined
+  } catch {
+    return undefined
+  }
+}
+
 async function getJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(path, {
     headers: { Accept: 'application/json' },
     credentials: 'same-origin',
     ...init,
   })
-  if (!response.ok) throw new ApiError(response.status)
+  if (!response.ok) throw new ApiError(response.status, await safeErrorCode(response))
   return response.json() as Promise<T>
 }
 

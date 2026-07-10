@@ -72,3 +72,16 @@ test('submits field initialization with only its safe browser payload', async ()
   const [, request] = fetchMock.mock.calls[0] as [string, RequestInit]
   expect(new Headers(request.headers).get('Idempotency-Key')).toBe('field-idempotency-1')
 })
+
+test('exposes only the duplicate-field allowlist code from a field initialization error', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    detail: { code: 'duplicate_field_name', message: 'field_name' },
+  }), { status: 422, headers: { 'Content-Type': 'application/json' } }))
+  vi.stubGlobal('fetch', fetchMock)
+
+  await expect(api.initializeField(
+    'table-1',
+    { name: '客户阶段', fieldType: 'text', required: false, choices: [] },
+    'field-idempotency-duplicate',
+  )).rejects.toMatchObject({ status: 422, code: 'duplicate_field_name' })
+})

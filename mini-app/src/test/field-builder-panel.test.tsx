@@ -44,6 +44,31 @@ test('preserves the same idempotency key after a temporary failure and locks aft
   expect(onSubmit).toHaveBeenNthCalledWith(2, expect.objectContaining({ name: '客户阶段' }), 'field-create-1')
 })
 
+test('renders the fixed duplicate-name feedback without rendering the server message', async () => {
+  const duplicate = Object.assign(new ApiError(422), { code: 'duplicate_field_name' })
+  const onSubmit = vi.fn().mockRejectedValue(duplicate)
+  render(<FieldBuilderPanel onSubmit={onSubmit} onClose={() => undefined} />)
+
+  fireEvent.change(screen.getByLabelText('字段名称'), { target: { value: '客户阶段' } })
+  fireEvent.click(screen.getByRole('button', { name: '创建字段' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('字段名称已存在，请使用其他名称。')
+  expect(screen.queryByText('field_name')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('字段名称')).toHaveValue('客户阶段')
+})
+
+test('keeps unknown field-initialization codes on the generic safe feedback path', async () => {
+  const unrecognised = Object.assign(new ApiError(422), { code: 'field_policy_not_allowed' })
+  const onSubmit = vi.fn().mockRejectedValue(unrecognised)
+  render(<FieldBuilderPanel onSubmit={onSubmit} onClose={() => undefined} />)
+
+  fireEvent.change(screen.getByLabelText('字段名称'), { target: { value: '客户阶段' } })
+  fireEvent.click(screen.getByRole('button', { name: '创建字段' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('创建失败，请稍后重试。')
+  expect(screen.queryByText('field_policy_not_allowed')).not.toBeInTheDocument()
+})
+
 test('shows a pending state and closes without submitting when cancelled', async () => {
   let resolveSubmission: () => void = () => undefined
   const onSubmit = vi.fn(() => new Promise<void>((resolve) => { resolveSubmission = resolve }))

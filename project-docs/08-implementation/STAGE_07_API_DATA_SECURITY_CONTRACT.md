@@ -116,6 +116,8 @@ The receipt excludes policy, raw options/configuration, default values, roles, i
 
 First success returns `201`, matching completed key/payload returns `200` with the same receipt, and a changed payload under the same key returns `409`. Validation failure is `422`; membership/action denial is generic `403`; `401` clears protected state; `404` does not reveal parent resources. A database or view-update failure rolls back the field, view changes, audit and incomplete idempotency state together. The browser retains a key only for explicit network/`5xx` retry, locks a `409` panel until close, and rereads authorized schema/presentation/records/create-form before it renders the field.
 
+For the approved duplicate-name feedback refinement, the transport may inspect only `422.detail.code === "duplicate_field_name"` and map it locally to the fixed message `字段名称已存在，请使用其他名称。`. It must not display `detail.message`, retain the response body, infer any other validation code, or treat an unknown/malformed error body as specific feedback; every other failure remains the existing generic safe error. This is an error-presentation allowlist, not a new browser write parameter, schema field, permission signal or resource-disclosure channel.
+
 ## 6. Client Security Rules
 
 - Do not derive permissions from navigation visibility or cached role strings.
@@ -124,6 +126,7 @@ First success returns `201`, matching completed key/payload returns `200` with t
 - On `403`, show a generic denied state; do not infer resource existence from client retries.
 - For P3 Builder initialization, preserve one idempotency key only across explicit network/5xx retry; lock a `409` conflict until the panel is closed, and never retry a denied request.
 - For F1 field initialization, use the same retry/`409`/denial discipline and never render a field from a receipt until its exact ID exists in the reread safe schema.
+- While an F1 request is pending, the modal remains modal and its close/cancel controls are disabled, so a user cannot force a background workspace/view switch through an open write dialog. Browser QA observes those disabled controls; the existing application test remains the authoritative simulation proving a delayed receipt cannot restore an old workspace after a scope switch.
 - Confirmation controls require server-provided draft/action state and the current user confirmation action. A stale action result is discarded and reloaded.
 
 ## 7. Acceptance Contract

@@ -860,13 +860,13 @@ At `1440px`, `1280px`, `430px` and `390px`, run these real interactions against 
 
 1. fieldless Grid -> `添加第一个字段` -> first `status` field with choices -> exact new header;
 2. nonempty Grid -> `multi_select` field -> create and direct-edit a record with two allowed choices;
-3. blank/duplicate name and invalid choice feedback;
+3. blank/invalid-choice feedback and a duplicate-name `422.detail.code = duplicate_field_name` response that renders only the fixed local message, never `detail.message`;
 4. simulated `503` same-key explicit retry, simulated `409` lock and simulated `403` generic denial; and
-5. workspace/view switch during a pending request, proving no stale field renders.
+5. a pending request with disabled close/cancel controls, proving the modal prevents an impossible background workspace/view switch; the existing application test then resolves a delayed receipt after a workspace replacement, proving no stale field renders.
 
 Capture the rendered screen beside `assets/stage07/workspace-ledger-reference.png` at the matching desktop widths. Inspect visible differences in shell proportions, dense toolbar placement, drawer/sheet spacing, type scale, borders/radii, selection blue and right-rail treatment. Stop/remove the fixture and delete unsanctioned test artifacts after inspection.
 
-2026-07-11 correction: fieldless/add/choice/create/503/409/403 and four-width runs exist; direct-edit success is retained in `artifacts/stage07/f1-direct-edit-success-1440.png`. The checkbox remains open because duplicate-name server feedback and an in-flight field request interrupted by workspace/view replacement still lack a browser run. The three PostgreSQL cases remain separately environment-gated.
+2026-07-11 correction: fieldless/add/choice/create/503/409/403 and four-width runs exist; direct-edit success is retained in `artifacts/stage07/f1-direct-edit-success-1440.png`. A disposable 1440px error fixture now proves the duplicate-name `422` allowlist mapping and the pending-dialog disabled-control state with an empty final error/warning log. Repeat those two states at 1280px/430px/390px before completing this four-width step. The delayed workspace replacement remains an application-level scope-isolation proof because the modal correctly prevents forcing that background interaction. The three PostgreSQL cases remain separately environment-gated.
 
 - [x] **Step 3: Update evidence documents accurately**
 

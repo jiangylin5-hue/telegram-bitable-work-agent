@@ -109,6 +109,8 @@ export function FieldBuilderPanel({ onSubmit, onClose }: FieldBuilderPanelProps)
       if (caught instanceof ApiError && caught.status === 409) {
         setError('创建请求发生冲突，请关闭后重新创建。')
         setConflicted(true)
+      } else if (caught instanceof ApiError && caught.status === 422 && caught.code === 'duplicate_field_name') {
+        setError('字段名称已存在，请使用其他名称。')
       } else {
         setError('创建失败，请稍后重试。')
       }

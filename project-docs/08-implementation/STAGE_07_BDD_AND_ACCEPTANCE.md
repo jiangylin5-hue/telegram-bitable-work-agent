@@ -84,6 +84,10 @@ Given two authorised builders add different fields to the same table concurrentl
 
 Given a builder opens the Mini App at `390px` or `430px`, when they add a field, then the labelled full-screen sheet exposes relevant inputs/retry/close controls and success returns to the same authorised Grid without a desktop-only route.
 
+### Scenario F1-8: Duplicate Feedback and Pending Dialog Stay Safe
+
+Given the server rejects a normalized duplicate field name with `422.detail.code = duplicate_field_name`, when the builder submits it, then the Field Builder keeps the entered values and shows the fixed local message `字段名称已存在，请使用其他名称。`; it ignores `detail.message` and every unrecognised error code. Given a field request is pending, when the dialog is visible, then its close/cancel controls are disabled and it cannot expose a background workspace/view switch; the application scope-switch test proves a delayed receipt cannot restore an old workspace.
+
 ## 2. Required Evidence
 
 - desktop and mobile screenshots for each primary flow;
