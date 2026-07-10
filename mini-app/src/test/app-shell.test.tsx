@@ -101,7 +101,8 @@ test('opening a Base loads its authorized table schema and saved-view records as
     .mockResolvedValueOnce(new Response(JSON.stringify({ views: [{ id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: '全部客户', view_type: 'grid', status: 'active' }, { id: 'view-2', base_id: 'base-1', table_id: 'table-1', name: '按状态', view_type: 'kanban', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     .mockResolvedValueOnce(new Response(JSON.stringify({ table: { id: 'table-1', name: '客户表', key: 'customers' }, fields: [{ id: 'field-1', name: '客户名称', key: 'name', field_type: 'text', required: true, order_index: 0 }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: ['name'], group_by_field_key: null, date_field_key: null, form_field_keys: ['name'] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
-    .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-1', records: [{ id: 'record-1', fields: { name: 'Ada Co' } }], trace_id: 'redacted', has_more: false, next_cursor: null }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-1', records: [{ id: 'record-1', fields: { name: 'Ada Co' } }], trace_id: 'redacted', has_more: true, next_cursor: 'cursor-2' }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-1', records: [{ id: 'record-1', fields: { name: 'Ada Co' } }, { id: 'record-2', fields: { name: 'Northstar' } }], has_more: false, next_cursor: null }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'record-1', table_id: 'table-1', values: { name: 'Ada Co' }, record_status: 'active', version: 3 }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'record-1', table_id: 'table-1', values: { name: 'Ada Ltd' }, record_status: 'active', version: 4 }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-2', table_id: 'table-1', view_type: 'kanban', visible_field_keys: ['name', 'status'], group_by_field_key: 'status', date_field_key: null, form_field_keys: ['name', 'status'] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
@@ -119,6 +120,10 @@ test('opening a Base loads its authorized table schema and saved-view records as
   expect(fetchMock).toHaveBeenCalledWith('/tables/table-1/schema', expect.any(Object))
   expect(fetchMock).toHaveBeenCalledWith('/views/view-1/presentation', expect.any(Object))
   expect(fetchMock).toHaveBeenCalledWith('/views/view-1/records', expect.any(Object))
+
+  fireEvent.click(screen.getByRole('button', { name: '加载更多记录' }))
+  expect(await screen.findByRole('cell', { name: 'Northstar' })).toBeInTheDocument()
+  expect(fetchMock).toHaveBeenCalledWith('/views/view-1/records?cursor=cursor-2', expect.any(Object))
 
   fireEvent.click(screen.getByRole('cell', { name: 'Ada Co' }))
   expect(await screen.findByRole('heading', { name: '记录详情' })).toBeInTheDocument()

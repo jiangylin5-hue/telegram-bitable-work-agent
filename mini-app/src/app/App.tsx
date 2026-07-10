@@ -16,6 +16,8 @@ type BaseCanvasState = {
   records: ViewRecords | null
   presentation: ViewPresentation | null
   detail?: RecordDetail
+  loadingMore?: boolean
+  loadMoreError?: boolean
 }
 
 type AppState =
@@ -121,6 +123,30 @@ export function App() {
     }
   }
 
+  async function loadMoreRecords(cursor: string) {
+    const canvas = readyState.canvas
+    if (!canvas?.view || !canvas.records || canvas.records.next_cursor !== cursor || canvas.loadingMore) return
+    const workspaceId = readyState.home.workspace_id
+    const viewId = canvas.view.id
+    const matchesActiveView = (current: AppState): current is Extract<AppState, { status: 'ready' }> & { canvas: BaseCanvasState } => current.status === 'ready' && current.home.workspace_id === workspaceId && current.canvas?.view?.id === viewId && current.canvas.records?.next_cursor === cursor
+    setState((current) => matchesActiveView(current) ? { ...current, canvas: { ...current.canvas, loadingMore: true, loadMoreError: false } } : current)
+    try {
+      const page = await api.viewRecords(viewId, cursor)
+      setState((current) => {
+        if (!matchesActiveView(current)) return current
+        const currentRecords = current.canvas.records!
+        const knownRecordIds = new Set(currentRecords.records.map((record) => record.id))
+        return { ...current, canvas: { ...current.canvas, records: { ...page, records: [...currentRecords.records, ...page.records.filter((record) => !knownRecordIds.has(record.id))] }, loadingMore: false, loadMoreError: false } }
+      })
+    } catch (error) {
+      setState((current) => {
+        if (!matchesActiveView(current)) return current
+        if (error instanceof ApiError && error.status === 403) return { status: 'denied' }
+        return { ...current, canvas: { ...current.canvas, loadingMore: false, loadMoreError: true } }
+      })
+    }
+  }
+
   async function selectView(viewId: string) {
     const canvas = readyState.canvas
     if (!canvas || canvas.view?.id === viewId) return
@@ -140,7 +166,7 @@ export function App() {
   const content = readyState.canvasLoading
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
-      ? <><BaseCanvas {...readyState.canvas} onBack={() => setState({ ...readyState, canvas: undefined })} onOpenRecord={openRecord} onSelectView={selectView} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} onConflict={refreshRecordAfterConflict} onClose={() => setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } })} />}</>
+      ? <><BaseCanvas {...readyState.canvas} onBack={() => setState({ ...readyState, canvas: undefined })} onOpenRecord={openRecord} onSelectView={selectView} onLoadMore={loadMoreRecords} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} onConflict={refreshRecordAfterConflict} onClose={() => setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } })} />}</>
       : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} />
   return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace}>{content}</AppShell>
 }

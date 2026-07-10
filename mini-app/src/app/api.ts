@@ -62,7 +62,7 @@ export const api = {
   baseViews: (baseId: string) => getJson<{ views: ViewSummary[] }>(`/bases/${baseId}/views`),
   tableSchema: (tableId: string) => getJson<TableSchema>(`/tables/${tableId}/schema`),
   viewPresentation: (viewId: string) => getJson<ViewPresentation>(`/views/${viewId}/presentation`),
-  viewRecords: (viewId: string) => getJson<ViewRecords>(`/views/${viewId}/records`),
+  viewRecords: (viewId: string, cursor?: string) => getJson<ViewRecords>(`/views/${viewId}/records${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`),
   recordDetail: (recordId: string) => getJson<RecordDetail>(`/records/${recordId}`),
   updateRecord: (recordId: string, values: Record<string, unknown>, expectedVersion: number) => getJson<RecordDetail>(`/records/${recordId}`, {
     method: 'PATCH',

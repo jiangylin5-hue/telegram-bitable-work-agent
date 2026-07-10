@@ -78,6 +78,18 @@
 - Prepared, but did not implement, `STAGE_07_TECHNICAL_DECISION_001_PROTECTED_QUERY_STATE.md` for user discussion. It recommends a memory-only `@tanstack/react-query` v5 boundary with verified user/workspace-prefixed keys, cancellation/removal on identity/workspace changes and no browser persistence.
 - This is a technical selection gate. No dependency, cache migration, local persistence, API/schema/permission change or Package 4 behavior was added by the proposal.
 
+### 2026-07-10: Server-Cursor View Pagination Verified
+
+- Reused the existing Stage06 `next_cursor`/`has_more` view-record contract; no client filter, sort, group, hidden-field reconstruction or API/permission change was added.
+- Base Canvas renders a load-more control only when the server returns a cursor. The next request sends that exact encoded cursor, appends only new record IDs and retains the previous authorized window if the next-page request fails so the user can retry.
+- `403` during pagination transitions to the generic denied boundary; stale pages cannot overwrite a replaced view/workspace because each completion verifies the active view/cursor before updating local state.
+- Verification: component and application tests cover server-cursor forwarding, deduplication and failure/retry presentation; focused frontend run passed `9 passed`; build passed. Browser QA with a disposable local contract fixture loaded page 2 (`Northstar`) at desktop and `390x844` mobile with no relevant console warning/error. The fixture/server were removed after the check.
+
+### 2026-07-10: Protected Query State Decision Approved
+
+- User approved Technical Decision 001. The next subphase may add the documented memory-only `@tanstack/react-query` v5 boundary after red tests prove user/workspace key isolation, request cancellation and 401/403/404 cache removal.
+- The approval does not extend to browser persistence, backend API/schema/permission changes, governance, Bot/knowledge/memory or Telegram production verification.
+
 ## Next Step
 
 Run the full frontend/backend regression and browser QA for the version-aware edit path. Then prepare and seek approval for the workspace-level Bot, knowledge, memory and Telegram lifecycle contract; complex typed field editors, conflict reload and cache invalidation remain separate, documented work items.

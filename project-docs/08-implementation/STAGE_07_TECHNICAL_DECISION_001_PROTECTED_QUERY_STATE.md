@@ -2,7 +2,7 @@
 
 ## Status
 
-- Decision status: proposal — **requires explicit user confirmation before dependency or code changes**
+- Decision status: approved by user on 2026-07-10 — implementation may begin only within this document's scope
 - Scope: Mini App/desktop React server-state cache, request cancellation, workspace/session/revocation clearing and mutation refresh
 - Non-scope: backend schema/API/role/permission changes; local persistence; Bot/knowledge/memory implementation
 
@@ -108,9 +108,9 @@ Protected queries are memory-only, `staleTime: 0`, `gcTime: 0` once unobserved, 
 - Existing 409 record conflict recovery and field filtering continue to pass.
 - Browser QA covers desktop and mobile workspace switch, denied/revoked recovery and record conflict states.
 
-## 7. Explicit Confirmation Requested
+## 7. Approval Boundary
 
-Approval authorizes only the Option A implementation above: adding `@tanstack/react-query` v5 as a memory-only protected server-state layer and refactoring the already-approved Package 1/2 reads to it. It does **not** authorize a backend contract change, local persistence, governance permissions, Bot/knowledge/memory work or Telegram production verification.
+The user approved Option A on 2026-07-10. The approval authorizes only adding `@tanstack/react-query` v5 as a memory-only protected server-state layer and refactoring the already-approved Package 1/2 reads to it. It does **not** authorize a backend contract change, local persistence, governance permissions, Bot/knowledge/memory work or Telegram production verification.
 
 ## 8. Mature Architecture References
 

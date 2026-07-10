@@ -2,15 +2,16 @@ import { ArrowLeft, ChevronDown, MoreHorizontal, Plus, Table2 } from 'lucide-rea
 
 import type { BaseSummary, PlatformTable, TableSchema, ViewPresentation, ViewRecords, ViewSummary } from './api'
 
-type BaseCanvasProps = { base: BaseSummary; tables: PlatformTable[]; views: ViewSummary[]; table: PlatformTable | null; view: ViewSummary | null; schema: TableSchema | null; records: ViewRecords | null; presentation: ViewPresentation | null; onBack: () => void; onOpenRecord: (recordId: string) => void; onSelectView: (viewId: string) => void }
+type BaseCanvasProps = { base: BaseSummary; tables: PlatformTable[]; views: ViewSummary[]; table: PlatformTable | null; view: ViewSummary | null; schema: TableSchema | null; records: ViewRecords | null; presentation: ViewPresentation | null; loadingMore?: boolean; loadMoreError?: boolean; onBack: () => void; onOpenRecord: (recordId: string) => void; onSelectView: (viewId: string) => void; onLoadMore?: (cursor: string) => void }
 
-export function BaseCanvas({ base, tables: _tables, views, table, view, schema, records, presentation, onBack, onOpenRecord, onSelectView }: BaseCanvasProps) {
+export function BaseCanvas({ base, tables: _tables, views, table, view, schema, records, presentation, loadingMore, loadMoreError, onBack, onOpenRecord, onSelectView, onLoadMore }: BaseCanvasProps) {
   if (!table || !view || !schema || !records || !presentation) return <main className="base-canvas empty-canvas" aria-label="Base 工作台"><button className="back-link" type="button" onClick={onBack}><ArrowLeft size={16} /> 返回工作区</button><h1>{base.name}</h1><p>这个 Base 还没有可访问的表或保存视图。</p></main>
   return <main className="base-canvas" aria-label="Base 工作台">
     <header className="canvas-header"><button className="back-link" type="button" onClick={onBack}><ArrowLeft size={16} /> 工作区</button><span className="canvas-separator">/</span><h1>{base.name}</h1><button className="icon-button" aria-label="更多 Base 操作" type="button"><MoreHorizontal size={19} /></button></header>
     <div className="canvas-table-tabs"><button className="table-tab active" type="button"><Table2 size={16} />{table.name}<ChevronDown size={14} /></button><button className="add-table" type="button" aria-label="新建表"><Plus size={16} /></button></div>
     <div className="view-toolbar"><div role="tablist" aria-label="保存视图">{views.filter((item) => item.table_id === table.id).map((item) => <button role="tab" aria-selected={item.id === view.id} className={item.id === view.id ? 'view-tab active' : 'view-tab'} type="button" key={item.id} onClick={() => onSelectView(item.id)}>{item.name}</button>)}</div><div className="view-tools"><button type="button">筛选</button><button type="button">排序</button><button type="button">分组</button></div></div>
     <ViewSurface presentation={presentation} schema={schema} records={records} onOpenRecord={onOpenRecord} />
+    {records.has_more && records.next_cursor && onLoadMore && <div className="record-pagination"><button type="button" disabled={loadingMore} onClick={() => onLoadMore(records.next_cursor!)}>{loadingMore ? '正在加载…' : '加载更多记录'}</button>{loadMoreError && <p role="alert">加载失败，请重试。</p>}</div>}
   </main>
 }
 

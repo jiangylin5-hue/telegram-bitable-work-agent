@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react'
-import { expect, test } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { expect, test, vi } from 'vitest'
 
 import { BaseCanvas } from '../app/BaseCanvas'
 
@@ -35,4 +35,25 @@ test('renders Form fields in the server-provided field order', () => {
   renderView('form', { form_field_keys: ['due', 'name'] })
   expect(screen.getByRole('button', { name: '查看记录详情' })).toBeInTheDocument()
   expect(screen.getByText('截止日')).toBeInTheDocument()
+})
+
+test('forwards only the server-provided next cursor when loading another record page', () => {
+  const onLoadMore = vi.fn()
+  const view = { id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: '当前视图', view_type: 'grid', status: 'active' }
+  render(<BaseCanvas base={base} tables={[table]} views={[view]} table={table} view={view} schema={schema} records={{ ...records, next_cursor: 'cursor-2', has_more: true }} presentation={{ view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: ['name', 'status', 'due'], group_by_field_key: null, date_field_key: null, form_field_keys: ['name', 'status', 'due'] }} onBack={() => undefined} onOpenRecord={() => undefined} onSelectView={() => undefined} onLoadMore={onLoadMore} />)
+
+  fireEvent.click(screen.getByRole('button', { name: '加载更多记录' }))
+
+  expect(onLoadMore).toHaveBeenCalledWith('cursor-2')
+})
+
+test('retains the authorized record window and offers retry after a next-page failure', () => {
+  const onLoadMore = vi.fn()
+  const view = { id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: '当前视图', view_type: 'grid', status: 'active' }
+  render(<BaseCanvas base={base} tables={[table]} views={[view]} table={table} view={view} schema={schema} records={{ ...records, next_cursor: 'cursor-2', has_more: true }} presentation={{ view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: ['name', 'status', 'due'], group_by_field_key: null, date_field_key: null, form_field_keys: ['name', 'status', 'due'] }} loadMoreError onBack={() => undefined} onOpenRecord={() => undefined} onSelectView={() => undefined} onLoadMore={onLoadMore} />)
+
+  expect(screen.getByRole('cell', { name: '发布计划' })).toBeInTheDocument()
+  expect(screen.getByRole('alert')).toHaveTextContent('加载失败，请重试。')
+  fireEvent.click(screen.getByRole('button', { name: '加载更多记录' }))
+  expect(onLoadMore).toHaveBeenCalledWith('cursor-2')
 })
