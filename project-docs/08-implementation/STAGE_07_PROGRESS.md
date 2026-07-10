@@ -7,6 +7,12 @@
 
 ## Progress Log
 
+### 2026-07-10: Original Stage07 Visual References Retained
+
+- The user re-provided the three selected desktop reference images that were previously unavailable as repository assets. They are now retained as `Work Queue Atlas`, `Conversation Desk` and `Workspace Ledger` references under `project-docs/08-implementation/assets/stage07/`.
+- Added `STAGE_07_VISUAL_REFERENCE_MANIFEST.md` to map each image to its owned product surface, state the shared light visual grammar and define later screenshot-comparison evidence. The references are visual-only: they neither import external product data nor expand the Stage07 API, authority, Bot or confirmation scope.
+- This closes the missing-reference-asset gap noted by P3 documentation. It does **not** claim that the current Mini App matches all three references, nor does it replace the required 1440/1280/430/390 visual QA and real Telegram Mini App evidence.
+
 ### 2026-07-10: P3 Atomic Base/Table Builder Is Implemented With A Real-PostgreSQL Evidence Gap
 
 - The approved P3 design and task plan introduced only two atomic creation paths: `POST /workspaces/{workspace_id}/base-initializations` creates `Base + initial table + default Grid`; `POST /bases/{base_id}/table-initializations` creates `table + default Grid`. Each endpoint independently authorizes the required granular actions, performs resource/audit/idempotency writes in one transaction and returns only a safe receipt. The existing primitive creation endpoints remain compatible but are not used by the Mini App P3 flow.

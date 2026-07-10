@@ -4,7 +4,7 @@
 
 - Document status: approved design, awaiting written-spec review
 - Scope: React/Vite Telegram Mini App and desktop-browser UI design for the generic workspace, Bitable and digital-employee platform
-- Current Progress: 2026-07-10 user-approved visual direction is active. A bounded Package 1/2 implementation uses the approved light visual system and read-only contract extensions; its exact evidence and remaining work are tracked by `STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md`. No unapproved Package 4 schema, API or permission change has started.
+- Current Progress: 2026-07-10 user-approved visual direction is active and its three original reference images are retained in the Stage07 visual manifest. A bounded Package 1/2 implementation uses the approved light visual system and read-only contract extensions; its exact evidence and remaining work are tracked by `STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md`. No unapproved Package 4 schema, API or permission change has started.
 
 ## Purpose
 
@@ -17,6 +17,8 @@ Stage07 is the separate UI phase authorized after Stage06 backend-readiness acce
 - Bot and draft-confirmation workflows use the contextual `Conversation Desk` direction.
 - The design is true-white, cool-gray and restrained azure-blue. Dark AI dashboards, gradients, glows and generic card walls are rejected.
 - Desktop favors building and governance; mobile favors processing, confirmation and conversation without changing authority or view semantics.
+
+The retained reference assets and their screen-by-screen acceptance roles are defined in [Stage 07 Visual Reference Manifest](STAGE_07_VISUAL_REFERENCE_MANIFEST.md). That manifest is the visual comparison baseline; it does not extend a backend contract or permit copied product data.
 
 ## Stage Packages
 
