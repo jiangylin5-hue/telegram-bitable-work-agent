@@ -3,7 +3,7 @@
 ## Status
 
 - Document status: active progress log
-- Current Progress: 2026-07-10 Package 1/2 has an implemented, verified vertical path: approved Mini App bootstrap, authorization-filtered Workspace Home, responsive App Shell and workspace switching; permission-filtered Base/table/view canvas; read-only Grid/Kanban/Calendar/Form presentation; Record Detail; and version-aware scalar direct edits. Governance, imports/templates, Bot surface, draft confirmation and final Stage07 acceptance remain incomplete.
+- Current Progress: 2026-07-10 Package 1/2 has an implemented, verified vertical path: approved Mini App bootstrap, authorization-filtered Workspace Home, responsive App Shell and workspace switching; permission-filtered Base/table/view canvas; read-only Grid/Kanban/Calendar/Form presentation; Record Detail; and version-aware scalar direct edits. Protected Query now covers bootstrap, Workspace Home and the initial Base-open dependency tree. Governance, imports/templates, Bot surface, draft confirmation and final Stage07 acceptance remain incomplete.
 
 ## Progress Log
 
@@ -97,6 +97,13 @@
 - No browser storage, cache persister, backend endpoint/schema/permission change, governance screen, Bot feature or Telegram production flow was added. Base/table/view/record reads deliberately remain on the existing local state path until their own migration test slice.
 - Verification: Query-key/scope-removal/default tests and API AbortSignal test passed; full frontend suite passed `17 passed`; production build passed. Browser QA switched from `运营中心` to `项目中心`, rendered only the new authorized Base and removed the old Base link with no relevant console warning/error. Static scan found no `localStorage`, `sessionStorage` or `persistQueryClient` usage.
 
+### 2026-07-10: Protected Query Base-Open Slice Verified
+
+- Migrated only the initial Base-open dependency tree to the approved memory-only query boundary: Base tables, Base views, the default table schema, default view presentation and the first cursor record window. All keys retain the verified `userId`/`workspaceId` prefix and each query forwards its cancellation signal to the existing transport; no backend/API/schema/permission change was made.
+- A new red application test reproduced an actual stale-data risk: delayed Base tables/views from `workspace-1` could complete after a switch to `workspace-2` and restore the old Base canvas. The test now passes because the canvas request generation is invalidated on workspace switch and the old protected scope is cancelled/removed before the target Home loads.
+- Verification: targeted App shell test passed `5 passed`; full frontend suite passed `18 passed`; `npm.cmd run build` and `git diff --check` passed. Browser QA used a disposable fixture to confirm `运营中心` Home -> `客户管理` Base -> `全部客户` Grid, including `Northstar / 进行中`, with no console warning/error. The test fixture and local server were removed/stopped after the check.
+- Not yet migrated: saved-view switching, record detail, cursor follow-up pages, direct-edit mutation refresh and conflict recovery. These remain deliberately scoped follow-up migrations, not implied by this Base-open slice.
+
 ## Next Step
 
-Run the full frontend/backend regression and browser QA for the version-aware edit path. Then prepare and seek approval for the workspace-level Bot, knowledge, memory and Telegram lifecycle contract; complex typed field editors, conflict reload and cache invalidation remain separate, documented work items.
+Complete the remaining protected-query migration in independently tested slices: saved-view switching, record detail and cursor follow-up pages, then targeted mutation invalidation/refetch for the existing direct-edit/conflict flow. Afterwards, prepare and seek approval for the workspace-level Bot, knowledge, memory and Telegram lifecycle contract; complex typed field editors remain a separate, documented work item.

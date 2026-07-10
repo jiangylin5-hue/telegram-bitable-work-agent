@@ -41,6 +41,7 @@ function AppContent() {
   const queryClient = useQueryClient()
   const [state, setState] = useState<AppState>({ status: 'loading' })
   const homeRequestVersion = useRef(0)
+  const canvasRequestVersion = useRef(0)
   const bootstrapQuery = useQuery({
     queryKey: ['stage07', 'bootstrap'],
     queryFn: ({ signal }) => api.bootstrap({ signal }),
@@ -105,25 +106,46 @@ function AppContent() {
   async function selectWorkspace(workspaceId: string) {
     if (workspaceId === activeWorkspace.id) return
     homeRequestVersion.current += 1
+    canvasRequestVersion.current += 1
     setState({ status: 'loading' })
     await clearProtectedWorkspace(queryClient, { userId: readyState.bootstrap.identity.user_id, workspaceId: activeWorkspace.id })
     await loadWorkspaceHome(readyState.bootstrap, workspaceId)
   }
 
   async function openBase(base: BaseSummary) {
+    const requestVersion = ++canvasRequestVersion.current
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
     setState({ ...readyState, canvasLoading: true, canvas: undefined })
     try {
-      const [{ tables }, { views }] = await Promise.all([api.baseTables(base.id), api.baseViews(base.id)])
+      const [{ tables }, { views }] = await Promise.all([
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'base', base.id, 'tables'), queryFn: ({ signal }) => api.baseTables(base.id, { signal }) }),
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'base', base.id, 'views'), queryFn: ({ signal }) => api.baseViews(base.id, { signal }) }),
+      ])
+      if (canvasRequestVersion.current !== requestVersion) return
       const table = tables[0] ?? null
       const view = table ? views.find((item) => item.table_id === table.id) ?? null : null
       if (!table || !view) {
         setState({ ...readyState, canvas: { base, tables, views, table, view, schema: null, records: null, presentation: null } })
         return
       }
-      const [schema, presentation, records] = await Promise.all([api.tableSchema(table.id), api.viewPresentation(view.id), api.viewRecords(view.id)])
+      const [schema, presentation, records] = await Promise.all([
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'table', table.id, 'schema'), queryFn: ({ signal }) => api.tableSchema(table.id, { signal }) }),
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'presentation'), queryFn: ({ signal }) => api.viewPresentation(view.id, { signal }) }),
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'records', null), queryFn: ({ signal }) => api.viewRecords(view.id, undefined, { signal }) }),
+      ])
+      if (canvasRequestVersion.current !== requestVersion) return
       setState({ ...readyState, canvas: { base, tables, views, table, view, schema, presentation, records } })
     } catch (error) {
-      setState({ status: error instanceof ApiError && error.status === 403 ? 'denied' : 'error' })
+      if (canvasRequestVersion.current !== requestVersion || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await clearAllProtectedQueries(queryClient)
+        setState({ status: 'denied' })
+      } else if (error instanceof ApiError && error.status === 403) {
+        await clearProtectedWorkspace(queryClient, scope)
+        setState({ status: 'denied' })
+      } else {
+        setState({ status: 'error' })
+      }
     }
   }
 

@@ -173,3 +173,32 @@ test('a record version conflict reloads the authoritative detail and current vie
   await waitFor(() => expect(fetchMock.mock.calls.filter(([path]) => path === '/views/view-1/records')).toHaveLength(2))
   expect(fetchMock.mock.calls.filter(([path]) => path === '/records/record-1')).toHaveLength(3)
 })
+
+test('discarding an in-flight Base open cannot restore the previous workspace after a switch', async () => {
+  const fetchMock = vi.fn()
+  vi.stubGlobal('fetch', fetchMock)
+  let resolveTables: (response: Response) => void = () => undefined
+  let resolveViews: (response: Response) => void = () => undefined
+  const tablesResponse = new Promise<Response>((resolve) => { resolveTables = resolve })
+  const viewsResponse = new Promise<Response>((resolve) => { resolveViews = resolve })
+  fetchMock
+    .mockResolvedValueOnce(new Response(JSON.stringify({ identity: { user_id: 'operator-1', source: 'verified_adapter' }, workspaces: [{ id: 'workspace-1', name: '运营中心', slug: 'operations', role: 'operator', capabilities: { can_read_bases: true, can_manage_workspace: false, can_manage_schema: false, can_review_drafts: true } }, { id: 'workspace-2', name: '项目中心', slug: 'projects', role: 'viewer', capabilities: { can_read_bases: true, can_manage_workspace: false, can_manage_schema: false, can_review_drafts: false } }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ workspace_id: 'workspace-1', recent_bases: [{ id: 'base-1', name: '客户管理', source_type: 'blank' }], queue: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockImplementationOnce(() => tablesResponse)
+    .mockImplementationOnce(() => viewsResponse)
+    .mockResolvedValueOnce(new Response(JSON.stringify({ workspace_id: 'workspace-2', recent_bases: [{ id: 'base-2', name: '项目跟踪', source_type: 'blank' }], queue: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ table: { id: 'table-1', name: '客户表', key: 'customers' }, fields: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: [], group_by_field_key: null, date_field_key: null, form_field_keys: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-1', records: [], next_cursor: null, has_more: false }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+
+  render(<App />)
+  fireEvent.click(await screen.findByRole('link', { name: '客户管理' }))
+  fireEvent.change(screen.getByLabelText('切换工作区（桌面）'), { target: { value: 'workspace-2' } })
+  expect(await screen.findByRole('link', { name: '项目跟踪' })).toBeInTheDocument()
+
+  resolveTables(new Response(JSON.stringify({ tables: [{ id: 'table-1', base_id: 'base-1', name: '客户表', key: 'customers', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+  resolveViews(new Response(JSON.stringify({ views: [{ id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: '全部客户', view_type: 'grid', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+
+  await waitFor(() => expect(screen.getByRole('link', { name: '项目跟踪' })).toBeInTheDocument())
+  expect(screen.queryByRole('heading', { name: '客户管理' })).not.toBeInTheDocument()
+})
