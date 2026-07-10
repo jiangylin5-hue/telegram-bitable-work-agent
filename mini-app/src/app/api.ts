@@ -45,10 +45,11 @@ export class ApiError extends Error {
   }
 }
 
-async function getJson<T>(path: string): Promise<T> {
+async function getJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(path, {
     headers: { Accept: 'application/json' },
     credentials: 'same-origin',
+    ...init,
   })
   if (!response.ok) throw new ApiError(response.status)
   return response.json() as Promise<T>
@@ -63,4 +64,9 @@ export const api = {
   viewPresentation: (viewId: string) => getJson<ViewPresentation>(`/views/${viewId}/presentation`),
   viewRecords: (viewId: string) => getJson<ViewRecords>(`/views/${viewId}/records`),
   recordDetail: (recordId: string) => getJson<RecordDetail>(`/records/${recordId}`),
+  updateRecord: (recordId: string, values: Record<string, unknown>, expectedVersion: number) => getJson<RecordDetail>(`/records/${recordId}`, {
+    method: 'PATCH',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values, expected_version: expectedVersion }),
+  }),
 }

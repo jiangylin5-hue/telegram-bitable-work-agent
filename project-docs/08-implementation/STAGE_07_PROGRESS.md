@@ -3,7 +3,7 @@
 ## Status
 
 - Document status: active progress log
-- Current Progress: 2026-07-10 Package 1/2 first vertical slice is implemented and verified: approved read-only Mini App bootstrap, authorization-filtered Workspace Home, responsive App Shell and workspace switching. Bitable canvas, governance, Bot surface and final visual-browser QA remain incomplete.
+- Current Progress: 2026-07-10 Package 1/2 has an implemented, verified vertical path: approved Mini App bootstrap, authorization-filtered Workspace Home, responsive App Shell and workspace switching; permission-filtered Base/table/view canvas; read-only Grid/Kanban/Calendar/Form presentation; Record Detail; and version-aware scalar direct edits. Governance, imports/templates, Bot surface, draft confirmation and final Stage07 acceptance remain incomplete.
 
 ## Progress Log
 
@@ -44,6 +44,16 @@
 - Verification: 16 focused backend tests passed; 6 frontend interaction/render tests passed; browser QA confirmed desktop Grid -> Kanban -> Record Detail and `390x844` full-screen mobile Record Detail with no relevant console warnings/errors.
 - Still incomplete: Form submission/editing workflow, filter/sort/group mutations, cursor pagination controls, conflict recovery, cache invalidation, imports/templates, governance and all Digital Employee/draft confirmation surfaces. Those must continue to use explicit authorized contracts and are not claimed by this slice.
 
+### 2026-07-10: Version-Aware Direct Record Edit Slice Verified
+
+- Reused the existing Stage06 `PATCH /records/{record_id}` request and its mandatory `expected_version`; no migration, Bot write path, schema contract or permission-model change was introduced.
+- Record Detail now offers direct human edits for scalar field types already validated by Stage06 (`text`, status/select-like strings, `date`, `number` and `checkbox`). It submits only values changed by the user, so readable but unmodified fields are never accidentally included in a write request.
+- The client passes the authoritative returned version/value back into the current detail and the rendered record window. The stored client response is reduced to keys present in the already server-filtered schema; it does not retain arbitrary fields returned by a primitive update route.
+- A `409` version conflict is visibly distinct from a successful save. It remains a manual retry state in this slice; automatic authoritative reload and general protected-query invalidation are still pending.
+- Complex `multi_select`, `linked_record`, `json` and `lookup` field values remain read-only in this direct-edit surface rather than being coerced into unsafe string writes. Their typed editor requires a separately documented interaction/data contract.
+- Verification: initial focused tests were observed failing for the missing edit UI, all-field payload behavior and string-number serialization; after the implementation, 6 frontend interaction tests and the production Vite build passed. Full frontend regression subsequently passed (`9 passed`), and the full backend regression passed (`406 passed, 19 skipped` for unavailable historical online/local PostgreSQL environment variables).
+- Browser QA used a disposable local contract fixture that was removed after the check. On desktop: Home -> Base -> record detail -> direct change of `Ada Co` / `12` to `Ada Labs` / `42` advanced the displayed and grid values to version `4`. At `390x844`, the latest versioned record opened in the full-width detail panel. No relevant browser console warnings or errors were observed; the temporary server and fixture were stopped/removed.
+
 ### 2026-07-10: Detailed Stage Documentation Package Requested
 
 - User required Stage07 to follow prior-stage documentation depth, including SDD, BDD, contract, module index, test plan, risks and explicit component interactions.
@@ -52,4 +62,4 @@
 
 ## Next Step
 
-Implement the permission-filtered Base/table/view work surface without expanding the approved schema/API boundary. Before Package 4, prepare and seek approval for the workspace-level Bot, knowledge, memory and Telegram lifecycle contract.
+Run the full frontend/backend regression and browser QA for the version-aware edit path. Then prepare and seek approval for the workspace-level Bot, knowledge, memory and Telegram lifecycle contract; complex typed field editors, conflict reload and cache invalidation remain separate, documented work items.

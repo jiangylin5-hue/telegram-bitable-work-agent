@@ -93,6 +93,18 @@ export function App() {
     }
   }
 
+  async function saveRecord(values: Record<string, unknown>) {
+    const canvas = readyState.canvas
+    const detail = canvas?.detail
+    if (!canvas || !detail) throw new Error('Record is not available')
+    const updated = await api.updateRecord(detail.id, values, detail.version)
+    const readableKeys = new Set(canvas.schema?.fields.map((field) => field.key) ?? [])
+    const safeUpdated = { ...updated, values: Object.fromEntries(Object.entries(updated.values).filter(([key]) => readableKeys.has(key))) }
+    const records = canvas.records && { ...canvas.records, records: canvas.records.records.map((record) => record.id === safeUpdated.id ? { ...record, fields: safeUpdated.values } : record) }
+    setState({ ...readyState, canvas: { ...canvas, records, detail: safeUpdated } })
+    return safeUpdated
+  }
+
   async function selectView(viewId: string) {
     const canvas = readyState.canvas
     if (!canvas || canvas.view?.id === viewId) return
@@ -112,7 +124,7 @@ export function App() {
   const content = readyState.canvasLoading
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
-      ? <><BaseCanvas {...readyState.canvas} onBack={() => setState({ ...readyState, canvas: undefined })} onOpenRecord={openRecord} onSelectView={selectView} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onClose={() => setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } })} />}</>
+      ? <><BaseCanvas {...readyState.canvas} onBack={() => setState({ ...readyState, canvas: undefined })} onOpenRecord={openRecord} onSelectView={selectView} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} onClose={() => setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } })} />}</>
       : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} />
   return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace}>{content}</AppShell>
 }

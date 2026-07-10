@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import { App } from '../app/App'
@@ -103,6 +103,7 @@ test('opening a Base loads its authorized table schema and saved-view records as
     .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: ['name'], group_by_field_key: null, date_field_key: null, form_field_keys: ['name'] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-1', records: [{ id: 'record-1', fields: { name: 'Ada Co' } }], trace_id: 'redacted', has_more: false, next_cursor: null }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'record-1', table_id: 'table-1', values: { name: 'Ada Co' }, record_status: 'active', version: 3 }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'record-1', table_id: 'table-1', values: { name: 'Ada Ltd' }, record_status: 'active', version: 4 }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-2', table_id: 'table-1', view_type: 'kanban', visible_field_keys: ['name', 'status'], group_by_field_key: 'status', date_field_key: null, form_field_keys: ['name', 'status'] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     .mockResolvedValueOnce(new Response(JSON.stringify({ view_id: 'view-2', records: [{ id: 'record-2', fields: { name: 'Northstar', status: '进行中' } }], has_more: false, next_cursor: null }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
 
@@ -123,6 +124,12 @@ test('opening a Base loads its authorized table schema and saved-view records as
   expect(await screen.findByRole('heading', { name: '记录详情' })).toBeInTheDocument()
   expect(screen.getByText('版本 3')).toBeInTheDocument()
   expect(fetchMock).toHaveBeenCalledWith('/records/record-1', expect.any(Object))
+
+  fireEvent.click(screen.getByRole('button', { name: '编辑记录' }))
+  fireEvent.change(screen.getByLabelText('客户名称'), { target: { value: 'Ada Ltd' } })
+  fireEvent.click(screen.getByRole('button', { name: '保存更改' }))
+  expect(await screen.findByText('版本 4')).toBeInTheDocument()
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/records/record-1', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ values: { name: 'Ada Ltd' }, expected_version: 3 }) })))
 
   fireEvent.click(screen.getByRole('button', { name: '关闭记录详情' }))
   fireEvent.click(screen.getByRole('tab', { name: '按状态' }))
