@@ -38,6 +38,7 @@ export type TableSchema = { table: { id: string; name: string; key: string }; fi
 export type ViewRecords = { view_id: string; records: { id: string; fields: Record<string, unknown> }[]; next_cursor: string | null; has_more: boolean }
 export type ViewPresentation = { view_id: string; table_id: string; view_type: string; visible_field_keys: string[]; group_by_field_key: string | null; date_field_key: string | null; form_field_keys: string[] }
 export type RecordDetail = { id: string; table_id: string; values: Record<string, unknown>; record_status: string; version: number }
+export type CreateForm = { table_id: string; can_create: boolean; fields: { key: string; name: string; field_type: string; required: boolean; options: Record<string, unknown>; order_index: number }[] }
 
 export class ApiError extends Error {
   constructor(public readonly status: number) {
@@ -64,6 +65,12 @@ export const api = {
   viewPresentation: (viewId: string, init?: RequestInit) => getJson<ViewPresentation>(`/views/${viewId}/presentation`, init),
   viewRecords: (viewId: string, cursor?: string, init?: RequestInit) => getJson<ViewRecords>(`/views/${viewId}/records${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`, init),
   recordDetail: (recordId: string, init?: RequestInit) => getJson<RecordDetail>(`/records/${recordId}`, init),
+  createForm: (tableId: string, init?: RequestInit) => getJson<CreateForm>(`/tables/${tableId}/create-form`, init),
+  createRecord: (tableId: string, values: Record<string, unknown>) => getJson<RecordDetail>(`/tables/${tableId}/records`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values }),
+  }),
   updateRecord: (recordId: string, values: Record<string, unknown>, expectedVersion: number) => getJson<RecordDetail>(`/records/${recordId}`, {
     method: 'PATCH',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
