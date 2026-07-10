@@ -28,6 +28,62 @@ class WorkspaceMemberListResponse(BaseModel):
     members: list[WorkspaceMemberResponse]
 
 
+class MiniAppIdentityResponse(BaseModel):
+    user_id: str
+    source: str
+
+
+class MiniAppWorkspaceCapabilitiesResponse(BaseModel):
+    can_read_bases: bool
+    can_manage_workspace: bool
+    can_manage_schema: bool
+    can_review_drafts: bool
+
+
+class MiniAppWorkspaceResponse(BaseModel):
+    id: str
+    name: str
+    slug: str
+    role: str
+    capabilities: MiniAppWorkspaceCapabilitiesResponse
+
+
+class MiniAppBootstrapResponse(BaseModel):
+    identity: MiniAppIdentityResponse
+    workspaces: list[MiniAppWorkspaceResponse]
+
+
+class MiniAppBaseSummaryResponse(BaseModel):
+    id: str
+    name: str
+    source_type: str
+
+
+class MiniAppQueueDestinationResponse(BaseModel):
+    base_id: str
+    draft_id: str
+
+
+class MiniAppQueueActionAvailabilityResponse(BaseModel):
+    can_confirm: bool
+    can_reject: bool
+
+
+class MiniAppQueueItemResponse(BaseModel):
+    id: str
+    kind: str
+    title: str
+    status: str
+    destination: MiniAppQueueDestinationResponse
+    action_availability: MiniAppQueueActionAvailabilityResponse
+
+
+class MiniAppWorkspaceHomeResponse(BaseModel):
+    workspace_id: str
+    recent_bases: list[MiniAppBaseSummaryResponse]
+    queue: list[MiniAppQueueItemResponse]
+
+
 class CreateBaseRequest(BaseModel):
     name: str
     description: str | None = None

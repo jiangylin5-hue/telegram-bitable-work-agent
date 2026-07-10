@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 planning source of truth
 - Scope: Telegram Mini App and desktop browser UI for the generic workspace, Bitable and digital-employee platform
-- Current Progress: 2026-07-10 detailed documentation package is ready for user review after user-approved discovery, visual direction and Stage07 component boundaries. No UI code or backend contract change is authorized yet.
+- Current Progress: 2026-07-10 Package 1 frontend scaffold is verified. The user approved the narrowly scoped, read-only Mini App bootstrap and Workspace Home contract; it adds no schema migration and does not change Stage06 roles or authorization rules.
 
 ## 1. Stage Goal
 
@@ -60,7 +60,15 @@ Stage06 is the backend contract baseline. Stage02-05 documents are historical ca
 - Loading, empty, denied, expired-session, network-error and conflict states.
 - Telegram deep links that resolve only after identity, workspace membership and resource authorization are checked.
 
-## 6. Explicit Contract Gate
+## 6. Contract Gates
+
+Approved Package 1/2 read-model boundary:
+
+- `GET /mini-app/bootstrap` may expose only verified identity, active memberships and server-derived navigation capabilities.
+- `GET /workspaces/{workspace_id}/home` may expose only authorized Base metadata and sanitized pending-draft queue summaries.
+- Both endpoints are read-only and must reuse Stage06 membership and action authorization. The client does not receive raw record values, draft before/proposed values, trace data, policies, or a role it can submit back to the server.
+
+The following remain a separate, unapproved Package 4 contract gate:
 
 Stage06 currently provides base-bound `DigitalEmployee` resources. The following are Stage07 proposals, not approved implementation work:
 
@@ -69,7 +77,7 @@ Stage06 currently provides base-bound `DigitalEmployee` resources. The following
 - Bot draft/test/published lifecycle and Telegram group/contact bindings;
 - curated knowledge-source registration and permission-filtered retrieval;
 - per-user Bot memory partitions and retention/clear controls;
-- Mini App verified identity and deep-link bootstrap contract.
+- production Telegram Mini App proof verification and durable deep-link resolver contract.
 
 No schema migration, API endpoint, authorization rule or permission model for this list may be implemented without a dedicated technical decision and explicit user confirmation.
 

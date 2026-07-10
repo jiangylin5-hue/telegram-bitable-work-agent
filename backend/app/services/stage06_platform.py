@@ -78,6 +78,9 @@ class Stage06PlatformUnitOfWork(Protocol):
     def list_workspace_members(self, workspace_id: UUID) -> list[WorkspaceMember]:
         pass
 
+    def list_workspace_members_for_user(self, user_id: str) -> list[WorkspaceMember]:
+        pass
+
     def get_workspace_member(self, member_id: UUID) -> WorkspaceMember | None:
         pass
 
@@ -85,6 +88,9 @@ class Stage06PlatformUnitOfWork(Protocol):
         pass
 
     def get_base(self, base_id: UUID) -> BitableBase | None:
+        pass
+
+    def list_bases(self, workspace_id: UUID) -> list[BitableBase]:
         pass
 
     def add_table(self, table: PlatformTable) -> None:
@@ -240,6 +246,11 @@ class InMemoryStage06PlatformUnitOfWork:
             member for member in self.workspace_members if member.workspace_id == workspace_id
         ]
 
+    def list_workspace_members_for_user(self, user_id: str) -> list[WorkspaceMember]:
+        return [
+            member for member in self.workspace_members if member.user_id == user_id
+        ]
+
     def get_workspace_member(self, member_id: UUID) -> WorkspaceMember | None:
         return _find_by_id(self.workspace_members, member_id)
 
@@ -248,6 +259,9 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def get_base(self, base_id: UUID) -> BitableBase | None:
         return _find_by_id(self.bases, base_id)
+
+    def list_bases(self, workspace_id: UUID) -> list[BitableBase]:
+        return [base for base in self.bases if base.workspace_id == workspace_id]
 
     def add_table(self, table: PlatformTable) -> None:
         self.tables.append(table)
@@ -402,6 +416,13 @@ class SqlAlchemyStage06PlatformUnitOfWork:
             )
         )
 
+    def list_workspace_members_for_user(self, user_id: str) -> list[WorkspaceMember]:
+        return list(
+            self.session.scalars(
+                select(WorkspaceMember).where(WorkspaceMember.user_id == user_id)
+            )
+        )
+
     def get_workspace_member(self, member_id: UUID) -> WorkspaceMember | None:
         return self.session.get(WorkspaceMember, member_id)
 
@@ -410,6 +431,13 @@ class SqlAlchemyStage06PlatformUnitOfWork:
 
     def get_base(self, base_id: UUID) -> BitableBase | None:
         return self.session.get(BitableBase, base_id)
+
+    def list_bases(self, workspace_id: UUID) -> list[BitableBase]:
+        return list(
+            self.session.scalars(
+                select(BitableBase).where(BitableBase.workspace_id == workspace_id)
+            )
+        )
 
     def add_table(self, table: PlatformTable) -> None:
         self.session.add(table)

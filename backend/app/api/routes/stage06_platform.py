@@ -15,6 +15,8 @@ from app.schemas.stage06_platform import (
     CreateViewRequest,
     CreateWorkspaceRequest,
     FieldResponse,
+    MiniAppBootstrapResponse,
+    MiniAppWorkspaceHomeResponse,
     RecordResponse,
     TableResponse,
     TableSchemaResponse,
@@ -53,6 +55,7 @@ from app.services.stage06_platform import (
     read_workspace,
     update_record,
 )
+from app.services.stage07_mini_app import get_mini_app_bootstrap, get_workspace_home
 
 router = APIRouter(tags=["stage06-platform"])
 
@@ -61,6 +64,31 @@ def get_stage06_platform_uow(
     session: Session = Depends(get_session),
 ) -> Stage06PlatformUnitOfWork:
     return SqlAlchemyStage06PlatformUnitOfWork(session)
+
+
+@router.get("/mini-app/bootstrap", response_model=MiniAppBootstrapResponse)
+def mini_app_bootstrap_endpoint(
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> MiniAppBootstrapResponse:
+    return MiniAppBootstrapResponse(**get_mini_app_bootstrap(uow, identity))
+
+
+@router.get(
+    "/workspaces/{workspace_id}/home",
+    response_model=MiniAppWorkspaceHomeResponse,
+)
+def get_workspace_home_endpoint(
+    workspace_id: UUID,
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> MiniAppWorkspaceHomeResponse:
+    try:
+        return MiniAppWorkspaceHomeResponse(
+            **get_workspace_home(uow, identity, workspace_id)
+        )
+    except Stage06AuthorizationError as exc:
+        raise _http_error(exc) from exc
 
 
 @router.post("/workspaces", response_model=WorkspaceResponse)
