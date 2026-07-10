@@ -10,10 +10,14 @@ from app.services.stage06_platform import (
     InMemoryStage06PlatformUnitOfWork,
     create_base,
     create_form_view,
+    create_field,
+    create_record,
     create_table,
     create_workspace,
+    get_create_form,
     initialize_field,
     PlatformValidationError,
+    update_record,
 )
 
 
@@ -454,3 +458,84 @@ def test_field_initialization_rolls_back_field_audit_and_idempotency_on_view_fai
     assert len(uow.audit_events) == audit_count
     assert uow.idempotency_records == []
     assert uow.views[0].config is None
+
+
+def test_configured_choice_fields_validate_create_update_and_keep_legacy_status_compatible() -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    actor = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="Acme", owner_user_id="owner-1", actor=actor)
+    base = create_base(uow, workspace.id, name="Operations", actor=actor)
+    table = create_table(uow, base.id, name="Projects", key="projects", actor=actor)
+    tags = initialize_field(
+        uow,
+        table.id,
+        name="Tags",
+        field_type="multi_select",
+        required=True,
+        choices=["vip", "trial"],
+        actor=actor,
+    ).field
+    legacy_status = create_field(
+        uow,
+        table.id,
+        name="Legacy status",
+        key="legacy_status",
+        field_type="status",
+        actor=actor,
+    )
+
+    record = create_record(
+        uow,
+        table.id,
+        values={tags.key: ["vip", "trial"], legacy_status.key: "historic-value"},
+        actor=actor,
+    )
+    assert record.values == {
+        tags.key: ["vip", "trial"],
+        legacy_status.key: "historic-value",
+    }
+
+    for invalid_tags in (["vip", "unknown"], ["vip", "vip"]):
+        with pytest.raises(PlatformValidationError) as error:
+            create_record(
+                uow,
+                table.id,
+                values={tags.key: invalid_tags},
+                actor=actor,
+            )
+        assert error.value.code == "invalid_field_choice"
+
+    with pytest.raises(PlatformValidationError) as error:
+        update_record(
+            uow,
+            record.id,
+            values={tags.key: ["unknown"]},
+            expected_version=record.version,
+            actor=actor,
+        )
+
+    assert error.value.code == "invalid_field_choice"
+    assert record.values[tags.key] == ["vip", "trial"]
+    assert record.version == 1
+    assert get_create_form(uow, table.id, actor=actor) == {
+        "table_id": str(table.id),
+        "can_create": True,
+        "fields": [
+            {
+                "key": tags.key,
+                "name": "Tags",
+                "field_type": "multi_select",
+                "required": True,
+                "options": {"choices": ["vip", "trial"]},
+                "order_index": 0,
+            },
+            {
+                "key": "legacy_status",
+                "name": "Legacy status",
+                "field_type": "status",
+                "required": False,
+                "options": {},
+                "order_index": 1,
+            },
+        ],
+    }

@@ -73,7 +73,19 @@ STAGE06_DEFAULT_WRITE_ROLES = frozenset(
     {"admin", "owner", "manager", "operator", "builder"}
 )
 CREATE_FORM_SCALAR_FIELD_TYPES = frozenset(
-    {"text", "number", "date", "status", "single_select", "user", "checkbox", "url", "email", "phone"}
+    {
+        "text",
+        "number",
+        "date",
+        "status",
+        "single_select",
+        "multi_select",
+        "user",
+        "checkbox",
+        "url",
+        "email",
+        "phone",
+    }
 )
 _MISSING = object()
 
@@ -924,12 +936,7 @@ def get_create_form(uow: Stage06PlatformUnitOfWork, table_id: UUID, *, actor: Ac
 
 
 def _create_form_options(field: PlatformField) -> dict[str, Any]:
-    if field.field_type not in {"status", "single_select"}:
-        return {}
-    choices = field.options.get("choices")
-    if not isinstance(choices, list) or not all(isinstance(choice, str) for choice in choices):
-        return {}
-    return {"choices": choices}
+    return _safe_field_options(field)
 
 
 def update_record(
@@ -1320,6 +1327,7 @@ def _validate_record_values(
             raise PlatformValidationError("unknown_field", key)
         if not _value_matches_field_type(value, field.field_type):
             raise PlatformValidationError("invalid_field_value", key)
+        _validate_configured_choice_value(field, value)
         if field.field_type == "linked_record":
             _validate_linked_record_value(uow, field, value)
 
@@ -1340,6 +1348,23 @@ def _value_matches_field_type(value: Any, field_type: str) -> bool:
     if field_type == "date":
         return isinstance(value, str)
     return False
+
+
+def _validate_configured_choice_value(field: PlatformField, value: Any) -> None:
+    choices = _safe_field_options(field).get("choices")
+    if choices is None or value is None:
+        return
+    if field.field_type == "multi_select":
+        if (
+            not isinstance(value, list)
+            or not all(isinstance(item, str) for item in value)
+            or len(value) != len(set(value))
+            or any(item not in choices for item in value)
+        ):
+            raise PlatformValidationError("invalid_field_choice", field.key)
+        return
+    if not isinstance(value, str) or value not in choices:
+        raise PlatformValidationError("invalid_field_choice", field.key)
 
 
 def _validate_linked_record_value(

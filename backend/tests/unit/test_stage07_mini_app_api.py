@@ -342,3 +342,62 @@ def test_create_form_returns_only_server_writable_fields_without_policy() -> Non
     assert "permission_policy" not in response.text
     assert "internal" not in response.text
     assert "accounts" not in response.text
+
+
+def test_create_form_and_record_api_support_configured_multi_select_choices() -> None:
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "owner-1"
+        workspace_id = client.post(
+            "/workspaces",
+            json={"name": "Acme", "owner_user_id": "owner-1"},
+        ).json()["id"]
+        base_id = client.post(
+            f"/workspaces/{workspace_id}/bases",
+            json={"name": "Operations"},
+        ).json()["id"]
+        table_id = client.post(
+            f"/bases/{base_id}/tables",
+            json={"name": "Projects", "key": "projects"},
+        ).json()["id"]
+        field = client.post(
+            f"/tables/{table_id}/field-initializations",
+            headers={"Idempotency-Key": "multi-select-field"},
+            json={
+                "name": "Tags",
+                "field_type": "multi_select",
+                "required": True,
+                "choices": ["vip", "trial"],
+            },
+        ).json()["field"]
+        form = client.get(f"/tables/{table_id}/create-form")
+        created = client.post(
+            f"/tables/{table_id}/records",
+            json={"values": {field["key"]: ["vip", "trial"]}},
+        )
+        rejected = client.post(
+            f"/tables/{table_id}/records",
+            json={"values": {field["key"]: ["vip", "unknown"]}},
+        )
+
+    assert form.status_code == 200
+    assert form.json() == {
+        "table_id": table_id,
+        "can_create": True,
+        "fields": [
+            {
+                "key": field["key"],
+                "name": "Tags",
+                "field_type": "multi_select",
+                "required": True,
+                "options": {"choices": ["vip", "trial"]},
+                "order_index": 0,
+            }
+        ],
+    }
+    assert created.status_code == 200
+    assert rejected.status_code == 422
+    assert rejected.json()["detail"]["code"] == "invalid_field_choice"

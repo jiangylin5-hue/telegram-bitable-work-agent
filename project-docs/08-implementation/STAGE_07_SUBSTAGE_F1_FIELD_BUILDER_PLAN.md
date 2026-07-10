@@ -459,7 +459,7 @@ git commit -m "feat(stage07): add safe field initialization api"
 - Consumes: `PlatformField.options.choices`, `get_create_form`, `_validate_record_values`, `create_record` and `update_record`.
 - Produces: safe `multi_select` create-form metadata and configured-choice validation that preserves no-choice legacy fields.
 
-- [ ] **Step 1: Write failing value-validation tests**
+- [x] **Step 1: Write failing value-validation tests**
 
 ```python
 def test_configured_multi_select_requires_distinct_allowed_choices():
@@ -473,7 +473,7 @@ def test_configured_multi_select_requires_distinct_allowed_choices():
 
 Add a legacy `status` field with `{}` options that accepts its historical string value, and assert the create-form response includes F1 `multi_select` choices only for a writable actor.
 
-- [ ] **Step 2: Run the focused test and verify it fails**
+- [x] **Step 2: Run the focused test and verify it fails**
 
 Run:
 
@@ -483,7 +483,7 @@ cd backend; python -m pytest -q tests/unit/test_stage07_field_builder.py -k "cho
 
 Expected: FAIL because `multi_select` is excluded from `CREATE_FORM_SCALAR_FIELD_TYPES` and select membership is not validated.
 
-- [ ] **Step 3: Implement explicit option membership validation**
+- [x] **Step 3: Implement explicit option membership validation**
 
 Use the following helper from `_validate_record_values` after type validation:
 
@@ -501,7 +501,7 @@ def _validate_configured_choice_value(field: PlatformField, value: Any) -> None:
 
 Add `multi_select` to `CREATE_FORM_SCALAR_FIELD_TYPES`. Make `_create_form_options` call the same safe-options helper for the three choice types; do not expose raw options.
 
-- [ ] **Step 4: Run record and API tests**
+- [x] **Step 4: Run record and API tests**
 
 Run:
 
