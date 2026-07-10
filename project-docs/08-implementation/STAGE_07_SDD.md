@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 design detail
 - Scope: UI architecture, module boundaries and interaction flows
-- Current Progress: AppShell, WorkspaceHome, BaseCanvas, field-filtered read models, RecordDetail and limited scalar direct edits are implemented. The requirement traceability audit identifies all incomplete SDD paths and contract gates; this SDD remains the design boundary for later packages.
+- Current Progress: AppShell, WorkspaceHome, BaseCanvas, field-filtered read models, RecordDetail and limited scalar direct edits are implemented. F1 independent Field Builder has an approved safe design and an implementation plan, but no F1 runtime evidence yet. The requirement traceability audit identifies all incomplete SDD paths and contract gates; this SDD remains the design boundary for later packages.
 
 ## 1. Architecture Overview
 
@@ -27,6 +27,7 @@ The browser never determines effective role, field visibility or Bot authority. 
 | `AppShell` | bootstrap, routing, desktop/mobile navigation, global state presentation | verified identity, workspace membership, feature flags | authorized route context or safe failure state |
 | `WorkspaceHome` | grouped work queues, recent Bases and deep-link landing | queue/read models, route context | navigation intents only |
 | `BaseCanvas` | saved-view rendering, table toolbar, builder entry | Base/table/view schema and paged records | record/view/schema mutation requests |
+| `FieldBuilderPanel` | independent field name/type/required/choice input | capability-gated active table, safe types, no technical metadata | idempotent field-initialization intent only |
 | `RecordDetail` | full record view/edit and field-level draft context | permitted field model and record | validated record edit or draft-review intent |
 | `BotHub` | team contacts, personal assistant, context selector and conversation | permitted employee model, selected resource scope | read/query intent or draft proposal display |
 | `DraftConfirmation` | immutable proposal diff, confirm/reject lifecycle | draft, execution status, audit reference | one idempotent confirm/reject command |
@@ -74,6 +75,18 @@ open Bot contact / personal assistant
 ```
 
 Team Bot context is constrained by published configuration and current caller permission. Personal assistant starts context-free. The UI must visibly distinguish both paths and never show one user's private memory to another user.
+
+## 5.1 Approved F1 Field Builder Flow
+
+1. `BaseCanvas` shows a real `添加字段` or fieldless-Grid `添加第一个字段` control only when the existing server capability hint permits schema management.
+2. `FieldBuilderPanel` opens as a desktop drawer or mobile full-screen sheet. It accepts only a display name, one F1 type, required state and server-compatible choices for `status`, `single_select` or `multi_select`.
+3. The browser generates one `Idempotency-Key` for the opened panel and calls `POST /tables/{table_id}/field-initializations`. It never submits a key, policy, view configuration, order, status or role.
+4. The backend independently requires active membership plus `field.manage`, generates the stable field key, serializes table field order, validates choices, updates eligible same-table view visibility and writes a sanitized audit event in one transaction.
+5. The receipt is only a pointer. The client invalidates/reloads the protected table schema, current-view presentation and records, create form and affected view windows; it renders the column only after the exact receipt field ID is present in the fresh safe schema.
+6. `status`, `single_select` and `multi_select` record controls use only returned choices. The server validates membership of submitted values; existing option-less legacy fields retain historical type-only validation.
+7. `422` keeps the panel with safe inline feedback; network/`5xx` retains the same key for one explicit retry; `409` locks until close; `401`/`403` remove protected state and show the existing generic safe boundary.
+
+The safe Canvas schema projection returns only `id`, `table_id`, `name`, `key`, `field_type`, `required`, safe choice options and `order_index`. It excludes `permission_policy`, default values, unique flags, raw option keys and technical status for every browser caller.
 
 ## 7. Governance Flow
 

@@ -80,7 +80,7 @@ No new form, drag-and-drop, grid or visual dependency is introduced in F1. `reac
 
 | Topic | F1 rule | Reason |
 | --- | --- | --- |
-| Field identity | Browser submits a display name; server generates a collision-safe opaque `fld_...` key. | Ordinary users do not manage technical keys and a duplicate-click cannot choose one. |
+| Field identity | Browser submits a display name; server generates a collision-safe opaque `fld_<server-uuid-suffix>` key. | Ordinary users do not manage technical keys and a duplicate-click cannot choose one. |
 | Display names | Trimmed `1..160` character names; duplicate visible names in one table are rejected case-insensitively after whitespace normalization. | Field labels must be unambiguous in a compact table and record form. |
 | Default policy | New fields receive the current project default policy `{}`. No policy travels from browser to server. | F1 does not silently add permission administration. |
 | Select choices | `status`, `single_select` and `multi_select` require `1..100` nonblank, unique choices of at most 64 characters. Order is preserved. | A newly required choice field must be immediately creatable and editable. |
@@ -170,7 +170,7 @@ For a new key the service performs these operations in one SQLAlchemy transactio
 1. resolve table -> Base -> workspace and require current active membership plus `field.manage`;
 2. normalise and validate the request, reject duplicate display names, and acquire a row lock for the target table;
 3. reserve/replay the operation through the existing scoped Stage06 idempotency record pattern;
-4. generate a `fld_...` key, persist one `PlatformField` with default policy and the next durable order;
+4. generate a `fld_<server-uuid-suffix>` key, persist one `PlatformField` with default policy and the next durable order;
 5. append the generated key once to eligible active same-table view configurations entirely on the server;
 6. write a sanitised `stage07.field_initialized` audit event containing resource identifiers, field type, required flag, order and affected-view IDs — never a policy, arbitrary options or record values;
 7. store the safe receipt reference as completed; and

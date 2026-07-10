@@ -15,6 +15,7 @@
 | security | hidden fields, workspace boundaries, revoked membership, chat/Bot scope | negative tests plus cache-clear assertions |
 | visual | selected white design system, desktop/mobile layout and state screens | reviewed screenshots at target viewports |
 | manual | Telegram entry/deep link and approved real identity path | sanitized run note only |
+| F1 PostgreSQL | field-init rollback, same-key replay, distinct-key order and view visibility | disposable local PostgreSQL only; an unavailable `STAGE06_LOCAL_DATABASE_URL` is an explicit skip/gap |
 
 ## 2. Required Matrices
 
@@ -24,6 +25,17 @@
 - states: loading/empty/denied/error/conflict/expired/success;
 - Bot classes: team contact and personal assistant;
 - write outcomes: confirm/reject/replay/conflict/expired.
+- F1 field types: `text`, `number`, `date`, `status`, `single_select`, `multi_select`, `user`, `checkbox`, `url`, `email`, `phone`; relation/lookup/JSON remain negative cases.
+- F1 failure states: blank/duplicate name, invalid/missing choices, raw request extras, schema-policy leak, 401/403/404/409/5xx and failed view update rollback.
+
+## 2.1 F1 Required Evidence
+
+- service tests prove generated keys, default policy, explicit-view append-once, implicit-view no-op and sanitized audit;
+- API tests prove `field.manage` and cross-workspace denial before writes, strict request shape, safe receipt/schema projection and idempotency replay/conflict;
+- record tests prove configured choice membership and multi-select distinctness while option-less legacy fields remain compatible;
+- real PostgreSQL tests prove table-row serialization and all-or-nothing rollback when an approved disposable URL is configured;
+- frontend panel/application tests prove drawer/sheet accessibility, retry/409 handling, exact schema reread, stale response rejection and protected-scope cleanup;
+- Browser QA compares the retained Workspace Ledger source at 1440/1280/430/390 and records zero relevant console errors.
 
 ## 3. Completion Rule
 

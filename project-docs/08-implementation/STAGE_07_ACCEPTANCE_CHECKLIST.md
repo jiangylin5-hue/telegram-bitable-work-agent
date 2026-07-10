@@ -30,6 +30,18 @@ These checks cover only the approved P3 atomic Base/Table creation slice. They d
 - [x] Disposable synthetic Browser QA verified P3 desktop behavior at actual `1280x720`, mobile sheet controls at actual `390x844`, and zero relevant final console warnings/errors; the fixture was stopped/deleted.
 - [ ] The P3 real-PostgreSQL rollback/concurrency/default-index tests run against a configured `STAGE06_LOCAL_DATABASE_URL`; they are present but currently skipped, so this is an explicit remaining evidence gap.
 
+### F1 Independent Field Builder Evidence
+
+These checks cover only approved independent field creation and its immediate record/form follow-through. They do not accept F2 relation/lookup, additional View Builder, import/template, governance or Stage07.
+
+- [ ] Authorised builders can create only the eleven approved F1 field types through a labelled desktop drawer/mobile full-screen sheet; the browser sends display data and choices only.
+- [ ] The F1 endpoint independently requires active membership + `field.manage`, rejects cross-workspace/extra/raw-policy/key/configuration inputs and returns only a safe receipt.
+- [ ] Safe Canvas schema, F1 receipt and create-form metadata contain no policy, raw non-choice options, default value, technical status or hidden field metadata.
+- [ ] The server generates the key/order/default policy, updates eligible explicit saved-view field lists atomically, writes sanitized audit and leaves existing record values empty.
+- [ ] Configured status/single/multi choices are validated server-side; multi-select works in record create and direct edit; legacy option-less fields preserve their documented compatibility.
+- [ ] Same-key replay, changed-payload `409`, rollback and distinct-concurrent-order tests have automated evidence; real PostgreSQL cases remain explicitly unchecked until an authorised local URL runs them.
+- [ ] Browser QA compares Workspace Ledger at 1440/1280/430/390 for fieldless-to-first-field, nonempty-table add, validation/retry/denial and choice-record flows with zero relevant console errors.
+
 ## Governance And Security
 
 - [ ] Management routes and data reject unauthorized users independently of client navigation.

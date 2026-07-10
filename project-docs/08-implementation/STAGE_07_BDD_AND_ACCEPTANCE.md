@@ -56,6 +56,34 @@ Given a browser changes local route or role-like state, when it tries to open go
 
 Given an expired Mini App identity, revoked membership or failed request, when the affected UI is visible, then protected cache is cleared or withheld, retry is explicit and no write is represented as complete.
 
+### Scenario F1-1: Builder Creates an Immediately Usable First Field
+
+Given an authorised builder opens a fieldless Grid, when they create a required `status` field with valid choices, then exactly one server-owned field persists, the reread default Grid renders that column and the reread create form offers only those choices.
+
+### Scenario F1-2: Unauthorised Member Cannot Mutate a Field
+
+Given a member lacks `field.manage`, when they open the same table or submit a field-initialization request, then the entry is absent, the server returns generic denial before any durable write and no field name/key/policy is retained by an error or protected cache.
+
+### Scenario F1-3: Field Builder Does Not Expose Schema Policy
+
+Given a builder or reader loads a Canvas schema or F1 receipt, when the response arrives, then it contains no `permission_policy`, raw non-choice option, default value, technical field status or role claim; fields without read permission remain absent.
+
+### Scenario F1-4: Choice Values Follow the Persisted Field Schema
+
+Given a builder creates a `multi_select` field with three choices, when an authorised member creates or directly edits a record, then only a distinct subset of the returned choices is submitted and an unknown value is rejected without changing the record.
+
+### Scenario F1-5: Field Initialization Is Atomic and Idempotent
+
+Given a field initialization is retried with the same key and normalized payload, when the original request has completed, then the backend returns the original receipt and only one field/audit event exists; when view visibility update fails, no field, view change, completed idempotency record or F1 audit survives.
+
+### Scenario F1-6: Concurrent Builders Preserve Field Order
+
+Given two authorised builders add different fields to the same table concurrently, when both operations complete, then both fields exist once in consecutive server-owned order and eligible saved views display each key once.
+
+### Scenario F1-7: F1 Mobile Builder Retains the Same Authority
+
+Given a builder opens the Mini App at `390px` or `430px`, when they add a field, then the labelled full-screen sheet exposes relevant inputs/retry/close controls and success returns to the same authorised Grid without a desktop-only route.
+
 ## 2. Required Evidence
 
 - desktop and mobile screenshots for each primary flow;
@@ -73,3 +101,6 @@ Given an expired Mini App identity, revoked membership or failed request, when t
 - [ ] Bot scopes, private assistant context and per-user memory boundaries are visible and enforced.
 - [ ] Every Bot write is confirmed through `record_change_draft` with an audit outcome.
 - [ ] No unapproved Stage07 contract extension is silently implemented.
+- [ ] F1 adds only approved independent field types, generated keys and safe choice metadata; F2 relations/lookup and V1 views remain absent.
+- [ ] F1 schema/receipt/form responses exclude field policy and raw non-choice options; hidden fields remain absent.
+- [ ] F1 has automated replay, rollback, concurrent-order and cross-workspace-denial evidence plus four-width visual comparison.

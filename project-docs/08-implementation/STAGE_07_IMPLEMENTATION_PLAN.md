@@ -45,6 +45,10 @@ Deliver one responsive React/Vite Mini App and desktop browser surface that expo
 
 This is deliberately narrower than the Package 2 deliverables: field creation/editing, extra view creation/editing, import/template UX, general schema administration and Package 3 governance are not completed or implied. Local full-suite/browser evidence is recorded in the P3 plan and progress log; the real-PostgreSQL P3 rollback/concurrency/index command is an explicitly retained evidence gap until `STAGE06_LOCAL_DATABASE_URL` is configured.
 
+### Approved F1: Independent Field Builder
+
+`docs/superpowers/specs/2026-07-10-stage07-f1-field-builder-design.md` and `STAGE_07_SUBSTAGE_F1_FIELD_BUILDER_PLAN.md` define the next bounded Package 2 substage. It creates only the approved independent field types through a safe atomic endpoint: the browser supplies display data and validated choices only; the server owns generated keys, default policy, durable order, saved-view visibility updates, audit and idempotent replay. F1 includes safe schema projection and choice-aware record create/direct edit so newly required choice fields are usable. Relation/lookup (F2), advanced JSON, field editing/reordering/deletion and additional views (V1) remain outside F1.
+
 ### Deliverables
 
 - queue-first Workspace Home, recent Base rail and durable deep links;

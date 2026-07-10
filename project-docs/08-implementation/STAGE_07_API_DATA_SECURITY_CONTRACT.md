@@ -38,6 +38,7 @@ The following endpoints are approved for Package 1 and the beginning of Package 
 | `GET /workspaces/{workspace_id}/bases` | permitted Base summaries `{ id, name, source_type, status }` | requires active membership plus `base.read`; does not return Base description/settings |
 | `GET /bases/{base_id}/tables` | permitted Table summaries `{ id, base_id, name, key, status }` | resolves Base ownership then requires `table.read` |
 | `GET /bases/{base_id}/views` | saved-view summaries `{ id, base_id, table_id, name, view_type, status }` | resolves Base ownership then requires `table.read`; excludes view config and permission policy |
+| `GET /tables/{table_id}/schema` | safe Canvas table + field schema; fields expose only `{ id, table_id, name, key, field_type, required, options.choices?, order_index }` | requires `table.read`; applies the same field-read filter and never returns a field policy, default, unique flag, raw option key or technical status |
 | `GET /views/{view_id}/presentation` | normalized saved-view semantics `{ view_type, visible_field_keys, group_by_field_key?, date_field_key?, form_field_keys }` | requires `record.read` plus view-resource visibility; every returned field key must pass field read policy; raw config and policy are excluded |
 | `GET /records/{record_id}` | detail `{ id, table_id, values, record_status, version }` | resolves record ownership then requires `record.read`; values contain only field-read-permitted keys |
 
@@ -61,7 +62,7 @@ The Base Canvas composes these summaries with authorized `GET /tables/{table_id}
 
 ## 5.1 Approved Form/Create Contract
 
-`GET /tables/{table_id}/create-form` is approved for the first scalar Form/create slice. It requires existing `record.create` authorization and returns only `{ table_id, can_create, fields[] }`, where every field is server-filtered for the actor's writable scope and exposes only `key`, `name`, `field_type`, `required`, filtered `options` and `order_index`. In the implemented first slice, only `status` / `single_select` may expose a validated string-array `options.choices`; all other options are `{}`. `can_create` is `false` when a required field cannot be safely edited in this slice, so the browser cannot submit an inevitably incomplete record. It never returns raw `permission_policy`, hidden field metadata, view config, inaccessible linked values or a role claim.
+`GET /tables/{table_id}/create-form` is approved for the scalar Form/create slice. It requires existing `record.create` authorization and returns only `{ table_id, can_create, fields[] }`, where every field is server-filtered for the actor's writable scope and exposes only `key`, `name`, `field_type`, `required`, filtered `options` and `order_index`. `status`, `single_select` and approved F1 `multi_select` fields may expose a validated string-array `options.choices`; all other options are `{}`. `can_create` is `false` when a required field cannot be safely edited in this slice, so the browser cannot submit an inevitably incomplete record. It never returns raw `permission_policy`, hidden field metadata, view config, inaccessible linked values or a role claim.
 
 The existing `POST /tables/{table_id}/records` remains the only create mutation. The browser submits only returned field keys; Stage06 remains authoritative for validation, normalization, audit and version-1 record creation. This approval does not cover complex field editors, builder, imports, drafts, Bot writes or Telegram actions.
 
@@ -90,6 +91,31 @@ The idempotency key is scoped to the endpoint/actor/resource context by the serv
 
 A receipt is a navigation pointer, never optimistic client state. After a success the client invalidates Home and the affected Base table/view lists, rereads those authorized lists, verifies the exact receipt IDs and their Base/table relationship, and only then opens the new Grid. It must not choose the first item in a list, cache a synthetic resource or offer fake field/record creation in a zero-field table.
 
+## 5.3 Approved F1 Atomic Field Builder Contract
+
+F1 creates one independent field at a time. It is not a raw Stage06 primitive-field client, a field-permission editor, relationship/lookup builder, JSON editor, field edit/reorder/delete surface or additional-view Builder.
+
+| Endpoint | Browser request boundary | Server authority and atomic result |
+| --- | --- | --- |
+| `POST /tables/{table_id}/field-initializations` | `{ name, field_type, required, choices? }` plus required `Idempotency-Key`; request extra fields are forbidden | resolves table ownership, requires active membership + `field.manage`, validates the F1 type/choice allowlist, locks the table row, generates a key and order, creates the field under default policy, appends it once to explicit active same-table view field lists, writes sanitized audit and stores a completed safe receipt in one transaction |
+
+The field type allowlist is exactly `text`, `number`, `date`, `status`, `single_select`, `multi_select`, `user`, `checkbox`, `url`, `email` and `phone`. `status`, `single_select` and `multi_select` require `1..100` ordered nonblank unique choices no longer than 64 characters. Other F1 types reject choices. `linked_record`, `lookup` and `json` are not accepted by this endpoint.
+
+```ts
+type FieldInitializationReceipt = {
+  field: {
+    id: string; table_id: string; name: string; key: string
+    field_type: string; required: boolean
+    options: { choices?: string[] }; order_index: number
+  }
+  affected_view_ids: string[]
+}
+```
+
+The receipt excludes policy, raw options/configuration, default values, roles, idempotency storage, audit body and record data. New field keys and `order_index` are server owned. Existing records receive no synthetic value. A table's primary field is not selected or changed by F1.
+
+First success returns `201`, matching completed key/payload returns `200` with the same receipt, and a changed payload under the same key returns `409`. Validation failure is `422`; membership/action denial is generic `403`; `401` clears protected state; `404` does not reveal parent resources. A database or view-update failure rolls back the field, view changes, audit and incomplete idempotency state together. The browser retains a key only for explicit network/`5xx` retry, locks a `409` panel until close, and rereads authorized schema/presentation/records/create-form before it renders the field.
+
 ## 6. Client Security Rules
 
 - Do not derive permissions from navigation visibility or cached role strings.
@@ -97,6 +123,7 @@ A receipt is a navigation pointer, never optimistic client state. After a succes
 - On `401`, expired bootstrap or membership revocation, remove protected query cache before re-authentication.
 - On `403`, show a generic denied state; do not infer resource existence from client retries.
 - For P3 Builder initialization, preserve one idempotency key only across explicit network/5xx retry; lock a `409` conflict until the panel is closed, and never retry a denied request.
+- For F1 field initialization, use the same retry/`409`/denial discipline and never render a field from a receipt until its exact ID exists in the reread safe schema.
 - Confirmation controls require server-provided draft/action state and the current user confirmation action. A stale action result is discarded and reloaded.
 
 ## 7. Acceptance Contract

@@ -14,6 +14,12 @@
 - The design also aligns the existing Canvas schema response with the Stage07 security contract by removing `permission_policy` and unrecognised options before they reach the browser. Choice-aware `multi_select` create/direct-edit support is part of F1 so a builder cannot create a required field that the app cannot use.
 - This is a design/documentation checkpoint only. No F1 route, service, model, migration, client component or test has been changed yet; implementation-plan, TDD and browser evidence remain required.
 
+### 2026-07-10: F1 Documentation and Test-First Plan Completed
+
+- Added `STAGE_07_SUBSTAGE_F1_FIELD_BUILDER_PLAN.md` with ten ordered TDD tasks: cross-document contract alignment; safe Canvas schema projection; atomic domain/table-lock logic; strict idempotent endpoint; choice-value validation; panel/transport; protected App integration; record choice controls; real PostgreSQL proof; and final four-width visual evidence.
+- Updated the active SDD, API/data-security contract, BDD, test plan, risk register, acceptance checklist, module index, requirement traceability audit and implementation/source indexes. They use one F1 endpoint/receipt vocabulary and explicitly preserve F2 relation/lookup and V1 additional-view exclusions.
+- Task 1 documentation checks are complete. No runtime F1 file, dependency, migration or UI behaviour has changed by this checkpoint. The next plan task is a red test for the existing Canvas schema policy/raw-option leak.
+
 ### 2026-07-10: Original Stage07 Visual References Retained
 
 - The user re-provided the three selected desktop reference images that were previously unavailable as repository assets. They are now retained as `Work Queue Atlas`, `Conversation Desk` and `Workspace Ledger` references under `project-docs/08-implementation/assets/stage07/`.
