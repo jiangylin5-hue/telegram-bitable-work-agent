@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ApiError, api, type BaseSummary, type BootstrapResponse, type PlatformTable, type RecordDetail, type TableSchema, type ViewPresentation, type ViewRecords, type ViewSummary, type WorkspaceHome } from './api'
 import { AppShell } from './AppShell'
 import { BaseCanvas } from './BaseCanvas'
 import { RecordDetailPanel } from './RecordDetail'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
+import { clearAllProtectedQueries, clearProtectedWorkspace, createProtectedQueryClient, protectedQueryKey } from './protectedQuery'
 
 type BaseCanvasState = {
   base: BaseSummary
@@ -26,31 +28,75 @@ type AppState =
   | { status: 'error' }
   | { status: 'ready'; bootstrap: BootstrapResponse; home: WorkspaceHome; canvas?: BaseCanvasState; canvasLoading?: boolean }
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError'
+}
+
 export function App() {
+  const [queryClient] = useState(createProtectedQueryClient)
+  return <QueryClientProvider client={queryClient}><AppContent /></QueryClientProvider>
+}
+
+function AppContent() {
+  const queryClient = useQueryClient()
   const [state, setState] = useState<AppState>({ status: 'loading' })
+  const homeRequestVersion = useRef(0)
+  const bootstrapQuery = useQuery({
+    queryKey: ['stage07', 'bootstrap'],
+    queryFn: ({ signal }) => api.bootstrap({ signal }),
+  })
+
+  async function loadWorkspaceHome(bootstrap: BootstrapResponse, workspaceId: string) {
+    const requestVersion = ++homeRequestVersion.current
+    const workspace = bootstrap.workspaces.find((item) => item.id === workspaceId)
+    if (!workspace) {
+      setState({ status: 'denied' })
+      return
+    }
+    const scope = { userId: bootstrap.identity.user_id, workspaceId }
+    try {
+      const home = await queryClient.fetchQuery({
+        queryKey: protectedQueryKey(scope, 'home'),
+        queryFn: ({ signal }) => api.workspaceHome(workspaceId, { signal }),
+      })
+      if (homeRequestVersion.current !== requestVersion) return
+      setState({ status: 'ready', bootstrap, home })
+    } catch (error) {
+      if (homeRequestVersion.current !== requestVersion || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await clearAllProtectedQueries(queryClient)
+        setState({ status: 'denied' })
+        return
+      }
+      if (error instanceof ApiError && error.status === 403) {
+        await clearProtectedWorkspace(queryClient, scope)
+        setState({ status: 'denied' })
+        return
+      }
+      setState({ status: 'error' })
+    }
+  }
 
   useEffect(() => {
-    let active = true
-    async function load() {
-      try {
-        const bootstrap = await api.bootstrap()
-        const workspace = bootstrap.workspaces[0]
-        if (!workspace) {
-          if (active) setState({ status: 'denied' })
-          return
-        }
-        const home = await api.workspaceHome(workspace.id)
-        if (active) setState({ status: 'ready', bootstrap, home })
-      } catch (error) {
-        if (!active) return
-        setState({ status: error instanceof ApiError && error.status === 403 ? 'denied' : 'error' })
-      }
+    const bootstrap = bootstrapQuery.data
+    if (!bootstrap) return
+    const workspace = bootstrap.workspaces[0]
+    if (!workspace) {
+      setState({ status: 'denied' })
+      return
     }
-    void load()
-    return () => { active = false }
-  }, [])
+    void loadWorkspaceHome(bootstrap, workspace.id)
+  }, [bootstrapQuery.data])
 
-  if (state.status === 'loading') return <main className="app-state" aria-label="正在加载工作区">正在加载工作区…</main>
+  useEffect(() => {
+    if (bootstrapQuery.error instanceof ApiError && (bootstrapQuery.error.status === 401 || bootstrapQuery.error.status === 403)) {
+      void clearAllProtectedQueries(queryClient)
+    }
+  }, [bootstrapQuery.error, queryClient])
+
+  if (bootstrapQuery.isError) return <main className="app-state" aria-label={bootstrapQuery.error instanceof ApiError && (bootstrapQuery.error.status === 401 || bootstrapQuery.error.status === 403) ? '无工作区访问权限' : '网络错误'}>{bootstrapQuery.error instanceof ApiError && (bootstrapQuery.error.status === 401 || bootstrapQuery.error.status === 403) ? '当前身份没有可访问的工作区。' : '暂时无法加载工作区，请稍后重试。'}</main>
+  if (bootstrapQuery.isPending || state.status === 'loading') return <main className="app-state" aria-label="正在加载工作区">正在加载工作区…</main>
+
   if (state.status === 'denied') return <main className="app-state" aria-label="无工作区访问权限">当前身份没有可访问的工作区。</main>
   if (state.status === 'error') return <main className="app-state" aria-label="网络错误">暂时无法加载工作区，请稍后重试。</main>
 
@@ -58,13 +104,10 @@ export function App() {
   const activeWorkspace = readyState.bootstrap.workspaces.find((item) => item.id === readyState.home.workspace_id) ?? readyState.bootstrap.workspaces[0]
   async function selectWorkspace(workspaceId: string) {
     if (workspaceId === activeWorkspace.id) return
+    homeRequestVersion.current += 1
     setState({ status: 'loading' })
-    try {
-      const home = await api.workspaceHome(workspaceId)
-      setState({ status: 'ready', bootstrap: readyState.bootstrap, home })
-    } catch (error) {
-      setState({ status: error instanceof ApiError && error.status === 403 ? 'denied' : 'error' })
-    }
+    await clearProtectedWorkspace(queryClient, { userId: readyState.bootstrap.identity.user_id, workspaceId: activeWorkspace.id })
+    await loadWorkspaceHome(readyState.bootstrap, workspaceId)
   }
 
   async function openBase(base: BaseSummary) {

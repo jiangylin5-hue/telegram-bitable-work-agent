@@ -5,6 +5,7 @@
 - Decision status: approved by user on 2026-07-10 — implementation may begin only within this document's scope
 - Scope: Mini App/desktop React server-state cache, request cancellation, workspace/session/revocation clearing and mutation refresh
 - Non-scope: backend schema/API/role/permission changes; local persistence; Bot/knowledge/memory implementation
+- Implementation progress: bootstrap and Workspace Home are migrated. Base/table/view/record reads remain an explicit later migration slice; this decision is not yet fully implemented.
 
 ## 1. Problem
 

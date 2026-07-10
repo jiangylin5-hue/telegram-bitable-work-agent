@@ -56,14 +56,14 @@ async function getJson<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  bootstrap: () => getJson<BootstrapResponse>('/mini-app/bootstrap'),
-  workspaceHome: (workspaceId: string) => getJson<WorkspaceHome>(`/workspaces/${workspaceId}/home`),
-  baseTables: (baseId: string) => getJson<{ tables: PlatformTable[] }>(`/bases/${baseId}/tables`),
-  baseViews: (baseId: string) => getJson<{ views: ViewSummary[] }>(`/bases/${baseId}/views`),
-  tableSchema: (tableId: string) => getJson<TableSchema>(`/tables/${tableId}/schema`),
-  viewPresentation: (viewId: string) => getJson<ViewPresentation>(`/views/${viewId}/presentation`),
-  viewRecords: (viewId: string, cursor?: string) => getJson<ViewRecords>(`/views/${viewId}/records${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`),
-  recordDetail: (recordId: string) => getJson<RecordDetail>(`/records/${recordId}`),
+  bootstrap: (init?: RequestInit) => getJson<BootstrapResponse>('/mini-app/bootstrap', init),
+  workspaceHome: (workspaceId: string, init?: RequestInit) => getJson<WorkspaceHome>(`/workspaces/${workspaceId}/home`, init),
+  baseTables: (baseId: string, init?: RequestInit) => getJson<{ tables: PlatformTable[] }>(`/bases/${baseId}/tables`, init),
+  baseViews: (baseId: string, init?: RequestInit) => getJson<{ views: ViewSummary[] }>(`/bases/${baseId}/views`, init),
+  tableSchema: (tableId: string, init?: RequestInit) => getJson<TableSchema>(`/tables/${tableId}/schema`, init),
+  viewPresentation: (viewId: string, init?: RequestInit) => getJson<ViewPresentation>(`/views/${viewId}/presentation`, init),
+  viewRecords: (viewId: string, cursor?: string, init?: RequestInit) => getJson<ViewRecords>(`/views/${viewId}/records${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`, init),
+  recordDetail: (recordId: string, init?: RequestInit) => getJson<RecordDetail>(`/records/${recordId}`, init),
   updateRecord: (recordId: string, values: Record<string, unknown>, expectedVersion: number) => getJson<RecordDetail>(`/records/${recordId}`, {
     method: 'PATCH',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json' },

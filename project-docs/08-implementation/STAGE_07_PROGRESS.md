@@ -90,6 +90,13 @@
 - User approved Technical Decision 001. The next subphase may add the documented memory-only `@tanstack/react-query` v5 boundary after red tests prove user/workspace key isolation, request cancellation and 401/403/404 cache removal.
 - The approval does not extend to browser persistence, backend API/schema/permission changes, governance, Bot/knowledge/memory or Telegram production verification.
 
+### 2026-07-10: Protected Query Bootstrap/Home Slice Verified
+
+- Installed the approved `@tanstack/react-query@5.101.2` without a persistence or Devtools plugin. `protectedQuery.ts` defines in-memory `QueryClient` defaults (`staleTime: 0`, `gcTime: 0`, no automatic retry), verified user/workspace-prefixed keys and scoped/all-Stage07 cancellation/removal helpers.
+- Migrated Mini App bootstrap and Workspace Home only. Bootstrap receives a query cancellation signal; Home uses the verified identity/workspace key and forwards the signal to `fetch`. A workspace switch increments the request generation, cancels/removes the old workspace scope before starting the target Home request; 401 clears all Stage07 queries and 403 clears the affected workspace scope before a safe denied state.
+- No browser storage, cache persister, backend endpoint/schema/permission change, governance screen, Bot feature or Telegram production flow was added. Base/table/view/record reads deliberately remain on the existing local state path until their own migration test slice.
+- Verification: Query-key/scope-removal/default tests and API AbortSignal test passed; full frontend suite passed `17 passed`; production build passed. Browser QA switched from `运营中心` to `项目中心`, rendered only the new authorized Base and removed the old Base link with no relevant console warning/error. Static scan found no `localStorage`, `sessionStorage` or `persistQueryClient` usage.
+
 ## Next Step
 
 Run the full frontend/backend regression and browser QA for the version-aware edit path. Then prepare and seek approval for the workspace-level Bot, knowledge, memory and Telegram lifecycle contract; complex typed field editors, conflict reload and cache invalidation remain separate, documented work items.
