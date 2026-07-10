@@ -10,3 +10,5 @@ venv/
 !.env.example
 .local/
 .worktrees/
+mini-app/node_modules/
+mini-app/dist/
