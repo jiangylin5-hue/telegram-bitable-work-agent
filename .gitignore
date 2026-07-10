@@ -12,3 +12,4 @@ venv/
 .worktrees/
 mini-app/node_modules/
 mini-app/dist/
+mini-app/*.tsbuildinfo
