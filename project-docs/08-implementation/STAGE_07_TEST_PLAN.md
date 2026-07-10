@@ -52,7 +52,8 @@
 
 - 2026-07-10: a disposable local fixture exercised 1440px, 1280px, 430px and 390px. It covered fieldless-to-status, visible header re-read, `multi_select`, allowed-choice record creation, blank-name feedback, same-key 503 retry, 409 lock and 403 denied-state cleanup. The retained Workspace Ledger reference and the 1440px rendered F1 state were reviewed together; all final fixture console warnings/errors were empty.
 - The 390px nonempty-table trigger initially exposed a responsive defect: the generic toolbar rule hid the authorised field action. A test was written red, the explicit mobile field/record action override was added, and a fresh 390px fixture run opened the field sheet from its visible `添加字段` trigger.
-- The original full fixture put its generic record read ahead of its test-only PATCH handler. It could not therefore provide a direct-edit-success screenshot; component/application tests provide that behaviour evidence. Re-run that one disposable visual state with corrected fixture route ordering before claiming the full F1 browser matrix complete.
+- 2026-07-11: a corrected disposable fixture handled `PATCH` before its generic record read. It changed a record from `新建` / `[重点客户, 续费关注]` to `跟进中` / `[重点客户]`, reread version `2` into both Grid and Record Detail, emitted an empty error/warning log and retained `artifacts/stage07/f1-direct-edit-success-1440.png` after visual inspection.
+- The full F1 browser matrix remains incomplete: duplicate-name server feedback and a pending field request interrupted by workspace/view replacement have component/application coverage but no matching browser run. Do not treat them as visually accepted.
 
 ## 3. Completion Rule
 

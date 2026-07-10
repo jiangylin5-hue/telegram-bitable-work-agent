@@ -16,9 +16,10 @@ blocked
 - Desktop field creation uses a right-side drawer; 430px and 390px use a full-width sheet with a visible close control, labelled inputs and an anchored action row.
 - The corrected 390px nonempty-table toolbar keeps both `添加字段` and `新建记录` reachable. This was verified by opening the drawer from the actual mobile trigger, rather than resizing an already-open drawer.
 - Blank-name validation, retryable 503 feedback, locked 409 feedback and generic 403 denial were observed. The final fixture console check reported no warnings or errors.
+- The corrected direct-edit fixture changed `客户阶段` from `新建` to `跟进中`, removed `续费关注` from the selected tags and rendered version `2` in both Grid and Record Detail. The retained sanitized evidence is `../project-docs/08-implementation/artifacts/stage07/f1-direct-edit-success-1440.png`; the final console check was empty.
 
 ## Blocking evidence gaps
 
 - The source reference includes a populated Workspace Ledger plus assistant rail, which belongs to wider Package 2/4 work and is intentionally not claimed as F1 parity.
-- The original full disposable fixture ordered its generic record-read handler before its `PATCH` handler. It therefore could not capture the final direct-edit success state visually, even though the actual component/application direct-edit tests pass. Re-run that one visual state with corrected test-only route order.
+- The direct-edit screenshot is now captured, but the full browser matrix still lacks explicit duplicate-name server feedback and an in-flight field request interrupted by a workspace/view transition. Existing component/application tests cover the corresponding behaviour; they are not substituted for those browser cases.
 - The three F1 real-PostgreSQL proof cases remain skipped until an authorised disposable `STAGE06_LOCAL_DATABASE_URL` is available.

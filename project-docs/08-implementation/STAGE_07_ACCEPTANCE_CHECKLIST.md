@@ -40,7 +40,7 @@ These checks cover only approved independent field creation and its immediate re
 - [x] The server generates the key/order/default policy, updates eligible explicit saved-view field lists atomically, writes sanitized audit and leaves existing record values empty.
 - [x] Configured status/single/multi choices are validated server-side; multi-select works in record create and direct edit; legacy option-less fields preserve their documented compatibility.
 - [x] Same-key replay and changed-payload `409` have automated evidence; in-memory rollback/order tests pass, while the three matching real-PostgreSQL cases remain explicitly unchecked until an authorised local URL runs them.
-- [ ] Browser QA has F1-scoped Workspace Ledger comparison and zero-console-error evidence at 1440/1280/430/390 for fieldless-to-first-field, nonempty-table add, validation/retry/denial and allowed-choice record creation. The corrected disposable direct-edit success capture remains an explicit visual-evidence follow-up.
+- [ ] Browser QA has F1-scoped Workspace Ledger comparison and zero-console-error evidence at 1440/1280/430/390 for fieldless-to-first-field, nonempty-table add, validation/retry/denial, allowed-choice record creation and direct-edit success; the sanitized direct-edit screenshot is retained at `artifacts/stage07/f1-direct-edit-success-1440.png`. Explicit duplicate-name server feedback and an in-flight field request interrupted by a workspace/view transition remain browser-evidence follow-ups.
 
 ## Governance And Security
 

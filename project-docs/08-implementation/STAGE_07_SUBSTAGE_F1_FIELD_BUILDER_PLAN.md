@@ -854,7 +854,7 @@ cd ..; git diff --check
 
 Expected: backend/frontend/build/migration commands report their actual result; any skipped PostgreSQL test count and reason are retained verbatim.
 
-- [x] **Step 2: Create and inspect the disposable browser fixture**
+- [ ] **Step 2: Create and inspect the disposable browser fixture**
 
 At `1440px`, `1280px`, `430px` and `390px`, run these real interactions against a disposable fixture:
 
@@ -865,6 +865,8 @@ At `1440px`, `1280px`, `430px` and `390px`, run these real interactions against 
 5. workspace/view switch during a pending request, proving no stale field renders.
 
 Capture the rendered screen beside `assets/stage07/workspace-ledger-reference.png` at the matching desktop widths. Inspect visible differences in shell proportions, dense toolbar placement, drawer/sheet spacing, type scale, borders/radii, selection blue and right-rail treatment. Stop/remove the fixture and delete unsanctioned test artifacts after inspection.
+
+2026-07-11 correction: fieldless/add/choice/create/503/409/403 and four-width runs exist; direct-edit success is retained in `artifacts/stage07/f1-direct-edit-success-1440.png`. The checkbox remains open because duplicate-name server feedback and an in-flight field request interrupted by workspace/view replacement still lack a browser run. The three PostgreSQL cases remain separately environment-gated.
 
 - [x] **Step 3: Update evidence documents accurately**
 

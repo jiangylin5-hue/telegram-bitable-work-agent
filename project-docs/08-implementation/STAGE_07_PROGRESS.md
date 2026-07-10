@@ -3,9 +3,15 @@
 ## Status
 
 - Document status: active progress log
-- Current Progress: 2026-07-10 Package 1/2 has an implemented, verified vertical path: approved Mini App bootstrap, authorization-filtered Workspace Home, responsive App Shell and workspace switching; permission-filtered Base/table/view canvas including authorized in-Base table switching; read-only Grid/Kanban/Calendar/Form presentation; Record Detail; version-aware scalar direct edits; a server-filtered scalar record-create drawer; bounded P3 atomic Base/Table Builder; and bounded F1 Independent Field Builder. F1 spans safe Canvas schema/receipt projection, atomic idempotent field initialization, choice-aware record flows, protected re-read/cache cleanup and desktop/mobile UI. Its real-PostgreSQL proof is unavailable locally, and the direct-edit browser screenshot needs one corrected disposable-fixture rerun; F2/V1, imports/templates, governance, Bot surface, draft confirmation and final Stage07 acceptance remain incomplete.
+- Current Progress: 2026-07-11 Package 1/2 has an implemented, verified vertical path: approved Mini App bootstrap, authorization-filtered Workspace Home, responsive App Shell and workspace switching; permission-filtered Base/table/view canvas including authorized in-Base table switching; read-only Grid/Kanban/Calendar/Form presentation; Record Detail; version-aware scalar direct edits; a server-filtered scalar record-create drawer; bounded P3 atomic Base/Table Builder; and bounded F1 Independent Field Builder. F1 spans safe Canvas schema/receipt projection, atomic idempotent field initialization, choice-aware record flows, protected re-read/cache cleanup and desktop/mobile UI. Direct-edit browser success is now retained; its real-PostgreSQL proof and two explicit browser cases remain incomplete. F2/V1, imports/templates, governance, Bot surface, draft confirmation and final Stage07 acceptance remain incomplete.
 
 ## Progress Log
+
+### 2026-07-11: F1 Direct-Edit Visual Evidence Corrected
+
+- Replaced the original disposable fixture's route ordering with a short-lived direct-edit fixture that handles `PATCH /records/{id}` before the generic read path. On the 1440px F1 Canvas, `客户阶段` changed from `新建` to `跟进中`, `续费关注` was removed from the tag list, and both Grid and Record Detail reread version `2`.
+- The sanitized screenshot was saved and visually inspected at `project-docs/08-implementation/artifacts/stage07/f1-direct-edit-success-1440.png`; the final browser console contained no warning/error. The temporary fixture source/import and local port-4173 server were removed/stopped after the run.
+- This improves only the direct-edit browser evidence. The F1 browser checklist deliberately remains incomplete for duplicate-name server feedback and an in-flight field request interrupted by workspace/view replacement; the PostgreSQL rollback/replay/concurrency evidence remains gated by the absent authorised disposable URL.
 
 ### 2026-07-10: F1 Independent Field Builder Is Partial-Local
 
