@@ -207,7 +207,10 @@ function AppContent() {
         setState({ status: 'denied' })
         return
       }
-      setState({ status: 'error' })
+      if (error instanceof ApiError && error.status === 404) {
+        setState({ status: 'error' })
+        return
+      }
       throw error
     }
   }
@@ -239,7 +242,10 @@ function AppContent() {
         setState({ status: 'denied' })
         return
       }
-      setState({ status: 'error' })
+      if (error instanceof ApiError && error.status === 404) {
+        setState({ status: 'error' })
+        return
+      }
       throw error
     }
   }

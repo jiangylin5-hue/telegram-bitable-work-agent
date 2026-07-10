@@ -148,6 +148,45 @@ test('clears the protected workspace and panel after a denied creation response'
   expect(screen.queryByText('不可见 Base')).not.toBeInTheDocument()
 })
 
+test('keeps a failed creation drawer and its idempotency key for an explicit retry', async () => {
+  const fetchMock = vi.fn()
+  vi.stubGlobal('fetch', fetchMock)
+  vi.stubGlobal('crypto', { randomUUID: () => 'retry-base-1' })
+  let creationAttempts = 0
+  let homeReads = 0
+  fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+    const path = String(input)
+    if (path === '/mini-app/bootstrap') return Promise.resolve(json(bootstrap()))
+    if (path === '/workspaces/workspace-1/home') {
+      homeReads += 1
+      return Promise.resolve(json(home(homeReads === 1 ? [] : [{ id: 'base-retry', name: '重试 Base', source_type: 'blank' }])))
+    }
+    if (path === '/workspaces/workspace-1/base-initializations') {
+      creationAttempts += 1
+      expect(new Headers(init?.headers).get('Idempotency-Key')).toBe('retry-base-1')
+      if (creationAttempts === 1) return Promise.resolve(json({ detail: 'temporary' }, 500))
+      return Promise.resolve(json({ base: { id: 'base-retry', name: '重试 Base', source_type: 'blank', status: 'active' }, table: { id: 'table-retry', base_id: 'base-retry', name: '数据表', key: 'tbl_retry', status: 'active' }, default_view: { id: 'view-retry', base_id: 'base-retry', table_id: 'table-retry', name: '所有记录', view_type: 'grid', status: 'active' } }, 201))
+    }
+    if (path === '/bases/base-retry/tables') return Promise.resolve(json({ tables: [{ id: 'table-retry', base_id: 'base-retry', name: '数据表', key: 'tbl_retry', status: 'active' }] }))
+    if (path === '/bases/base-retry/views') return Promise.resolve(json({ views: [{ id: 'view-retry', base_id: 'base-retry', table_id: 'table-retry', name: '所有记录', view_type: 'grid', status: 'active' }] }))
+    if (path === '/tables/table-retry/schema') return Promise.resolve(json({ table: { id: 'table-retry', name: '数据表', key: 'tbl_retry' }, fields: [] }))
+    if (path === '/views/view-retry/presentation') return Promise.resolve(json(grid('table-retry', 'view-retry')))
+    if (path === '/views/view-retry/records') return Promise.resolve(json(records('view-retry')))
+    return Promise.resolve(json({ detail: `unexpected ${path}` }, 404))
+  })
+
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: '新建 Base' }))
+  fireEvent.change(screen.getByLabelText('Base 名称'), { target: { value: '重试 Base' } })
+  fireEvent.click(screen.getByRole('button', { name: '创建 Base' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('创建失败，请稍后重试。')
+  expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+  fireEvent.click(screen.getByRole('button', { name: '创建 Base' }))
+  expect(await screen.findByRole('heading', { name: '重试 Base' })).toBeInTheDocument()
+  expect(creationAttempts).toBe(2)
+})
+
 test('ignores a delayed creation receipt after the user has changed workspace', async () => {
   const fetchMock = vi.fn()
   vi.stubGlobal('fetch', fetchMock)

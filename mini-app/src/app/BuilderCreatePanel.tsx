@@ -1,5 +1,7 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 
+import { ApiError } from './api'
+
 type BaseValues = { baseName: string; tableName: string }
 type TableValues = { tableName: string }
 
@@ -17,6 +19,7 @@ export function BuilderCreatePanel({ mode, onSubmit, onClose }: BuilderCreatePan
   const [tableName, setTableName] = useState('数据表')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [conflicted, setConflicted] = useState(false)
 
   useEffect(() => {
     firstInputRef.current?.focus()
@@ -48,8 +51,13 @@ export function BuilderCreatePanel({ mode, onSubmit, onClose }: BuilderCreatePan
           : { tableName: normalizedTableName },
         idempotencyKey,
       )
-    } catch {
-      setError('创建失败，请稍后重试。')
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 409) {
+        setError('创建请求发生冲突，请关闭后重新创建。')
+        setConflicted(true)
+      } else {
+        setError('创建失败，请稍后重试。')
+      }
     } finally {
       setSaving(false)
     }
@@ -67,16 +75,16 @@ export function BuilderCreatePanel({ mode, onSubmit, onClose }: BuilderCreatePan
       <form className="builder-create-form" onSubmit={handleSubmit} noValidate>
         {isBase && <label>
           <span>Base 名称</span>
-          <input ref={firstInputRef} value={baseName} onChange={(event) => setBaseName(event.target.value)} placeholder="例如：客户运营" />
+          <input ref={firstInputRef} value={baseName} onChange={(event) => setBaseName(event.target.value)} placeholder="例如：客户运营" disabled={saving || conflicted} />
         </label>}
         <label>
           <span>{isBase ? '首张表名称' : '数据表名称'}</span>
-          <input ref={isBase ? undefined : firstInputRef} value={tableName} onChange={(event) => setTableName(event.target.value)} />
+          <input ref={isBase ? undefined : firstInputRef} value={tableName} onChange={(event) => setTableName(event.target.value)} disabled={saving || conflicted} />
         </label>
         {error && <p className="builder-create-error" role="alert">{error}</p>}
         <div className="builder-create-actions">
           <button type="button" className="button-secondary" onClick={onClose} disabled={saving}>取消</button>
-          <button type="submit" className="button-primary" disabled={saving}>{saving ? '创建中…' : submitLabel}</button>
+          <button type="submit" className="button-primary" disabled={saving || conflicted}>{saving ? '创建中…' : submitLabel}</button>
         </div>
       </form>
     </aside>

@@ -4,6 +4,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 import { BuilderCreatePanel } from '../app/BuilderCreatePanel'
 import { BaseCanvas } from '../app/BaseCanvas'
 import { WorkspaceHome } from '../app/WorkspaceHome'
+import { ApiError } from '../app/api'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -54,6 +55,21 @@ test('table mode keeps the same idempotency key after a retryable failure', asyn
     { tableName: '待办' },
     'table-attempt-1',
   ))
+})
+
+test('an idempotency conflict requires closing the panel before a new attempt', async () => {
+  const onSubmit = vi.fn().mockRejectedValue(new ApiError(409))
+  const onClose = vi.fn()
+  vi.stubGlobal('crypto', { randomUUID: () => 'conflicted-attempt-1' })
+
+  render(<BuilderCreatePanel mode="table" onSubmit={onSubmit} onClose={onClose} />)
+
+  fireEvent.change(screen.getByLabelText('数据表名称'), { target: { value: '待办' } })
+  fireEvent.click(screen.getByRole('button', { name: '创建数据表' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('创建请求发生冲突，请关闭后重新创建。')
+  expect(screen.getByRole('button', { name: '创建数据表' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '取消' })).toBeEnabled()
 })
 
 test('closing the panel does not submit', () => {
