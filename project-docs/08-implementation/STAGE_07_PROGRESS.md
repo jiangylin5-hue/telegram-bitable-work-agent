@@ -73,6 +73,11 @@
 - TDD evidence: an application integration test initially exposed a real mount-effect race that could close the editor immediately after an edit click. The synchronization effect now runs only after the record ID/version actually changes. The new application test proves one failed `PATCH`, a detail reread, a view-window reread and authoritative version `4` rendering.
 - Verification: `npm.cmd run test:run` => `10 passed`; `npm.cmd run build` passed. Browser QA through a disposable local contract fixture produced `409`, reread `Ada Global`/version `4` into both Grid and Record Detail, displayed the retry notice and had no relevant console warning/error. The fixture/server were deleted/stopped after the run.
 
+### 2026-07-10: Protected Query State Decision Proposal Prepared
+
+- Prepared, but did not implement, `STAGE_07_TECHNICAL_DECISION_001_PROTECTED_QUERY_STATE.md` for user discussion. It recommends a memory-only `@tanstack/react-query` v5 boundary with verified user/workspace-prefixed keys, cancellation/removal on identity/workspace changes and no browser persistence.
+- This is a technical selection gate. No dependency, cache migration, local persistence, API/schema/permission change or Package 4 behavior was added by the proposal.
+
 ## Next Step
 
 Run the full frontend/backend regression and browser QA for the version-aware edit path. Then prepare and seek approval for the workspace-level Bot, knowledge, memory and Telegram lifecycle contract; complex typed field editors, conflict reload and cache invalidation remain separate, documented work items.

@@ -39,6 +39,7 @@ verified identity -> workspace member -> permission-filtered UI
 11. [Stage 07 Acceptance Checklist](STAGE_07_ACCEPTANCE_CHECKLIST.md)
 12. [Stage 07 Progress](STAGE_07_PROGRESS.md)
 13. [Stage 07 Requirement Traceability Audit](STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md)
+14. [Technical Decision 001: Protected Query State](STAGE_07_TECHNICAL_DECISION_001_PROTECTED_QUERY_STATE.md)
 
 Stage06 is the backend contract baseline. Stage02-05 documents are historical capability evidence only.
 
