@@ -165,7 +165,7 @@ git commit -m "feat(stage07): define strict saved view commands"
 - Consumes: typed V1 command, table field metadata and caller field visibility.
 - Produces: canonical stored V1 presentation, a safe builder projection, and fixed validation codes.
 
-- [ ] **Step 1: Write failing validation and projection tests**
+- [x] **Step 1: Write failing validation and projection tests**
 
 ```python
 def test_grid_query_rejects_more_than_twelve_filters() -> None:
@@ -177,13 +177,13 @@ def test_hidden_or_unauthorized_field_never_enters_builder_projection() -> None:
     assert "sensitive_field" not in json.dumps(projection)
 ```
 
-- [ ] **Step 2: Verify red test**
+- [x] **Step 2: Verify red test**
 
 Run: `python -m pytest -q tests/unit/test_stage07_view_builder_validation.py`
 
 Expected: FAIL because V1 canonicalization is absent.
 
-- [ ] **Step 3: Implement one service-owned canonicalization path**
+- [x] **Step 3: Implement one service-owned canonicalization path**
 
 ```python
 def canonicalize_v1_presentation(
@@ -195,13 +195,13 @@ def canonicalize_v1_presentation(
 
 Enforce A01--A07 exactly: Grid field order only from readable fields; at most 12 flat AND clauses; at most three stable sorts; one group; only enumerated operators per field type; no relation/lookup grouping; relation filters use candidate IDs from the safe picker; lookup filter/sort only for numeric lookup values; Kanban, Calendar and Form accept only their documented typed settings. Persist the canonical result in the existing JSONB `config` only as server-owned data and return an independently constructed safe projection. Reject unsupported nested lookup depth, formula text, free expressions and client-supplied policy.
 
-- [ ] **Step 4: Verify green plus F1/F2 regression**
+- [x] **Step 4: Verify green plus F1/F2 regression**
 
 Run: `python -m pytest -q tests/unit/test_stage07_view_builder_validation.py tests/unit/test_stage06_platform_api.py tests/unit/test_stage07_relation_lookup.py`
 
 Expected: PASS; legacy safe presentation and F2 relation/lookup guards remain intact.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/services/stage06_platform.py backend/tests/unit/test_stage07_view_builder_validation.py

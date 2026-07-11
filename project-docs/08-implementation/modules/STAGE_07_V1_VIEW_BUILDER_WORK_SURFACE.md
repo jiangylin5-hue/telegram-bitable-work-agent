@@ -4,7 +4,7 @@
 
 - Document status: user-approved module/work-surface contract; approved implementation in progress
 - Scope: every V1 user-facing saved-view state in BaseCanvas, desktop and mobile
-- Current Progress: V1-1/2 durable persistence and typed schema have no Mini App effect. Current toolbar buttons remain non-mutating until the later typed service and Mini App tasks complete.
+- Current Progress: V1-1/2/3 durable persistence, typed schema and server canonicalization have no Mini App effect. Current toolbar buttons remain non-mutating until the later mutation service and Mini App tasks complete.
 
 ## 1. Module Purpose
 

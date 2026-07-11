@@ -4,7 +4,7 @@
 
 - Document status: user-approved complexity/index inventory; approved implementation in progress
 - Scope: V1 configuration/ACL/query state, logical indexes, proposed physical PostgreSQL indexes and evidence ownership
-- Current Progress: V1-1/2 creates the correctness-critical grant uniqueness constraint and strict typed command/read boundary. The listed optional non-unique physical indexes are not migrations and remain forbidden until Task 7 records the required measured PostgreSQL evidence.
+- Current Progress: V1-1/2/3 creates the correctness-critical grant uniqueness constraint, strict typed command/read boundary and canonical safe query-shape projection. The listed optional non-unique physical indexes are not migrations and remain forbidden until Task 7 records the required measured PostgreSQL evidence.
 
 ## 1. Purpose
 

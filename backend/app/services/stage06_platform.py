@@ -30,6 +30,7 @@ from app.models.stage06_templates import (
     TemplateInstallation,
 )
 from app.models.stage06_hardening import Stage06IdempotencyRecord
+from app.schemas.stage06_platform import ViewPresentationCommand
 from app.services.audit import record_audit_event
 from app.services.permissions import Actor
 from app.services.stage06_audit import sanitize_stage06_audit_state
@@ -74,6 +75,9 @@ LOOKUP_AGGREGATIONS = frozenset(
     {"values", "count", "count_distinct", "sum", "average", "min", "max"}
 )
 NUMERIC_LOOKUP_AGGREGATIONS = frozenset({"sum", "average", "min", "max"})
+V1_NUMERIC_LOOKUP_AGGREGATIONS = frozenset(
+    {"count", "count_distinct", *NUMERIC_LOOKUP_AGGREGATIONS}
+)
 LOOKUP_INELIGIBLE_TARGET_FIELD_TYPES = frozenset({"linked_record", "json", "formula"})
 RELATION_LABEL_FIELD_TYPES = frozenset(
     {"text", "status", "single_select", "url", "email", "phone", "user"}
@@ -98,6 +102,37 @@ CREATE_FORM_SCALAR_FIELD_TYPES = frozenset(
     }
 )
 _MISSING = object()
+_V1_EMPTY_OPERATORS = frozenset({"is_empty", "is_not_empty"})
+_V1_FILTER_OPERATORS_BY_TYPE = {
+    "text": frozenset({"equals", "not_equals", "contains", *_V1_EMPTY_OPERATORS}),
+    "url": frozenset({"equals", "not_equals", "contains", *_V1_EMPTY_OPERATORS}),
+    "email": frozenset({"equals", "not_equals", "contains", *_V1_EMPTY_OPERATORS}),
+    "phone": frozenset({"equals", "not_equals", "contains", *_V1_EMPTY_OPERATORS}),
+    "number": frozenset({"equals", "not_equals", "gt", "gte", "lt", "lte", *_V1_EMPTY_OPERATORS}),
+    "date": frozenset({"equals", "before", "on_or_before", "after", "on_or_after", *_V1_EMPTY_OPERATORS}),
+    "status": frozenset({"is", "is_not", *_V1_EMPTY_OPERATORS}),
+    "single_select": frozenset({"is", "is_not", *_V1_EMPTY_OPERATORS}),
+    "multi_select": frozenset({"contains_any", "contains_all", *_V1_EMPTY_OPERATORS}),
+    "checkbox": frozenset({"is_true", "is_false"}),
+    "user": frozenset({"is", "is_not", *_V1_EMPTY_OPERATORS}),
+    "linked_record": frozenset({"contains_record", *_V1_EMPTY_OPERATORS}),
+}
+_V1_SORTABLE_FIELD_TYPES = frozenset(
+    {
+        "text",
+        "url",
+        "email",
+        "phone",
+        "number",
+        "date",
+        "status",
+        "single_select",
+        "multi_select",
+        "checkbox",
+        "user",
+    }
+)
+_V1_GROUPABLE_FIELD_TYPES = frozenset({"status", "single_select", "user"})
 
 
 class PlatformValidationError(ValueError):
@@ -1720,6 +1755,397 @@ def read_record_for_actor(
         "record_status": record.record_status,
         "version": record.version,
     }
+
+
+def canonicalize_v1_presentation(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID,
+    *,
+    actor: Actor,
+    command: ViewPresentationCommand,
+) -> dict[str, Any]:
+    """Validate a typed V1 command into server-owned JSONB-ready presentation state."""
+
+    _require_exists(uow.get_table(table_id), "table_not_found")
+    readable_fields = {
+        field.key: field
+        for field in uow.list_fields(table_id)
+        if field.status == "active" and _can_actor_read_field(actor, field)
+    }
+    visible_field_keys = _canonical_v1_field_keys(
+        command.visible_field_keys,
+        readable_fields,
+        code="view_field_not_visible",
+    )
+    filters = _canonical_v1_filters(
+        uow,
+        table_id,
+        actor,
+        readable_fields,
+        command,
+    )
+    sort_rules = _canonical_v1_sort_rules(
+        readable_fields,
+        getattr(command, "sort_rules", []),
+    )
+    group_by_field_key = _canonical_v1_group_key(
+        readable_fields,
+        getattr(command, "group_by_field_key", None),
+        required=command.view_type == "kanban",
+    )
+    date_field_key = _canonical_v1_date_key(
+        readable_fields,
+        getattr(command, "date_field_key", None),
+        required=command.view_type == "calendar",
+    )
+    form_field_keys = _canonical_v1_form_keys(
+        readable_fields,
+        getattr(command, "form_field_keys", []),
+        actor,
+        required=command.view_type == "form",
+    )
+    return {
+        "schema": "stage07_v1",
+        "fields": visible_field_keys,
+        "filters": filters,
+        "sort_rules": sort_rules,
+        "group_by_field_key": group_by_field_key,
+        "date_field_key": date_field_key,
+        "form_field_keys": form_field_keys,
+    }
+
+
+def build_v1_safe_view_projection(
+    uow: Stage06PlatformUnitOfWork,
+    view: PlatformView,
+    *,
+    actor: Actor,
+) -> dict[str, Any]:
+    """Rebuild a safe V1 presentation without exposing persisted raw configuration."""
+
+    if view.table_id is None:
+        raise PlatformValidationError("view_has_no_table", str(view.id))
+    readable_fields = {
+        field.key: field
+        for field in uow.list_fields(view.table_id)
+        if field.status == "active" and _can_actor_read_field(actor, field)
+    }
+    config = view.config if isinstance(view.config, dict) else {}
+    visible_field_keys = _safe_v1_configured_field_keys(
+        config.get("fields"),
+        readable_fields,
+    )
+    return {
+        "view_id": str(view.id),
+        "table_id": str(view.table_id),
+        "view_type": view.view_type,
+        "visible_field_keys": visible_field_keys,
+        "filters": _safe_v1_configured_filters(
+            config.get("filters"),
+            readable_fields,
+        ),
+        "sort_rules": _safe_v1_configured_sorts(
+            config.get("sort_rules"),
+            readable_fields,
+        ),
+        "group_by_field_key": _safe_v1_configured_group(
+            config.get("group_by_field_key"),
+            readable_fields,
+        ),
+        "date_field_key": _safe_v1_configured_date(
+            config.get("date_field_key"),
+            readable_fields,
+        ),
+        "form_field_keys": _safe_v1_configured_field_keys(
+            config.get("form_field_keys"),
+            readable_fields,
+        ),
+    }
+
+
+def _canonical_v1_field_keys(
+    keys: object,
+    readable_fields: dict[str, PlatformField],
+    *,
+    code: str,
+) -> list[str]:
+    if not isinstance(keys, list) or len(keys) > 200:
+        raise PlatformValidationError(code, "field_keys")
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for key in keys:
+        if not isinstance(key, str) or key in seen or key not in readable_fields:
+            raise PlatformValidationError(code, "field_key")
+        normalized.append(key)
+        seen.add(key)
+    return normalized
+
+
+def _canonical_v1_filters(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID,
+    actor: Actor,
+    readable_fields: dict[str, PlatformField],
+    command: ViewPresentationCommand,
+) -> list[dict[str, Any]]:
+    conjunction = getattr(command, "filter_conjunction", "and")
+    filters = getattr(command, "filters", [])
+    if conjunction != "and" or not isinstance(filters, list) or len(filters) > 12:
+        raise PlatformValidationError("view_filter_invalid", "filters")
+    normalized: list[dict[str, Any]] = []
+    for condition in filters:
+        field_key = getattr(condition, "field_key", None)
+        operator = getattr(condition, "operator", None)
+        value = getattr(condition, "value", _MISSING)
+        field = readable_fields.get(field_key)
+        if field is None or not isinstance(operator, str):
+            raise PlatformValidationError("view_filter_invalid", "field")
+        allowed_operators = _v1_filter_operators(field)
+        if operator not in allowed_operators or not _v1_filter_value_is_valid(
+            field,
+            operator,
+            value,
+        ):
+            raise PlatformValidationError("view_filter_invalid", field.key)
+        if field.field_type == "linked_record" and operator == "contains_record":
+            _validate_v1_relation_filter_candidate(
+                uow,
+                table_id,
+                field,
+                value,
+                actor,
+            )
+        normalized.append(
+            {"field_key": field.key, "operator": operator, "value": value}
+        )
+    return normalized
+
+
+def _canonical_v1_sort_rules(
+    readable_fields: dict[str, PlatformField],
+    sort_rules: object,
+) -> list[dict[str, str]]:
+    if not isinstance(sort_rules, list) or len(sort_rules) > 3:
+        raise PlatformValidationError("view_sort_invalid", "sort_rules")
+    normalized: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for rule in sort_rules:
+        field_key = getattr(rule, "field_key", None)
+        direction = getattr(rule, "direction", None)
+        field = readable_fields.get(field_key)
+        if (
+            field is None
+            or field.key in seen
+            or direction not in {"asc", "desc"}
+            or not _v1_field_is_sortable(field)
+        ):
+            raise PlatformValidationError("view_sort_invalid", "sort_rule")
+        normalized.append({"field_key": field.key, "direction": direction})
+        seen.add(field.key)
+    return normalized
+
+
+def _canonical_v1_group_key(
+    readable_fields: dict[str, PlatformField],
+    key: object,
+    *,
+    required: bool,
+) -> str | None:
+    if key is None and not required:
+        return None
+    field = readable_fields.get(key) if isinstance(key, str) else None
+    if field is None or field.field_type not in _V1_GROUPABLE_FIELD_TYPES:
+        raise PlatformValidationError("view_group_invalid", "group_by_field_key")
+    return field.key
+
+
+def _canonical_v1_date_key(
+    readable_fields: dict[str, PlatformField],
+    key: object,
+    *,
+    required: bool,
+) -> str | None:
+    if key is None and not required:
+        return None
+    field = readable_fields.get(key) if isinstance(key, str) else None
+    if field is None or field.field_type != "date":
+        raise PlatformValidationError("view_date_field_invalid", "date_field_key")
+    return field.key
+
+
+def _canonical_v1_form_keys(
+    readable_fields: dict[str, PlatformField],
+    keys: object,
+    actor: Actor,
+    *,
+    required: bool,
+) -> list[str]:
+    if not keys and not required:
+        return []
+    normalized = _canonical_v1_field_keys(
+        keys,
+        readable_fields,
+        code="view_form_field_invalid",
+    )
+    if required and not normalized:
+        raise PlatformValidationError("view_form_field_invalid", "form_field_keys")
+    if any(not _can_actor_write_field(actor, readable_fields[key]) for key in normalized):
+        raise PlatformValidationError("view_form_field_invalid", "form_field_key")
+    return normalized
+
+
+def _v1_filter_operators(field: PlatformField) -> frozenset[str]:
+    if field.field_type == "lookup":
+        if _v1_lookup_is_numeric(field):
+            return _V1_FILTER_OPERATORS_BY_TYPE["number"]
+        return frozenset()
+    return _V1_FILTER_OPERATORS_BY_TYPE.get(field.field_type, frozenset())
+
+
+def _v1_field_is_sortable(field: PlatformField) -> bool:
+    return field.field_type in _V1_SORTABLE_FIELD_TYPES or (
+        field.field_type == "lookup" and _v1_lookup_is_numeric(field)
+    )
+
+
+def _v1_lookup_is_numeric(field: PlatformField) -> bool:
+    return field.options.get("aggregation") in V1_NUMERIC_LOOKUP_AGGREGATIONS
+
+
+def _v1_filter_value_is_valid(
+    field: PlatformField,
+    operator: str,
+    value: object,
+) -> bool:
+    if operator in _V1_EMPTY_OPERATORS or operator in {"is_true", "is_false"}:
+        return value is None
+    field_type = "number" if field.field_type == "lookup" else field.field_type
+    if field_type in {"text", "url", "email", "phone", "date", "user", "linked_record"}:
+        return isinstance(value, str) and bool(value)
+    if field_type in {"status", "single_select"}:
+        choices = _safe_field_options(field).get("choices", [])
+        return isinstance(value, str) and value in choices
+    if field_type == "number":
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    if field_type == "multi_select":
+        choices = _safe_field_options(field).get("choices", [])
+        return isinstance(value, list) and bool(value) and all(
+            isinstance(item, str) and item in choices for item in value
+        )
+    return False
+
+
+def _validate_v1_relation_filter_candidate(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID,
+    relation_field: PlatformField,
+    value: object,
+    actor: Actor,
+) -> None:
+    if not isinstance(value, str):
+        raise PlatformValidationError("view_filter_invalid", relation_field.key)
+    candidate_id = _optional_uuid(value)
+    source_table = uow.get_table(table_id)
+    candidate = None if candidate_id is None else uow.get_record(candidate_id)
+    if source_table is None or candidate is None:
+        raise PlatformValidationError("view_filter_invalid", relation_field.key)
+    try:
+        target_table = _relation_target_table(uow, source_table, relation_field)
+    except PlatformValidationError as exc:
+        raise PlatformValidationError("view_filter_invalid", relation_field.key) from exc
+    if candidate.table_id != target_table.id or _safe_relation_label(
+        uow,
+        target_table,
+        candidate,
+        actor,
+    ) is None:
+        raise PlatformValidationError("view_filter_invalid", relation_field.key)
+
+
+def _safe_v1_configured_field_keys(
+    keys: object,
+    readable_fields: dict[str, PlatformField],
+) -> list[str]:
+    if not isinstance(keys, list):
+        return []
+    result: list[str] = []
+    seen: set[str] = set()
+    for key in keys:
+        if isinstance(key, str) and key in readable_fields and key not in seen:
+            result.append(key)
+            seen.add(key)
+    return result
+
+
+def _safe_v1_configured_filters(
+    filters: object,
+    readable_fields: dict[str, PlatformField],
+) -> list[dict[str, Any]]:
+    if not isinstance(filters, list) or len(filters) > 12:
+        return []
+    result: list[dict[str, Any]] = []
+    for condition in filters:
+        if not isinstance(condition, dict):
+            continue
+        field_key = condition.get("field_key")
+        operator = condition.get("operator")
+        value = condition.get("value", _MISSING)
+        field = readable_fields.get(field_key) if isinstance(field_key, str) else None
+        if (
+            field is None
+            or not isinstance(operator, str)
+            or operator not in _v1_filter_operators(field)
+            or not _v1_filter_value_is_valid(field, operator, value)
+        ):
+            continue
+        result.append({"field_key": field.key, "operator": operator, "value": value})
+    return result
+
+
+def _safe_v1_configured_sorts(
+    sort_rules: object,
+    readable_fields: dict[str, PlatformField],
+) -> list[dict[str, str]]:
+    if not isinstance(sort_rules, list) or len(sort_rules) > 3:
+        return []
+    result: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for rule in sort_rules:
+        if not isinstance(rule, dict):
+            continue
+        field_key = rule.get("field_key")
+        direction = rule.get("direction")
+        field = readable_fields.get(field_key) if isinstance(field_key, str) else None
+        if (
+            field is None
+            or field.key in seen
+            or direction not in {"asc", "desc"}
+            or not _v1_field_is_sortable(field)
+        ):
+            continue
+        result.append({"field_key": field.key, "direction": direction})
+        seen.add(field.key)
+    return result
+
+
+def _safe_v1_configured_group(
+    key: object,
+    readable_fields: dict[str, PlatformField],
+) -> str | None:
+    field = readable_fields.get(key) if isinstance(key, str) else None
+    if field is None or field.field_type not in _V1_GROUPABLE_FIELD_TYPES:
+        return None
+    return field.key
+
+
+def _safe_v1_configured_date(
+    key: object,
+    readable_fields: dict[str, PlatformField],
+) -> str | None:
+    field = readable_fields.get(key) if isinstance(key, str) else None
+    if field is None or field.field_type != "date":
+        return None
+    return field.key
 
 
 def list_relation_candidates(

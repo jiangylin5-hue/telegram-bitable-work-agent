@@ -4,7 +4,7 @@
 
 - Document status: user-approved comprehensive V1 design; approved implementation in progress
 - Scope: all saved view types (`grid`, `kanban`, `calendar`, `form`), server-owned presentation semantics, personal/restricted member view access, safe creation/configuration and responsive Mini App work surface
-- Current Progress: V1-1/2 local durable persistence and strict typed command/read schemas are implemented; no V1 endpoint, authorization/configuration semantics, dependency, role/capability or Mini App behavior has been added.
+- Current Progress: V1-1/2/3 local durable persistence, strict typed command/read schemas and canonical safe projection are implemented; no V1 endpoint, mutation authorization/idempotency/audit, dependency, role/capability or Mini App behavior has been added.
 - Prerequisites: Stage07 P3, F1 and F2 are bounded `implemented-local` evidence; this proposal must not be interpreted as widening their accepted contracts.
 
 ## 1. Goal And Product Boundary

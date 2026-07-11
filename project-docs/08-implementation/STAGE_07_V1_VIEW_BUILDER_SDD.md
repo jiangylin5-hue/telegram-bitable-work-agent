@@ -4,7 +4,7 @@
 
 - Document status: user-approved technical design; approved implementation in progress
 - Scope: durable V1 view ownership/ACL/configuration, safe server commands/read models and Mini App module boundary
-- Current Progress: V1-1/2 local persistence and strict typed-schema foundations are implemented; service authorization/canonicalization, query, route and Mini App tasks remain pending. Optional access/list indexes remain deferred until the Task 7 PostgreSQL `EXPLAIN` evidence gate.
+- Current Progress: V1-1/2/3 local persistence, strict typed-schema and canonicalization/safe-projection foundations are implemented; mutation authorization/idempotency/audit, query, route and Mini App tasks remain pending. Optional access/list indexes remain deferred until the Task 7 PostgreSQL `EXPLAIN` evidence gate.
 
 ## 1. Architecture
 
