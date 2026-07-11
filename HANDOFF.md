@@ -63,7 +63,7 @@ Stage07 is the responsive React/Vite Mini App and desktop browser surface over t
 
 ### Deliberately not implemented / not accepted
 
-- F2 relation/lookup is not accepted: user-approved design/plan and detailed BDD/SDD/module/index documents now exist. Local branch commits cover only safe transport and atomic relation initialization; candidate selection, record write rechecks, lookup evaluation, PostgreSQL, frontend and browser evidence remain incomplete.
+- F2 relation/lookup is not accepted: user-approved design/plan and detailed BDD/SDD/module/index documents now exist. Local branch commits cover safe transport, atomic relation initialization and bounded lookup initialization; candidate selection, record write rechecks, lookup evaluation, PostgreSQL, frontend and browser evidence remain incomplete.
 - V1 additional View Builder.
 - Server-recognized filter/sort/group UI behavior.
 - Template/import UI.
