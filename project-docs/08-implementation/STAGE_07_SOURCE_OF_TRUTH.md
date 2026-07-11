@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 planning source of truth
 - Scope: Telegram Mini App and desktop browser UI for the generic workspace, Bitable and digital-employee platform
-- Current Progress: 2026-07-11 Package 1 and bounded Package 2 paths are implemented locally: approved bootstrap/Home/navigation, field-filtered Base/view/record reads, server-filtered scalar record creation, responsive renderers, scalar version-aware edit, authorized in-Base table switching, P3 atomic Base/Table Builder and F1 independent Field Builder. P3/F1 now have an authorised disposable-local PostgreSQL migration smoke plus six real rollback/replay/concurrency/default-view cases, all passing; F1 also has eleven safe field types, choice-aware record controls, four-width browser evidence and a retained direct-edit success visual artifact. Its duplicate-name allowlist feedback and pending-dialog lock are browser-observed at 1440px, 1280px, 430px and 390px; delayed workspace replacement remains an application-level scope-isolation proof. P3/F1 are `implemented-local`, never staging/production claims. The current requirement-by-requirement gap is recorded in `STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md`; F2/V1, imports/templates, Package 3 and Package 4 remain incomplete or contract-gated.
+- Current Progress: 2026-07-11 Package 1 and bounded Package 2 paths are implemented locally: approved bootstrap/Home/navigation, field-filtered Base/view/record reads, server-filtered scalar record creation, responsive renderers, scalar version-aware edit, authorized in-Base table switching, P3 atomic Base/Table Builder and F1 independent Field Builder. P3/F1 now have an authorised disposable-local PostgreSQL migration smoke plus six real rollback/replay/concurrency/default-view cases, all passing; F1 also has eleven safe field types, choice-aware record controls, four-width browser evidence and a retained direct-edit success visual artifact. Its duplicate-name allowlist feedback and pending-dialog lock are browser-observed at 1440px, 1280px, 430px and 390px; delayed workspace replacement remains an application-level scope-isolation proof. P3/F1 are `implemented-local`, never staging/production claims. F2 has an approved design/plan and now has dedicated BDD, SDD, work-surface and complex-feature-index documents; only its transport/relation-initializer slices have local branch commits, while the rest is paused pending this documentation reconciliation and no F2 acceptance is claimed. The current requirement-by-requirement gap is recorded in `STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md`; V1, imports/templates, Package 3 and Package 4 remain incomplete or contract-gated.
 
 ## 1. Stage Goal
 
@@ -32,17 +32,23 @@ verified identity -> workspace member -> permission-filtered UI
 4. [Stage07 Mini App UI Design Specification](../../docs/superpowers/specs/2026-07-10-stage07-mini-app-ui-design.md)
 5. [Stage07 F1 Field Builder Design](../../docs/superpowers/specs/2026-07-10-stage07-f1-field-builder-design.md)
 6. [Stage07 F1 Field Builder Plan](STAGE_07_SUBSTAGE_F1_FIELD_BUILDER_PLAN.md)
-7. [Stage 07 SDD](STAGE_07_SDD.md)
-8. [Stage 07 API Data Security Contract](STAGE_07_API_DATA_SECURITY_CONTRACT.md)
-9. [Stage 07 BDD And Acceptance](STAGE_07_BDD_AND_ACCEPTANCE.md)
-10. [Stage 07 Module Index](STAGE_07_MODULE_INDEX.md)
-11. [Stage 07 Test Plan](STAGE_07_TEST_PLAN.md)
-12. [Stage 07 Risk Register](STAGE_07_RISK_REGISTER.md)
-13. [Stage 07 Implementation Plan](STAGE_07_IMPLEMENTATION_PLAN.md)
-14. [Stage 07 Acceptance Checklist](STAGE_07_ACCEPTANCE_CHECKLIST.md)
-15. [Stage 07 Progress](STAGE_07_PROGRESS.md)
-16. [Stage 07 Requirement Traceability Audit](STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md)
-17. [Technical Decision 001: Protected Query State](STAGE_07_TECHNICAL_DECISION_001_PROTECTED_QUERY_STATE.md)
+7. [Stage07 F2 Relation/Lookup Design](../../docs/superpowers/specs/2026-07-11-stage07-f2-relation-lookup-design.md)
+8. [Stage07 F2 Relation/Lookup Implementation Plan](../../docs/superpowers/plans/2026-07-11-stage07-f2-relation-lookup-implementation.md)
+9. [Stage07 F2 Relation/Lookup BDD And Acceptance](STAGE_07_F2_RELATION_LOOKUP_BDD_AND_ACCEPTANCE.md)
+10. [Stage07 F2 Relation/Lookup SDD](STAGE_07_F2_RELATION_LOOKUP_SDD.md)
+11. [Stage07 F2 Relation/Lookup Work Surface](modules/STAGE_07_F2_RELATION_LOOKUP_WORK_SURFACE.md)
+12. [Stage07 F2 Relation/Lookup Complex Feature Index](STAGE_07_F2_RELATION_LOOKUP_COMPLEX_FEATURE_INDEX.md)
+13. [Stage 07 SDD](STAGE_07_SDD.md)
+14. [Stage 07 API Data Security Contract](STAGE_07_API_DATA_SECURITY_CONTRACT.md)
+15. [Stage 07 BDD And Acceptance](STAGE_07_BDD_AND_ACCEPTANCE.md)
+16. [Stage 07 Module Index](STAGE_07_MODULE_INDEX.md)
+17. [Stage 07 Test Plan](STAGE_07_TEST_PLAN.md)
+18. [Stage 07 Risk Register](STAGE_07_RISK_REGISTER.md)
+19. [Stage 07 Implementation Plan](STAGE_07_IMPLEMENTATION_PLAN.md)
+20. [Stage 07 Acceptance Checklist](STAGE_07_ACCEPTANCE_CHECKLIST.md)
+21. [Stage 07 Progress](STAGE_07_PROGRESS.md)
+22. [Stage 07 Requirement Traceability Audit](STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md)
+23. [Technical Decision 001: Protected Query State](STAGE_07_TECHNICAL_DECISION_001_PROTECTED_QUERY_STATE.md)
 
 Stage06 is the backend contract baseline. Stage02-05 documents are historical capability evidence only.
 

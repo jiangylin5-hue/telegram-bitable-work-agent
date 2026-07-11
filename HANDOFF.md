@@ -63,7 +63,7 @@ Stage07 is the responsive React/Vite Mini App and desktop browser surface over t
 
 ### Deliberately not implemented / not accepted
 
-- F2 relation/lookup runtime: the approved design/plan exist at `docs/superpowers/specs/2026-07-11-stage07-f2-relation-lookup-design.md` and `docs/superpowers/plans/2026-07-11-stage07-f2-relation-lookup-implementation.md`, but no code is authorised until the user approves the plan and separately authorizes its API/read-model/permission changes.
+- F2 relation/lookup is not accepted: user-approved design/plan and detailed BDD/SDD/module/index documents now exist. Local branch commits cover only safe transport and atomic relation initialization; candidate selection, record write rechecks, lookup evaluation, PostgreSQL, frontend and browser evidence remain incomplete.
 - V1 additional View Builder.
 - Server-recognized filter/sort/group UI behavior.
 - Template/import UI.
@@ -134,16 +134,16 @@ npm.cmd run build
 
 When a UI path changes, use the in-app Browser, inspect the actual rendered state at the required desktop/mobile widths, inspect console warnings/errors, then remove any disposable fixture/server. Do not cite a component test as browser evidence.
 
-## 6. Immediate Next Step: F2 Plan Review, Not Code
+## 6. Immediate Next Step: F2 Documentation Review, Then Resume Approved Plan
 
-P3 and F1 are closed bounded substages. F2 relation/lookup discussion produced a user-approved design and detailed plan. The next safe work is user review of that plan and separate explicit authorization for its proposed API/read-model/permission-enforcement implementation. No F2 runtime code may start before both gates.
+P3 and F1 are closed bounded substages. F2 relation/lookup has user-approved design/plan and implementation authorization, but the user required prior-stage-quality BDD, SDD, module and complex-feature-index documentation before further runtime work. That document package is now present and F2 lookup work is paused pending review; do not treat narrow local commits as F2 acceptance.
 
-- **F2 relation/lookup:** design/plan are recorded in the two `docs/superpowers` files above. The bounded plan uses same-Base relation, two-level fixed aggregation lookup, fail-closed permission degradation and no new dependency/migration/role capability; it does not create a public delete route.
+- **F2 relation/lookup:** design/plan are recorded in the two docs/superpowers files above; BDD/SDD/work-surface/index are in project-docs/08-implementation. The bounded plan uses same-Base relation, two-level fixed aggregation lookup, fail-closed permission degradation and no new dependency/migration/role capability; it does not create a public delete route.
 - **V1 additional views:** Grid/Kanban/Calendar/Form creation/configuration, grouping/date/form-field choices, saved filter/sort semantics, default-view switching, field visibility, permission model, browser/mobile interaction and audit remain a separate later discussion.
 
-The F2 decisions alter API/data/permission/interaction contracts. Do not infer implementation approval from existing Stage06 primitive endpoints, from the approved design, or from the approved plan: raw config/policy shapes remain unsafe client contracts. Obtain the separate implementation authorization first.
+The F2 decisions alter API/data/permission/interaction contracts. Implementation authorization exists only for the reviewed bounded F2 contract; raw config/policy shapes remain unsafe client contracts. Do not add anything outside the documented F2 boundary.
 
-After F2 implementation authorization, execute its detailed plan test-first and perform real UI QA. V1 requires its own design and plan after F2. Import/template should be a separate later decision unless the user explicitly combines it.
+After the user accepts the reconciled F2 documentation package, resume its detailed plan test-first and perform real UI QA. V1 requires its own design and plan after F2. Import/template should be a separate later decision unless the user explicitly combines it.
 
 ## 7. Non-Negotiable Safety And Product Boundaries
 

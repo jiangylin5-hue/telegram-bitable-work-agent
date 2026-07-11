@@ -28,10 +28,13 @@ The browser never determines effective role, field visibility or Bot authority. 
 | `WorkspaceHome` | grouped work queues, recent Bases and deep-link landing | queue/read models, route context | navigation intents only |
 | `BaseCanvas` | saved-view rendering, table toolbar, builder entry | Base/table/view schema and paged records | record/view/schema mutation requests |
 | `FieldBuilderPanel` | independent field name/type/required/choice input | capability-gated active table, safe types, no technical metadata | idempotent field-initialization intent only |
+| `RelationLookupFieldBuilderPanel` / `RelationPicker` | bounded same-Base relation/lookup intent and server-paged safe candidate selection | F2 safe schema/form/receipt/candidate models under verified scope | dedicated initializer intent or existing record create/PATCH values only |
 | `RecordDetail` | full record view/edit and field-level draft context | permitted field model and record | validated record edit or draft-review intent |
 | `BotHub` | team contacts, personal assistant, context selector and conversation | permitted employee model, selected resource scope | read/query intent or draft proposal display |
 | `DraftConfirmation` | immutable proposal diff, confirm/reject lifecycle | draft, execution status, audit reference | one idempotent confirm/reject command |
 | `Governance` | members, roles, permissions, audit and Bot administration | management authorization and paged admin models | authorized administration request |
+
+F2's detailed service/state/permission design is isolated in STAGE_07_F2_RELATION_LOOKUP_SDD.md; its UI ownership is isolated in modules/STAGE_07_F2_RELATION_LOOKUP_WORK_SURFACE.md. The generic Stage07 SDD must not silently broaden F2 beyond those documents.
 
 ## 3. Identity And Route Bootstrap
 

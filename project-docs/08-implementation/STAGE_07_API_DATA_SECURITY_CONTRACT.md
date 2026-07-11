@@ -118,6 +118,14 @@ First success returns `201`, matching completed key/payload returns `200` with t
 
 For the approved duplicate-name feedback refinement, the transport may inspect only `422.detail.code === "duplicate_field_name"` and map it locally to the fixed message `字段名称已存在，请使用其他名称。`. It must not display `detail.message`, retain the response body, infer any other validation code, or treat an unknown/malformed error body as specific feedback; every other failure remains the existing generic safe error. This is an error-presentation allowlist, not a new browser write parameter, schema field, permission signal or resource-disclosure channel.
 
+## 5.4 Approved F2 Relation / Lookup Boundary
+
+F2 uses two dedicated field-initialization routes, one relation-candidate read route, and the existing record-create/versioned-PATCH routes. Relation request shape is name, target_table_id and required; lookup request shape is name, source_relation_field_id, target_field_id and one fixed aggregation from values, count, count_distinct, sum, average, min or max. Both require Idempotency-Key and forbid extra keys. They return the existing safe field receipt only: generated field identity/metadata, empty safe options and affected view IDs.
+
+Internal relation/lookup options, target table/field IDs, aggregation, policy, raw view configuration, audit bodies and idempotency records never reach the browser. Candidate response is only field_id, opaque id/label records, next_cursor and has_more. Relation display is server-projected opaque id/label cells. Lookup display is server-normalized values, number or permitted numeric-empty null; an unreadable or invalid hop omits the complete lookup value. Browser joins, arbitrary target-table reads, aggregate expressions and raw error messages are forbidden.
+
+The full F2 endpoint/state/permission matrix is defined in STAGE_07_F2_RELATION_LOOKUP_SDD.md and STAGE_07_F2_RELATION_LOOKUP_BDD_AND_ACCEPTANCE.md. F2 adds no migration, physical database index, role/capability, persistent browser cache, DELETE endpoint/UI or cascade behavior.
+
 ## 6. Client Security Rules
 
 - Do not derive permissions from navigation visibility or cached role strings.

@@ -27,6 +27,7 @@
 - write outcomes: confirm/reject/replay/conflict/expired.
 - F1 field types: `text`, `number`, `date`, `status`, `single_select`, `multi_select`, `user`, `checkbox`, `url`, `email`, `phone`; relation/lookup/JSON remain negative cases.
 - F1 failure states: blank/duplicate name with the allowlisted local feedback only, invalid/missing choices, raw request extras, schema-policy leak, 401/403/404/409/5xx and failed view update rollback.
+- F2 relation/lookup: use the separate F2 BDD, SDD and complex-feature index as the exhaustive state source. Required cases include same-Base/permission denial, replay/conflict/rollback, candidate search/cursor/label omission, relation required/self/unreadable-target writes, all fixed aggregates, two-level/cycle failure, whole-lookup fail-closed omission, future delete guards, protected-cache cancellation and four-width UI QA.
 
 ## 2.1 F1 Required Evidence
 
@@ -36,6 +37,14 @@
 - real PostgreSQL tests prove table-row serialization and all-or-nothing rollback when an approved disposable URL is configured;
 - frontend panel/application tests prove drawer/sheet accessibility, retry/409 handling, exact schema reread, stale response rejection and protected-scope cleanup;
 - Browser QA compares the retained Workspace Ledger source at 1440/1280/430/390 and records zero relevant console errors.
+
+## 2.2 F2 Required Evidence
+
+- Unit/API cases map one-to-one to F2-I01 through F2-I08 in STAGE_07_F2_RELATION_LOOKUP_COMPLEX_FEATURE_INDEX.md; each behavior begins red and becomes green before the next behavior.
+- Disposable PostgreSQL cases prove source-table locking, all-or-nothing relation/lookup initialization, same-key replay, graph/dependency guards and concurrent relation-update integrity. They may not run against development, staging or production.
+- Frontend cases prove typed transport redaction, fixed error-code mapping, verified user/workspace candidate keys, cancellation/removal, builder reread, Picker paging/order, relation required validation and direct-edit conflict behavior.
+- Browser cases use a disposable fixture only and cover 1440, 1280, 430 and 390 widths; they record Builder, Picker, relation create/edit, nested lookup, aggregation families, denial/invalid state, late scope switch and final console scan. Fixture/server/artifact cleanup is recorded before any F2 completion report.
+- Current F2 evidence is incomplete. Local commits are not substitutes for this matrix.
 
 ### F1 Automated Current Evidence
 
