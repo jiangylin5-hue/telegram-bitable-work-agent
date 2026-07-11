@@ -17,10 +17,12 @@ from app.services.stage06_platform import (
     InMemoryStage06PlatformUnitOfWork,
     PlatformValidationError,
     create_base,
+    create_field,
     create_form_view,
     create_table,
     create_workspace,
     initialize_relation_field,
+    initialize_lookup_field,
     safe_table_schema_field,
 )
 
@@ -169,3 +171,314 @@ def test_relation_initializer_endpoint_replays_safe_receipt_and_denies_viewer() 
     assert len(uow.idempotency_records) == 1
     assert created.json()["field"]["options"] == {}
     assert target_id not in created.text
+
+
+def _lookup_fixture(*, target_field_type: str = "number") -> tuple[
+    InMemoryStage06PlatformUnitOfWork,
+    Actor,
+    object,
+    object,
+    object,
+]:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    actor = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="Acme", owner_user_id="owner-1", actor=actor)
+    base = create_base(uow, workspace.id, name="Operations", actor=actor)
+    source = create_table(uow, base.id, name="Projects", key="projects", actor=actor)
+    target = create_table(uow, base.id, name="Customers", key="customers", actor=actor)
+    relation = initialize_relation_field(
+        uow,
+        source.id,
+        name="Related customers",
+        target_table_id=target.id,
+        required=False,
+        actor=actor,
+    ).field
+    target_field = create_field(
+        uow,
+        target.id,
+        name="Amount",
+        key="amount",
+        field_type=target_field_type,
+        options={"choices": ["gold", "silver"]} if target_field_type == "multi_select" else None,
+        actor=actor,
+    )
+    return uow, actor, source, relation, target_field
+
+
+@pytest.mark.parametrize(
+    "aggregation",
+    ["values", "count", "count_distinct", "sum", "average", "min", "max"],
+)
+def test_lookup_initializer_accepts_approved_fixed_aggregations(aggregation: str) -> None:
+    uow, actor, source, relation, target_field = _lookup_fixture()
+
+    result = initialize_lookup_field(
+        uow,
+        source.id,
+        name=f"Customer {aggregation}",
+        source_relation_field_id=relation.id,
+        target_field_id=target_field.id,
+        aggregation=aggregation,
+        actor=actor,
+    )
+
+    assert result.field.field_type == "lookup"
+    assert result.field.options == {
+        "source_field_id": str(relation.id),
+        "target_field_id": str(target_field.id),
+        "aggregation": aggregation,
+    }
+    assert safe_table_schema_field(result.field)["options"] == {}
+
+
+def test_lookup_initializer_allows_values_for_multi_select_but_rejects_numeric_aggregation_for_text() -> None:
+    uow, actor, source, relation, multi_select_field = _lookup_fixture(target_field_type="multi_select")
+    result = initialize_lookup_field(
+        uow,
+        source.id,
+        name="Customer segments",
+        source_relation_field_id=relation.id,
+        target_field_id=multi_select_field.id,
+        aggregation="values",
+        actor=actor,
+    )
+    text_field = create_field(
+        uow,
+        multi_select_field.table_id,
+        name="Customer name",
+        key="customer_name",
+        field_type="text",
+        actor=actor,
+    )
+
+    with pytest.raises(PlatformValidationError) as error:
+        initialize_lookup_field(
+            uow,
+            source.id,
+            name="Customer total",
+            source_relation_field_id=relation.id,
+            target_field_id=text_field.id,
+            aggregation="sum",
+            actor=actor,
+        )
+
+    assert result.field.field_type == "lookup"
+    assert error.value.code == "lookup_target_incompatible"
+
+
+def test_lookup_initializer_rejects_an_aggregation_outside_the_fixed_enum() -> None:
+    uow, actor, source, relation, target_field = _lookup_fixture()
+
+    with pytest.raises(PlatformValidationError) as error:
+        initialize_lookup_field(
+            uow,
+            source.id,
+            name="Median amount",
+            source_relation_field_id=relation.id,
+            target_field_id=target_field.id,
+            aggregation="median",
+            actor=actor,
+        )
+
+    assert error.value.code == "lookup_target_incompatible"
+    assert [field.field_type for field in uow.list_fields(source.id)] == ["linked_record"]
+
+
+def test_lookup_initializer_resolves_a_legacy_key_config_for_one_nested_level() -> None:
+    uow, actor, source, relation, target_field = _lookup_fixture()
+    target_relation = initialize_relation_field(
+        uow,
+        target_field.table_id,
+        name="Related customers",
+        target_table_id=target_field.table_id,
+        required=False,
+        actor=actor,
+    ).field
+    legacy_lookup = create_field(
+        uow,
+        target_field.table_id,
+        name="Legacy amount",
+        key="legacy_amount",
+        field_type="lookup",
+        options={
+            "source_field_key": target_relation.key,
+            "target_field_key": target_field.key,
+        },
+        actor=actor,
+    )
+
+    result = initialize_lookup_field(
+        uow,
+        source.id,
+        name="Nested legacy amount",
+        source_relation_field_id=relation.id,
+        target_field_id=legacy_lookup.id,
+        aggregation="values",
+        actor=actor,
+    )
+
+    assert result.field.field_type == "lookup"
+    assert result.field.options["target_field_id"] == str(legacy_lookup.id)
+
+
+def test_lookup_initializer_rejects_non_relation_source_cross_base_relation_and_hidden_target_field() -> None:
+    uow, actor, source, relation, target_field = _lookup_fixture()
+    non_relation = create_field(uow, source.id, name="Title", key="title", field_type="text", actor=actor)
+    hidden_target = create_field(
+        uow,
+        target_field.table_id,
+        name="Private amount",
+        key="private_amount",
+        field_type="number",
+        permission_policy={"viewer": "hidden"},
+        actor=actor,
+    )
+    viewer = Actor(actor_type="user", actor_id="viewer-1", role="viewer")
+    cross_base = create_base(uow, uow.get_base(source.base_id).workspace_id, name="Finance", actor=actor)
+    cross_table = create_table(uow, cross_base.id, name="Invoices", key="invoices", actor=actor)
+    cross_relation = create_field(
+        uow,
+        source.id,
+        name="Cross base",
+        key="cross_base",
+        field_type="linked_record",
+        options={"target_table_id": str(cross_table.id)},
+        actor=actor,
+    )
+
+    with pytest.raises(PlatformValidationError) as source_error:
+        initialize_lookup_field(
+            uow,
+            source.id,
+            name="Broken source",
+            source_relation_field_id=non_relation.id,
+            target_field_id=target_field.id,
+            aggregation="values",
+            actor=actor,
+        )
+    with pytest.raises(PlatformValidationError) as hidden_error:
+        initialize_lookup_field(
+            uow,
+            source.id,
+            name="Hidden target",
+            source_relation_field_id=relation.id,
+            target_field_id=hidden_target.id,
+            aggregation="values",
+            actor=viewer,
+        )
+    with pytest.raises(PlatformValidationError) as scope_error:
+        initialize_lookup_field(
+            uow,
+            source.id,
+            name="Cross base target",
+            source_relation_field_id=cross_relation.id,
+            target_field_id=target_field.id,
+            aggregation="values",
+            actor=actor,
+        )
+
+    assert source_error.value.code == "lookup_source_not_relation"
+    assert hidden_error.value.code == "permission_denied"
+    assert scope_error.value.code == "resource_scope_mismatch"
+
+
+def test_lookup_initializer_rejects_cycle_and_third_lookup_level() -> None:
+    uow, actor, source, relation, target_field = _lookup_fixture()
+    target_relation = initialize_relation_field(
+        uow,
+        target_field.table_id,
+        name="Related customers",
+        target_table_id=target_field.table_id,
+        required=False,
+        actor=actor,
+    ).field
+    first = create_field(
+        uow,
+        target_field.table_id,
+        name="First lookup",
+        key="first_lookup",
+        field_type="lookup",
+        options={
+            "source_field_id": str(target_relation.id),
+            "target_field_id": str(target_field.id),
+            "aggregation": "values",
+        },
+        actor=actor,
+    )
+    second = create_field(
+        uow,
+        target_field.table_id,
+        name="Second lookup",
+        key="second_lookup",
+        field_type="lookup",
+        options={
+            "source_field_id": str(target_relation.id),
+            "target_field_id": str(first.id),
+            "aggregation": "values",
+        },
+        actor=actor,
+    )
+
+    with pytest.raises(PlatformValidationError) as depth_error:
+        initialize_lookup_field(
+            uow,
+            source.id,
+            name="Third lookup",
+            source_relation_field_id=relation.id,
+            target_field_id=second.id,
+            aggregation="values",
+            actor=actor,
+        )
+
+    first.options = {
+        "source_field_id": str(target_relation.id),
+        "target_field_id": str(second.id),
+        "aggregation": "values",
+    }
+    with pytest.raises(PlatformValidationError) as cycle_error:
+        initialize_lookup_field(
+            uow,
+            source.id,
+            name="Cyclic lookup",
+            source_relation_field_id=relation.id,
+            target_field_id=first.id,
+            aggregation="values",
+            actor=actor,
+        )
+
+    assert depth_error.value.code == "lookup_depth_exceeded"
+    assert cycle_error.value.code == "lookup_dependency_cycle"
+
+
+def test_lookup_initializer_endpoint_replays_a_redacted_receipt() -> None:
+    uow, actor, source, relation, target_field = _lookup_fixture()
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    payload = {
+        "name": "Customer total",
+        "source_relation_field_id": str(relation.id),
+        "target_field_id": str(target_field.id),
+        "aggregation": "sum",
+    }
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = actor.actor_id
+        created = client.post(
+            f"/tables/{source.id}/lookup-field-initializations",
+            headers={"Idempotency-Key": "lookup-initialization-1"},
+            json=payload,
+        )
+        replayed = client.post(
+            f"/tables/{source.id}/lookup-field-initializations",
+            headers={"Idempotency-Key": "lookup-initialization-1"},
+            json=payload,
+        )
+
+    assert created.status_code == 201
+    assert replayed.status_code == 200
+    assert replayed.json() == created.json()
+    assert created.json()["field"]["field_type"] == "lookup"
+    assert created.json()["field"]["options"] == {}
+    assert str(relation.id) not in created.text
+    assert str(target_field.id) not in created.text

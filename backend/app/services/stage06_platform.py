@@ -69,6 +69,11 @@ F1_FIELD_TYPES = frozenset(
     }
 )
 F1_CHOICE_FIELD_TYPES = frozenset({"status", "single_select", "multi_select"})
+LOOKUP_AGGREGATIONS = frozenset(
+    {"values", "count", "count_distinct", "sum", "average", "min", "max"}
+)
+NUMERIC_LOOKUP_AGGREGATIONS = frozenset({"sum", "average", "min", "max"})
+LOOKUP_INELIGIBLE_TARGET_FIELD_TYPES = frozenset({"linked_record", "json", "formula"})
 STAGE06_DEFAULT_WRITE_ROLES = frozenset(
     {"admin", "owner", "manager", "operator", "builder"}
 )
@@ -950,6 +955,203 @@ def initialize_relation_field(
         },
     )
     return FieldInitializationResult(field=field, affected_view_ids=affected_view_ids)
+
+
+def initialize_lookup_field(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID,
+    *,
+    name: str,
+    source_relation_field_id: UUID,
+    target_field_id: UUID,
+    aggregation: str,
+    actor: Actor,
+) -> FieldInitializationResult:
+    normalized_name = _normalized_f1_field_name(name)
+    if aggregation not in LOOKUP_AGGREGATIONS:
+        raise PlatformValidationError("lookup_target_incompatible", "aggregation")
+    table = _require_exists(
+        uow.lock_table_for_schema_mutation(table_id),
+        "table_not_found",
+    )
+    source_relation = _field_for_table(uow, table.id, source_relation_field_id)
+    if source_relation is None or source_relation.field_type != "linked_record":
+        raise PlatformValidationError("lookup_source_not_relation", "source_relation")
+    if not _can_actor_read_field(actor, source_relation):
+        _deny_permission(
+            uow,
+            actor=actor,
+            action="read_lookup_source_relation",
+            entity_type="field",
+            entity_id=source_relation.id,
+            field_key=source_relation.key,
+        )
+    target_table = _relation_target_table(uow, table, source_relation)
+    target_field = _field_for_table(uow, target_table.id, target_field_id)
+    if target_field is None or target_field.field_type in LOOKUP_INELIGIBLE_TARGET_FIELD_TYPES:
+        raise PlatformValidationError("lookup_target_incompatible", "target_field")
+    if not _can_actor_read_field(actor, target_field):
+        _deny_permission(
+            uow,
+            actor=actor,
+            action="read_lookup_target_field",
+            entity_type="field",
+            entity_id=target_field.id,
+            field_key=target_field.key,
+        )
+
+    terminal_field = _lookup_terminal_field(
+        uow,
+        candidate_id=uuid4(),
+        target_field=target_field,
+    )
+    if (
+        aggregation in NUMERIC_LOOKUP_AGGREGATIONS
+        and terminal_field.field_type != "number"
+    ):
+        raise PlatformValidationError("lookup_target_incompatible", "aggregation")
+
+    existing_fields = uow.list_fields(table.id)
+    normalized_existing_names = {
+        field.name.strip().casefold()
+        for field in existing_fields
+    }
+    if normalized_name.casefold() in normalized_existing_names:
+        raise PlatformValidationError("duplicate_field_name", "field_name")
+
+    field = PlatformField(
+        id=uuid4(),
+        table_id=table.id,
+        name=normalized_name,
+        key=_generated_f1_field_key({field.key for field in existing_fields}),
+        field_type="lookup",
+        required=False,
+        unique=False,
+        options={
+            "source_field_id": str(source_relation.id),
+            "target_field_id": str(target_field.id),
+            "aggregation": aggregation,
+        },
+        permission_policy={},
+        order_index=max(
+            (field.order_index for field in existing_fields),
+            default=-1,
+        ) + 1,
+        status="active",
+    )
+    uow.add_field(field)
+
+    affected_view_ids: list[UUID] = []
+    for view in uow.list_views(table.id):
+        configured_fields = view.config.get("fields")
+        if view.status != "active" or not isinstance(configured_fields, list):
+            continue
+        if field.key in configured_fields:
+            continue
+        next_config = dict(view.config)
+        next_config["fields"] = [*configured_fields, field.key]
+        view.config = next_config
+        affected_view_ids.append(view.id)
+
+    _record_stage06_audit(
+        uow,
+        actor=actor,
+        event_type="stage07.lookup_field_initialized",
+        entity_type="field",
+        entity_id=field.id,
+        after_state={
+            "table_id": str(table.id),
+            "field_key": field.key,
+            "field_type": field.field_type,
+            "order_index": field.order_index,
+            "affected_view_ids": [str(view_id) for view_id in affected_view_ids],
+        },
+    )
+    return FieldInitializationResult(field=field, affected_view_ids=affected_view_ids)
+
+
+def _field_for_table(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID,
+    field_id: UUID,
+) -> PlatformField | None:
+    return next(
+        (field for field in uow.list_fields(table_id) if field.id == field_id),
+        None,
+    )
+
+
+def _relation_target_table(
+    uow: Stage06PlatformUnitOfWork,
+    source_table: PlatformTable,
+    relation_field: PlatformField,
+) -> PlatformTable:
+    target_table_id = _optional_uuid(relation_field.options.get("target_table_id"))
+    target_table = None if target_table_id is None else uow.get_table(target_table_id)
+    if target_table is None:
+        raise PlatformValidationError("lookup_source_not_relation", "source_relation")
+    if target_table.base_id != source_table.base_id:
+        raise PlatformValidationError("resource_scope_mismatch", "target_table")
+    return target_table
+
+
+def _lookup_terminal_field(
+    uow: Stage06PlatformUnitOfWork,
+    *,
+    candidate_id: UUID,
+    target_field: PlatformField,
+) -> PlatformField:
+    seen = {candidate_id}
+    lookup_depth = 1
+    current_field = target_field
+    while current_field.field_type == "lookup":
+        if current_field.id in seen:
+            raise PlatformValidationError("lookup_dependency_cycle", "lookup")
+        seen.add(current_field.id)
+        lookup_depth += 1
+        next_field = _stored_lookup_target_field(uow, current_field)
+        if next_field is None:
+            raise PlatformValidationError("lookup_target_incompatible", "target_field")
+        current_field = next_field
+    if lookup_depth > 2:
+        raise PlatformValidationError("lookup_depth_exceeded", "lookup")
+    return current_field
+
+
+def _stored_lookup_target_field(
+    uow: Stage06PlatformUnitOfWork,
+    lookup_field: PlatformField,
+) -> PlatformField | None:
+    source_fields = uow.list_fields(lookup_field.table_id)
+    source_relation_id = _optional_uuid(lookup_field.options.get("source_field_id"))
+    if source_relation_id is None:
+        source_relation_key = lookup_field.options.get("source_field_key")
+        source_relation = next(
+            (field for field in source_fields if field.key == source_relation_key),
+            None,
+        )
+    else:
+        source_relation = next(
+            (field for field in source_fields if field.id == source_relation_id),
+            None,
+        )
+    if source_relation is None or source_relation.field_type != "linked_record":
+        return None
+    source_table = uow.get_table(lookup_field.table_id)
+    if source_table is None:
+        return None
+    try:
+        target_table = _relation_target_table(uow, source_table, source_relation)
+    except PlatformValidationError:
+        return None
+    target_field_id = _optional_uuid(lookup_field.options.get("target_field_id"))
+    if target_field_id is not None:
+        return _field_for_table(uow, target_table.id, target_field_id)
+    target_field_key = lookup_field.options.get("target_field_key")
+    return next(
+        (field for field in uow.list_fields(target_table.id) if field.key == target_field_key),
+        None,
+    )
 
 
 def create_record(
