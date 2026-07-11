@@ -223,7 +223,7 @@ git commit -m "feat(stage07): validate canonical view presentation"
 - Consumes: authenticated caller, table permission result, `Idempotency-Key`, `expected_version` and member-replacement command.
 - Produces: a private V1 view, owner/editor/viewer effective capabilities, atomic grant replacement and version conflict errors.
 
-- [ ] **Step 1: Write failing access-control tests**
+- [x] **Step 1: Write failing access-control tests**
 
 ```python
 def test_new_v1_view_is_private_even_when_creator_can_read_entire_base(client) -> None:
@@ -236,13 +236,13 @@ def test_editor_cannot_replace_members_and_viewer_cannot_patch_presentation() ->
     assert patch_presentation_as("viewer").status_code == 403
 ```
 
-- [ ] **Step 2: Verify red test**
+- [x] **Step 2: Verify red test**
 
 Run: `python -m pytest -q tests/unit/test_stage07_view_builder_access.py`
 
 Expected: FAIL because V1 ACL behavior is absent.
 
-- [ ] **Step 3: Add narrow effective-access service methods**
+- [x] **Step 3: Add narrow effective-access service methods**
 
 ```python
 def resolve_view_access(self, *, view: PlatformView, actor: ActorScope) -> ViewAccess:
@@ -253,7 +253,7 @@ def resolve_view_access(self, *, view: PlatformView, actor: ActorScope) -> ViewA
 
 Implement initialization as private-only and idempotent through the existing Stage06 idempotency store. Lock the view row before `PATCH` or `PUT members`, compare `expected_version`, update canonical state and increment `version` exactly once on success. The owner may change presentation and replace active editor/viewer grants; editors may change presentation only; viewers read only. Grant replacement is atomic, may not grant an unknown/disabled Base member, preserves owner authority outside the grant rows and recomputes `scope` as `private` or `restricted`. Underlying Base/Table/Field authorization is always intersected and must return not-found-safe denial where existing routes do so.
 
-- [ ] **Step 4: Run unit and disposable PostgreSQL concurrency coverage**
+- [x] **Step 4: Run unit and disposable PostgreSQL concurrency coverage**
 
 Run: `python -m pytest -q tests/unit/test_stage07_view_builder_access.py`
 
@@ -261,7 +261,7 @@ Run: `python -m pytest -q tests/integration/test_stage07_view_builder_postgres.p
 
 Expected: PASS, including duplicate initialization idempotency, stale `expected_version`, concurrent grant replacement and unique grant/index behavior against PostgreSQL.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/services/stage06_platform.py backend/tests/unit/test_stage07_view_builder_access.py backend/tests/integration/test_stage07_view_builder_postgres.py

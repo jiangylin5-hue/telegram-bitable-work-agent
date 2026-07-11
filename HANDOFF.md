@@ -7,7 +7,7 @@ This handoff is for a new session with no prior context. It records the actual c
 - Repository worktree: `D:\telegram多维表格和工作智能体的开发\.worktrees\stage07-mini-app-ui`
 - Branch: `codex/stage07-mini-app-ui`
 - Latest baseline commit before the current F2 closure: `5fa9562 docs(stage07): record F2 mobile replay invalid evidence`
-- Current worktree includes the bounded F2 closure plus authorized V1 implementation. V1-1/2/3 has local durable ownership/grant persistence (`20260711_0022`), strict typed command/read models and canonical safe projection; inspect `git status --short` and the V1 implementation plan before any new change.
+- Current worktree includes the bounded F2 closure plus authorized V1 implementation. V1-1/2/3/4 has local durable ownership/grant persistence (`20260711_0022`), strict typed command/read models, canonical safe projection and versioned ACL mutation with disposable PostgreSQL evidence; inspect `git status --short` and the V1 implementation plan before any new change.
 - User language: Chinese. Keep code, API, database and stable status identifiers in English.
 - Current delivery rule: document first; do not implement a new schema/API/permission/technical direction without the user’s explicit approval. A change already described and approved in the relevant Stage07 documents may proceed without another confirmation.
 
@@ -67,12 +67,12 @@ Stage07 is the responsive React/Vite Mini App and desktop browser surface over t
   - F2 Builder, Picker, create/direct-edit and cache/error paths at 1440/1280/430/390, including final 1440/390 current-record candidate exclusion and clean local console;
   - authorised disposable PostgreSQL `6 passed`, Mini App `18` files / `93` tests, production build, and full backend `477 passed, 17 historical Stage02 online-smoke skips`.
   - F2 is `implemented-local` only, not Telegram/staging/production/Stage07 acceptance.
-- V1 Saved View Builder design and implementation plan are user-approved; V1-1/2/3 has begun:
+- V1 Saved View Builder design and implementation plan are user-approved; V1-1/2/3/4 has begun:
   - Grid, Kanban, Calendar and Form use one typed server-owned saved-view grammar;
   - new views are private, owner may grant active members `editor`/`viewer`, system default Grid remains unchanged;
   - typed flat `AND` filters, bounded sort/group/date/form semantics and F2 eligibility are specified;
   - raw legacy view config/policy endpoint is explicitly forbidden to Mini App;
-  - local model/migration/UoW evidence exists for owner/scope/version and unique member grants; strict typed command/read models reject raw state and bound V1 inputs; server canonicalization rejects ineligible fields/query semantics and safe reread omits hidden state; no V1 API, mutation authorization/idempotency/audit, dependency, capability or Browser evidence exists yet.
+  - local model/migration/UoW evidence exists for owner/scope/version and unique member grants; strict typed command/read models reject raw state and bound V1 inputs; server canonicalization rejects ineligible fields/query semantics and safe reread omits hidden state; private initialization/grant mutation use idempotency, audit, locks and resolved owner/editor/viewer access with real local PostgreSQL replay/unique/concurrency proof; no V1 HTTP API, query execution, dependency, capability or Browser evidence exists yet.
 
 ### Deliberately not implemented / not accepted
 

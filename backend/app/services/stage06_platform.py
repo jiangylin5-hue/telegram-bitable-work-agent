@@ -30,7 +30,12 @@ from app.models.stage06_templates import (
     TemplateInstallation,
 )
 from app.models.stage06_hardening import Stage06IdempotencyRecord
-from app.schemas.stage06_platform import ViewPresentationCommand
+from app.schemas.stage06_platform import (
+    ViewInitializationRequest,
+    ViewMemberCommand,
+    ViewPresentationCommand,
+    ViewPresentationPatchRequest,
+)
 from app.services.audit import record_audit_event
 from app.services.permissions import Actor
 from app.services.stage06_audit import sanitize_stage06_audit_state
@@ -158,6 +163,20 @@ class TableInitializationResult:
 class FieldInitializationResult:
     field: PlatformField
     affected_view_ids: list[UUID]
+
+
+@dataclass(frozen=True)
+class ViewInitializationResult:
+    view: PlatformView
+    replayed: bool
+
+
+@dataclass(frozen=True)
+class V1ViewAccess:
+    role: str
+    can_read: bool
+    can_edit_presentation: bool
+    can_replace_members: bool
 
 
 class Stage06PlatformUnitOfWork(Protocol):
@@ -1861,6 +1880,339 @@ def build_v1_safe_view_projection(
             readable_fields,
         ),
     }
+
+
+def initialize_v1_view(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID,
+    *,
+    request: ViewInitializationRequest,
+    idempotency_key: str,
+    actor: Actor,
+) -> ViewInitializationResult:
+    """Create exactly one private V1 view for a normalized idempotent command."""
+
+    table, workspace = _require_v1_table_manage_authority(uow, table_id, actor)
+    name = _normalized_v1_view_name(request.name)
+    canonical = canonicalize_v1_presentation(
+        uow,
+        table.id,
+        actor=actor,
+        command=request.presentation,
+    )
+    from app.services.stage06_idempotency import (
+        begin_idempotent_operation,
+        complete_idempotent_operation,
+        fingerprint_request,
+    )
+
+    operation = "stage07.v1_view.initialize"
+    fingerprint = fingerprint_request(
+        {
+            "operation": operation,
+            "table_id": str(table.id),
+            "actor_user_id": actor.actor_id,
+            "name": name,
+            "view_type": request.view_type,
+            "presentation": canonical,
+        }
+    )
+    decision = begin_idempotent_operation(
+        uow,
+        workspace_id=workspace.id,
+        operation=operation,
+        idempotency_key=idempotency_key,
+        request_fingerprint=fingerprint,
+        trace_id=f"idempotency:{operation}:{fingerprint[:24]}",
+    )
+    if decision.status == "replay":
+        view_id = _optional_uuid((decision.response_ref or {}).get("view_id"))
+        view = None if view_id is None else uow.get_view(view_id)
+        if view is None:
+            raise PlatformValidationError("idempotency_in_progress", operation)
+        return ViewInitializationResult(view=view, replayed=True)
+
+    view = PlatformView(
+        id=uuid4(),
+        base_id=table.base_id,
+        table_id=table.id,
+        name=name,
+        view_type=request.view_type,
+        config=canonical,
+        permission_policy={},
+        is_default=False,
+        status="active",
+        owner_user_id=actor.actor_id,
+        scope="private",
+        version=1,
+    )
+    uow.add_view(view)
+    _record_stage06_audit(
+        uow,
+        actor=actor,
+        event_type="stage07.view_initialized",
+        entity_type="view",
+        entity_id=view.id,
+        after_state={
+            "table_id": str(table.id),
+            "view_type": view.view_type,
+            "scope": view.scope,
+            "version": view.version,
+        },
+    )
+    complete_idempotent_operation(
+        decision.record,
+        response_ref={"view_id": str(view.id)},
+    )
+    return ViewInitializationResult(view=view, replayed=False)
+
+
+def update_v1_view_presentation(
+    uow: Stage06PlatformUnitOfWork,
+    view_id: UUID,
+    *,
+    request: ViewPresentationPatchRequest,
+    actor: Actor,
+) -> PlatformView:
+    view = _require_exists(uow.lock_view_for_mutation(view_id), "view_not_found")
+    _require_v1_presentation_access(uow, view, actor)
+    _require_v1_expected_version(view, request.expected_version)
+    if view.table_id is None:
+        raise PlatformValidationError("view_not_found", str(view_id))
+    if view.view_type != request.presentation.view_type:
+        raise PlatformValidationError("view_type_unsupported", request.presentation.view_type)
+    canonical = canonicalize_v1_presentation(
+        uow,
+        view.table_id,
+        actor=actor,
+        command=request.presentation,
+    )
+    if request.name is not None:
+        view.name = _normalized_v1_view_name(request.name)
+    view.config = canonical
+    view.version += 1
+    _record_stage06_audit(
+        uow,
+        actor=actor,
+        event_type="stage07.view_presentation_updated",
+        entity_type="view",
+        entity_id=view.id,
+        after_state={
+            "view_type": view.view_type,
+            "scope": view.scope,
+            "version": view.version,
+            "changed_categories": ["presentation"],
+        },
+    )
+    return view
+
+
+def replace_v1_view_members(
+    uow: Stage06PlatformUnitOfWork,
+    view_id: UUID,
+    *,
+    expected_version: int,
+    members: list[ViewMemberCommand],
+    actor: Actor,
+) -> PlatformView:
+    view = _require_exists(uow.lock_view_for_mutation(view_id), "view_not_found")
+    _require_v1_owner_access(uow, view, actor)
+    _require_v1_expected_version(view, expected_version)
+    workspace = _v1_workspace_for_view(uow, view)
+    active_members = {
+        member.user_id: member
+        for member in uow.list_workspace_members(workspace.id)
+        if member.status == "active"
+    }
+    grants: list[ViewMemberGrant] = []
+    recipient_ids: set[str] = set()
+    for member in members:
+        if member.user_id in recipient_ids:
+            raise PlatformValidationError("view_member_invalid", "duplicate_member")
+        recipient_ids.add(member.user_id)
+        if member.access_level not in {"editor", "viewer"}:
+            raise PlatformValidationError("view_member_invalid", "access_level")
+        if member.user_id == view.owner_user_id:
+            raise PlatformValidationError("view_member_grant_forbidden", "owner")
+        if member.user_id not in active_members:
+            raise PlatformValidationError("view_member_not_active", member.user_id)
+        grants.append(
+            ViewMemberGrant(
+                id=uuid4(),
+                view_id=view.id,
+                user_id=member.user_id,
+                access_level=member.access_level,
+                status="active",
+            )
+        )
+    uow.replace_view_grants(view.id, grants)
+    view.scope = "restricted" if grants else "private"
+    view.version += 1
+    _record_stage06_audit(
+        uow,
+        actor=actor,
+        event_type="stage07.view_members_replaced",
+        entity_type="view",
+        entity_id=view.id,
+        after_state={
+            "scope": view.scope,
+            "version": view.version,
+            "member_count": len(grants),
+            "access_levels": sorted({grant.access_level for grant in grants}),
+        },
+    )
+    return view
+
+
+def _normalized_v1_view_name(value: str) -> str:
+    if not isinstance(value, str):
+        raise PlatformValidationError("view_name_invalid", "name")
+    normalized = value.strip()
+    if not normalized or len(normalized) > 120:
+        raise PlatformValidationError("view_name_invalid", "name")
+    return normalized
+
+
+def _require_v1_table_manage_authority(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID,
+    actor: Actor,
+) -> tuple[PlatformTable, Workspace]:
+    table = _require_exists(uow.lock_table_for_schema_mutation(table_id), "table_not_found")
+    workspace = _v1_workspace_for_table(uow, table)
+    member = _require_v1_active_member(uow, workspace, actor)
+    if not _v1_role_allows(member, "view.manage"):
+        raise PlatformValidationError("view_access_denied", "view.manage")
+    return table, workspace
+
+
+def _require_v1_presentation_access(
+    uow: Stage06PlatformUnitOfWork,
+    view: PlatformView,
+    actor: Actor,
+) -> None:
+    if not resolve_v1_view_access(
+        uow,
+        view,
+        actor=actor,
+    ).can_edit_presentation:
+        raise PlatformValidationError("view_access_denied", "presentation")
+
+
+def _require_v1_owner_access(
+    uow: Stage06PlatformUnitOfWork,
+    view: PlatformView,
+    actor: Actor,
+) -> None:
+    if not resolve_v1_view_access(
+        uow,
+        view,
+        actor=actor,
+    ).can_replace_members:
+        raise PlatformValidationError("view_access_denied", "members")
+
+
+def resolve_v1_view_access(
+    uow: Stage06PlatformUnitOfWork,
+    view: PlatformView,
+    *,
+    actor: Actor,
+) -> V1ViewAccess:
+    if view.status != "active":
+        raise PlatformValidationError("view_access_denied", "view_status")
+    workspace = _v1_workspace_for_view(uow, view)
+    member = _require_v1_active_member(uow, workspace, actor)
+    if not _v1_role_allows(member, "table.read"):
+        raise PlatformValidationError("view_access_denied", "table.read")
+    if view.scope == "system_default" or view.is_default:
+        can_manage = _v1_role_allows(member, "view.manage")
+        return V1ViewAccess(
+            role="system_default",
+            can_read=True,
+            can_edit_presentation=can_manage,
+            can_replace_members=False,
+        )
+    if view.owner_user_id == actor.actor_id:
+        return V1ViewAccess(
+            role="owner",
+            can_read=True,
+            can_edit_presentation=True,
+            can_replace_members=True,
+        )
+    if view.scope != "restricted":
+        raise PlatformValidationError("view_access_denied", "view_scope")
+    grant = next(
+        (
+            item
+            for item in uow.list_view_grants(view.id)
+            if item.user_id == actor.actor_id and item.status == "active"
+        ),
+        None,
+    )
+    if grant is None:
+        raise PlatformValidationError("view_access_denied", "view_grant")
+    if grant.access_level == "editor":
+        return V1ViewAccess(
+            role="editor",
+            can_read=True,
+            can_edit_presentation=True,
+            can_replace_members=False,
+        )
+    if grant.access_level == "viewer":
+        return V1ViewAccess(
+            role="viewer",
+            can_read=True,
+            can_edit_presentation=False,
+            can_replace_members=False,
+        )
+    raise PlatformValidationError("view_access_denied", "view_grant")
+
+
+def _require_v1_expected_version(view: PlatformView, expected_version: int) -> None:
+    if view.version != expected_version:
+        raise PlatformValidationError("view_version_conflict", "version")
+
+
+def _v1_workspace_for_table(
+    uow: Stage06PlatformUnitOfWork,
+    table: PlatformTable,
+) -> Workspace:
+    base = _require_exists(uow.get_base(table.base_id), "base_not_found")
+    return _require_exists(uow.get_workspace(base.workspace_id), "workspace_not_found")
+
+
+def _v1_workspace_for_view(
+    uow: Stage06PlatformUnitOfWork,
+    view: PlatformView,
+) -> Workspace:
+    base = _require_exists(uow.get_base(view.base_id), "base_not_found")
+    return _require_exists(uow.get_workspace(base.workspace_id), "workspace_not_found")
+
+
+def _require_v1_active_member(
+    uow: Stage06PlatformUnitOfWork,
+    workspace: Workspace,
+    actor: Actor,
+) -> WorkspaceMember:
+    if actor.actor_type != "user":
+        raise PlatformValidationError("view_access_denied", "actor_type")
+    member = next(
+        (
+            candidate
+            for candidate in uow.list_workspace_members(workspace.id)
+            if candidate.user_id == actor.actor_id and candidate.status == "active"
+        ),
+        None,
+    )
+    if member is None or member.role != actor.role:
+        raise PlatformValidationError("view_access_denied", "membership")
+    return member
+
+
+def _v1_role_allows(member: WorkspaceMember, action: str) -> bool:
+    from app.services.stage06_authorization import action_allowed_for_role
+
+    return action_allowed_for_role(member.role, action)
 
 
 def _canonical_v1_field_keys(
