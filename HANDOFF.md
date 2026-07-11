@@ -63,7 +63,8 @@ Stage07 is the responsive React/Vite Mini App and desktop browser surface over t
 
 ### Deliberately not implemented / not accepted
 
-- F2 relation/lookup Builder and V1 additional View Builder.
+- F2 relation/lookup runtime: the approved design/plan exist at `docs/superpowers/specs/2026-07-11-stage07-f2-relation-lookup-design.md` and `docs/superpowers/plans/2026-07-11-stage07-f2-relation-lookup-implementation.md`, but no code is authorised until the user approves the plan and separately authorizes its API/read-model/permission changes.
+- V1 additional View Builder.
 - Server-recognized filter/sort/group UI behavior.
 - Template/import UI.
 - Package 3 governance: members, roles, permissions and audit-readback UI.
@@ -133,16 +134,16 @@ npm.cmd run build
 
 When a UI path changes, use the in-app Browser, inspect the actual rendered state at the required desktop/mobile widths, inspect console warnings/errors, then remove any disposable fixture/server. Do not cite a component test as browser evidence.
 
-## 6. Immediate Next Step: Discussion, Not Code
+## 6. Immediate Next Step: F2 Plan Review, Not Code
 
-P3 and F1 are closed bounded substages. The next safe work is to discuss **F2 and V1**, before writing code:
+P3 and F1 are closed bounded substages. F2 relation/lookup discussion produced a user-approved design and detailed plan. The next safe work is user review of that plan and separate explicit authorization for its proposed API/read-model/permission-enforcement implementation. No F2 runtime code may start before both gates.
 
-- **F2 relation/lookup:** safe target Base/table/field selection, field-level read permissions, relation write semantics, lookup read-only/refresh semantics, delete/rename behavior, safe request and receipt models, browser error boundaries and audit.
-- **V1 additional views:** Grid/Kanban/Calendar/Form creation/configuration, grouping/date/form-field choices, saved filter/sort semantics, default-view switching, field visibility, permission model, browser/mobile interaction and audit.
+- **F2 relation/lookup:** design/plan are recorded in the two `docs/superpowers` files above. The bounded plan uses same-Base relation, two-level fixed aggregation lookup, fail-closed permission degradation and no new dependency/migration/role capability; it does not create a public delete route.
+- **V1 additional views:** Grid/Kanban/Calendar/Form creation/configuration, grouping/date/form-field choices, saved filter/sort semantics, default-view switching, field visibility, permission model, browser/mobile interaction and audit remain a separate later discussion.
 
-These decisions alter API/data/permission/interaction contracts. Prepare a concise options-and-tradeoffs proposal for the user and obtain explicit confirmation. Do not infer approval from existing Stage06 primitive endpoints: their raw config/policy shapes are not safe client contracts.
+The F2 decisions alter API/data/permission/interaction contracts. Do not infer implementation approval from existing Stage06 primitive endpoints, from the approved design, or from the approved plan: raw config/policy shapes remain unsafe client contracts. Obtain the separate implementation authorization first.
 
-After F2/V1 are approved, write the detailed design, BDD/SDD/API-security updates and implementation plan first, then use test-first implementation and perform real UI QA. Import/template should be a separate later decision unless the user explicitly combines it.
+After F2 implementation authorization, execute its detailed plan test-first and perform real UI QA. V1 requires its own design and plan after F2. Import/template should be a separate later decision unless the user explicitly combines it.
 
 ## 7. Non-Negotiable Safety And Product Boundaries
 

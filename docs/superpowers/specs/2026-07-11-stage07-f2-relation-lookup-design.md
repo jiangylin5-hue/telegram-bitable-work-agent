@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: approved conversational design; this specification awaits the user's written-file review before an implementation plan or runtime change.
+- Status: user-approved design specification; the detailed implementation plan awaits user review and runtime work still requires separate explicit API/read-model/permission-change authorization.
 - Date: 2026-07-11
 - Scope: Stage07 Package 2 F2 — safe same-Base `linked_record` and nested/aggregated `lookup` field creation, safe relation selection and use in record create/direct edit.
 - Explicit non-scope: V1 additional View Builder, cross-Base relation, reverse fields, field edit/delete UI, more than two lookup levels, arbitrary formula/aggregation DSL, imports/templates, governance, Bot, draft confirmation, Telegram and production rollout.
