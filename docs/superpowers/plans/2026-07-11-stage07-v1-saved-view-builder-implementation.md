@@ -4,7 +4,7 @@
 
 - Plan status: user-approved detailed TDD plan; execution in progress.
 - Scope gate: the user approved the V1 design package and this implementation plan.
-- Current Progress: Tasks 1--8 are complete locally: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations, service-owned Grid filter/group/stable-sort execution before cursor pagination, five approved safe HTTP endpoints, real PostgreSQL default/rollback/hidden-field/index-plan evidence, and Mini App typed transport/protected keys/fixed error mapping. The optional non-unique indexes are explicitly deferred by measured evidence. Builder UI and four-width Browser tasks remain pending.
+- Current Progress: Tasks 1--9 are complete locally: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations, service-owned Grid filter/group/stable-sort execution before cursor pagination, five approved safe HTTP endpoints, real PostgreSQL default/rollback/hidden-field/index-plan/safe-field evidence, Mini App typed transport/protected keys/fixed error mapping, and direct-tested callback-driven Builder/Access/Query panels. The optional non-unique indexes are explicitly deferred by measured evidence. Task 10 App/BaseCanvas lifecycle wiring and four-width Browser tasks remain pending.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -527,7 +527,7 @@ git commit -m "feat(stage07): add typed view builder transport"
 - Consumes: safe builder/context projections and V1 mutation callbacks.
 - Produces: create-private-view flow, type-specific editing, flat query controls, owner access management and deterministic focus/live feedback.
 
-- [ ] **Step 1: Write failing interaction/accessibility tests**
+- [x] **Step 1: Write failing interaction/accessibility tests**
 
 ```tsx
 it("creates a private view before rendering its Access panel", async () => {
@@ -543,13 +543,13 @@ it("does not render grant controls for editor and viewer capabilities", () => {
 })
 ```
 
-- [ ] **Step 2: Verify red test**
+- [x] **Step 2: Verify red test**
 
 Run: `npm run test -- --run src/test/view-builder-panel.test.tsx src/test/view-access-panel.test.tsx`
 
 Expected: FAIL because the V1 panels do not exist.
 
-- [ ] **Step 3: Implement components by reusing existing F1/F2 panel patterns**
+- [x] **Step 3: Implement components by reusing existing F1/F2 panel patterns**
 
 ```tsx
 <Dialog open={open} onOpenChange={setOpen}>
@@ -561,13 +561,13 @@ Expected: FAIL because the V1 panels do not exist.
 
 Reuse the existing F1/F2 native drawer/form primitives because this Mini App has no installed shadcn component registry; do not add a component dependency solely for V1. The create flow has name/type/presentation only and clearly labels the result as private. Render Grid controls: ordered visible fields, flat AND filters (max 12), max-three sorts and one group. Render Kanban/Calendar/Form only using the settings supplied by safe context; unsupported field/type combinations are disabled with the fixed product explanation. Relation filters invoke the existing F2 safe candidate picker; numeric lookup controls use typed numeric values; readable select-like filters use only the safe `filter_values` projection; no relation/lookup group control is rendered. Owner sees active member list and editor/viewer grant choices; editor/viewer never see mutation controls. Implement keyboard focus return, `aria-live` mutation state, labels, Escape close and fixed safe errors.
 
-- [ ] **Step 4: Verify green and F1/F2 panel regression**
+- [x] **Step 4: Verify green and F1/F2 panel regression**
 
 Run: `npm run test -- --run src/test/view-builder-panel.test.tsx src/test/view-access-panel.test.tsx src/test/builder-create-panel.test.tsx src/test/f2-field-builder-panel.test.tsx`
 
 Expected: PASS; prior builder/field flows retain their behavior.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add mini-app/src/app/ViewBuilderPanel.tsx mini-app/src/app/ViewAccessPanel.tsx mini-app/src/app/ViewQueryControls.tsx mini-app/src/app/App.tsx mini-app/src/test/view-builder-panel.test.tsx mini-app/src/test/view-access-panel.test.tsx

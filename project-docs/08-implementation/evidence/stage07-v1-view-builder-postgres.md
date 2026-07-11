@@ -2,9 +2,9 @@
 
 ## Status
 
-- Evidence status: local disposable PostgreSQL evidence; V1-7 `partial-local`
-- Date: 2026-07-11
-- Scope: migration/default invariant, initialization rollback, hidden-field non-disclosure, grant concurrency/uniqueness, V1 query ordering and optional-index decision
+- Evidence status: local disposable PostgreSQL evidence; V1-7 plus V1-9 safe field projection `partial-local`
+- Date: 2026-07-12
+- Scope: migration/default invariant, initialization rollback, hidden-field non-disclosure, grant concurrency/uniqueness, V1 query ordering, safe Builder field projection and optional-index decision
 - Environment: authorized disposable local PostgreSQL only; PostgreSQL `18.4`; no remote staging or production target
 - Migration head: `20260711_0022`
 
@@ -13,7 +13,7 @@
 | Command | Result | What it establishes |
 | --- | --- | --- |
 | `python -m alembic heads` | `20260711_0022 (head)` | one current V1 migration head |
-| `python -m pytest -q tests/integration/test_stage07_view_builder_postgres.py tests/integration/test_stage07_view_builder_security_postgres.py -m postgres` | `9 passed` | real PostgreSQL V1 invariant/security/query suite |
+| `python -m pytest -q tests/integration/test_stage07_view_builder_postgres.py tests/integration/test_stage07_view_builder_security_postgres.py -m postgres` | `10 passed` | real PostgreSQL V1 invariant/security/query/safe-field suite |
 | `python -m pytest -q -s tests/integration/test_stage07_view_builder_security_postgres.py::test_v1_optional_access_indexes_remain_deferred_after_explain -m postgres` | `1 passed` | captured sanitized `EXPLAIN (ANALYZE, BUFFERS)` index decision evidence |
 
 The test target is classified by the retained local-disposable guard before its public schema is reset and migrated. No connection string, database user, record value, request body or audit body is retained in this evidence.
@@ -39,6 +39,8 @@ The hidden-field scenario creates a readable title and a viewer-hidden grouped s
 - V1 builder context, which requires `view.manage`.
 
 The V1 record-query scenario proves canonical filtering, group-first ordering, configured descending sort and cursor continuation against actual PostgreSQL. The first two one-row pages are the two rows in the first permitted group; group metadata contains only that page's returned IDs.
+
+The V1 Builder-context route also reads from the real PostgreSQL fixture: a readable `status` field projects its existing safe `field_id` and validated `filter_values` choices, while an ordinary text field projects `filter_values: []`. The response contains none of raw `options`, field `permission_policy` or relation-target internals. This is a safe read-model proof only; it does not prove a Mini App lifecycle or Browser interaction.
 
 ## 4. Optional Non-Unique Index Decision
 

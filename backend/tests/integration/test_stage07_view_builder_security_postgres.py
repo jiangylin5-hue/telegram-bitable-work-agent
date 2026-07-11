@@ -41,6 +41,38 @@ pytestmark = [
 ]
 
 
+def test_v1_postgres_context_projects_only_safe_field_identifier_and_select_values(
+    stage07_postgres: Stage07Postgres,
+) -> None:
+    owner = _actor("pg-safe-field-owner", "owner")
+    table_id = _create_table(stage07_postgres, owner)
+    with stage07_postgres.session_factory() as session:
+        state = create_field(
+            SqlAlchemyStage06PlatformUnitOfWork(session),
+            table_id,
+            name="State",
+            key="state",
+            field_type="status",
+            options={"choices": ["open", "closed"]},
+            actor=owner,
+        )
+        session.commit()
+
+    app = _postgres_app(stage07_postgres)
+    with TestClient(app) as client:
+        response = client.get(
+            f"/tables/{table_id}/view-builder-context",
+            headers={"X-Stage06-User-Id": owner.actor_id},
+        )
+
+    assert response.status_code == 200
+    fields = {item["key"]: item for item in response.json()["fields"]}
+    assert fields["state"]["field_id"] == str(state.id)
+    assert fields["state"]["filter_values"] == ["open", "closed"]
+    assert fields["title"]["filter_values"] == []
+    assert {"options", "permission_policy", "target_table_id"}.isdisjoint(fields["state"])
+
+
 def test_v1_postgres_preserves_one_default_grid_and_private_rows_are_not_defaults(
     stage07_postgres: Stage07Postgres,
 ) -> None:

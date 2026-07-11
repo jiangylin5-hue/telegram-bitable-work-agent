@@ -7,7 +7,7 @@ This handoff is for a new session with no prior context. It records the actual c
 - Repository worktree: `D:\telegram多维表格和工作智能体的开发\.worktrees\stage07-mini-app-ui`
 - Branch: `codex/stage07-mini-app-ui`
 - Latest baseline commit before the current F2 closure: `5fa9562 docs(stage07): record F2 mobile replay invalid evidence`
-- Current worktree includes the bounded F2 closure plus authorized V1 implementation. V1-1 through V1-8 has local durable ownership/grant persistence (`20260711_0022`), strict typed command/read models, canonical safe projection, versioned ACL mutation, service-owned Grid filter/group/stable-sort execution before cursor pagination, five safe HTTP routes, disposable PostgreSQL default/rollback/hidden-field/index-plan evidence and typed Mini App transport/protected query keys/fixed errors; inspect `git status --short` and the V1 implementation plan before any new change.
+- Current worktree includes the bounded F2 closure plus authorized V1 implementation. V1-1 through V1-9 has local durable ownership/grant persistence (`20260711_0022`), strict typed command/read models, canonical safe projection, versioned ACL mutation, service-owned Grid filter/group/stable-sort execution before cursor pagination, five safe HTTP routes, disposable PostgreSQL default/rollback/hidden-field/index-plan/safe-field evidence, typed Mini App transport/protected query keys/fixed errors and direct-tested Builder/Access/Query panels; inspect `git status --short` and the V1 implementation plan before any new change.
 - User language: Chinese. Keep code, API, database and stable status identifiers in English.
 - Current delivery rule: document first; do not implement a new schema/API/permission/technical direction without the user’s explicit approval. A change already described and approved in the relevant Stage07 documents may proceed without another confirmation.
 
@@ -67,12 +67,12 @@ Stage07 is the responsive React/Vite Mini App and desktop browser surface over t
   - F2 Builder, Picker, create/direct-edit and cache/error paths at 1440/1280/430/390, including final 1440/390 current-record candidate exclusion and clean local console;
   - authorised disposable PostgreSQL `6 passed`, Mini App `18` files / `93` tests, production build, and full backend `477 passed, 17 historical Stage02 online-smoke skips`.
   - F2 is `implemented-local` only, not Telegram/staging/production/Stage07 acceptance.
-- V1 Saved View Builder design and implementation plan are user-approved; V1-1 through V1-8 has begun:
+- V1 Saved View Builder design and implementation plan are user-approved; V1-1 through V1-9 has begun:
   - Grid, Kanban, Calendar and Form use one typed server-owned saved-view grammar;
   - new views are private, owner may grant active members `editor`/`viewer`, system default Grid remains unchanged;
   - typed flat `AND` filters, bounded sort/group/date/form semantics and F2 eligibility are specified;
   - raw legacy view config/policy endpoint is explicitly forbidden to Mini App;
-  - local model/migration/UoW evidence exists for owner/scope/version and unique member grants; strict typed command/read models reject raw state and bound V1 inputs; server canonicalization rejects ineligible fields/query semantics and safe reread omits hidden state; private initialization/grant mutation use idempotency, audit, locks and resolved owner/editor/viewer access with real local PostgreSQL replay/unique/concurrency proof; V1 Grid applies canonical safe filters, groups and stable sorts before cursor pagination, with page-local safe `groups` metadata and a PostgreSQL cursor-boundary test; five safe V1 routes provide context, create/replay, builder read, versioned presentation mutation and owner member replacement with fixed `view_*` errors; PostgreSQL proves default/rollback/hidden-field behavior and explicitly defers both optional non-unique indexes after `EXPLAIN`; typed V1 client transport strips unexpected response keys, maps fixed errors and keys all state by verified user/workspace; no V1 Builder UI or Browser evidence exists yet.
+  - local model/migration/UoW evidence exists for owner/scope/version and unique member grants; strict typed command/read models reject raw state and bound V1 inputs; server canonicalization rejects ineligible fields/query semantics and safe reread omits hidden state; private initialization/grant mutation use idempotency, audit, locks and resolved owner/editor/viewer access with real local PostgreSQL replay/unique/concurrency proof; V1 Grid applies canonical safe filters, groups and stable sorts before cursor pagination, with page-local safe `groups` metadata and a PostgreSQL cursor-boundary test; five safe V1 routes provide context, create/replay, builder read, versioned presentation mutation and owner member replacement with fixed `view_*` errors; PostgreSQL proves default/rollback/hidden-field behavior, safe Builder field `field_id`/select `filter_values` projection, and explicitly defers both optional non-unique indexes after `EXPLAIN`; typed V1 client transport strips unexpected response keys, maps fixed errors and keys all state by verified user/workspace; callback-driven V1 Builder/Access/Query panels are direct-tested but are not yet wired into App/BaseCanvas or Browser evidence.
 
 ### Deliberately not implemented / not accepted
 
@@ -168,7 +168,7 @@ P3, F1 and F2 remain bounded `implemented-local` substages. V1 now has its compl
 4. `project-docs/08-implementation/modules/STAGE_07_V1_VIEW_BUILDER_WORK_SURFACE.md`
 5. `project-docs/08-implementation/STAGE_07_V1_VIEW_BUILDER_COMPLEX_FEATURE_INDEX.md`
 
-The detailed TDD implementation plan is approved and V1-1 through V1-8 persistence/schema/canonicalization/ACL/query/HTTP/PostgreSQL/transport tasks are complete locally. Continue with Task 9 Builder and Access panels; Canvas lifecycle and Browser evidence remain later. Imports/templates, governance and Package 4 remain later separate decisions. No raw config/policy browser contract is authorized.
+The detailed TDD implementation plan is approved and V1-1 through V1-9 persistence/schema/canonicalization/ACL/query/HTTP/PostgreSQL/transport/panel tasks are complete locally. Continue with Task 10: App/BaseCanvas selected-view lifecycle and renderer integration; Browser evidence remains later. Imports/templates, governance and Package 4 remain later separate decisions. No raw config/policy browser contract is authorized.
 
 ## 7. Non-Negotiable Safety And Product Boundaries
 

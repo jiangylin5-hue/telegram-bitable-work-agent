@@ -4,7 +4,7 @@
 
 - Document status: user-approved module/work-surface contract; approved implementation in progress
 - Scope: every V1 user-facing saved-view state in BaseCanvas, desktop and mobile
-- Current Progress: V1-1 through V1-8 durable persistence, typed schema, canonicalization, ACL/versioned mutation, server-owned Grid filter/group/sort ordering, five safe HTTP routes, PostgreSQL security/index proof and typed safe Mini App transport are implemented without Builder UI effect. Current toolbar buttons remain non-mutating until the panel tasks complete; the browser must not infer query semantics or consume page-local group metadata from the backend path.
+- Current Progress: V1-1 through V1-9 durable persistence, typed schema, canonicalization, ACL/versioned mutation, server-owned Grid filter/group/sort ordering, five safe HTTP routes, PostgreSQL security/index proof, typed safe Mini App transport and callback-driven Builder/Access/Query panels are implemented. The panel layer remains isolated until V1-10 connects it to the App/BaseCanvas authoritative reread path, so current toolbar buttons remain non-mutating and the browser must not infer query semantics or consume page-local group metadata.
 
 ## 1. Module Purpose
 
