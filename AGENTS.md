@@ -4,7 +4,7 @@
 
 - Document status: active project collaboration rule
 - Scope: Generic Telegram-first multidimensional table, no-code workspace and table-bound digital employee platform
-- Current Progress: 2026-07-10 Stage06 backend-stage acceptance passed after correcting Stage06 work that remained in the Stage05 worktree. Fresh evidence: 129 Stage06-focused tests, 402 full-backend tests with 17 historical Stage02 skips, one Alembic head `20260710_0020`, real local PostgreSQL isolation/redaction/concurrency smoke, retained real OpenRouter and Telegram entry evidence, and sanitized machine-readable security evidence. The separate Stage07 Mini App UI design and detailed documentation package are ready for user review; explicit approval for its proposed schema/API/permission extensions remains required before code. Production deployment remains a separate gate.
+- Current Progress: 2026-07-11 Stage06 backend-stage acceptance remains the baseline. Stage07 bounded Package 2 substages P3, F1 and the user-approved F2 relation/lookup slice are `implemented-local`: F2 has detailed design/plan/BDD/SDD/work-surface/index, Mini App `18` files / `93` tests, a passing production build, six authorised-disposable PostgreSQL cases and full backend `477 passed, 17 historical Stage02 online-smoke skips`, plus four-width local Browser evidence. This does not accept Stage07, Telegram identity, staging or production. V1 additional views, imports/templates, Package 3/4 and deployment remain separate gates requiring their own approved documentation and contract decisions.
 
 ## 1. Project Positioning
 

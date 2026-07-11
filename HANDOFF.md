@@ -6,8 +6,8 @@ This handoff is for a new session with no prior context. It records the actual c
 
 - Repository worktree: `D:\telegram多维表格和工作智能体的开发\.worktrees\stage07-mini-app-ui`
 - Branch: `codex/stage07-mini-app-ui`
-- Latest baseline commit before the current repair: `06dada5 fix(stage07): close real postgres builder proof`
-- Current worktree includes the documented TD001 direct-record mutation safety repair; inspect `git status --short` before any new change.
+- Latest baseline commit before the current F2 closure: `5fa9562 docs(stage07): record F2 mobile replay invalid evidence`
+- Current worktree includes the bounded F2 real-PostgreSQL/test/UI-guard closure; inspect `git status --short` before any new change.
 - User language: Chinese. Keep code, API, database and stable status identifiers in English.
 - Current delivery rule: document first; do not implement a new schema/API/permission/technical direction without the user’s explicit approval. A change already described and approved in the relevant Stage07 documents may proceed without another confirmation.
 
@@ -60,10 +60,16 @@ Stage07 is the responsive React/Vite Mini App and desktop browser surface over t
   - P3 rollback, same-key concurrency and default-view uniqueness;
   - F1 rollback, same-key replay, distinct-key serialized order and view append;
   - all six passed on 2026-07-11.
+- F2 Relation / Lookup:
+  - same-Base ordered multi-select relation with same-table support but server-rejected self links;
+  - protected server-composed `{ id, label }` candidates, safe relation/lookup rendering and existing versioned create/PATCH writes;
+  - fixed `values`, `count`, `count_distinct`, `sum`, `average`, `min`, `max` aggregation with at most two lookup nodes and whole-field fail-closed omission;
+  - F2 Builder, Picker, create/direct-edit and cache/error paths at 1440/1280/430/390, including final 1440/390 current-record candidate exclusion and clean local console;
+  - authorised disposable PostgreSQL `6 passed`, Mini App `18` files / `93` tests, production build, and full backend `477 passed, 17 historical Stage02 online-smoke skips`.
+  - F2 is `implemented-local` only, not Telegram/staging/production/Stage07 acceptance.
 
 ### Deliberately not implemented / not accepted
 
-- F2 relation/lookup is not accepted: user-approved design/plan and detailed BDD/SDD/module/index documents now exist. Local branch commits cover safe transport, initializers, candidate selection, relation write rechecks, lookup evaluation/guards, protected Picker/create/direct-edit, safe Detail/Canvas rendering and the separate Builder. A disposable fixture exercised the primary flow at all four required widths with a clean final console, but PostgreSQL execution, rejection/nested/replay Browser cases and final acceptance remain incomplete.
 - V1 additional View Builder.
 - Server-recognized filter/sort/group UI behavior.
 - Template/import UI.
@@ -75,7 +81,15 @@ The traceability table is authoritative for the remaining scope: `project-docs/0
 
 ## 4. Most Recent Work And Why It Matters
 
-Commit `06dada5` closed the prior database-evidence gap and fixed a real defect exposed only by PostgreSQL.
+The current F2 closure extends the earlier P3/F1 database evidence with an authorised disposable F2 PostgreSQL matrix and fixes a real Detail Picker safety gap discovered during final UI audit.
+
+### F2 bounded closure
+
+- `backend/tests/integration/test_stage07_relation_lookup_postgres.py` now has six real database cases: relation rollback/concurrency/replay, lookup rollback, durable delete guards and a safe view that evaluates all seven fixed aggregates.
+- `mini-app/src/app/RelationPicker.tsx` accepts a narrow optional `excludedCandidateId`; `RecordDetail.tsx` supplies the current record ID. This filters only the current same-table record from display candidates. It preserves backend `relation_self_reference` as the final authority and changes no request, schema, permission or API contract.
+- Final synthetic Browser verification rendered all seven aggregate outputs, verified no opaque target ID, and asserted at both 1440 and 390 that `Current record = 0`, `Other record = 1`, selected `Other record × = 1`; local-origin console `error`/`warn` was `[]`. The long detail panel could not physically activate its bottom submit button through the in-app Browser pointer bridge, so this is explicitly not presented as new Browser PATCH-success evidence.
+
+### Earlier P3 real-database repair
 
 ### Root cause found
 
@@ -107,6 +121,9 @@ python scripts/stage06_local_postgres_migration_smoke.py
 # P3 + F1 real-PostgreSQL proof.
 python -m pytest -q tests/integration/test_stage07_field_builder_postgres.py tests/integration/test_stage06_postgres_security.py -k "stage07 or field_initialization or default_view"
 
+# F2 real-PostgreSQL relation/lookup proof.
+python -m pytest -q tests/integration/test_stage07_relation_lookup_postgres.py
+
 # Full backend regression with local PostgreSQL evidence enabled.
 python -m pytest -q
 
@@ -121,8 +138,9 @@ Latest verified results:
 | --- | --- | --- |
 | Disposable migration smoke | passed, Alembic `20260710_0021` | local database only |
 | P3/F1 real PostgreSQL matrix | `6 passed, 2 deselected` | local database only |
-| Full backend | `440 passed, 17 skipped` | skips are the 17 historical Stage02 online-PostgreSQL tests without `STAGE02_ONLINE_DATABASE_URL` |
-| Mini App tests | 14 files / 67 tests passed | mocked transport; not backend authorization proof |
+| F2 real PostgreSQL matrix | `6 passed` | local database only; includes all fixed aggregation projections |
+| Full backend | `477 passed, 17 skipped` | skips are the 17 historical Stage02 online-PostgreSQL tests without `STAGE02_ONLINE_DATABASE_URL` |
+| Mini App tests | 18 files / 93 tests passed | mocked transport; not backend authorization proof |
 | Mini App production build | passed | compilation/build only |
 
 Run from `mini-app` when frontend code changes:
@@ -134,16 +152,14 @@ npm.cmd run build
 
 When a UI path changes, use the in-app Browser, inspect the actual rendered state at the required desktop/mobile widths, inspect console warnings/errors, then remove any disposable fixture/server. Do not cite a component test as browser evidence.
 
-## 6. Immediate Next Step: F2 Integration and Evidence Matrix
+## 6. Immediate Next Step: V1 Or Import/Template Decision Gate
 
-P3 and F1 are closed bounded substages. F2 relation/lookup has user-approved design/plan and implementation authorization; the required prior-stage-quality BDD, SDD, module and complex-feature-index package is present. Bounded backend and current frontend work is implemented locally, but do not treat local commits or Mini App component tests as F2 acceptance.
+P3, F1 and the approved F2 relation/lookup slice are closed as bounded `implemented-local` substages. The F2 design/plan, BDD/SDD/work-surface/index, six-case real PostgreSQL suite and Browser evidence are reconciled. Do not reopen F2 merely to add adjacent product scope.
 
-- **F2 relation/lookup:** design/plan are recorded in the two docs/superpowers files above; BDD/SDD/work-surface/index are in project-docs/08-implementation. The bounded plan uses same-Base relation, two-level fixed aggregation lookup, fail-closed permission degradation and no new dependency/migration/role capability; it does not create a public delete route.
-- **V1 additional views:** Grid/Kanban/Calendar/Form creation/configuration, grouping/date/form-field choices, saved filter/sort semantics, default-view switching, field visibility, permission model, browser/mobile interaction and audit remain a separate later discussion.
+- **V1 additional views:** Grid/Kanban/Calendar/Form creation/configuration, grouping/date/form-field choices, saved filter/sort semantics, default-view switching, field visibility, permission model, browser/mobile interaction and audit require their own design and user-approved safe contract.
+- **Import/template:** a separate design decision is required for upload/preview/retry/error/idempotency UX and safe resource refresh. Do not infer it from existing Stage06 routes.
 
-The F2 decisions alter API/data/permission/interaction contracts. Implementation authorization exists only for the reviewed bounded F2 contract; raw config/policy shapes remain unsafe client contracts. Do not add anything outside the documented F2 boundary.
-
-Resume the approved F2 plan with its remaining evidence: execute the authorised disposable PostgreSQL suite when available; add Browser cases for denied/invalid/replay/nested lookup; run the full backend regression; then reconcile the F2 acceptance/traceability records. V1 requires its own design and plan after F2. Import/template should be a separate later decision unless the user explicitly combines it.
+No new schema/API/permission/technical direction is authorized by the F2 closure. Raw config/policy shapes remain unsafe browser contracts. Governance and Package 4 require their own source documents and explicit approval.
 
 ## 7. Non-Negotiable Safety And Product Boundaries
 

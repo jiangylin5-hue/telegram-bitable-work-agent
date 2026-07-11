@@ -42,6 +42,21 @@ These checks cover only approved independent field creation and its immediate re
 - [x] Same-key replay and changed-payload `409` have automated evidence; the three matching real-PostgreSQL rollback/replay/concurrent-order cases ran and passed on the authorised disposable local database.
 - [x] Browser QA has F1-scoped Workspace Ledger comparison and zero-console-error evidence at 1440/1280/430/390 for fieldless-to-first-field, nonempty-table add, validation/retry/denial, allowed-choice record creation and direct-edit success; the sanitized direct-edit screenshot is retained at `artifacts/stage07/f1-direct-edit-success-1440.png`. At all four widths, the duplicate-name allowlist feedback preserves the typed name and suppresses the server message, while a pending request disables create/close/cancel and keeps the dialog visible. Delayed workspace replacement remains covered by the application scope-isolation test. The matching real-PostgreSQL item above also passed.
 
+### F2 Relation / Lookup Evidence
+
+These checks cover only the approved F2 same-Base relation, fixed lookup and Builder/Picker slice. They do not accept V1 views, imports/templates, governance, Bot/Telegram, staging, production or Stage07 as a whole.
+
+- [x] Relation initialization is same-Base, atomic and idempotent: unit/API coverage and authorised disposable PostgreSQL rollback, concurrent-order and same-key replay cases pass.
+- [x] Safe transport/schema/audit output exposes no raw relation/lookup configuration, target data or policy; browser candidate and relation read models use safe `{ id, label }` projection only.
+- [x] Candidate search/cursor/paging remains server-composed and protected by user/workspace query state. Initial failure, stale generation, denied cleanup and cursor retry have frontend coverage.
+- [x] Existing record creation/versioned PATCH enforce relation required/target/readability/duplicate/self checks. The UI maps chips to opaque IDs only and rereads authoritative output.
+- [x] Same-table Picker defense-in-depth excludes the active record from a candidate page even if it is returned by a fixture; final in-app Browser assertions at 1440px and 390px recorded `Current record = 0`, `Other record = 1` and selected `Other record × = 1`. Server-side `relation_self_reference` remains the final authority.
+- [x] Lookup accepts only the seven approved aggregations; unit tests cover nested/depth/cycle behavior and a real PostgreSQL safe view projects `values`, `count`, `count_distinct`, `sum`, `average`, `min` and `max` together.
+- [x] Unreadable/invalid lookup hops omit the whole lookup field; numeric-empty is the sole documented `null` case. Lookup controls are read-only in Detail/Canvas.
+- [x] Real PostgreSQL dependency guards detect incoming record links and relation/target field dependencies. No DELETE route/UI, automatic unlink or cascade was added.
+- [x] Local Browser fixtures cover F2 primary and negative behavior at 1440/1280/430/390. The final local-origin error/warn scan was `[]`; an in-app Browser long-panel pointer limitation is documented separately and is not misreported as a new PATCH-success visual proof.
+- [x] Fresh local verification is Mini App `18` files / `93` tests, production build, dedicated F2 PostgreSQL `6 passed` and full backend `477 passed, 17 historical Stage02 online-smoke skips`.
+
 ## Governance And Security
 
 - [ ] Management routes and data reject unauthorized users independently of client navigation.

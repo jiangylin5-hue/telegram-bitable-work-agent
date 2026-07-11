@@ -7,10 +7,11 @@ type RelationPickerProps = {
   value: RelationCandidate[]
   onChange: (value: RelationCandidate[]) => void
   loadCandidates: (fieldId: string, query: string, cursor: string | null) => Promise<RelationCandidatePage>
+  excludedCandidateId?: string
   disabled?: boolean
 }
 
-export function RelationPicker({ fieldId, value, onChange, loadCandidates, disabled = false }: RelationPickerProps) {
+export function RelationPicker({ fieldId, value, onChange, loadCandidates, excludedCandidateId, disabled = false }: RelationPickerProps) {
   const [query, setQuery] = useState('')
   const [candidates, setCandidates] = useState<RelationCandidate[]>([])
   const [nextCursor, setNextCursor] = useState<string | null>(null)
@@ -24,7 +25,10 @@ export function RelationPicker({ fieldId, value, onChange, loadCandidates, disab
     try {
       const page = await loadCandidates(fieldId, nextQuery, cursor)
       if (generation !== requestGeneration.current || page.field_id !== fieldId) return
-      setCandidates((current) => cursor === null ? page.records : [...current, ...page.records.filter((item) => !current.some((existing) => existing.id === item.id))])
+      const permittedRecords = excludedCandidateId
+        ? page.records.filter((item) => item.id !== excludedCandidateId)
+        : page.records
+      setCandidates((current) => cursor === null ? permittedRecords : [...current, ...permittedRecords.filter((item) => !current.some((existing) => existing.id === item.id))])
       setNextCursor(page.next_cursor)
       setHasMore(page.has_more)
     } catch {

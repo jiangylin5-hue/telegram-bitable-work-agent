@@ -108,3 +108,35 @@ test('edits a relation with server candidates, submits opaque IDs, and leaves lo
 
   await waitFor(() => expect(onSave).toHaveBeenCalledWith({ customer: ['record-acme', 'record-beacon'] }))
 })
+
+test('excludes the current same-table record from relation picker candidates', async () => {
+  const sameTableDetail: RecordDetail = {
+    id: 'record-self',
+    table_id: 'table-1',
+    values: { related: [] },
+    record_status: 'active',
+    version: 1,
+  }
+  const sameTableSchema = {
+    table: schema.table,
+    fields: [
+      { id: 'field-related', table_id: 'table-1', name: 'Related records', key: 'related', field_type: 'linked_record', required: false, options: {}, order_index: 0 },
+    ],
+  }
+  const loadRelationCandidates = vi.fn().mockResolvedValue({
+    field_id: 'field-related',
+    records: [
+      { id: 'record-self', label: 'Current record' },
+      { id: 'record-other', label: 'Other record' },
+    ],
+    next_cursor: null,
+    has_more: false,
+  })
+
+  render(<RecordDetailPanel detail={sameTableDetail} schema={sameTableSchema} onClose={() => undefined} onSave={vi.fn()} loadRelationCandidates={loadRelationCandidates} />)
+
+  fireEvent.click(screen.getByRole('button', { name: '编辑记录' }))
+
+  expect(await screen.findByRole('button', { name: 'Other record' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Current record' })).not.toBeInTheDocument()
+})
