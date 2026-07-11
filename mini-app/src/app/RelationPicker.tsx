@@ -27,6 +27,11 @@ export function RelationPicker({ fieldId, value, onChange, loadCandidates, disab
       setCandidates((current) => cursor === null ? page.records : [...current, ...page.records.filter((item) => !current.some((existing) => existing.id === item.id))])
       setNextCursor(page.next_cursor)
       setHasMore(page.has_more)
+    } catch {
+      if (generation !== requestGeneration.current || cursor !== null) return
+      setCandidates([])
+      setNextCursor(null)
+      setHasMore(false)
     } finally {
       if (generation === requestGeneration.current) setLoading(false)
     }
@@ -37,6 +42,9 @@ export function RelationPicker({ fieldId, value, onChange, loadCandidates, disab
     setNextCursor(null)
     setHasMore(false)
     void loadPage(null, '')
+    return () => {
+      requestGeneration.current += 1
+    }
   }, [fieldId])
 
   function toggle(candidate: RelationCandidate) {

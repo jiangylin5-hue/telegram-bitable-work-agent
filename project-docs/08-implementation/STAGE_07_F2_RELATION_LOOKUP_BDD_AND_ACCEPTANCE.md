@@ -4,7 +4,7 @@
 
 - Document status: active detailed F2 behavior and acceptance source
 - Scope: Stage07 Package 2 / F2 same-Base multi-select relation, bounded nested/aggregated lookup, safe candidate selection and record create/direct-edit follow-through
-- Current Progress: approved F2 backend transport/initializers/read-write/lookup work and the bounded Mini App Picker, create/direct-edit, safe-rendering and Builder paths have local commits. The frontend has fresh `18` files / `90` tests and a passing production build after task-level independent review. A disposable local Browser fixture exercised the primary Builder/Picker/create/direct-edit/read-only-lookup flow at 1440/1280/430/390 with final console logs `[]`; it is not the complete F2 Browser matrix. No executable PostgreSQL acceptance or final F2 acceptance is claimed.
+- Current Progress: approved F2 backend transport/initializers/read-write/lookup work and the bounded Mini App Picker, create/direct-edit, safe-rendering and Builder paths have local commits. The frontend has fresh `18` files / `92` tests and a passing production build after independent reviews. A disposable local Browser fixture exercised the primary Builder/Picker/create/direct-edit/read-only-lookup flow at 1440/1280/430/390, then a desktop negative fixture covered nested lookup output, replay, 409 builder lock, allowlisted invalid feedback and candidate 403 with final console logs `[]`. The full backend regression is `463 passed, 27 skipped`; F2 PostgreSQL remains skipped because its authorised URL is absent. It is not the complete F2 Browser or PostgreSQL matrix, and no final F2 acceptance is claimed.
 - Preconditions: approved F2 choices recorded in `docs/superpowers/specs/2026-07-11-stage07-f2-relation-lookup-design.md`; this document makes their behavior and evidence measurable.
 
 ## 1. Scope and Outcome
@@ -172,16 +172,16 @@ The fixed browser error-code allowlist is only: `relation_self_reference`, `look
 
 | ID | Requirement | Minimum evidence | Current status |
 | --- | --- | --- | --- |
-| F2-A01 | relation same-Base atomic initializer | unit/API replay/conflict/rollback + PostgreSQL | in progress |
-| F2-A02 | safe receipt/schema/audit redaction | unit/API response scans | in progress |
-| F2-A03 | candidate label/search/cursor/permission behavior | service/API tests | not implemented |
-| F2-A04 | relation create/PATCH required/self/visibility rechecks | service/API tests | not implemented |
-| F2-A05 | safe relation projection and whole-field lookup omission | unit/API tests | not implemented |
-| F2-A06 | all seven aggregation and nested graph bounds | unit tests + PostgreSQL | in progress |
-| F2-A07 | incoming-link/dependent-field guards | service and PostgreSQL tests | not implemented |
-| F2-A08 | protected candidate cache/error handling | frontend tests | not implemented |
-| F2-A09 | relation/lookup Builder and Picker | component/integration tests | not implemented |
-| F2-A10 | four-width actual Mini App QA | local fixture + browser screenshots + console scan | not implemented |
+| F2-A01 | relation same-Base atomic initializer | unit/API replay/conflict/rollback + PostgreSQL | partial-local: unit/API evidence exists; F2 PostgreSQL suite is `2 skipped` without authorised URL |
+| F2-A02 | safe receipt/schema/audit redaction | unit/API response scans | implemented-local: safe transport/read-model regression is included in the `463 passed, 27 skipped` backend run |
+| F2-A03 | candidate label/search/cursor/permission behavior | service/API tests | implemented-local: targeted backend/API evidence and Browser candidate paging/403 safe-boundary evidence |
+| F2-A04 | relation create/PATCH required/self/visibility rechecks | service/API tests | implemented-local: targeted backend/API and Mini App ID-array create/direct-edit coverage |
+| F2-A05 | safe relation projection and whole-field lookup omission | unit/API tests | implemented-local: backend projection/evaluator coverage; legacy expectation was aligned to the safe `{ id, label }` contract |
+| F2-A06 | all seven aggregation and nested graph bounds | unit tests + PostgreSQL | partial-local: in-memory unit/API graph/aggregation evidence and nested Browser output exist; PostgreSQL is pending |
+| F2-A07 | incoming-link/dependent-field guards | service and PostgreSQL tests | partial-local: service guard coverage exists; PostgreSQL proof is pending |
+| F2-A08 | protected candidate cache/error handling | frontend tests | implemented-local: candidate keys/cleanup, stale generation, initial rejection and cursor-failure retry are covered by Mini App tests |
+| F2-A09 | relation/lookup Builder and Picker | component/integration tests | implemented-local: Builder/Picker/create/direct-edit flows, replay, conflict lock and allowlisted invalid mapping are covered locally |
+| F2-A10 | four-width actual Mini App QA | local fixture + browser screenshots + console scan | partial-local: primary flow passed at 1440/1280/430/390; desktop negative states passed with console `[]`; mobile negative permutations remain pending |
 
 ## 6. Completion Report Requirements
 
