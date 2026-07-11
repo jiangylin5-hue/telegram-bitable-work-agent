@@ -6,8 +6,8 @@ This handoff is for a new session with no prior context. It records the actual c
 
 - Repository worktree: `D:\telegram多维表格和工作智能体的开发\.worktrees\stage07-mini-app-ui`
 - Branch: `codex/stage07-mini-app-ui`
-- Latest commit at handoff: `06dada5 fix(stage07): close real postgres builder proof`
-- Working tree at handoff: clean.
+- Latest baseline commit before the current repair: `06dada5 fix(stage07): close real postgres builder proof`
+- Current worktree includes the documented TD001 direct-record mutation safety repair; inspect `git status --short` before any new change.
 - User language: Chinese. Keep code, API, database and stable status identifiers in English.
 - Current delivery rule: document first; do not implement a new schema/API/permission/technical direction without the user’s explicit approval. A change already described and approved in the relevant Stage07 documents may proceed without another confirmation.
 
@@ -42,6 +42,7 @@ Stage07 is the responsive React/Vite Mini App and desktop browser surface over t
 ### Completed, bounded `implemented-local`
 
 - Server-verified Mini App bootstrap, active membership/workspace navigation, permission-filtered Home/Base/table/view/record reads and protected query-state cleanup.
+- TD001 direct-record safety repair: session-expiry latch/generation invalidation, active-workspace 403 fail-closed behavior, exact record/current-view cancellation on 404 or disposal, and regression/browser proof that a delayed PATCH cannot restore an old workspace.
 - Base Canvas with Grid/Kanban/Calendar/Form presentation dispatch, cursor-safe paging, scalar record create and version-aware scalar edit.
 - P3 atomic Base/Table Builder:
   - `POST /workspaces/{workspace_id}/base-initializations`
@@ -120,7 +121,7 @@ Latest verified results:
 | Disposable migration smoke | passed, Alembic `20260710_0021` | local database only |
 | P3/F1 real PostgreSQL matrix | `6 passed, 2 deselected` | local database only |
 | Full backend | `440 passed, 17 skipped` | skips are the 17 historical Stage02 online-PostgreSQL tests without `STAGE02_ONLINE_DATABASE_URL` |
-| Mini App tests | 13 files / 55 tests passed | mocked transport; not backend authorization proof |
+| Mini App tests | 14 files / 67 tests passed | mocked transport; not backend authorization proof |
 | Mini App production build | passed | compilation/build only |
 
 Run from `mini-app` when frontend code changes:

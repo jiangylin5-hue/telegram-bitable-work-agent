@@ -276,3 +276,55 @@ test('discarding an in-flight record detail cannot restore the previous workspac
   expect(screen.queryByRole('heading', { name: '记录详情' })).not.toBeInTheDocument()
   expect(screen.getByRole('link', { name: '项目跟踪' })).toBeInTheDocument()
 })
+
+test('discarding an in-flight record save cannot restore the previous workspace after a switch', async () => {
+  const fetchMock = vi.fn()
+  vi.stubGlobal('fetch', fetchMock)
+  let resolveUpdate: (response: Response) => void = () => undefined
+  const updateResponse = new Promise<Response>((resolve) => { resolveUpdate = resolve })
+  let recordReads = 0
+
+  fetchMock.mockImplementation((input: string | URL | Request, init?: RequestInit) => {
+    const path = typeof input === 'string' ? input : input instanceof URL ? input.pathname : new URL(input.url).pathname
+    if (path === '/mini-app/bootstrap') return Promise.resolve(new Response(JSON.stringify({
+      identity: { user_id: 'operator-1', source: 'verified_adapter' },
+      workspaces: [
+        { id: 'workspace-1', name: '运营中心', slug: 'operations', role: 'operator', capabilities: { can_read_bases: true, can_manage_workspace: false, can_manage_schema: false, can_review_drafts: true } },
+        { id: 'workspace-2', name: '项目中心', slug: 'projects', role: 'viewer', capabilities: { can_read_bases: true, can_manage_workspace: false, can_manage_schema: false, can_review_drafts: false } },
+      ],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/workspaces/workspace-1/home') return Promise.resolve(new Response(JSON.stringify({ workspace_id: 'workspace-1', recent_bases: [{ id: 'base-1', name: '客户管理', source_type: 'blank' }], queue: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/workspaces/workspace-2/home') return Promise.resolve(new Response(JSON.stringify({ workspace_id: 'workspace-2', recent_bases: [{ id: 'base-2', name: '项目跟踪', source_type: 'blank' }], queue: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/bases/base-1/tables') return Promise.resolve(new Response(JSON.stringify({ tables: [{ id: 'table-1', base_id: 'base-1', name: '客户表', key: 'customers', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/bases/base-1/views') return Promise.resolve(new Response(JSON.stringify({ views: [{ id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: '全部客户', view_type: 'grid', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/tables/table-1/schema') return Promise.resolve(new Response(JSON.stringify({ table: { id: 'table-1', name: '客户表', key: 'customers' }, fields: [{ id: 'field-name', table_id: 'table-1', name: '客户名称', key: 'name', field_type: 'text', required: true, options: {}, order_index: 0 }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/views/view-1/presentation') return Promise.resolve(new Response(JSON.stringify({ view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: ['name'], group_by_field_key: null, date_field_key: null, form_field_keys: ['name'] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/views/view-1/records') return Promise.resolve(new Response(JSON.stringify({ view_id: 'view-1', records: [{ id: 'record-1', fields: { name: recordReads > 0 ? 'Ada Ltd' : 'Ada Co' } }], next_cursor: null, has_more: false }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/records/record-1' && init?.method === 'PATCH') return updateResponse
+    if (path === '/records/record-1') {
+      recordReads += 1
+      return Promise.resolve(new Response(JSON.stringify({ id: 'record-1', table_id: 'table-1', values: { name: recordReads > 1 ? 'Ada Ltd' : 'Ada Co' }, record_status: 'active', version: recordReads > 1 ? 4 : 3 }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    }
+    return Promise.reject(new Error(`Unexpected request: ${path}`))
+  })
+
+  render(<App />)
+  fireEvent.click(await screen.findByRole('link', { name: '客户管理' }))
+  fireEvent.click(await screen.findByRole('cell', { name: 'Ada Co' }))
+  fireEvent.click(await screen.findByRole('button', { name: '编辑记录' }))
+  fireEvent.change(screen.getByLabelText('客户名称'), { target: { value: 'Ada Ltd' } })
+  fireEvent.click(screen.getByRole('button', { name: '保存更改' }))
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/records/record-1', expect.objectContaining({ method: 'PATCH' })))
+
+  fireEvent.change(screen.getByLabelText('切换工作区（桌面）'), { target: { value: 'workspace-2' } })
+  expect(await screen.findByRole('link', { name: '项目跟踪' })).toBeInTheDocument()
+
+  await act(async () => {
+    resolveUpdate(new Response(JSON.stringify({ id: 'record-1', table_id: 'table-1', values: { name: 'Ada Ltd' }, record_status: 'active', version: 4 }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    await Promise.resolve()
+  })
+
+  await waitFor(() => expect(screen.getByRole('link', { name: '项目跟踪' })).toBeInTheDocument())
+  expect(screen.queryByRole('heading', { name: '客户管理' })).not.toBeInTheDocument()
+  expect(screen.queryByText('Ada Ltd')).not.toBeInTheDocument()
+})

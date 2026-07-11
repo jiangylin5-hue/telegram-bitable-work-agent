@@ -53,3 +53,17 @@ export async function clearFieldMutationQueries(
   await Promise.all(queryKeys.map((queryKey) => queryClient.cancelQueries({ queryKey })))
   for (const queryKey of queryKeys) queryClient.removeQueries({ queryKey })
 }
+
+export async function clearRecordMutationQueries(
+  queryClient: QueryClient,
+  scope: ProtectedScope,
+  recordId: string,
+  viewId: string,
+): Promise<void> {
+  const queryKeys: QueryKey[] = [
+    protectedQueryKey(scope, 'record', recordId),
+    protectedQueryKey(scope, 'view', viewId, 'records', null),
+  ]
+  await Promise.all(queryKeys.map((queryKey) => queryClient.cancelQueries({ queryKey })))
+  for (const queryKey of queryKeys) queryClient.removeQueries({ queryKey })
+}

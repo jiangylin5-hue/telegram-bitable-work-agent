@@ -39,6 +39,7 @@
 
 ### F1 Automated Current Evidence
 
+- 2026-07-11: direct-record mutation safety repair added red/green application/query-state cases for late `403` after record switch, `401` versus a concurrent PATCH completion, detail-close cancellation, 401/403/404 save/conflict failures and exact 404 cleanup. Fresh Mini App regression: `14` passed test files and `67` passed tests; `npm.cmd run build` passed. This is TD001 cache/race evidence, not backend authorization proof.
 - 2026-07-11: fresh full backend regression with the authorised disposable local URL: `440 passed, 17 skipped in 23.10s`. The only skips are 17 historical Stage02 online-PostgreSQL cases requiring `STAGE02_ONLINE_DATABASE_URL`; the five Stage06-local security cases and three F1 disposable-PostgreSQL cases ran and passed.
 - 2026-07-11: fresh Mini App regression after the duplicate-feedback refinement: `13 passed` test files and `55 passed` tests; `npm.cmd run build` passed.
 - 2026-07-10: `alembic heads` reports only `20260710_0021 (head)`; `alembic upgrade head --sql` exited successfully.
@@ -53,6 +54,10 @@
 - The 390px nonempty-table trigger initially exposed a responsive defect: the generic toolbar rule hid the authorised field action. A test was written red, the explicit mobile field/record action override was added, and a fresh 390px fixture run opened the field sheet from its visible `添加字段` trigger.
 - 2026-07-11: a corrected disposable fixture handled `PATCH` before its generic record read. It changed a record from `新建` / `[重点客户, 续费关注]` to `跟进中` / `[重点客户]`, reread version `2` into both Grid and Record Detail, emitted an empty error/warning log and retained `artifacts/stage07/f1-direct-edit-success-1440.png` after visual inspection.
 - 2026-07-11: a disposable local error fixture exercised the actual transport chain for `422.detail.code = duplicate_field_name` at 1440px, 1280px, 430px and 390px: every run retained `客户阶段`, rendered only `字段名称已存在，请使用其他名称。`, rendered no `field_name` server message and had no warning/error console entries. At the same four widths, a pending field request kept the dialog visible and disabled `创建中…`, `关闭` and `取消`. The application test remains the authoritative scope-switch simulation: it resolves a delayed field receipt only after a workspace replacement and proves the old field does not render. Do not force an impossible background switch through the modal or treat component coverage as browser evidence. This closes the F1 browser state matrix only; it is not real-PostgreSQL proof.
+
+### TD001 Direct-Record Mutation Browser Evidence
+
+- 2026-07-11: a disposable local fixture/proxy used the actual Vite Mini App transport. It opened `客户管理`, edited `Ada Wong`, began a delayed `PATCH`, switched to `产品协作工作区` and waited for the old response. The rendered UI stayed on `需求规划`, did not render `Ada Ltd`, and the final console warning/error query returned `[]`. The fixture, proxy and Vite processes were removed/stopped. This validates the repaired workspace-switch race only; it does not replace the required whole-stage four-width matrix or real Telegram identity evidence.
 
 ## 3. Completion Rule
 

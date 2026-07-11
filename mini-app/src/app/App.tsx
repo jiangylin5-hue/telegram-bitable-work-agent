@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query'
+import { isCancelledError, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ApiError, api, type BaseSummary, type BootstrapResponse, type CreateForm, type PlatformTable, type RecordDetail, type TableSchema, type ViewPresentation, type ViewRecords, type ViewSummary, type WorkspaceHome } from './api'
 import { AppShell } from './AppShell'
@@ -9,7 +9,7 @@ import { FieldBuilderPanel, type FieldBuilderValues } from './FieldBuilderPanel'
 import { CreateRecordPanel } from './CreateRecordPanel'
 import { RecordDetailPanel } from './RecordDetail'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
-import { clearAllProtectedQueries, clearFieldMutationQueries, clearProtectedWorkspace, createProtectedQueryClient, protectedQueryKey } from './protectedQuery'
+import { clearAllProtectedQueries, clearFieldMutationQueries, clearProtectedWorkspace, clearRecordMutationQueries, createProtectedQueryClient, protectedQueryKey } from './protectedQuery'
 
 type BaseCanvasState = {
   base: BaseSummary
@@ -36,7 +36,7 @@ type CanvasTarget = { tableId: string; viewId: string }
 type BuilderPanel = { mode: 'base' } | { mode: 'table'; base: BaseSummary } | { mode: 'field'; tableId: string; viewId: string }
 
 function isAbortError(error: unknown): boolean {
-  return error instanceof DOMException && error.name === 'AbortError'
+  return isCancelledError(error) || (error instanceof DOMException && error.name === 'AbortError')
 }
 
 export function App() {
@@ -53,10 +53,48 @@ function AppContent() {
   const recordRequestVersion = useRef(0)
   const createFormRequestVersion = useRef(0)
   const builderRequestVersion = useRef(0)
+  const sessionInvalidated = useRef(false)
   const [builderPanel, setBuilderPanel] = useState<BuilderPanel>()
+
+  function invalidateInFlightRequests() {
+    homeRequestVersion.current += 1
+    canvasRequestVersion.current += 1
+    recordRequestVersion.current += 1
+    createFormRequestVersion.current += 1
+    builderRequestVersion.current += 1
+  }
+
+  async function denyInvalidSession() {
+    sessionInvalidated.current = true
+    invalidateInFlightRequests()
+    setState({ status: 'denied' })
+    await clearAllProtectedQueries(queryClient)
+  }
+
+  async function denyWorkspace(scope: { userId: string; workspaceId: string }) {
+    await clearProtectedWorkspace(queryClient, scope)
+    if (!sessionInvalidated.current && activeWorkspaceId.current === scope.workspaceId) {
+      invalidateInFlightRequests()
+      setState({ status: 'denied' })
+    }
+  }
+
+  async function discardRecordMutationQueries(scope: { userId: string; workspaceId: string }, recordId: string, viewId: string) {
+    await clearRecordMutationQueries(queryClient, scope, recordId, viewId)
+  }
+
+  function abandonRecordDetail(canvas: BaseCanvasState | undefined, workspaceId: string) {
+    recordRequestVersion.current += 1
+    if (!canvas?.detail || !canvas.view) return
+    void discardRecordMutationQueries({ userId: readyState.bootstrap.identity.user_id, workspaceId }, canvas.detail.id, canvas.view.id)
+  }
+
   const bootstrapQuery = useQuery({
     queryKey: ['stage07', 'bootstrap'],
-    queryFn: ({ signal }) => api.bootstrap({ signal }),
+    queryFn: ({ signal }) => sessionInvalidated.current
+      ? Promise.reject(new DOMException('Session invalidated', 'AbortError'))
+      : api.bootstrap({ signal }),
+    enabled: !sessionInvalidated.current,
   })
 
   async function loadWorkspaceHome(bootstrap: BootstrapResponse, workspaceId: string) {
@@ -78,13 +116,11 @@ function AppContent() {
     } catch (error) {
       if (homeRequestVersion.current !== requestVersion || isAbortError(error)) return
       if (error instanceof ApiError && error.status === 401) {
-        await clearAllProtectedQueries(queryClient)
-        setState({ status: 'denied' })
+        await denyInvalidSession()
         return
       }
       if (error instanceof ApiError && error.status === 403) {
-        await clearProtectedWorkspace(queryClient, scope)
-        setState({ status: 'denied' })
+        await denyWorkspace(scope)
         return
       }
       setState({ status: 'error' })
@@ -104,14 +140,14 @@ function AppContent() {
 
   useEffect(() => {
     if (bootstrapQuery.error instanceof ApiError && (bootstrapQuery.error.status === 401 || bootstrapQuery.error.status === 403)) {
-      void clearAllProtectedQueries(queryClient)
+      void denyInvalidSession()
     }
   }, [bootstrapQuery.error, queryClient])
 
+  if (state.status === 'denied') return <main className="app-state" aria-label="无工作区访问权限">当前身份没有可访问的工作区。</main>
   if (bootstrapQuery.isError) return <main className="app-state" aria-label={bootstrapQuery.error instanceof ApiError && (bootstrapQuery.error.status === 401 || bootstrapQuery.error.status === 403) ? '无工作区访问权限' : '网络错误'}>{bootstrapQuery.error instanceof ApiError && (bootstrapQuery.error.status === 401 || bootstrapQuery.error.status === 403) ? '当前身份没有可访问的工作区。' : '暂时无法加载工作区，请稍后重试。'}</main>
   if (bootstrapQuery.isPending || state.status === 'loading') return <main className="app-state" aria-label="正在加载工作区">正在加载工作区…</main>
 
-  if (state.status === 'denied') return <main className="app-state" aria-label="无工作区访问权限">当前身份没有可访问的工作区。</main>
   if (state.status === 'error') return <main className="app-state" aria-label="网络错误">暂时无法加载工作区，请稍后重试。</main>
 
   const readyState = state
@@ -136,7 +172,7 @@ function AppContent() {
     if (!target) setBuilderPanel(undefined)
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: homeOverride.workspace_id }
     const canvasState = { status: 'ready' as const, bootstrap: readyState.bootstrap, home: homeOverride }
-    const isCurrent = () => canvasRequestVersion.current === requestVersion && builderRequestVersion.current === builderVersion && activeWorkspaceId.current === homeOverride.workspace_id
+    const isCurrent = () => !sessionInvalidated.current && canvasRequestVersion.current === requestVersion && builderRequestVersion.current === builderVersion && activeWorkspaceId.current === homeOverride.workspace_id
     setState({ ...canvasState, canvasLoading: true, canvas: undefined })
     try {
       const [{ tables }, { views }] = await Promise.all([
@@ -163,11 +199,9 @@ function AppContent() {
     } catch (error) {
       if (!isCurrent() || isAbortError(error)) return false
       if (error instanceof ApiError && error.status === 401) {
-        await clearAllProtectedQueries(queryClient)
-        setState({ status: 'denied' })
+        await denyInvalidSession()
       } else if (error instanceof ApiError && error.status === 403) {
-        await clearProtectedWorkspace(queryClient, scope)
-        setState({ status: 'denied' })
+        await denyWorkspace(scope)
       } else {
         setState({ status: 'error' })
       }
@@ -187,7 +221,7 @@ function AppContent() {
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
     const requestVersion = builderRequestVersion.current
     const canvasVersion = canvasRequestVersion.current
-    const isCurrent = () => builderRequestVersion.current === requestVersion && canvasRequestVersion.current === canvasVersion && activeWorkspaceId.current === workspaceId
+    const isCurrent = () => !sessionInvalidated.current && builderRequestVersion.current === requestVersion && canvasRequestVersion.current === canvasVersion && activeWorkspaceId.current === workspaceId
     try {
       const receipt = await api.initializeBase(workspaceId, values, idempotencyKey)
       if (!isCurrent()) return
@@ -199,13 +233,11 @@ function AppContent() {
     } catch (error) {
       if (!isCurrent() || isAbortError(error)) return
       if (error instanceof ApiError && error.status === 401) {
-        await clearAllProtectedQueries(queryClient)
-        setState({ status: 'denied' })
+        await denyInvalidSession()
         return
       }
       if (error instanceof ApiError && error.status === 403) {
-        await clearProtectedWorkspace(queryClient, scope)
-        setState({ status: 'denied' })
+        await denyWorkspace(scope)
         return
       }
       if (error instanceof ApiError && error.status === 404) {
@@ -221,7 +253,7 @@ function AppContent() {
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
     const requestVersion = builderRequestVersion.current
     const canvasVersion = canvasRequestVersion.current
-    const isCurrent = () => builderRequestVersion.current === requestVersion && canvasRequestVersion.current === canvasVersion && activeWorkspaceId.current === workspaceId
+    const isCurrent = () => !sessionInvalidated.current && builderRequestVersion.current === requestVersion && canvasRequestVersion.current === canvasVersion && activeWorkspaceId.current === workspaceId
     try {
       const receipt = await api.initializeTable(base.id, values, idempotencyKey)
       if (!isCurrent()) return
@@ -234,13 +266,11 @@ function AppContent() {
     } catch (error) {
       if (!isCurrent() || isAbortError(error)) return
       if (error instanceof ApiError && error.status === 401) {
-        await clearAllProtectedQueries(queryClient)
-        setState({ status: 'denied' })
+        await denyInvalidSession()
         return
       }
       if (error instanceof ApiError && error.status === 403) {
-        await clearProtectedWorkspace(queryClient, scope)
-        setState({ status: 'denied' })
+        await denyWorkspace(scope)
         return
       }
       if (error instanceof ApiError && error.status === 404) {
@@ -265,7 +295,7 @@ function AppContent() {
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
     const requestVersion = builderRequestVersion.current
     const canvasVersion = canvasRequestVersion.current
-    const isCurrent = () => builderRequestVersion.current === requestVersion
+    const isCurrent = () => !sessionInvalidated.current && builderRequestVersion.current === requestVersion
       && canvasRequestVersion.current === canvasVersion
       && activeWorkspaceId.current === workspaceId
     try {
@@ -297,15 +327,13 @@ function AppContent() {
     } catch (error) {
       if (!isCurrent() || isAbortError(error)) return
       if (error instanceof ApiError && error.status === 401) {
-        await clearAllProtectedQueries(queryClient)
+        await denyInvalidSession()
         setBuilderPanel(undefined)
-        setState({ status: 'denied' })
         return
       }
       if (error instanceof ApiError && error.status === 403) {
-        await clearProtectedWorkspace(queryClient, scope)
+        await denyWorkspace(scope)
         setBuilderPanel(undefined)
-        setState({ status: 'denied' })
         return
       }
       if (error instanceof ApiError && error.status === 404) {
@@ -320,21 +348,20 @@ function AppContent() {
   const selectedWorkspace = activeWorkspace
   async function openRecord(recordId: string) {
     if (!readyState.canvas) return
+    abandonRecordDetail(readyState.canvas, readyState.home.workspace_id)
     const requestVersion = ++recordRequestVersion.current
     const canvasVersion = canvasRequestVersion.current
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
     try {
       const detail = await queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'record', recordId), queryFn: ({ signal }) => api.recordDetail(recordId, { signal }) })
-      if (recordRequestVersion.current !== requestVersion || canvasRequestVersion.current !== canvasVersion) return
+      if (sessionInvalidated.current || recordRequestVersion.current !== requestVersion || canvasRequestVersion.current !== canvasVersion) return
       setState({ ...readyState, canvas: { ...readyState.canvas, detail } })
     } catch (error) {
-      if (recordRequestVersion.current !== requestVersion || canvasRequestVersion.current !== canvasVersion || isAbortError(error)) return
+      if (sessionInvalidated.current || recordRequestVersion.current !== requestVersion || canvasRequestVersion.current !== canvasVersion || isAbortError(error)) return
       if (error instanceof ApiError && error.status === 401) {
-        await clearAllProtectedQueries(queryClient)
-        setState({ status: 'denied' })
+        await denyInvalidSession()
       } else if (error instanceof ApiError && error.status === 403) {
-        await clearProtectedWorkspace(queryClient, scope)
-        setState({ status: 'denied' })
+        await denyWorkspace(scope)
       } else {
         setState({ status: 'error' })
       }
@@ -345,31 +372,18 @@ function AppContent() {
     const canvas = readyState.canvas
     const detail = canvas?.detail
     if (!canvas || !detail || !canvas.view) throw new Error('Record is not available')
-    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
-    await api.updateRecord(detail.id, values, detail.version)
+    const workspaceId = readyState.home.workspace_id
+    const canvasVersion = canvasRequestVersion.current
+    const recordVersion = recordRequestVersion.current
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const isCurrent = () => !sessionInvalidated.current && canvasRequestVersion.current === canvasVersion
+      && recordRequestVersion.current === recordVersion
+      && activeWorkspaceId.current === workspaceId
     const recordKey = protectedQueryKey(scope, 'record', detail.id)
     const recordsKey = protectedQueryKey(scope, 'view', canvas.view.id, 'records', null)
-    await Promise.all([queryClient.invalidateQueries({ queryKey: recordKey }), queryClient.invalidateQueries({ queryKey: recordsKey })])
-    queryClient.removeQueries({ queryKey: recordKey })
-    queryClient.removeQueries({ queryKey: recordsKey })
-    const [updated, records] = await Promise.all([
-      queryClient.fetchQuery({ queryKey: recordKey, queryFn: ({ signal }) => api.recordDetail(detail.id, { signal }) }),
-      queryClient.fetchQuery({ queryKey: recordsKey, queryFn: ({ signal }) => api.viewRecords(canvas.view!.id, undefined, { signal }) }),
-    ])
-    const readableKeys = new Set(canvas.schema?.fields.map((field) => field.key) ?? [])
-    const safeUpdated = { ...updated, values: Object.fromEntries(Object.entries(updated.values).filter(([key]) => readableKeys.has(key))) }
-    setState({ ...readyState, canvas: { ...canvas, records, detail: safeUpdated } })
-    return safeUpdated
-  }
-
-  async function refreshRecordAfterConflict() {
-    const canvas = readyState.canvas
-    const detail = canvas?.detail
-    if (!canvas || !detail || !canvas.view) throw new Error('Record is not available')
-    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
-    const recordKey = protectedQueryKey(scope, 'record', detail.id)
-      const recordsKey = protectedQueryKey(scope, 'view', canvas.view.id, 'records', null)
     try {
+      await api.updateRecord(detail.id, values, detail.version)
+      if (!isCurrent()) throw new DOMException('Obsolete record mutation', 'AbortError')
       await Promise.all([queryClient.invalidateQueries({ queryKey: recordKey }), queryClient.invalidateQueries({ queryKey: recordsKey })])
       queryClient.removeQueries({ queryKey: recordKey })
       queryClient.removeQueries({ queryKey: recordsKey })
@@ -377,12 +391,74 @@ function AppContent() {
         queryClient.fetchQuery({ queryKey: recordKey, queryFn: ({ signal }) => api.recordDetail(detail.id, { signal }) }),
         queryClient.fetchQuery({ queryKey: recordsKey, queryFn: ({ signal }) => api.viewRecords(canvas.view!.id, undefined, { signal }) }),
       ])
+      if (!isCurrent()) throw new DOMException('Obsolete record mutation', 'AbortError')
       const readableKeys = new Set(canvas.schema?.fields.map((field) => field.key) ?? [])
       const safeUpdated = { ...updated, values: Object.fromEntries(Object.entries(updated.values).filter(([key]) => readableKeys.has(key))) }
-      setState({ ...readyState, canvas: { ...canvas, detail: safeUpdated, records } })
+      setState((current) => {
+        if (current.status !== 'ready' || !current.canvas
+          || current.home.workspace_id !== workspaceId
+          || current.canvas.view?.id !== canvas.view?.id
+          || current.canvas.detail?.id !== detail.id) return current
+        return { ...current, canvas: { ...current.canvas, records, detail: safeUpdated } }
+      })
       return safeUpdated
     } catch (error) {
-      if (error instanceof ApiError && (error.status === 403 || error.status === 404)) setState({ status: 'denied' })
+      if (isAbortError(error)) throw error
+      if (error instanceof ApiError && error.status === 401) {
+        await denyInvalidSession()
+      } else if (error instanceof ApiError && error.status === 403) {
+        await denyWorkspace(scope)
+      } else if (error instanceof ApiError && error.status === 404) {
+        await discardRecordMutationQueries(scope, detail.id, canvas.view.id)
+        if (isCurrent()) setState({ status: 'denied' })
+      }
+      throw error
+    }
+  }
+
+  async function refreshRecordAfterConflict() {
+    const canvas = readyState.canvas
+    const detail = canvas?.detail
+    if (!canvas || !detail || !canvas.view) throw new Error('Record is not available')
+    const workspaceId = readyState.home.workspace_id
+    const canvasVersion = canvasRequestVersion.current
+    const recordVersion = recordRequestVersion.current
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const isCurrent = () => !sessionInvalidated.current && canvasRequestVersion.current === canvasVersion
+      && recordRequestVersion.current === recordVersion
+      && activeWorkspaceId.current === workspaceId
+    const recordKey = protectedQueryKey(scope, 'record', detail.id)
+    const recordsKey = protectedQueryKey(scope, 'view', canvas.view.id, 'records', null)
+    try {
+      if (!isCurrent()) throw new DOMException('Obsolete record mutation', 'AbortError')
+      await Promise.all([queryClient.invalidateQueries({ queryKey: recordKey }), queryClient.invalidateQueries({ queryKey: recordsKey })])
+      queryClient.removeQueries({ queryKey: recordKey })
+      queryClient.removeQueries({ queryKey: recordsKey })
+      const [updated, records] = await Promise.all([
+        queryClient.fetchQuery({ queryKey: recordKey, queryFn: ({ signal }) => api.recordDetail(detail.id, { signal }) }),
+        queryClient.fetchQuery({ queryKey: recordsKey, queryFn: ({ signal }) => api.viewRecords(canvas.view!.id, undefined, { signal }) }),
+      ])
+      if (!isCurrent()) throw new DOMException('Obsolete record mutation', 'AbortError')
+      const readableKeys = new Set(canvas.schema?.fields.map((field) => field.key) ?? [])
+      const safeUpdated = { ...updated, values: Object.fromEntries(Object.entries(updated.values).filter(([key]) => readableKeys.has(key))) }
+      setState((current) => {
+        if (current.status !== 'ready' || !current.canvas
+          || current.home.workspace_id !== workspaceId
+          || current.canvas.view?.id !== canvas.view?.id
+          || current.canvas.detail?.id !== detail.id) return current
+        return { ...current, canvas: { ...current.canvas, detail: safeUpdated, records } }
+      })
+      return safeUpdated
+    } catch (error) {
+      if (isAbortError(error)) throw error
+      if (error instanceof ApiError && error.status === 401) {
+        await denyInvalidSession()
+      } else if (error instanceof ApiError && error.status === 403) {
+        await denyWorkspace(scope)
+      } else if (error instanceof ApiError && error.status === 404) {
+        await discardRecordMutationQueries(scope, detail.id, canvas.view.id)
+        if (isCurrent()) setState({ status: 'denied' })
+      }
       throw error
     }
   }
@@ -406,8 +482,7 @@ function AppContent() {
     } catch (error) {
       if (isAbortError(error)) return
       if (error instanceof ApiError && error.status === 401) {
-        await clearAllProtectedQueries(queryClient)
-        setState({ status: 'denied' })
+        await denyInvalidSession()
         return
       }
       if (error instanceof ApiError && error.status === 403) await clearProtectedWorkspace(queryClient, scope)
@@ -437,8 +512,7 @@ function AppContent() {
     } catch (error) {
       if (createFormRequestVersion.current !== requestVersion || isAbortError(error)) return
       if (error instanceof ApiError && error.status === 401) {
-        await clearAllProtectedQueries(queryClient)
-        setState({ status: 'denied' })
+        await denyInvalidSession()
       } else if (error instanceof ApiError && error.status === 403) {
         await clearProtectedWorkspace(queryClient, scope)
         setState({ status: 'denied' })
@@ -469,8 +543,7 @@ function AppContent() {
         : current)
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
-        await clearAllProtectedQueries(queryClient)
-        setState({ status: 'denied' })
+        await denyInvalidSession()
       } else if (error instanceof ApiError && error.status === 403) {
         await clearProtectedWorkspace(queryClient, scope)
         setState({ status: 'denied' })
@@ -485,6 +558,7 @@ function AppContent() {
     const table = canvas.tables.find((item) => item.id === tableId)
     if (!table) return
     const view = canvas.views.find((item) => item.table_id === table.id) ?? null
+    abandonRecordDetail(canvas, readyState.home.workspace_id)
     const requestVersion = ++canvasRequestVersion.current
     createFormRequestVersion.current += 1
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
@@ -504,8 +578,7 @@ function AppContent() {
     } catch (error) {
       if (canvasRequestVersion.current !== requestVersion || isAbortError(error)) return
       if (error instanceof ApiError && error.status === 401) {
-        await clearAllProtectedQueries(queryClient)
-        setState({ status: 'denied' })
+        await denyInvalidSession()
       } else if (error instanceof ApiError && error.status === 403) {
         await clearProtectedWorkspace(queryClient, scope)
         setState({ status: 'denied' })
@@ -521,6 +594,7 @@ function AppContent() {
     const view = canvas.views.find((item) => item.id === viewId)
     const table = view?.table_id ? canvas.tables.find((item) => item.id === view.table_id) ?? null : null
     if (!view || !table) return
+    abandonRecordDetail(canvas, readyState.home.workspace_id)
     const requestVersion = ++canvasRequestVersion.current
     createFormRequestVersion.current += 1
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
@@ -538,8 +612,7 @@ function AppContent() {
     } catch (error) {
       if (canvasRequestVersion.current !== requestVersion || isAbortError(error)) return
       if (error instanceof ApiError && error.status === 401) {
-        await clearAllProtectedQueries(queryClient)
-        setState({ status: 'denied' })
+        await denyInvalidSession()
       } else if (error instanceof ApiError && error.status === 403) {
         await clearProtectedWorkspace(queryClient, scope)
         setState({ status: 'denied' })
@@ -552,7 +625,7 @@ function AppContent() {
   const content = readyState.canvasLoading
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
-      ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} onConflict={refreshRecordAfterConflict} onClose={() => setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } })} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => setState((current) => current.status === 'ready' && current.canvas ? { ...current, canvas: { ...current.canvas, createForm: undefined } } : current)} />}</>
+    ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => setState((current) => current.status === 'ready' && current.canvas ? { ...current, canvas: { ...current.canvas, createForm: undefined } } : current)} />}</>
       : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} />
   const builderOverlay = builderPanel?.mode === 'base'
     ? <BuilderCreatePanel mode="base" onSubmit={(values, idempotencyKey) => createBase(values as { baseName: string; tableName: string }, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />

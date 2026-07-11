@@ -1,6 +1,6 @@
 import { expect, test, vi } from 'vitest'
 
-import { clearAllProtectedQueries, clearProtectedWorkspace, createProtectedQueryClient, protectedQueryKey } from '../app/protectedQuery'
+import { clearAllProtectedQueries, clearProtectedWorkspace, clearRecordMutationQueries, createProtectedQueryClient, protectedQueryKey } from '../app/protectedQuery'
 
 test('keys protected data by verified user and workspace before resource segments', () => {
   expect(protectedQueryKey({ userId: 'user-1', workspaceId: 'workspace-1' }, 'record', 'record-1')).toEqual(['stage07', 'user-1', 'workspace-1', 'record', 'record-1'])
@@ -39,4 +39,27 @@ test('removes every Stage07 query after identity expiry', async () => {
 
   expect(client.getQueryData(firstKey)).toBeUndefined()
   expect(client.getQueryData(secondKey)).toBeUndefined()
+})
+
+test('removes only the current record and initial view window after a record-level 404', async () => {
+  const client = createProtectedQueryClient()
+  const scope = { userId: 'user-1', workspaceId: 'workspace-1' }
+  const currentRecord = protectedQueryKey(scope, 'record', 'record-1')
+  const anotherRecord = protectedQueryKey(scope, 'record', 'record-2')
+  const currentWindow = protectedQueryKey(scope, 'view', 'view-1', 'records', null)
+  const nextWindow = protectedQueryKey(scope, 'view', 'view-1', 'records', 'cursor-2')
+  const anotherView = protectedQueryKey(scope, 'view', 'view-2', 'records', null)
+  client.setQueryData(currentRecord, { values: { name: 'Ada' } })
+  client.setQueryData(anotherRecord, { values: { name: 'Grace' } })
+  client.setQueryData(currentWindow, { records: ['Ada'] })
+  client.setQueryData(nextWindow, { records: ['Celia'] })
+  client.setQueryData(anotherView, { records: ['Northstar'] })
+
+  await clearRecordMutationQueries(client, scope, 'record-1', 'view-1')
+
+  expect(client.getQueryData(currentRecord)).toBeUndefined()
+  expect(client.getQueryData(currentWindow)).toBeUndefined()
+  expect(client.getQueryData(anotherRecord)).toEqual({ values: { name: 'Grace' } })
+  expect(client.getQueryData(nextWindow)).toEqual({ records: ['Celia'] })
+  expect(client.getQueryData(anotherView)).toEqual({ records: ['Northstar'] })
 })
