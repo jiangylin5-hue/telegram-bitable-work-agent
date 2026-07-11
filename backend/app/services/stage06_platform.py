@@ -74,6 +74,9 @@ LOOKUP_AGGREGATIONS = frozenset(
 )
 NUMERIC_LOOKUP_AGGREGATIONS = frozenset({"sum", "average", "min", "max"})
 LOOKUP_INELIGIBLE_TARGET_FIELD_TYPES = frozenset({"linked_record", "json", "formula"})
+RELATION_LABEL_FIELD_TYPES = frozenset(
+    {"text", "status", "single_select", "url", "email", "phone", "user"}
+)
 STAGE06_DEFAULT_WRITE_ROLES = frozenset(
     {"admin", "owner", "manager", "operator", "builder"}
 )
@@ -161,6 +164,9 @@ class Stage06PlatformUnitOfWork(Protocol):
         pass
 
     def add_field(self, field: PlatformField) -> None:
+        pass
+
+    def get_field(self, field_id: UUID) -> PlatformField | None:
         pass
 
     def list_fields(self, table_id: UUID) -> list[PlatformField]:
@@ -335,6 +341,9 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def add_field(self, field: PlatformField) -> None:
         self.fields.append(field)
+
+    def get_field(self, field_id: UUID) -> PlatformField | None:
+        return _find_by_id(self.fields, field_id)
 
     def list_fields(self, table_id: UUID) -> list[PlatformField]:
         return sorted(
@@ -524,6 +533,9 @@ class SqlAlchemyStage06PlatformUnitOfWork:
 
     def add_field(self, field: PlatformField) -> None:
         self.session.add(field)
+
+    def get_field(self, field_id: UUID) -> PlatformField | None:
+        return self.session.get(PlatformField, field_id)
 
     def list_fields(self, table_id: UUID) -> list[PlatformField]:
         return list(
@@ -1540,6 +1552,55 @@ def read_record_for_actor(
     }
 
 
+def list_relation_candidates(
+    uow: Stage06PlatformUnitOfWork,
+    field_id: UUID,
+    *,
+    actor: Actor,
+    query: str | None,
+    cursor: str | None,
+    limit: int,
+) -> dict[str, Any]:
+    relation_field = _require_exists(uow.get_field(field_id), "field_not_found")
+    if relation_field.field_type != "linked_record":
+        raise PlatformValidationError("lookup_source_not_relation", "relation_field")
+    if not _can_actor_read_field(actor, relation_field):
+        _deny_permission(
+            uow,
+            actor=actor,
+            action="read_relation_candidates",
+            entity_type="field",
+            entity_id=relation_field.id,
+            field_key=relation_field.key,
+        )
+    source_table = _require_exists(uow.get_table(relation_field.table_id), "table_not_found")
+    target_table = _relation_target_table(uow, source_table, relation_field)
+    matched: list[tuple[PlatformRecord, str]] = []
+    normalized_query = query.strip().casefold() if isinstance(query, str) else ""
+    for record in uow.list_records(target_table.id):
+        label = _safe_relation_label(uow, target_table, record, actor)
+        if label is None:
+            continue
+        if normalized_query and normalized_query not in label.casefold():
+            continue
+        matched.append((record, label))
+    page = paginate_items(
+        [record for record, _ in matched],
+        limit=limit,
+        cursor=cursor,
+    )
+    labels = {record.id: label for record, label in matched}
+    return {
+        "field_id": str(relation_field.id),
+        "records": [
+            {"id": str(record.id), "label": labels[record.id]}
+            for record in page.items
+        ],
+        "next_cursor": page.next_cursor,
+        "has_more": page.has_more,
+    }
+
+
 def list_view_records(
     uow: Stage06PlatformUnitOfWork,
     view_id: UUID,
@@ -1726,11 +1787,76 @@ def _view_field_value(
 ) -> Any:
     if field is None:
         return _MISSING
+    if field.field_type == "linked_record":
+        return _safe_relation_cells(uow, record, field, actor)
     if field.field_type == "lookup":
         return _lookup_field_value(uow, record, field, actor)
     if field.key in record.values:
         return record.values[field.key]
     return _MISSING
+
+
+def _safe_relation_cells(
+    uow: Stage06PlatformUnitOfWork,
+    record: PlatformRecord,
+    relation_field: PlatformField,
+    actor: Actor,
+) -> list[dict[str, str]]:
+    source_table = uow.get_table(record.table_id)
+    if source_table is None:
+        return []
+    try:
+        target_table = _relation_target_table(uow, source_table, relation_field)
+    except PlatformValidationError:
+        return []
+    linked_ids = record.values.get(relation_field.key)
+    if not isinstance(linked_ids, list):
+        return []
+    cells: list[dict[str, str]] = []
+    for linked_id in linked_ids:
+        target_record_id = _optional_uuid(linked_id)
+        if target_record_id is None:
+            continue
+        target_record = uow.get_record(target_record_id)
+        if target_record is None or target_record.table_id != target_table.id:
+            continue
+        label = _safe_relation_label(uow, target_table, target_record, actor)
+        if label is not None:
+            cells.append({"id": str(target_record.id), "label": label})
+    return cells
+
+
+def _safe_relation_label(
+    uow: Stage06PlatformUnitOfWork,
+    target_table: PlatformTable,
+    record: PlatformRecord,
+    actor: Actor,
+) -> str | None:
+    fields = uow.list_fields(target_table.id)
+    primary_field = (
+        None
+        if target_table.primary_field_id is None
+        else _field_for_table(uow, target_table.id, target_table.primary_field_id)
+    )
+    candidates: list[PlatformField] = []
+    if (
+        primary_field is not None
+        and primary_field.field_type in RELATION_LABEL_FIELD_TYPES
+        and _can_actor_read_field(actor, primary_field)
+    ):
+        candidates.append(primary_field)
+    candidates.extend(
+        field
+        for field in fields
+        if field is not primary_field
+        and field.field_type in RELATION_LABEL_FIELD_TYPES
+        and _can_actor_read_field(actor, field)
+    )
+    for field in candidates:
+        value = record.values.get(field.key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
 
 
 def _lookup_field_value(

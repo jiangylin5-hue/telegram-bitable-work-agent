@@ -19,10 +19,13 @@ from app.services.stage06_platform import (
     create_base,
     create_field,
     create_form_view,
+    create_record,
     create_table,
     create_workspace,
     initialize_relation_field,
     initialize_lookup_field,
+    list_relation_candidates,
+    list_view_records,
     safe_table_schema_field,
 )
 
@@ -482,3 +485,126 @@ def test_lookup_initializer_endpoint_replays_a_redacted_receipt() -> None:
     assert created.json()["field"]["options"] == {}
     assert str(relation.id) not in created.text
     assert str(target_field.id) not in created.text
+
+
+def test_relation_candidates_and_safe_relation_projection_use_only_readable_labels() -> None:
+    uow, owner, source, relation, target_field = _lookup_fixture()
+    target = uow.get_table(target_field.table_id)
+    assert target is not None
+    label_field = create_field(
+        uow,
+        target.id,
+        name="Customer name",
+        key="customer_name",
+        field_type="text",
+        actor=owner,
+    )
+    secret_field = create_field(
+        uow,
+        target.id,
+        name="Secret",
+        key="secret",
+        field_type="text",
+        permission_policy={"viewer": "hidden"},
+        actor=owner,
+    )
+    target.primary_field_id = label_field.id
+    first = create_record(
+        uow,
+        target.id,
+        values={label_field.key: "Acme", secret_field.key: "must-not-leak"},
+        actor=owner,
+    )
+    second = create_record(
+        uow,
+        target.id,
+        values={label_field.key: "Acorn"},
+        actor=owner,
+    )
+    source_record = create_record(
+        uow,
+        source.id,
+        values={relation.key: [str(first.id), str(second.id)]},
+        actor=owner,
+    )
+    source_base = uow.get_base(source.base_id)
+    assert source_base is not None
+    view = create_form_view(
+        uow,
+        source_base.id,
+        source.id,
+        name="Projects",
+        view_type="grid",
+        config={"fields": [relation.key]},
+        actor=owner,
+    )
+    viewer = Actor(actor_type="user", actor_id="viewer-1", role="viewer")
+
+    page = list_relation_candidates(
+        uow,
+        relation.id,
+        actor=viewer,
+        query="ac",
+        cursor=None,
+        limit=1,
+    )
+    projected = list_view_records(uow, view.id, actor=viewer, limit=50, cursor=None)
+    expected_candidate = min((first, second), key=lambda item: str(item.id))
+
+    assert page["field_id"] == str(relation.id)
+    assert page["records"] == [{
+        "id": str(expected_candidate.id),
+        "label": "Acme" if expected_candidate.id == first.id else "Acorn",
+    }]
+    assert page["next_cursor"] is not None
+    assert page["has_more"] is True
+    assert projected["records"] == [
+        {
+            "id": str(source_record.id),
+            "fields": {
+                relation.key: [
+                    {"id": str(first.id), "label": "Acme"},
+                    {"id": str(second.id), "label": "Acorn"},
+                ]
+            },
+        }
+    ]
+    assert "must-not-leak" not in repr(page)
+    assert "must-not-leak" not in repr(projected)
+
+
+def test_relation_candidate_endpoint_returns_only_safe_records() -> None:
+    uow, owner, source, relation, target_field = _lookup_fixture()
+    target = uow.get_table(target_field.table_id)
+    assert target is not None
+    label_field = create_field(
+        uow,
+        target.id,
+        name="Customer name",
+        key="customer_name",
+        field_type="text",
+        actor=owner,
+    )
+    target.primary_field_id = label_field.id
+    target_record = create_record(
+        uow,
+        target.id,
+        values={label_field.key: "Acme"},
+        actor=owner,
+    )
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = owner.actor_id
+        response = client.get(f"/fields/{relation.id}/relation-candidates?q=ac")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "field_id": str(relation.id),
+        "records": [{"id": str(target_record.id), "label": "Acme"}],
+        "next_cursor": None,
+        "has_more": False,
+    }
+    assert "target_table_id" not in response.text
+    assert "permission_policy" not in response.text

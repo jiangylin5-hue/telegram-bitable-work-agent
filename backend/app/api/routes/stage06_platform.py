@@ -33,6 +33,7 @@ from app.schemas.stage06_platform import (
     InitializeTableRequest,
     RecordResponse,
     RecordDetailResponse,
+    RelationCandidatePageResponse,
     TableResponse,
     TableListResponse,
     SafeTableFieldResponse,
@@ -78,6 +79,7 @@ from app.services.stage06_platform import (
     initialize_table,
     list_workspace_members,
     list_bases_for_workspace,
+    list_relation_candidates,
     list_tables_for_base,
     list_views_for_base,
     list_view_records,
@@ -740,6 +742,40 @@ def initialize_lookup_field_endpoint(
     if replayed:
         response.status_code = status.HTTP_200_OK
     return initialization
+
+
+@router.get(
+    "/fields/{field_id}/relation-candidates",
+    response_model=RelationCandidatePageResponse,
+)
+def list_relation_candidates_endpoint(
+    field_id: UUID,
+    q: str | None = Query(default=None, max_length=160),
+    cursor: str | None = Query(default=None, max_length=512),
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> RelationCandidatePageResponse:
+    try:
+        field = uow.get_field(field_id)
+        if field is None:
+            raise PlatformValidationError("field_not_found", "field")
+        workspace_id = workspace_id_for_table(uow, field.table_id)
+        actor = authorize_workspace_action(uow, identity, workspace_id, "record.read")
+        page = list_relation_candidates(
+            uow,
+            field_id,
+            actor=actor,
+            query=q,
+            cursor=cursor,
+            limit=50,
+        )
+    except (
+        PlatformValidationError,
+        Stage06AuthorizationError,
+        Stage06PaginationError,
+    ) as exc:
+        raise _http_error(exc) from exc
+    return RelationCandidatePageResponse(**page)
 
 
 @router.get("/tables/{table_id}/create-form", response_model=CreateFormResponse)
