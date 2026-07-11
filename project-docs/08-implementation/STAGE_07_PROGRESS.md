@@ -7,6 +7,12 @@
 
 ## Progress Log
 
+### 2026-07-11: F2 Safe Read/Write, Lookup Evaluation and Guard Substages
+
+- Commits 5690092, ca63786, c5dd5e1 and fe0b44f complete the local in-memory/API-safe slice: server-composed candidate pages, safe relation cells, required/self/target relation validation, safe mutation rereads, seven fixed aggregations, one nested lookup level, whole-field fail-closed lookup omission and reusable incoming-link/field-dependency guards.
+- F2 adds no public DELETE route/UI, automatic unlink/cascade, migration, physical database index, client-side join, formula DSL, capability or persistent browser data. The guards are future deletion-path preconditions only.
+- Focused F2 plus existing Stage07 field/API unit regression reported 53 passed. PostgreSQL transactional/concurrency proof, Mini App F2 transport/query/UI implementation, full frontend regression, four-width Browser QA, full-backend regression and final traceability audit remain open.
+
 ### 2026-07-11: F2 Safe Candidate and Relation-Write Substages
 
 - Commit 5690092 adds server-composed relation candidate pages and server-only relation cells. Candidate records contain only opaque ID/label pairs; labels use readable primary/fallback text fields; raw target values/policies are not returned. Existing view/detail projections no longer expose linked-record ID arrays.
