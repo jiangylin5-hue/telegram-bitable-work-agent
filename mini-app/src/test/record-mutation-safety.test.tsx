@@ -21,7 +21,7 @@ function json(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), { status, headers: { 'Content-Type': 'application/json' } })
 }
 
-function installRecordMutationFixture(updateStatus: number, refreshStatus?: number, delayUpdate = false, loadMoreStatus?: number, withRelation = false) {
+function installRecordMutationFixture(updateStatus: number, refreshStatus?: number, delayUpdate = false, loadMoreStatus?: number, withRelation = false, withDetailExcludedRelation = false) {
   let recordReads = 0
   let viewReads = 0
   let refreshViewSignal: AbortSignal | undefined
@@ -39,7 +39,7 @@ function installRecordMutationFixture(updateStatus: number, refreshStatus?: numb
     if (path === '/workspaces/workspace-1/home') return Promise.resolve(json({ workspace_id: 'workspace-1', recent_bases: [{ id: 'base-1', name: '客户管理', source_type: 'blank' }], queue: [] }))
     if (path === '/bases/base-1/tables') return Promise.resolve(json({ tables: [{ id: 'table-1', base_id: 'base-1', name: '客户表', key: 'customers', status: 'active' }] }))
     if (path === '/bases/base-1/views') return Promise.resolve(json({ views: [{ id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: '全部客户', view_type: 'grid', status: 'active' }] }))
-    if (path === '/tables/table-1/schema') return Promise.resolve(json({ table: { id: 'table-1', name: '客户表', key: 'customers' }, fields: [{ id: 'field-name', table_id: 'table-1', name: '客户名称', key: 'name', field_type: 'text', required: true, options: {}, order_index: 0 }, ...(withRelation ? [{ id: 'field-customer', table_id: 'table-1', name: '关联客户', key: 'customer', field_type: 'linked_record', required: false, options: {}, order_index: 1 }] : [])] }))
+    if (path === '/tables/table-1/schema') return Promise.resolve(json({ table: { id: 'table-1', name: '客户表', key: 'customers' }, fields: [{ id: 'field-name', table_id: 'table-1', name: '客户名称', key: 'name', field_type: 'text', required: true, options: {}, order_index: 0 }, ...(withRelation ? [{ id: 'field-customer', table_id: 'table-1', name: '关联客户', key: 'customer', field_type: 'linked_record', required: false, options: {}, order_index: 1 }] : []), ...(withDetailExcludedRelation ? [{ id: 'field-other-relation', table_id: 'table-1', name: '其他关联', key: 'other_relation', field_type: 'linked_record', required: false, options: {}, order_index: 2 }] : [])] }))
     if (path === '/views/view-1/presentation') return Promise.resolve(json({ view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: withRelation ? ['name', 'customer'] : ['name'], group_by_field_key: null, date_field_key: null, form_field_keys: ['name'] }))
     if (path === '/views/view-1/records') {
       if (requestUrl.searchParams.get('cursor') === 'cursor-1') {
@@ -83,8 +83,8 @@ test.each([401, 403, 404])('record save %s fails closed without retaining protec
   expect(fetchMock).toHaveBeenCalledWith('/records/record-1', expect.objectContaining({ method: 'PATCH' }))
 })
 
-test('a 404 relation direct edit clears its field-scoped candidate cache before the safe boundary renders', async () => {
-  const { fetchMock } = installRecordMutationFixture(404, undefined, false, undefined, true)
+test('a 404 relation direct edit clears only candidate queries for linked fields present in Detail', async () => {
+  const { fetchMock } = installRecordMutationFixture(404, undefined, false, undefined, true, true)
   render(<App />)
 
   fireEvent.click(await screen.findByRole('link', { name: '客户管理' }))
@@ -96,6 +96,7 @@ test('a 404 relation direct edit clears its field-scoped candidate cache before 
 
   expect(await screen.findByRole('main', { name: '无工作区访问权限' })).toBeInTheDocument()
   expect(clearRelationCandidateQueries).toHaveBeenCalledWith(expect.anything(), { userId: 'operator-1', workspaceId: 'workspace-1' }, 'field-customer')
+  expect(clearRelationCandidateQueries).not.toHaveBeenCalledWith(expect.anything(), { userId: 'operator-1', workspaceId: 'workspace-1' }, 'field-other-relation')
   expect(document.body.textContent).not.toContain('target-1')
   expect(document.body.textContent).not.toContain('private server detail')
   expect(fetchMock).toHaveBeenCalledWith('/records/record-1', expect.objectContaining({ method: 'PATCH' }))

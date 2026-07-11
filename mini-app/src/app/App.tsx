@@ -541,7 +541,7 @@ function AppContent() {
         await Promise.all([
           discardRecordMutationQueries(scope, detail.id, canvas.view.id),
           ...(canvas.schema?.fields ?? [])
-            .filter((field) => field.field_type === 'linked_record')
+            .filter((field) => field.field_type === 'linked_record' && Object.hasOwn(detail.values, field.key))
             .map((field) => clearRelationCandidateQueries(queryClient, scope, field.id)),
         ])
         if (isCurrent()) setState({ status: 'denied' })
