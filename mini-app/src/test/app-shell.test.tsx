@@ -7,6 +7,75 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+function prepareDelayedRelationLookupSchema() {
+  const fetchMock = vi.fn()
+  let schemaReads = 0
+  let resolveSchema: (response: Response) => void = () => undefined
+  const delayedSchema = new Promise<Response>((resolve) => { resolveSchema = resolve })
+  vi.stubGlobal('fetch', fetchMock)
+  fetchMock.mockImplementation((input: RequestInfo | URL) => {
+    const path = String(input)
+    if (path === '/mini-app/bootstrap') return Promise.resolve(new Response(JSON.stringify({ identity: { user_id: 'owner-1', source: 'development_header' }, workspaces: [{ id: 'workspace-1', name: '运营中心', slug: 'operations', role: 'owner', capabilities: { can_read_bases: true, can_manage_workspace: false, can_manage_schema: true, can_review_drafts: false } }, { id: 'workspace-2', name: '项目中心', slug: 'projects', role: 'viewer', capabilities: { can_read_bases: true, can_manage_workspace: false, can_manage_schema: false, can_review_drafts: false } }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/workspaces/workspace-1/home') return Promise.resolve(new Response(JSON.stringify({ workspace_id: 'workspace-1', recent_bases: [{ id: 'base-1', name: '客户管理', source_type: 'blank' }], queue: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/workspaces/workspace-2/home') return Promise.resolve(new Response(JSON.stringify({ workspace_id: 'workspace-2', recent_bases: [], queue: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/bases/base-1/tables') return Promise.resolve(new Response(JSON.stringify({ tables: [{ id: 'table-orders', base_id: 'base-1', name: '订单', key: 'orders', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/bases/base-1/views') return Promise.resolve(new Response(JSON.stringify({ views: [{ id: 'view-orders', base_id: 'base-1', table_id: 'table-orders', name: '全部订单', view_type: 'grid', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/tables/table-orders/schema') {
+      schemaReads += 1
+      if (schemaReads > 1) return delayedSchema
+      return Promise.resolve(new Response(JSON.stringify({ table: { id: 'table-orders', name: '订单', key: 'orders' }, fields: [{ id: 'field-name', table_id: 'table-orders', name: '订单名称', key: 'name', field_type: 'text', required: true, options: {}, order_index: 0 }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    }
+    if (path === '/views/view-orders/presentation') return Promise.resolve(new Response(JSON.stringify({ view_id: 'view-orders', table_id: 'table-orders', view_type: 'grid', visible_field_keys: ['name'], group_by_field_key: null, date_field_key: null, form_field_keys: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/views/view-orders/records') return Promise.resolve(new Response(JSON.stringify({ view_id: 'view-orders', records: [], next_cursor: null, has_more: false }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    return Promise.resolve(new Response(JSON.stringify({ detail: `unexpected ${path}` }), { status: 404, headers: { 'Content-Type': 'application/json' } }))
+  })
+  return {
+    resolveSchema: () => resolveSchema(new Response(JSON.stringify({ table: { id: 'table-orders', name: '订单', key: 'orders' }, fields: [{ id: 'field-name', table_id: 'table-orders', name: '订单名称', key: 'name', field_type: 'text', required: true, options: {}, order_index: 0 }] }), { status: 200, headers: { 'Content-Type': 'application/json' } })),
+  }
+}
+
+test('replaces the F1 builder with non-submittable loading while relation schema preload is pending', async () => {
+  const preload = prepareDelayedRelationLookupSchema()
+  render(<App />)
+
+  fireEvent.click(await screen.findByRole('link', { name: '客户管理' }))
+  fireEvent.click(await screen.findByRole('button', { name: '添加字段' }))
+  fireEvent.click(screen.getByRole('button', { name: '关联记录与查找' }))
+
+  expect(screen.queryByRole('button', { name: '创建字段' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '创建关联字段' })).not.toBeInTheDocument()
+  await act(async () => { preload.resolveSchema(); await Promise.resolve() })
+  expect(await screen.findByRole('dialog', { name: '添加关联字段' })).toBeInTheDocument()
+})
+
+test('does not restore a relation builder after its loading state is closed before delayed schema resolution', async () => {
+  const preload = prepareDelayedRelationLookupSchema()
+  render(<App />)
+
+  fireEvent.click(await screen.findByRole('link', { name: '客户管理' }))
+  fireEvent.click(await screen.findByRole('button', { name: '添加字段' }))
+  fireEvent.click(screen.getByRole('button', { name: '关联记录与查找' }))
+  fireEvent.click(screen.getByRole('button', { name: '关闭' }))
+  await act(async () => { preload.resolveSchema(); await Promise.resolve() })
+
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: '添加关联字段' })).not.toBeInTheDocument())
+  expect(screen.queryByRole('dialog', { name: '添加字段' })).not.toBeInTheDocument()
+})
+
+test('does not restore a relation builder after a workspace generation replaces the loading canvas', async () => {
+  const preload = prepareDelayedRelationLookupSchema()
+  render(<App />)
+
+  fireEvent.click(await screen.findByRole('link', { name: '客户管理' }))
+  fireEvent.click(await screen.findByRole('button', { name: '添加字段' }))
+  fireEvent.click(screen.getByRole('button', { name: '关联记录与查找' }))
+  fireEvent.change(screen.getByLabelText('切换工作区（桌面）'), { target: { value: 'workspace-2' } })
+  await act(async () => { preload.resolveSchema(); await Promise.resolve() })
+
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: '添加关联字段' })).not.toBeInTheDocument())
+  expect(screen.queryByRole('dialog', { name: '正在加载关系字段' })).not.toBeInTheDocument()
+})
+
 test('reuses protected table schemas to initialize a relation field and verifies its safe receipt by reread', async () => {
   const fetchMock = vi.fn()
   vi.stubGlobal('fetch', fetchMock)

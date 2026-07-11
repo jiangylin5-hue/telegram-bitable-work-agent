@@ -38,6 +38,7 @@ type BuilderPanel =
   | { mode: 'base' }
   | { mode: 'table'; base: BaseSummary }
   | { mode: 'field'; tableId: string; viewId: string }
+  | { mode: 'relation-lookup-loading'; tableId: string; viewId: string }
   | { mode: 'relation-lookup'; tableId: string; viewId: string; tables: PlatformTable[]; schemas: TableSchema[] }
 
 function isAbortError(error: unknown): boolean {
@@ -366,6 +367,7 @@ function AppContent() {
     const isCurrent = () => !sessionInvalidated.current && builderRequestVersion.current === requestVersion
       && canvasRequestVersion.current === canvasVersion
       && activeWorkspaceId.current === workspaceId
+    setBuilderPanel({ mode: 'relation-lookup-loading', tableId, viewId })
     try {
       const { tables } = await queryClient.fetchQuery({
         queryKey: protectedQueryKey(scope, 'base', canvas.base.id, 'tables'),
@@ -379,7 +381,10 @@ function AppContent() {
       if (!isCurrent()) return
       const authorizedTableIds = new Set(tables.map((table) => table.id))
       const safeSchemas = schemas.filter((schema, index) => authorizedTableIds.has(schema.table.id) && schema.table.id === tables[index]?.id)
-      if (!safeSchemas.some((schema) => schema.table.id === tableId)) return
+      if (!safeSchemas.some((schema) => schema.table.id === tableId)) {
+        setBuilderPanel(undefined)
+        return
+      }
       setBuilderPanel({ mode: 'relation-lookup', tableId, viewId, tables, schemas: safeSchemas })
     } catch (error) {
       if (!isCurrent() || isAbortError(error)) return
@@ -782,8 +787,10 @@ function AppContent() {
       ? <BuilderCreatePanel mode="table" onSubmit={(values, idempotencyKey) => createTable(builderPanel.base, values as { tableName: string }, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
       : builderPanel?.mode === 'field'
         ? <FieldBuilderPanel onSubmit={(values, idempotencyKey) => createField(builderPanel.tableId, builderPanel.viewId, values, idempotencyKey)} onOpenRelationLookup={() => { void openRelationLookupBuilder(builderPanel.tableId, builderPanel.viewId) }} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
-        : builderPanel?.mode === 'relation-lookup'
-          ? <RelationLookupFieldBuilderPanel currentTableId={builderPanel.tableId} tables={builderPanel.tables} schemas={builderPanel.schemas} onSubmit={(values, idempotencyKey) => createRelationLookupField(builderPanel.tableId, builderPanel.viewId, values, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
-          : null
+        : builderPanel?.mode === 'relation-lookup-loading'
+          ? <div className="field-builder-backdrop" role="presentation"><aside className="field-builder-panel" aria-label="正在加载关系字段" aria-modal="true" role="dialog"><header className="field-builder-header"><div className="field-builder-heading"><div><p>关系字段</p><h2>正在加载关系字段</h2></div></div><button className="field-builder-close" type="button" aria-label="关闭" onClick={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }}>×</button></header><p className="field-builder-intro">正在加载当前 Base 的授权表结构。</p></aside></div>
+          : builderPanel?.mode === 'relation-lookup'
+            ? <RelationLookupFieldBuilderPanel currentTableId={builderPanel.tableId} tables={builderPanel.tables} schemas={builderPanel.schemas} onSubmit={(values, idempotencyKey) => createRelationLookupField(builderPanel.tableId, builderPanel.viewId, values, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
+            : null
   return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace}>{content}{builderOverlay}</AppShell>
 }
