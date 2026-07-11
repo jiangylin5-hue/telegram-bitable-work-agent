@@ -4,7 +4,7 @@
 
 - Plan status: user-approved detailed TDD plan; execution in progress.
 - Scope gate: the user approved the V1 design package and this implementation plan.
-- Current Progress: Tasks 1--5 are complete locally: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations and service-owned Grid filter/group/stable-sort execution before cursor pagination have focused and real PostgreSQL evidence. Only the approved HTTP surface, broader PostgreSQL/security/index proof, Mini App and four-width Browser tasks remain pending.
+- Current Progress: Tasks 1--6 are complete locally: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations, service-owned Grid filter/group/stable-sort execution before cursor pagination, and the five approved safe HTTP endpoints have focused/API and real PostgreSQL query evidence. Broader PostgreSQL/security/index proof, Mini App and four-width Browser tasks remain pending.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -18,7 +18,7 @@
 
 - Implement only the approved V1 design and companion BDD/SDD/work-surface/index package.
 - Reuse Stage06 authorization, P3/F1/F2 idempotency/audit and TD001 state. Do not create a permission engine, raw SQL executor, persistent browser cache, generic JSON Patch endpoint or expression DSL.
-- Never expose/accept raw view `config`, `permission_policy`, `is_default`, owner identity, raw member role/status, hidden field metadata, audit body or arbitrary query text.
+- Never expose/accept raw view `config`, `permission_policy`, owner identity, raw member role/status, hidden field metadata, audit body or arbitrary query text. `is_default` is never accepted; a safe read may expose only its documented default marker.
 - Creation is private-only. Owner sharing happens only through a separate atomic member-replacement command after authoritative reread.
 - Keep the existing system default Grid as the sole default. No public link, member group, delegation, default reassignment, delete UI, import/template, Bot, Telegram or production work.
 - V1 creation uses `Idempotency-Key`; presentation/member mutations use `expected_version`; all route input is `extra="forbid"` and all browser error text is fixed-code allowlisted.
@@ -344,7 +344,7 @@ git commit -m "feat(stage07): execute saved grid query server-side"
 - Consumes: existing Stage06 bearer authentication, Idempotency-Key and typed V1 route payloads.
 - Produces: only the five approved endpoints, safe response bodies, fixed security error codes and compatible legacy routes.
 
-- [ ] **Step 1: Write failing contract tests**
+- [x] **Step 1: Write failing contract tests**
 
 ```python
 def test_v1_routes_require_authorized_actor_and_never_return_raw_policy(client) -> None:
@@ -358,13 +358,13 @@ def test_unapproved_create_view_route_cannot_create_restricted_v1_view(client) -
     assert response.status_code in {400, 422}
 ```
 
-- [ ] **Step 2: Verify red test**
+- [x] **Step 2: Verify red test**
 
 Run: `python -m pytest -q tests/unit/test_stage07_view_builder_api.py`
 
 Expected: FAIL because V1 endpoints and response projection do not exist.
 
-- [ ] **Step 3: Add explicit V1 routes; retain legacy surface untouched**
+- [x] **Step 3: Add explicit V1 routes; retain legacy surface untouched**
 
 ```python
 @router.post("/tables/{table_id}/view-initializations", status_code=status.HTTP_201_CREATED)
@@ -379,13 +379,13 @@ async def replace_view_members(...): ...
 
 Also implement `GET /tables/{table_id}/view-builder-context` and `GET /views/{view_id}/builder`, and wire the existing safe record-list endpoint to V1 execution when the selected view is a V1 Grid. Parse `Idempotency-Key` only for initialization and `expected_version` only from the typed body for mutations. Translate service errors to the SDD's allowlisted codes (`view_not_found`, `view_access_denied`, `view_version_conflict`, `view_filter_limit`, `view_query_unsupported`, etc.); do not reflect exception strings. Do not widen the existing raw create/view response routes as a shortcut.
 
-- [ ] **Step 4: Verify route contract and compatibility**
+- [x] **Step 4: Verify route contract and compatibility**
 
 Run: `python -m pytest -q tests/unit/test_stage07_view_builder_api.py tests/unit/test_stage06_platform_api.py`
 
 Expected: PASS; no route returns raw configuration/policy or bypasses ACL.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/api/routes/stage06_platform.py backend/app/schemas/stage06_platform.py backend/tests/unit/test_stage07_view_builder_api.py backend/tests/unit/test_stage06_platform_api.py

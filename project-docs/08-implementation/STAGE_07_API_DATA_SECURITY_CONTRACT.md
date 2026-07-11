@@ -126,11 +126,11 @@ Internal relation/lookup options, target table/field IDs, aggregation, policy, r
 
 The full F2 endpoint/state/permission matrix is defined in STAGE_07_F2_RELATION_LOOKUP_SDD.md and STAGE_07_F2_RELATION_LOOKUP_BDD_AND_ACCEPTANCE.md. F2 adds no migration, physical database index, role/capability, persistent browser cache, DELETE endpoint/UI or cascade behavior.
 
-## 5.5 Proposed V1 Saved View Builder Contract
+## 5.5 V1 Saved View Builder Contract
 
-V1's design and detailed implementation plan are user-approved. Local V1-1/2 provides persistence and strict Pydantic shapes only; it does not yet create an HTTP/browser contract. The legacy `POST /bases/{base_id}/views` response contains raw `config` and `permission_policy`; it is not a Mini App contract and must not be reused by the browser.
+V1's design and detailed implementation plan are user-approved. V1-6 now exposes the five approved FastAPI endpoints with strict Pydantic commands and independently composed safe responses; this is local backend API evidence only, not a Mini App/browser acceptance. The legacy `POST /bases/{base_id}/views` response contains raw `config` and `permission_policy`; it is not a Mini App contract and remains untouched.
 
-V1 proposes typed server commands:
+V1 implements these typed server commands:
 
 | Endpoint | Required authority | Browser input | Safe response |
 | --- | --- | --- | --- |
@@ -140,7 +140,7 @@ V1 proposes typed server commands:
 | `PATCH /views/{view_id}/presentation` | owner/editor; system default requires `view.manage` | expected version, optional name, typed presentation | safe summary/version |
 | `PUT /views/{view_id}/members` | owner only | expected version, full editor/viewer member list | safe summary, safe grants and version |
 
-The browser must never send/receive raw `config`, `permission_policy`, `is_default`, owner identity, raw member role/status, raw field option, hidden field key or audit body. The server owns `scope` (`system_default`, `private`, `restricted`), owner derivation, version increment, canonical configuration and default-view invariant. A view ACL intersects with existing workspace/Base/Table/Record/Field authority; it cannot grant a resource permission.
+`Idempotency-Key` is accepted only by initialization. `expected_version` is accepted only as a strict JSON property of PATCH/PUT. V1 route errors emit fixed `view_*` codes rather than exception text; current proof covers `403/view_access_denied`, `409/view_version_conflict` and strict `422` rejection of unknown `scope`. The browser must never send raw `config`, `permission_policy`, `is_default`, owner identity, raw member role/status, raw field option, hidden field key or audit body. A safe summary may read only the documented default marker; no V1 route accepts it as mutation input. The server owns `scope` (`system_default`, `private`, `restricted`), owner derivation, version increment, canonical configuration and default-view invariant. A view ACL intersects with existing workspace/Base/Table/Record/Field authority; it cannot grant a resource permission.
 
 Safe V1 presentation is limited to view/table/type, ordered safe visible/form keys, up to twelve flat `AND` filter conditions with fixed typed operators, up to three sorts, at most one group key and one Calendar date key. It excludes query text, `OR`, nested condition groups, formulas, client query semantics and arbitrary layout data. Relation filter values reuse F2 candidate projection; numeric lookup has bounded numeric filter/sort; relation/lookup never group.
 

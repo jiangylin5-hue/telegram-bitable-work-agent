@@ -42,6 +42,14 @@ from app.schemas.stage06_platform import (
     ViewResponse,
     ViewPresentationResponse,
     ViewListResponse,
+    ViewBuilderContextResponse,
+    ViewBuilderResponse,
+    ViewInitializationRequest,
+    ViewInitializationResponse,
+    ViewMemberReplaceRequest,
+    ViewMemberReplaceResponse,
+    ViewPresentationMutationResponse,
+    ViewPresentationPatchRequest,
     ViewSummaryResponse,
     ViewRecordsResponse,
     WorkspaceMemberListResponse,
@@ -70,12 +78,16 @@ from app.services.stage06_platform import (
     create_table,
     create_workspace,
     create_form_view,
+    build_v1_safe_view_summary,
+    get_v1_view_builder,
+    get_v1_view_builder_context,
     get_table_schema,
     get_view_presentation,
     initialize_base,
     initialize_field,
     initialize_relation_field,
     initialize_lookup_field,
+    initialize_v1_view,
     initialize_table,
     list_workspace_members,
     list_bases_for_workspace,
@@ -87,6 +99,8 @@ from app.services.stage06_platform import (
     read_record_for_actor,
     read_workspace,
     update_record,
+    update_v1_view_presentation,
+    replace_v1_view_members,
     safe_table_schema_field,
     _validated_f1_choices,
 )
@@ -827,6 +841,135 @@ def get_table_schema_endpoint(
 
 
 @router.get(
+    "/tables/{table_id}/view-builder-context",
+    response_model=ViewBuilderContextResponse,
+)
+def get_view_builder_context_endpoint(
+    table_id: UUID,
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> ViewBuilderContextResponse:
+    try:
+        workspace_id = workspace_id_for_table(uow, table_id)
+        authorize_workspace_action(uow, identity, workspace_id, "table.read")
+        actor = authorize_workspace_action(uow, identity, workspace_id, "view.manage")
+        context = get_v1_view_builder_context(uow, table_id, actor=actor)
+    except (PlatformValidationError, Stage06AuthorizationError) as exc:
+        raise _http_error(exc) from exc
+    return ViewBuilderContextResponse(**context)
+
+
+@router.post(
+    "/tables/{table_id}/view-initializations",
+    response_model=ViewInitializationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def initialize_v1_view_endpoint(
+    table_id: UUID,
+    request: ViewInitializationRequest,
+    response: Response,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=160),
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> ViewInitializationResponse:
+    try:
+        workspace_id = workspace_id_for_table(uow, table_id)
+        authorize_workspace_action(uow, identity, workspace_id, "table.read")
+        actor = authorize_workspace_action(uow, identity, workspace_id, "view.manage")
+        result = initialize_v1_view(
+            uow,
+            table_id,
+            request=request,
+            idempotency_key=idempotency_key,
+            actor=actor,
+        )
+        payload = ViewInitializationResponse(
+            view=build_v1_safe_view_summary(uow, result.view, actor=actor),
+            affected_view_ids=[str(result.view.id)],
+        )
+        _commit_if_sqlalchemy(uow)
+    except (PlatformValidationError, Stage06AuthorizationError) as exc:
+        _rollback_if_sqlalchemy(uow)
+        raise _http_error(exc) from exc
+    if result.replayed:
+        response.status_code = status.HTTP_200_OK
+    return payload
+
+
+@router.get("/views/{view_id}/builder", response_model=ViewBuilderResponse)
+def get_v1_view_builder_endpoint(
+    view_id: UUID,
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> ViewBuilderResponse:
+    try:
+        workspace_id = workspace_id_for_view(uow, view_id)
+        actor = authorize_workspace_action(uow, identity, workspace_id, "table.read")
+        builder = get_v1_view_builder(uow, view_id, actor=actor)
+    except (PlatformValidationError, Stage06AuthorizationError) as exc:
+        raise _http_error(exc) from exc
+    return ViewBuilderResponse(**builder)
+
+
+@router.patch(
+    "/views/{view_id}/presentation",
+    response_model=ViewPresentationMutationResponse,
+)
+def update_v1_view_presentation_endpoint(
+    view_id: UUID,
+    request: ViewPresentationPatchRequest,
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> ViewPresentationMutationResponse:
+    try:
+        workspace_id = workspace_id_for_view(uow, view_id)
+        actor = authorize_workspace_action(uow, identity, workspace_id, "table.read")
+        view = update_v1_view_presentation(uow, view_id, request=request, actor=actor)
+        payload = ViewPresentationMutationResponse(
+            view=build_v1_safe_view_summary(uow, view, actor=actor),
+            version=view.version,
+        )
+        _commit_if_sqlalchemy(uow)
+    except (PlatformValidationError, Stage06AuthorizationError) as exc:
+        _rollback_if_sqlalchemy(uow)
+        raise _http_error(exc) from exc
+    return payload
+
+
+@router.put(
+    "/views/{view_id}/members",
+    response_model=ViewMemberReplaceResponse,
+)
+def replace_v1_view_members_endpoint(
+    view_id: UUID,
+    request: ViewMemberReplaceRequest,
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> ViewMemberReplaceResponse:
+    try:
+        workspace_id = workspace_id_for_view(uow, view_id)
+        actor = authorize_workspace_action(uow, identity, workspace_id, "table.read")
+        view = replace_v1_view_members(
+            uow,
+            view_id,
+            expected_version=request.expected_version,
+            members=request.members,
+            actor=actor,
+        )
+        builder = get_v1_view_builder(uow, view.id, actor=actor)
+        payload = ViewMemberReplaceResponse(
+            view=builder["view"],
+            members=builder["members"],
+            version=view.version,
+        )
+        _commit_if_sqlalchemy(uow)
+    except (PlatformValidationError, Stage06AuthorizationError) as exc:
+        _rollback_if_sqlalchemy(uow)
+        raise _http_error(exc) from exc
+    return payload
+
+
+@router.get(
     "/views/{view_id}/presentation",
     response_model=ViewPresentationResponse,
 )
@@ -1019,14 +1162,16 @@ def _http_error(
         )
     if exc.code.endswith("_not_found"):
         status_code = 404
-    elif exc.code == "permission_denied":
+    elif exc.code in {"permission_denied", "view_access_denied"}:
         status_code = 403
     elif exc.code in {
         "record_version_conflict",
+        "view_version_conflict",
         "idempotency_conflict",
         "idempotency_in_progress",
     }:
         status_code = 409
     else:
         status_code = 422
-    return HTTPException(status_code=status_code, detail=error_detail(exc.code, str(exc)))
+    message = exc.code if exc.code.startswith("view_") else str(exc)
+    return HTTPException(status_code=status_code, detail=error_detail(exc.code, message))

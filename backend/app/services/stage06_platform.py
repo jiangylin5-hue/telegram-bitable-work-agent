@@ -1883,6 +1883,133 @@ def build_v1_safe_view_projection(
     }
 
 
+def build_v1_safe_view_summary(
+    uow: Stage06PlatformUnitOfWork,
+    view: PlatformView,
+    *,
+    actor: Actor,
+) -> dict[str, Any]:
+    access = resolve_v1_view_access(uow, view, actor=actor)
+    if view.table_id is None:
+        raise PlatformValidationError("view_not_found", str(view.id))
+    return {
+        "id": str(view.id),
+        "base_id": str(view.base_id),
+        "table_id": str(view.table_id),
+        "name": view.name,
+        "view_type": view.view_type,
+        "scope": view.scope,
+        "caller_access_level": access.role,
+        "status": view.status,
+        "is_default": view.is_default,
+    }
+
+
+def get_v1_view_builder_context(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID,
+    *,
+    actor: Actor,
+) -> dict[str, Any]:
+    table, workspace = _require_v1_table_context_authority(uow, table_id, actor)
+    views: list[dict[str, Any]] = []
+    for view in uow.list_views(table.id):
+        try:
+            views.append(build_v1_safe_view_summary(uow, view, actor=actor))
+        except PlatformValidationError as exc:
+            if exc.code != "view_access_denied":
+                raise
+    members = [
+        {"id": member.user_id, "label": member.user_id}
+        for member in uow.list_workspace_members(workspace.id)
+        if member.status == "active"
+    ]
+    return {
+        "table": {
+            "id": str(table.id),
+            "base_id": str(table.base_id),
+            "name": table.name,
+            "key": table.key,
+            "status": table.status,
+        },
+        "fields": _v1_safe_field_context(uow, table.id, actor=actor),
+        "views": views,
+        "member_candidates": members,
+    }
+
+
+def get_v1_view_builder(
+    uow: Stage06PlatformUnitOfWork,
+    view_id: UUID,
+    *,
+    actor: Actor,
+) -> dict[str, Any]:
+    view = _require_exists(uow.get_view(view_id), "view_not_found")
+    access = resolve_v1_view_access(uow, view, actor=actor)
+    if not access.can_edit_presentation:
+        raise PlatformValidationError("view_access_denied", "builder")
+    members = (
+        _v1_safe_view_members(uow, view)
+        if access.can_replace_members
+        else []
+    )
+    return {
+        "view": build_v1_safe_view_summary(uow, view, actor=actor),
+        "presentation": build_v1_safe_view_projection(uow, view, actor=actor),
+        "fields": _v1_safe_field_context(uow, view.table_id, actor=actor),
+        "members": members,
+        "version": view.version,
+        "can_edit_presentation": access.can_edit_presentation,
+        "can_replace_members": access.can_replace_members,
+    }
+
+
+def _v1_safe_field_context(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID | None,
+    *,
+    actor: Actor,
+) -> list[dict[str, Any]]:
+    if table_id is None:
+        raise PlatformValidationError("view_not_found", "view_table")
+    return [
+        {
+            "key": field.key,
+            "label": field.name,
+            "field_type": field.field_type,
+            "filter_operators": sorted(_v1_filter_operators(field)),
+            "sortable": _v1_field_is_sortable(field),
+            "groupable": field.field_type in _V1_GROUPABLE_FIELD_TYPES,
+            "form_eligible": _can_actor_write_field(actor, field),
+        }
+        for field in uow.list_fields(table_id)
+        if field.status == "active" and _can_actor_read_field(actor, field)
+    ]
+
+
+def _v1_safe_view_members(
+    uow: Stage06PlatformUnitOfWork,
+    view: PlatformView,
+) -> list[dict[str, Any]]:
+    workspace = _v1_workspace_for_view(uow, view)
+    active_member_ids = {
+        member.user_id
+        for member in uow.list_workspace_members(workspace.id)
+        if member.status == "active"
+    }
+    return [
+        {
+            "user_id": grant.user_id,
+            "label": grant.user_id,
+            "access_level": grant.access_level,
+        }
+        for grant in uow.list_view_grants(view.id)
+        if grant.status == "active"
+        and grant.user_id in active_member_ids
+        and grant.access_level in {"editor", "viewer"}
+    ]
+
+
 def initialize_v1_view(
     uow: Stage06PlatformUnitOfWork,
     table_id: UUID,
@@ -2082,8 +2209,21 @@ def _require_v1_table_manage_authority(
     table = _require_exists(uow.lock_table_for_schema_mutation(table_id), "table_not_found")
     workspace = _v1_workspace_for_table(uow, table)
     member = _require_v1_active_member(uow, workspace, actor)
-    if not _v1_role_allows(member, "view.manage"):
+    if not _v1_role_allows(member, "table.read") or not _v1_role_allows(member, "view.manage"):
         raise PlatformValidationError("view_access_denied", "view.manage")
+    return table, workspace
+
+
+def _require_v1_table_context_authority(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID,
+    actor: Actor,
+) -> tuple[PlatformTable, Workspace]:
+    table = _require_exists(uow.get_table(table_id), "table_not_found")
+    workspace = _v1_workspace_for_table(uow, table)
+    member = _require_v1_active_member(uow, workspace, actor)
+    if not _v1_role_allows(member, "table.read") or not _v1_role_allows(member, "view.manage"):
+        raise PlatformValidationError("view_access_denied", "view_context")
     return table, workspace
 
 

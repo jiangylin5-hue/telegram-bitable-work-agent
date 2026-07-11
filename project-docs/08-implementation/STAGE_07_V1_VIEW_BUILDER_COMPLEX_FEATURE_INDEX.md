@@ -4,7 +4,7 @@
 
 - Document status: user-approved complexity/index inventory; approved implementation in progress
 - Scope: V1 configuration/ACL/query state, logical indexes, proposed physical PostgreSQL indexes and evidence ownership
-- Current Progress: V1-1 through V1-5 create the correctness-critical grant uniqueness constraint, strict typed command/read boundary, canonical safe query-shape projection and service-owned Grid filter/group/stable-sort ordering before cursor pagination. The latest disposable PostgreSQL proof covers a canonical numeric filter/group/sort cursor boundary; it is not a query-plan or index proof. The listed optional non-unique physical indexes are not migrations and remain forbidden until Task 7 records the required measured PostgreSQL evidence.
+- Current Progress: V1-1 through V1-6 create the correctness-critical grant uniqueness constraint, strict typed command/read boundary, canonical safe query-shape projection, service-owned Grid filter/group/stable-sort ordering before cursor pagination and five safe HTTP route boundaries. The latest disposable PostgreSQL proof covers a canonical numeric filter/group/sort cursor boundary; it is not a query-plan or index proof. The listed optional non-unique physical indexes are not migrations and remain forbidden until Task 7 records the required measured PostgreSQL evidence.
 
 ## 1. Purpose
 

@@ -4,7 +4,7 @@
 
 - Document status: user-approved technical design; approved implementation in progress
 - Scope: durable V1 view ownership/ACL/configuration, safe server commands/read models and Mini App module boundary
-- Current Progress: V1-1 through V1-5 local persistence, strict typed-schema, canonicalization/safe-projection, ACL/versioned mutation and Grid filter/group/sort-before-pagination foundations are implemented; route and Mini App tasks remain pending. Optional access/list indexes remain deferred until the Task 7 PostgreSQL `EXPLAIN` evidence gate.
+- Current Progress: V1-1 through V1-6 local persistence, strict typed-schema, canonicalization/safe-projection, ACL/versioned mutation, Grid filter/group/sort-before-pagination and five safe HTTP routes are implemented; Mini App tasks remain pending. Optional access/list indexes remain deferred until the Task 7 PostgreSQL `EXPLAIN` evidence gate.
 
 ## 1. Architecture
 
@@ -114,6 +114,18 @@ type ViewMembersReplaceRequest = {
 ```
 
 `ViewPresentationCommand` is a discriminated union by `view_type`. It accepts only `visible_field_keys`, flat `filters`, `sort_rules`, `group_by_field_key`, `date_field_key` and `form_field_keys` allowed for that type. It does not accept `config`, policy, owner, scope, default, status, raw field option or arbitrary layout key.
+
+### Implemented HTTP boundary (V1-6)
+
+| Route | Authorization and transaction rule | Response boundary |
+| --- | --- | --- |
+| `GET /tables/{table_id}/view-builder-context` | active `table.read` and `view.manage`; no write | safe table, eligible fields, accessible summaries, active `{id,label}` candidates only |
+| `POST /tables/{table_id}/view-initializations` | same authority; service owns idempotency/audit; `Idempotency-Key` only | `201` receipt or `200` replay, safe view and affected id only |
+| `GET /views/{view_id}/builder` | underlying table read plus resolved owner/editor/default manager access | safe editable projection; grants only for owner |
+| `PATCH /views/{view_id}/presentation` | underlying table read plus resolved edit access; exact body version | safe view plus incremented version |
+| `PUT /views/{view_id}/members` | underlying table read plus owner access; exact body version | safe view, safe grants and incremented version |
+
+These routes use only the V1 models. They do not widen legacy create/view routes, and V1 `view_*` failures serialize a fixed code instead of the service exception text.
 
 ### Create sequence
 

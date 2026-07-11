@@ -445,6 +445,11 @@ class SafeViewMemberResponse(StrictViewBuilderModel):
     access_level: Literal["editor", "viewer"]
 
 
+class SafeViewMemberCandidateResponse(StrictViewBuilderModel):
+    id: str
+    label: str
+
+
 class SafeViewFieldResponse(StrictViewBuilderModel):
     key: str
     label: str
@@ -475,3 +480,26 @@ class ViewBuilderResponse(StrictViewBuilderModel):
     version: Annotated[int, Field(ge=1)]
     can_edit_presentation: bool
     can_replace_members: bool
+
+
+class ViewBuilderContextResponse(StrictViewBuilderModel):
+    table: TableResponse
+    fields: list[SafeViewFieldResponse]
+    views: list[SafeViewSummaryResponse]
+    member_candidates: list[SafeViewMemberCandidateResponse]
+
+
+class ViewInitializationResponse(StrictViewBuilderModel):
+    view: SafeViewSummaryResponse
+    affected_view_ids: list[str]
+
+
+class ViewPresentationMutationResponse(StrictViewBuilderModel):
+    view: SafeViewSummaryResponse
+    version: Annotated[int, Field(ge=1)]
+
+
+class ViewMemberReplaceResponse(StrictViewBuilderModel):
+    view: SafeViewSummaryResponse
+    members: list[SafeViewMemberResponse]
+    version: Annotated[int, Field(ge=1)]

@@ -4,7 +4,7 @@
 
 - Document status: user-approved comprehensive V1 design; approved implementation in progress
 - Scope: all saved view types (`grid`, `kanban`, `calendar`, `form`), server-owned presentation semantics, personal/restricted member view access, safe creation/configuration and responsive Mini App work surface
-- Current Progress: V1-1/2/3 local durable persistence, strict typed command/read schemas and canonical safe projection are implemented; no V1 endpoint, mutation authorization/idempotency/audit, dependency, role/capability or Mini App behavior has been added.
+- Current Progress: V1-1 through V1-6 local durable persistence, strict typed command/read schemas, canonical safe projection, versioned ACL mutation, V1 server query execution and the five approved safe HTTP endpoints are implemented. Backend API proof is local only; Mini App transport/state, Browser evidence, final PostgreSQL security/index proof, Telegram and production remain pending.
 - Prerequisites: Stage07 P3, F1 and F2 are bounded `implemented-local` evidence; this proposal must not be interpreted as widening their accepted contracts.
 
 ## 1. Goal And Product Boundary
@@ -186,7 +186,7 @@ These are proposed V1 contracts, not current endpoints. They replace Mini App us
 
 `SafeViewSummary` contains only id, Base/table ids, name, type, scope, caller access level, status and default marker. `SafeViewMember` contains only recipient id, server-derived label and `editor`/`viewer`; it never returns raw membership, workspace role, policy or activity history.
 
-No V1 client route sends `config`, `permission_policy`, `is_default`, owner ID, raw field option, raw member role or audit payload. Legacy `POST /bases/{base_id}/views` remains outside Mini App use until a later server-only compatibility decision.
+No V1 client route sends `config`, `permission_policy`, `is_default`, owner ID, raw field option, raw member role or audit payload. A safe summary may read only the documented default marker; it cannot use it to mutate default state. Legacy `POST /bases/{base_id}/views` remains outside Mini App use until a later server-only compatibility decision.
 
 ## 7. Atomicity, Concurrency And Audit
 
