@@ -7,6 +7,12 @@
 
 ## Progress Log
 
+### 2026-07-11: F2 Safe Candidate and Relation-Write Substages
+
+- Commit 5690092 adds server-composed relation candidate pages and server-only relation cells. Candidate records contain only opaque ID/label pairs; labels use readable primary/fallback text fields; raw target values/policies are not returned. Existing view/detail projections no longer expose linked-record ID arrays.
+- Commit ca63786 keeps existing create/versioned PATCH as the only relation write protocol and rejects required empty relation values, duplicate IDs, wrong target tables, targets without safe readable labels and same-record self links. Record mutation responses reread the authorised safe projection; create-form includes a linked field only when it is writable and picker-safe.
+- Focused F2 plus existing Stage07 field/API unit regression reported 43 passed. This is local unit evidence only. Lookup runtime aggregation/fail-closed hop evaluation, dependency delete guards, PostgreSQL, Mini App Picker/rendering and browser acceptance remain open.
+
 ### 2026-07-11: F2 Documentation Reconciliation (Execution Paused)
 
 - The user required Stage07 documentation to meet the prior-stage standard before further F2 implementation: detailed BDD, SDD, per-function module documentation and a separately navigable complex-feature index.
