@@ -39,7 +39,7 @@ The creation Builder contains identity/type and presentation only; desktop may s
 | Section | Fields | Who may edit | Validation before request |
 | --- | --- | --- | --- |
 | Identity and type | name, Grid/Kanban/Calendar/Form | owner on create; owner/editor name update | nonempty normalized name, allowed type |
-| Presentation | visible field order, filters, sorts, group/date/form keys | owner/editor | only context-returned fields/operators/values; max counts |
+| Presentation | visible field order, filters, sorts, group/date/form keys | owner/editor | only context-returned fields/operators/values; `filter_values` is available only for readable select-like fields; max counts |
 
 ### Type-specific panels
 
@@ -67,7 +67,9 @@ Each row contains a safe field select, a server-listed fixed operator select and
 
 | Selected field | Value editor |
 | --- | --- |
-| scalar text/date/number/checkbox/select/user | controlled primitive input/choice from safe field metadata |
+| scalar text/date/number/checkbox | controlled typed primitive input only |
+| status/single_select/multi_select | controlled choice sourced only from the field's safe `filter_values`; no free-text option entry |
+| user | controlled choice sourced only from active safe member candidates |
 | linked relation | F2 `RelationPicker`; it returns opaque permitted IDs only |
 | numeric lookup | numeric editor only |
 | ineligible field | no filter row may be added |

@@ -1978,6 +1978,7 @@ def _v1_safe_field_context(
             "label": field.name,
             "field_type": field.field_type,
             "filter_operators": sorted(_v1_filter_operators(field)),
+            "filter_values": _v1_safe_filter_values(field),
             "sortable": _v1_field_is_sortable(field),
             "groupable": field.field_type in _V1_GROUPABLE_FIELD_TYPES,
             "form_eligible": _can_actor_write_field(actor, field),
@@ -2493,6 +2494,11 @@ def _v1_filter_operators(field: PlatformField) -> frozenset[str]:
             return _V1_FILTER_OPERATORS_BY_TYPE["number"]
         return frozenset()
     return _V1_FILTER_OPERATORS_BY_TYPE.get(field.field_type, frozenset())
+
+
+def _v1_safe_filter_values(field: PlatformField) -> list[str]:
+    """Expose only validated discrete choices needed by V1 filter controls."""
+    return list(_safe_field_options(field).get("choices", []))
 
 
 def _v1_field_is_sortable(field: PlatformField) -> bool:

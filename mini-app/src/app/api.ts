@@ -262,7 +262,7 @@ function safeViewField(value: unknown): SafeViewField {
   const source = jsonRecord(value)
   return {
     key: stringValue(source.key), label: stringValue(source.label), field_type: stringValue(source.field_type),
-    filter_operators: stringArray(source.filter_operators), sortable: booleanValue(source.sortable),
+    filter_operators: stringArray(source.filter_operators), filter_values: stringArray(source.filter_values), sortable: booleanValue(source.sortable),
     groupable: booleanValue(source.groupable), form_eligible: booleanValue(source.form_eligible),
   }
 }

@@ -141,6 +141,7 @@ Given any accessible view
 When list, presentation, record or Builder context is requested
 Then response is limited to the documented safe summary/presentation/eligible-field/member-candidate models.
 It never exposes `permission_policy`, raw JSONB `config`, raw membership role/status, owner identity, audit body, record values outside field filter or hidden field metadata.
+And a select-like field may expose only its validated `filter_values` string array for the typed chooser; it never exposes a raw `options` object, option metadata or choices for a hidden field.
 
 ### V1-14: Version conflict, denial and session replacement fail closed
 

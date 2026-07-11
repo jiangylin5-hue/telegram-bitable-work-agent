@@ -88,6 +88,7 @@ export type SafeViewField = {
   label: string
   field_type: string
   filter_operators: string[]
+  filter_values: string[]
   sortable: boolean
   groupable: boolean
   form_eligible: boolean

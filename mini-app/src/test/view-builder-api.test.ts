@@ -70,6 +70,34 @@ test('patches typed presentation without an Idempotency-Key', async () => {
   expect(new Headers(request.headers).get('Idempotency-Key')).toBeNull()
 })
 
+test('keeps only the allowlisted discrete filter values from Builder fields', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    view: {
+      id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: 'Safe', view_type: 'grid',
+      scope: 'private', caller_access_level: 'owner', status: 'active', is_default: false,
+    },
+    presentation: {
+      view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: ['state'],
+      filters: [], sort_rules: [], group_by_field_key: null, date_field_key: null, form_field_keys: [],
+    },
+    fields: [{
+      key: 'state', label: 'State', field_type: 'status', filter_operators: ['is'],
+      filter_values: ['active', 'closed'], sortable: true, groupable: true, form_eligible: true,
+      options: { choices: ['active', 'closed'], internal: 'must-not-reach-browser' },
+    }],
+    members: [], version: 1, can_edit_presentation: true, can_replace_members: true,
+  }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+  vi.stubGlobal('fetch', fetchMock)
+
+  const builder = await api.viewBuilder('view-1')
+
+  expect(builder.fields).toEqual([{
+    key: 'state', label: 'State', field_type: 'status', filter_operators: ['is'],
+    filter_values: ['active', 'closed'], sortable: true, groupable: true, form_eligible: true,
+  }])
+  expect(builder.fields[0]).not.toHaveProperty('options')
+})
+
 test('uses fixed allowlisted V1 errors and scoped protected query keys', () => {
   expect(toSafeViewError({ code: 'view_version_conflict', message: 'secret backend detail' }))
     .toBe('视图已被更新，请重新加载后再试。')

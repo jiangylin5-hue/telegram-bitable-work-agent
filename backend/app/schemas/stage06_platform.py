@@ -455,6 +455,7 @@ class SafeViewFieldResponse(StrictViewBuilderModel):
     label: str
     field_type: str
     filter_operators: list[str]
+    filter_values: list[str] = Field(default_factory=list)
     sortable: bool
     groupable: bool
     form_eligible: bool
