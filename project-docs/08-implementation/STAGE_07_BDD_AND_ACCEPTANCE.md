@@ -105,6 +105,6 @@ Given the server rejects a normalized duplicate field name with `422.detail.code
 - [ ] Bot scopes, private assistant context and per-user memory boundaries are visible and enforced.
 - [ ] Every Bot write is confirmed through `record_change_draft` with an audit outcome.
 - [ ] No unapproved Stage07 contract extension is silently implemented.
-- [ ] F1 remains limited to approved independent field types, generated keys and safe choice metadata; F2 has its separately approved bounded contract and detailed companion BDD/SDD/module/index. V1 Saved View Builder has approved implementation in progress: V1-1 durable persistence is local-only, while no end-to-end V1 runtime behavior is accepted.
+- [ ] F1 remains limited to approved independent field types, generated keys and safe choice metadata; F2 has its separately approved bounded contract and detailed companion BDD/SDD/module/index. V1 Saved View Builder has approved implementation in progress: V1-1/2 durability and strict schemas are local-only, while no end-to-end V1 runtime behavior is accepted.
 - [ ] F1 schema/receipt/form responses exclude field policy and raw non-choice options; hidden fields remain absent.
 - [ ] F1 has automated replay, rollback, concurrent-order and cross-workspace-denial evidence plus four-width visual comparison.

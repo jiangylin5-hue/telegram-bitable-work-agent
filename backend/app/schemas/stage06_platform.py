@@ -1,6 +1,6 @@
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat, StrictInt, StrictStr, model_validator
 
 
 class CreateWorkspaceRequest(BaseModel):
@@ -318,3 +318,159 @@ class ViewRecordsResponse(BaseModel):
     trace_id: str
     next_cursor: str | None = None
     has_more: bool = False
+
+
+class StrictViewBuilderModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+ViewFieldKey = Annotated[str, Field(min_length=1, max_length=120)]
+ViewName = Annotated[str, Field(min_length=1, max_length=120)]
+ViewFilterValue = StrictStr | StrictInt | StrictFloat | StrictBool | list[StrictStr] | None
+
+
+class ViewFilterCondition(StrictViewBuilderModel):
+    field_key: ViewFieldKey
+    operator: Literal[
+        "equals",
+        "not_equals",
+        "contains",
+        "is_empty",
+        "is_not_empty",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "is",
+        "is_not",
+        "contains_any",
+        "contains_all",
+        "is_true",
+        "is_false",
+        "contains_record",
+        "before",
+        "on_or_before",
+        "after",
+        "on_or_after",
+    ]
+    value: ViewFilterValue = None
+
+
+class ViewSortRule(StrictViewBuilderModel):
+    field_key: ViewFieldKey
+    direction: Literal["asc", "desc"]
+
+
+class _FilteredSortableViewPresentation(StrictViewBuilderModel):
+    visible_field_keys: list[ViewFieldKey] = Field(default_factory=list, max_length=200)
+    filter_conjunction: Literal["and"] = "and"
+    filters: list[ViewFilterCondition] = Field(default_factory=list, max_length=12)
+    sort_rules: list[ViewSortRule] = Field(default_factory=list, max_length=3)
+
+
+class GridViewPresentationCommand(_FilteredSortableViewPresentation):
+    view_type: Literal["grid"]
+    group_by_field_key: ViewFieldKey | None = None
+
+
+class KanbanViewPresentationCommand(_FilteredSortableViewPresentation):
+    view_type: Literal["kanban"]
+    group_by_field_key: ViewFieldKey
+
+
+class CalendarViewPresentationCommand(_FilteredSortableViewPresentation):
+    view_type: Literal["calendar"]
+    date_field_key: ViewFieldKey
+
+
+class FormViewPresentationCommand(StrictViewBuilderModel):
+    view_type: Literal["form"]
+    visible_field_keys: list[ViewFieldKey] = Field(default_factory=list, max_length=200)
+    form_field_keys: list[ViewFieldKey] = Field(min_length=1, max_length=200)
+
+
+ViewPresentationCommand = Annotated[
+    GridViewPresentationCommand
+    | KanbanViewPresentationCommand
+    | CalendarViewPresentationCommand
+    | FormViewPresentationCommand,
+    Field(discriminator="view_type"),
+]
+
+
+class ViewInitializationRequest(StrictViewBuilderModel):
+    name: ViewName
+    view_type: Literal["grid", "kanban", "calendar", "form"]
+    presentation: ViewPresentationCommand
+
+    @model_validator(mode="after")
+    def matches_presentation_type(self) -> "ViewInitializationRequest":
+        if self.view_type != self.presentation.view_type:
+            raise ValueError("view_type must match presentation.view_type")
+        return self
+
+
+class ViewPresentationPatchRequest(StrictViewBuilderModel):
+    expected_version: Annotated[StrictInt, Field(ge=1)]
+    name: ViewName | None = None
+    presentation: ViewPresentationCommand
+
+
+class ViewMemberCommand(StrictViewBuilderModel):
+    user_id: Annotated[str, Field(min_length=1, max_length=120)]
+    access_level: Literal["editor", "viewer"]
+
+
+class ViewMemberReplaceRequest(StrictViewBuilderModel):
+    expected_version: Annotated[StrictInt, Field(ge=1)]
+    members: list[ViewMemberCommand] = Field(default_factory=list, max_length=100)
+
+
+class SafeViewSummaryResponse(StrictViewBuilderModel):
+    id: str
+    base_id: str
+    table_id: str
+    name: str
+    view_type: Literal["grid", "kanban", "calendar", "form"]
+    scope: Literal["system_default", "private", "restricted"]
+    caller_access_level: Literal["owner", "editor", "viewer", "system_default"]
+    status: str
+    is_default: bool
+
+
+class SafeViewMemberResponse(StrictViewBuilderModel):
+    user_id: str
+    label: str
+    access_level: Literal["editor", "viewer"]
+
+
+class SafeViewFieldResponse(StrictViewBuilderModel):
+    key: str
+    label: str
+    field_type: str
+    filter_operators: list[str]
+    sortable: bool
+    groupable: bool
+    form_eligible: bool
+
+
+class SafeViewPresentationResponse(StrictViewBuilderModel):
+    view_id: str
+    table_id: str
+    view_type: Literal["grid", "kanban", "calendar", "form"]
+    visible_field_keys: list[str]
+    filters: list[ViewFilterCondition]
+    sort_rules: list[ViewSortRule]
+    group_by_field_key: str | None = None
+    date_field_key: str | None = None
+    form_field_keys: list[str] = Field(default_factory=list)
+
+
+class ViewBuilderResponse(StrictViewBuilderModel):
+    view: SafeViewSummaryResponse
+    presentation: SafeViewPresentationResponse
+    fields: list[SafeViewFieldResponse]
+    members: list[SafeViewMemberResponse]
+    version: Annotated[int, Field(ge=1)]
+    can_edit_presentation: bool
+    can_replace_members: bool

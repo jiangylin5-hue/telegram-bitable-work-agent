@@ -4,7 +4,7 @@
 
 - Document status: user-approved detailed V1 behavior and acceptance source; approved implementation in progress
 - Scope: saved Grid/Kanban/Calendar/Form creation and configuration, personal/restricted member view access, safe query/presentation behavior and responsive Mini App surface
-- Current Progress: V1-1 local persistence foundation is implemented: `PlatformView` ownership/scope/version columns, `ViewMemberGrant` unique recipient rows, migration `20260711_0022` and narrow UoW methods. It has no real PostgreSQL acceptance yet and does not implement a V1 endpoint, authorization/configuration behavior or Mini App state.
+- Current Progress: V1-1/2 local durability and typed command/read-schema foundations are implemented: `PlatformView` ownership/scope/version, `ViewMemberGrant`, migration `20260711_0022`, narrow UoW methods, discriminated view presentation commands, bounded flat filter/sort/member inputs and raw-state-free safe view models. It has no real PostgreSQL acceptance yet and does not implement a V1 endpoint, authorization/configuration behavior or Mini App state.
 - Design companion: `docs/superpowers/specs/2026-07-11-stage07-v1-saved-view-builder-design.md`
 
 ## 1. Actor And Resource Vocabulary

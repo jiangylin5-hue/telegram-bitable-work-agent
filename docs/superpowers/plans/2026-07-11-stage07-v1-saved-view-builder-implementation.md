@@ -104,7 +104,7 @@ git commit -m "feat(stage07): add saved view ownership persistence"
 - Consumes: bearer actor, existing table/view identifiers and V1 JSON payloads.
 - Produces: `ViewInitializationRequest`, `ViewPresentationPatchRequest`, `ViewMemberReplaceRequest`, `ViewBuilderResponse` and fixed-code API errors.
 
-- [ ] **Step 1: Write failing schema boundary tests**
+- [x] **Step 1: Write failing schema boundary tests**
 
 ```python
 def test_view_initialization_is_private_and_rejects_acl_fields() -> None:
@@ -117,13 +117,13 @@ def test_presentation_patch_requires_version_and_rejects_raw_config() -> None:
         ViewPresentationPatchRequest.model_validate({"expected_version": 1, "config": {}})
 ```
 
-- [ ] **Step 2: Verify red test**
+- [x] **Step 2: Verify red test**
 
 Run: `python -m pytest -q tests/unit/test_stage07_view_builder_schemas.py`
 
 Expected: FAIL because typed V1 commands do not exist.
 
-- [ ] **Step 3: Add allowlisted Pydantic v2 models**
+- [x] **Step 3: Add allowlisted Pydantic v2 models**
 
 ```python
 class ViewInitializationRequest(StrictStage06Model):
@@ -138,13 +138,13 @@ class ViewMemberReplaceRequest(StrictStage06Model):
 
 Use a shared strict base with `extra="forbid"`; define typed operators, sort directions, a single group, field-order items, Kanban/Calendar/Form settings and allowed member access levels (`editor`, `viewer`). Do not use `dict[str, Any]` for V1 browser input. Define response schemas that expose only readable field keys/labels, canonical query summary, caller capability flags, `scope`, `version`, owner-self indicator and active grant display rows.
 
-- [ ] **Step 4: Verify green and regression schemas**
+- [x] **Step 4: Verify green and regression schemas**
 
 Run: `python -m pytest -q tests/unit/test_stage07_view_builder_schemas.py tests/unit/test_stage06_platform_api.py`
 
 Expected: PASS; legacy schemas still parse unchanged.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/schemas/stage06_platform.py backend/tests/unit/test_stage07_view_builder_schemas.py
