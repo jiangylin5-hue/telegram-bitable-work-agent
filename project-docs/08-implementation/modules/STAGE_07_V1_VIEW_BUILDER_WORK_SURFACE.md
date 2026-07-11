@@ -2,9 +2,9 @@
 
 ## Status
 
-- Document status: proposed module/work-surface contract; awaiting user review
+- Document status: user-approved module/work-surface contract; implementation plan awaiting user approval
 - Scope: every V1 user-facing saved-view state in BaseCanvas, desktop and mobile
-- Current Progress: documentation only; current toolbar buttons remain non-mutating until V1 is approved and implemented.
+- Current Progress: user-approved design and plan-review state only; current toolbar buttons remain non-mutating until the plan is approved and V1 is implemented.
 
 ## 1. Module Purpose
 

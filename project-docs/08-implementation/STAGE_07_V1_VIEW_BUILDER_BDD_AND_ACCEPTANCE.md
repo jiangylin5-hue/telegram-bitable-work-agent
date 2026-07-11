@@ -2,9 +2,9 @@
 
 ## Status
 
-- Document status: proposed detailed V1 behavior and acceptance source; awaiting user review
+- Document status: user-approved detailed V1 behavior and acceptance source; implementation plan awaiting user approval
 - Scope: saved Grid/Kanban/Calendar/Form creation and configuration, personal/restricted member view access, safe query/presentation behavior and responsive Mini App surface
-- Current Progress: documentation only. No V1 endpoint, model, migration, permission enforcement or Mini App behavior has changed.
+- Current Progress: user-approved design and detailed TDD plan only. No V1 endpoint, model, migration, permission enforcement or Mini App behavior has changed.
 - Design companion: `docs/superpowers/specs/2026-07-11-stage07-v1-saved-view-builder-design.md`
 
 ## 1. Actor And Resource Vocabulary

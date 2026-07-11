@@ -2,9 +2,9 @@
 
 ## Status
 
-- Document status: proposed technical design; awaiting user review
+- Document status: user-approved technical design; implementation plan awaiting user approval
 - Scope: durable V1 view ownership/ACL/configuration, safe server commands/read models and Mini App module boundary
-- Current Progress: design only; all contracts in this document are proposed and require user approval before code.
+- Current Progress: user-approved design and detailed TDD plan only; implementation remains blocked until the plan receives separate approval.
 
 ## 1. Architecture
 

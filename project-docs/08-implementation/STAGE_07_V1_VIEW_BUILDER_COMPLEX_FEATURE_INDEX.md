@@ -2,9 +2,9 @@
 
 ## Status
 
-- Document status: proposed complexity/index inventory; awaiting user review
+- Document status: user-approved complexity/index inventory; implementation plan awaiting user approval
 - Scope: V1 configuration/ACL/query state, logical indexes, proposed physical PostgreSQL indexes and evidence ownership
-- Current Progress: design only. The listed physical indexes are not migrations and must not be created without measured evidence and user-approved implementation plan.
+- Current Progress: user-approved design and plan-review state only. The listed physical indexes are not migrations and must not be created without measured evidence and implementation-plan approval.
 
 ## 1. Purpose
 
