@@ -4,7 +4,7 @@
 
 - Document status: user-approved detailed V1 behavior and acceptance source; approved implementation in progress
 - Scope: saved Grid/Kanban/Calendar/Form creation and configuration, personal/restricted member view access, safe query/presentation behavior and responsive Mini App surface
-- Current Progress: V1-1/2/3/4 local durability, typed command/read-schema, canonicalization and ACL/versioned mutation foundations are implemented: `PlatformView` ownership/scope/version, `ViewMemberGrant`, migration `20260711_0022`, narrow UoW methods, strict presentation commands, server-composed safe projection, idempotent private initialization, effective owner/editor/viewer access and atomic grants. Disposable PostgreSQL proves migration/replay/unique/concurrent version behavior only. No V1 endpoint, server record-query execution or Mini App state exists.
+- Current Progress: V1-1 through V1-5 local durability, typed command/read-schema, canonicalization, ACL/versioned mutation and Grid query foundations are implemented: `PlatformView` ownership/scope/version, `ViewMemberGrant`, migration `20260711_0022`, narrow UoW methods, strict presentation commands, server-composed safe projection, idempotent private initialization, effective owner/editor/viewer access, atomic grants and canonical filter/group/stable-sort execution before cursor pagination. Disposable PostgreSQL additionally proves a group/filter/sort cursor boundary. No V1-specific endpoint or Mini App state exists.
 - Design companion: `docs/superpowers/specs/2026-07-11-stage07-v1-saved-view-builder-design.md`
 
 ## 1. Actor And Resource Vocabulary
@@ -177,7 +177,7 @@ No required mutation is hover-only, and no mobile path turns a denied/partial re
 | V1-A03 | owner/editor/viewer mutation separation | service/API tests | approved-design-unimplemented |
 | V1-A04 | existing default Grid invariant | migration + integration tests | approved-design-unimplemented |
 | V1-A05 | typed configuration validation and safe projection | unit/API response scans | approved-design-unimplemented |
-| V1-A06 | server filter/sort/group before pagination | unit/integration + real PostgreSQL | approved-design-unimplemented |
+| V1-A06 | server filter/sort/group before pagination | unit/integration + real PostgreSQL | partial-local: Grid filter/group/sort-before-pagination and page-local safe group metadata are proven; HTTP/UI remain pending |
 | V1-A07 | F2 relation/numeric lookup eligibility | unit/API + Picker contract tests | approved-design-unimplemented |
 | V1-A08 | Kanban/Calendar/Form configuration validation | unit/API tests | approved-design-unimplemented |
 | V1-A09 | protected query/cancellation/error containment | Mini App component/application tests | approved-design-unimplemented |

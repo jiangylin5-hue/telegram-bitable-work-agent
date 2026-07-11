@@ -4,7 +4,7 @@
 
 - Document status: user-approved technical design; approved implementation in progress
 - Scope: durable V1 view ownership/ACL/configuration, safe server commands/read models and Mini App module boundary
-- Current Progress: V1-1/2/3/4 local persistence, strict typed-schema, canonicalization/safe-projection and ACL/versioned mutation foundations are implemented; query, route and Mini App tasks remain pending. Optional access/list indexes remain deferred until the Task 7 PostgreSQL `EXPLAIN` evidence gate.
+- Current Progress: V1-1 through V1-5 local persistence, strict typed-schema, canonicalization/safe-projection, ACL/versioned mutation and Grid filter/group/sort-before-pagination foundations are implemented; route and Mini App tasks remain pending. Optional access/list indexes remain deferred until the Task 7 PostgreSQL `EXPLAIN` evidence gate.
 
 ## 1. Architecture
 
@@ -137,19 +137,19 @@ type ViewMembersReplaceRequest = {
 
 ## 6. Query Semantics
 
-The service parses canonical conditions, maps them to SQLAlchemy expression builders and applies them before cursor pagination. It may only use static field-type/operator mappings defined by V1; it may not interpolate a field key, operator or value into raw SQL.
+The service parses canonical conditions and applies them before cursor pagination. The current generic record architecture loads only already-authorised projections, then uses a bounded service interpreter with static field-type/operator mappings; no field key, operator or value is interpolated into raw SQL. A future SQLAlchemy/JSONB pushdown is permitted only after equivalence and query-plan evidence, not as an unverified optimization.
 
 ```text
 authorized table fields
 -> canonical allowed condition list (AND)
--> SQLAlchemy typed predicate composition
+-> bounded typed predicate evaluation over safe projections
 -> stable sort tuple(s) + record ID tie-breaker
 -> cursor pagination
 -> field-filtered safe record projection
 -> view-specific renderer metadata
 ```
 
-Relation `contains_record` validates selected target identity through the existing linked-field service. Numeric lookup relies on existing safe computed value semantics; nonnumeric lookup is never made sortable/filterable by V1. Grouping is presentation metadata over the filtered/sorted safe record window and only accepts status/single-select/user fields.
+Relation `contains_record` validates selected target identity through the existing linked-field service. Numeric lookup relies on existing safe computed value semantics; nonnumeric lookup is never made sortable/filterable by V1. Grouping is applied before configured sorts and cursor pagination, only for status/single-select/user fields. A V1 grouped page returns `groups: [{ value, record_ids }]`; `value` is a current readable group value (or `null` for empty), and `record_ids` names only records present in that page. It is safe renderer metadata, never raw configuration or hidden-field data.
 
 ## 7. Client Integration
 

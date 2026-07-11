@@ -859,7 +859,11 @@ def read_record_detail_endpoint(
     return RecordDetailResponse(**record)
 
 
-@router.get("/views/{view_id:uuid}/records", response_model=ViewRecordsResponse)
+@router.get(
+    "/views/{view_id:uuid}/records",
+    response_model=ViewRecordsResponse,
+    response_model_exclude_unset=True,
+)
 def list_view_records_endpoint(
     view_id: UUID,
     limit: int = Query(default=50, ge=1, le=200),

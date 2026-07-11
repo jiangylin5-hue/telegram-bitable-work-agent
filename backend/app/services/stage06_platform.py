@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from functools import cmp_to_key
 from typing import Any, Protocol
 from uuid import UUID, uuid4
 
@@ -2558,7 +2559,10 @@ def list_view_records(
     cursor: str | None = None,
 ) -> dict[str, Any]:
     view = _require_exists(uow.get_view(view_id), "view_not_found")
-    if not _can_actor_read_resource(actor, view.permission_policy):
+    is_v1_view = isinstance(view.config, dict) and view.config.get("schema") == "stage07_v1"
+    if is_v1_view:
+        resolve_v1_view_access(uow, view, actor=actor)
+    elif not _can_actor_read_resource(actor, view.permission_policy):
         _deny_permission(
             uow,
             actor=actor,
@@ -2570,12 +2574,33 @@ def list_view_records(
         raise PlatformValidationError("view_has_no_table", str(view_id))
     fields = uow.list_fields(view.table_id)
     field_by_key = {field.key: field for field in fields}
-    view_fields = view.config.get("fields") or [field.key for field in fields]
+    projection = (
+        build_v1_safe_view_projection(uow, view, actor=actor)
+        if is_v1_view
+        else None
+    )
+    view_fields = (
+        projection["visible_field_keys"]
+        if projection is not None
+        else view.config.get("fields") or [field.key for field in fields]
+    )
+    source_records = (
+        _execute_v1_view_records(
+            uow,
+            view.table_id,
+            fields,
+            actor,
+            projection,
+        )
+        if projection is not None
+        else uow.list_records(view.table_id)
+    )
     records = []
     page = paginate_items(
-        uow.list_records(view.table_id),
+        source_records,
         limit=limit,
         cursor=cursor,
+        preserve_order=projection is not None,
     )
     for record in page.items:
         visible_fields: dict[str, Any] = {}
@@ -2587,13 +2612,207 @@ def list_view_records(
             if value is not _MISSING:
                 visible_fields[key] = value
         records.append({"id": str(record.id), "fields": visible_fields})
-    return {
+    response = {
         "view_id": str(view.id),
         "records": records,
         "trace_id": f"stage06:view:{view.id}",
         "next_cursor": page.next_cursor,
         "has_more": page.has_more,
     }
+    if projection is not None:
+        response["groups"] = _build_v1_group_metadata(
+            uow,
+            page.items,
+            fields,
+            field_by_key,
+            projection,
+            actor,
+        )
+    return response
+
+
+def _execute_v1_view_records(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID,
+    fields: list[PlatformField],
+    actor: Actor,
+    projection: dict[str, Any],
+) -> list[PlatformRecord]:
+    field_by_key = {field.key: field for field in fields}
+    matching = [
+        record
+        for record in uow.list_records(table_id)
+        if _record_matches_v1_filters(
+            uow,
+            record,
+            fields,
+            field_by_key,
+            projection["filters"],
+            actor,
+        )
+    ]
+    return sorted(
+        matching,
+        key=cmp_to_key(
+            lambda left, right: _compare_v1_records(
+                uow,
+                left,
+                right,
+                fields,
+                field_by_key,
+                projection["sort_rules"],
+                projection["group_by_field_key"],
+                actor,
+            )
+        ),
+    )
+
+
+def _record_matches_v1_filters(
+    uow: Stage06PlatformUnitOfWork,
+    record: PlatformRecord,
+    fields: list[PlatformField],
+    field_by_key: dict[str, PlatformField],
+    filters: list[dict[str, Any]],
+    actor: Actor,
+) -> bool:
+    for condition in filters:
+        field = field_by_key.get(condition["field_key"])
+        if field is None:
+            return False
+        value = _view_field_value(uow, record, fields, field, actor)
+        if not _v1_filter_matches(value, condition["operator"], condition["value"]):
+            return False
+    return True
+
+
+def _v1_filter_matches(value: object, operator: str, expected: object) -> bool:
+    is_empty = value is _MISSING or value is None or value == "" or value == []
+    if operator == "is_empty":
+        return is_empty
+    if operator == "is_not_empty":
+        return not is_empty
+    if operator == "is_true":
+        return value is True
+    if operator == "is_false":
+        return value is False
+    if value is _MISSING or value is None:
+        return False
+    if operator == "contains_record":
+        return any(
+            isinstance(cell, dict) and cell.get("id") == expected
+            for cell in value
+        ) if isinstance(value, list) else False
+    if operator == "contains":
+        return isinstance(value, str) and isinstance(expected, str) and expected.casefold() in value.casefold()
+    if operator == "contains_any":
+        return isinstance(value, list) and isinstance(expected, list) and bool(
+            set(value) & set(expected)
+        )
+    if operator == "contains_all":
+        return isinstance(value, list) and isinstance(expected, list) and set(expected) <= set(value)
+    if operator in {"equals", "is"}:
+        return value == expected
+    if operator in {"not_equals", "is_not"}:
+        return value != expected
+    if operator == "gt":
+        return value > expected
+    if operator == "gte":
+        return value >= expected
+    if operator == "lt":
+        return value < expected
+    if operator == "lte":
+        return value <= expected
+    if operator == "before":
+        return value < expected
+    if operator == "on_or_before":
+        return value <= expected
+    if operator == "after":
+        return value > expected
+    if operator == "on_or_after":
+        return value >= expected
+    return False
+
+
+def _compare_v1_records(
+    uow: Stage06PlatformUnitOfWork,
+    left: PlatformRecord,
+    right: PlatformRecord,
+    fields: list[PlatformField],
+    field_by_key: dict[str, PlatformField],
+    sort_rules: list[dict[str, str]],
+    group_by_field_key: str | None,
+    actor: Actor,
+) -> int:
+    if group_by_field_key is not None:
+        group_field = field_by_key.get(group_by_field_key)
+        if group_field is not None:
+            group_comparison = _compare_v1_values(
+                _view_field_value(uow, left, fields, group_field, actor),
+                _view_field_value(uow, right, fields, group_field, actor),
+                direction="asc",
+            )
+            if group_comparison:
+                return group_comparison
+    for rule in sort_rules:
+        field = field_by_key.get(rule["field_key"])
+        if field is None:
+            continue
+        comparison = _compare_v1_values(
+            _view_field_value(uow, left, fields, field, actor),
+            _view_field_value(uow, right, fields, field, actor),
+            direction=rule["direction"],
+        )
+        if comparison:
+            return comparison
+    return (str(left.id) > str(right.id)) - (str(left.id) < str(right.id))
+
+
+def _compare_v1_values(left: object, right: object, *, direction: str) -> int:
+    left_empty = left is _MISSING or left is None
+    right_empty = right is _MISSING or right is None
+    if left_empty != right_empty:
+        return 1 if left_empty else -1
+    if left_empty:
+        return 0
+    left_value = _v1_sort_value(left)
+    right_value = _v1_sort_value(right)
+    comparison = (left_value > right_value) - (left_value < right_value)
+    return -comparison if direction == "desc" else comparison
+
+
+def _v1_sort_value(value: object) -> object:
+    if isinstance(value, list):
+        return tuple(str(item) for item in value)
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, (int, float, str)):
+        return value
+    return ""
+
+
+def _build_v1_group_metadata(
+    uow: Stage06PlatformUnitOfWork,
+    records: list[PlatformRecord],
+    fields: list[PlatformField],
+    field_by_key: dict[str, PlatformField],
+    projection: dict[str, Any],
+    actor: Actor,
+) -> list[dict[str, Any]]:
+    group_by_field_key = projection.get("group_by_field_key")
+    group_field = field_by_key.get(group_by_field_key)
+    if group_field is None:
+        return []
+    groups: list[dict[str, Any]] = []
+    current_value: str | None | object = _MISSING
+    for record in records:
+        raw_value = _view_field_value(uow, record, fields, group_field, actor)
+        value = None if raw_value is _MISSING or raw_value is None else str(raw_value)
+        if current_value is _MISSING or value != current_value:
+            groups.append({"value": value, "record_ids": []})
+            current_value = value
+        groups[-1]["record_ids"].append(str(record.id))
+    return groups
 
 
 def _validate_record_values(

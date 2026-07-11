@@ -17,9 +17,11 @@ from app.services.stage06_platform import (
     SqlAlchemyStage06PlatformUnitOfWork,
     create_base,
     create_field,
+    create_record,
     create_table,
     create_workspace,
     initialize_v1_view,
+    list_view_records,
     replace_v1_view_members,
 )
 from tests.integration.test_stage07_field_builder_postgres import Stage07Postgres, stage07_postgres
@@ -146,6 +148,77 @@ def test_v1_concurrent_member_replacement_allows_one_version_and_conflicts_the_o
         grants = list(session.scalars(select(ViewMemberGrant)))
         assert len(grants) == 1
         assert _load_view(session, view_id).version == 2
+
+
+def test_v1_postgres_applies_filter_and_sort_before_cursor_pagination(
+    stage07_postgres: Stage07Postgres,
+) -> None:
+    owner = _actor("pg-query-owner", "owner")
+    table_id = _create_table(stage07_postgres, owner)
+    with stage07_postgres.session_factory() as session:
+        uow = SqlAlchemyStage06PlatformUnitOfWork(session)
+        create_field(uow, table_id, name="Score", key="score", field_type="number", actor=owner)
+        create_field(
+            uow,
+            table_id,
+            name="State",
+            key="state",
+            field_type="status",
+            options={"choices": ["active", "closed"]},
+            actor=owner,
+        )
+        session.flush()
+        records = [
+            create_record(
+                uow,
+                table_id,
+                values={"title": title, "score": score, "state": state},
+                actor=owner,
+            )
+            for title, score, state in (
+                ("bravo", 2, "closed"),
+                ("alpha", 5, "active"),
+                ("charlie", 3, "active"),
+                ("delta", 4, "closed"),
+            )
+        ]
+        session.flush()
+        view = initialize_v1_view(
+            uow,
+            table_id,
+            request=ViewInitializationRequest.model_validate(
+                {
+                    "name": "Ranked",
+                    "view_type": "grid",
+                    "presentation": {
+                        "view_type": "grid",
+                        "visible_field_keys": ["title", "score"],
+                        "filters": [{"field_key": "score", "operator": "gte", "value": 3}],
+                        "sort_rules": [{"field_key": "score", "direction": "desc"}],
+                        "group_by_field_key": "state",
+                    },
+                }
+            ),
+            idempotency_key="pg-v1-query",
+            actor=owner,
+        ).view
+        session.commit()
+
+    with stage07_postgres.session_factory() as session:
+        uow = SqlAlchemyStage06PlatformUnitOfWork(session)
+        first = list_view_records(uow, view.id, actor=owner, limit=1)
+        second = list_view_records(
+            uow,
+            view.id,
+            actor=owner,
+            limit=1,
+            cursor=first["next_cursor"],
+        )
+
+    assert [row["fields"]["title"] for row in first["records"]] == ["alpha"]
+    assert [row["fields"]["title"] for row in second["records"]] == ["charlie"]
+    assert first["groups"] == [{"value": "active", "record_ids": [str(records[1].id)]}]
+    assert second["groups"] == [{"value": "active", "record_ids": [str(records[2].id)]}]
 
 
 def _create_table(

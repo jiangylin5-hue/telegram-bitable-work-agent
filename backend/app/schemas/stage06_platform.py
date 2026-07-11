@@ -318,6 +318,7 @@ class ViewRecordsResponse(BaseModel):
     trace_id: str
     next_cursor: str | None = None
     has_more: bool = False
+    groups: list[dict[str, Any]] | None = None
 
 
 class StrictViewBuilderModel(BaseModel):

@@ -157,6 +157,7 @@ def test_stage06_platform_api_reads_updates_and_filters_view_records() -> None:
     assert view_response.json()["records"] == [
         {"id": record_id, "fields": {"name": "Ada Co"}}
     ]
+    assert "groups" not in view_response.json()
     assert "stage06.workspace_created" in {
         event.event_type for event in uow.audit_events
     }

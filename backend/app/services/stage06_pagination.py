@@ -36,12 +36,22 @@ def paginate_items(
     *,
     limit: int | None,
     cursor: str | None,
+    preserve_order: bool = False,
 ) -> Stage06Page[T]:
     page_size = bounded_page_size(limit)
-    ordered = sorted(items, key=lambda item: str(item.id))
+    ordered = list(items) if preserve_order else sorted(items, key=lambda item: str(item.id))
     cursor_id = _decode_cursor(cursor) if cursor else None
     if cursor_id is not None:
-        ordered = [item for item in ordered if str(item.id) > cursor_id]
+        if preserve_order:
+            cursor_index = next(
+                (index for index, item in enumerate(ordered) if str(item.id) == cursor_id),
+                None,
+            )
+            if cursor_index is None:
+                raise Stage06PaginationError("invalid_page_cursor")
+            ordered = ordered[cursor_index + 1 :]
+        else:
+            ordered = [item for item in ordered if str(item.id) > cursor_id]
     window = ordered[: page_size + 1]
     has_more = len(window) > page_size
     selected = window[:page_size]

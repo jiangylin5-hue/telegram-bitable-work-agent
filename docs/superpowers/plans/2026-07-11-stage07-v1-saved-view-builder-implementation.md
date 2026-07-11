@@ -4,7 +4,7 @@
 
 - Plan status: user-approved detailed TDD plan; execution in progress.
 - Scope gate: the user approved the V1 design package and this implementation plan.
-- Current Progress: Task 1 is complete locally: model/migration/UoW foundation exists; typed schema/API/ACL/query/UI work remains pending.
+- Current Progress: Tasks 1--5 are complete locally: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations and service-owned Grid filter/group/stable-sort execution before cursor pagination have focused and real PostgreSQL evidence. Only the approved HTTP surface, broader PostgreSQL/security/index proof, Mini App and four-width Browser tasks remain pending.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -284,7 +284,7 @@ git commit -m "feat(stage07): enforce saved view member access"
 - Consumes: a readable Grid view's canonical filters/sorts/group and existing record-list pagination cursor.
 - Produces: server-filtered, stable-sorted record rows and permitted single-group metadata, with no client predicate authority.
 
-- [ ] **Step 1: Write failing query-order tests**
+- [x] **Step 1: Write failing query-order tests**
 
 ```python
 def test_filter_and_stable_sorts_happen_before_limit_and_cursor() -> None:
@@ -296,13 +296,13 @@ def test_relation_and_lookup_fields_cannot_be_used_as_group_keys() -> None:
     assert patch_view(group_by="related_record").status_code == 422
 ```
 
-- [ ] **Step 2: Verify red test**
+- [x] **Step 2: Verify red test**
 
 Run: `python -m pytest -q tests/unit/test_stage07_view_builder_query_execution.py`
 
 Expected: FAIL because list logic currently pages raw records before V1 execution.
 
-- [ ] **Step 3: Introduce a service-owned execution pipeline**
+- [x] **Step 3: Introduce a service-owned execution pipeline**
 
 ```python
 records = self._load_visible_records(table_id=table_id, actor=actor)
@@ -313,7 +313,7 @@ page = self._paginate_records(records=ordered, cursor=cursor, limit=limit)
 
 Ensure the pipeline reads only already-authorized field values; does not emit hidden values through predicates, sort keys, counts or grouping metadata; provides deterministic record-ID tie-break behavior; uses the documented numeric lookup treatment; and does not let browser query parameters override saved view semantics. Use SQLAlchemy/JSONB operators where that preserves semantics and use bounded, covered fallback only if the existing generic record architecture requires it. Do not add free-text formula evaluation, search DSL, multi-group or client-side filtering.
 
-- [ ] **Step 4: Verify green unit, regression and PostgreSQL tests**
+- [x] **Step 4: Verify green unit, regression and PostgreSQL tests**
 
 Run: `python -m pytest -q tests/unit/test_stage07_view_builder_query_execution.py tests/unit/test_stage06_pagination.py`
 
@@ -321,7 +321,7 @@ Run: `python -m pytest -q tests/integration/test_stage07_view_builder_postgres.p
 
 Expected: PASS, with ordering/pagination parity under actual PostgreSQL.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/services/stage06_platform.py backend/tests/unit/test_stage06_pagination.py backend/tests/unit/test_stage07_view_builder_query_execution.py backend/tests/integration/test_stage07_view_builder_postgres.py
