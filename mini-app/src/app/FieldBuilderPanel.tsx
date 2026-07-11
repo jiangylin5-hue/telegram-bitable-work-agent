@@ -34,9 +34,10 @@ export type FieldBuilderValues = {
 type FieldBuilderPanelProps = {
   onSubmit: (values: FieldBuilderValues, idempotencyKey: string) => Promise<void>
   onClose: () => void
+  onOpenRelationLookup?: () => void
 }
 
-export function FieldBuilderPanel({ onSubmit, onClose }: FieldBuilderPanelProps) {
+export function FieldBuilderPanel({ onSubmit, onClose, onOpenRelationLookup }: FieldBuilderPanelProps) {
   const firstInputRef = useRef<HTMLInputElement>(null)
   const attemptKeyRef = useRef<string | null>(null)
   const [name, setName] = useState('')
@@ -126,6 +127,7 @@ export function FieldBuilderPanel({ onSubmit, onClose }: FieldBuilderPanelProps)
         <button className="field-builder-close" type="button" aria-label="关闭" onClick={onClose} disabled={saving}><X size={18} /></button>
       </header>
       <p className="field-builder-intro">字段会显示在当前数据表的可见列中，可随时在后续阶段继续调整。</p>
+      {onOpenRelationLookup ? <button className="field-builder-relation-entry" type="button" onClick={onOpenRelationLookup} disabled={saving || conflicted}>关联记录与查找</button> : null}
       <form className="field-builder-form" onSubmit={handleSubmit} noValidate>
         <label><span>字段名称</span><input ref={firstInputRef} value={name} onChange={(event) => setName(event.target.value)} placeholder="例如：客户阶段" disabled={saving || conflicted} /></label>
         <label><span>字段类型</span><select value={fieldType} onChange={(event) => setFieldType(event.target.value as FieldBuilderValues['fieldType'])} disabled={saving || conflicted}>{fieldTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>

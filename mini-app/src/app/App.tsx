@@ -8,6 +8,7 @@ import { BuilderCreatePanel } from './BuilderCreatePanel'
 import { FieldBuilderPanel, type FieldBuilderValues } from './FieldBuilderPanel'
 import { CreateRecordPanel } from './CreateRecordPanel'
 import { RecordDetailPanel } from './RecordDetail'
+import { RelationLookupFieldBuilderPanel, type F2FieldBuilderValues } from './RelationLookupFieldBuilderPanel'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
 import { clearAllProtectedQueries, clearFieldMutationQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, createProtectedQueryClient, protectedQueryKey, relationCandidateQueryKey } from './protectedQuery'
 
@@ -33,7 +34,11 @@ type AppState =
   | { status: 'ready'; bootstrap: BootstrapResponse; home: WorkspaceHome; canvas?: BaseCanvasState; canvasLoading?: boolean }
 
 type CanvasTarget = { tableId: string; viewId: string }
-type BuilderPanel = { mode: 'base' } | { mode: 'table'; base: BaseSummary } | { mode: 'field'; tableId: string; viewId: string }
+type BuilderPanel =
+  | { mode: 'base' }
+  | { mode: 'table'; base: BaseSummary }
+  | { mode: 'field'; tableId: string; viewId: string }
+  | { mode: 'relation-lookup'; tableId: string; viewId: string; tables: PlatformTable[]; schemas: TableSchema[] }
 
 function isAbortError(error: unknown): boolean {
   return isCancelledError(error) || (error instanceof DOMException && error.name === 'AbortError')
@@ -306,6 +311,119 @@ function AppContent() {
       && activeWorkspaceId.current === workspaceId
     try {
       const receipt = await api.initializeField(tableId, values, idempotencyKey)
+      if (!isCurrent()) return
+      const affectedViewIds = [...new Set([viewId, ...receipt.affected_view_ids])]
+      await clearFieldMutationQueries(queryClient, scope, tableId, affectedViewIds)
+      if (!isCurrent()) return
+      const schema = await queryClient.fetchQuery({
+        queryKey: protectedQueryKey(scope, 'table', tableId, 'schema'),
+        queryFn: ({ signal }) => api.tableSchema(tableId, { signal }),
+      })
+      if (!schema.fields.some((field) => field.id === receipt.field.id)) {
+        throw new Error('Created field is unavailable')
+      }
+      const [presentation, records] = await Promise.all([
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', viewId, 'presentation'), queryFn: ({ signal }) => api.viewPresentation(viewId, { signal }) }),
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', viewId, 'records', null), queryFn: ({ signal }) => api.viewRecords(viewId, undefined, { signal }) }),
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'table', tableId, 'create-form'), queryFn: ({ signal }) => api.createForm(tableId, { signal }) }),
+      ])
+      if (!isCurrent()) return
+      setState((current) => current.status === 'ready'
+        && current.home.workspace_id === workspaceId
+        && current.canvas?.table?.id === tableId
+        && current.canvas.view?.id === viewId
+        ? { ...current, canvas: { ...current.canvas, schema, presentation, records, detail: undefined, createForm: undefined } }
+        : current)
+      setBuilderPanel(undefined)
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await denyInvalidSession()
+        setBuilderPanel(undefined)
+        return
+      }
+      if (error instanceof ApiError && error.status === 403) {
+        await denyWorkspace(scope)
+        setBuilderPanel(undefined)
+        return
+      }
+      if (error instanceof ApiError && error.status === 404) {
+        setBuilderPanel(undefined)
+        setState({ status: 'error' })
+        return
+      }
+      throw error
+    }
+  }
+
+  async function openRelationLookupBuilder(tableId: string, viewId: string) {
+    const canvas = readyState.canvas
+    if (!canvas?.table || !canvas.view || canvas.table.id !== tableId || canvas.view.id !== viewId) return
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++builderRequestVersion.current
+    const canvasVersion = canvasRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current && builderRequestVersion.current === requestVersion
+      && canvasRequestVersion.current === canvasVersion
+      && activeWorkspaceId.current === workspaceId
+    try {
+      const { tables } = await queryClient.fetchQuery({
+        queryKey: protectedQueryKey(scope, 'base', canvas.base.id, 'tables'),
+        queryFn: ({ signal }) => api.baseTables(canvas.base.id, { signal }),
+      })
+      if (!isCurrent()) return
+      const schemas = await Promise.all(tables.map((table) => queryClient.fetchQuery({
+        queryKey: protectedQueryKey(scope, 'table', table.id, 'schema'),
+        queryFn: ({ signal }) => api.tableSchema(table.id, { signal }),
+      })))
+      if (!isCurrent()) return
+      const authorizedTableIds = new Set(tables.map((table) => table.id))
+      const safeSchemas = schemas.filter((schema, index) => authorizedTableIds.has(schema.table.id) && schema.table.id === tables[index]?.id)
+      if (!safeSchemas.some((schema) => schema.table.id === tableId)) return
+      setBuilderPanel({ mode: 'relation-lookup', tableId, viewId, tables, schemas: safeSchemas })
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await denyInvalidSession()
+        setBuilderPanel(undefined)
+        return
+      }
+      if (error instanceof ApiError && error.status === 403) {
+        await denyWorkspace(scope)
+        setBuilderPanel(undefined)
+        return
+      }
+      if (error instanceof ApiError && error.status === 404) {
+        setBuilderPanel(undefined)
+        setState({ status: 'error' })
+        return
+      }
+      setBuilderPanel(undefined)
+      setState({ status: 'error' })
+    }
+  }
+
+  async function createRelationLookupField(
+    tableId: string,
+    viewId: string,
+    values: F2FieldBuilderValues,
+    idempotencyKey: string,
+  ) {
+    const canvas = readyState.canvas
+    if (!canvas?.table || !canvas.view || canvas.table.id !== tableId || canvas.view.id !== viewId) {
+      throw new Error('Table is not available')
+    }
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = builderRequestVersion.current
+    const canvasVersion = canvasRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current && builderRequestVersion.current === requestVersion
+      && canvasRequestVersion.current === canvasVersion
+      && activeWorkspaceId.current === workspaceId
+    try {
+      const receipt = values.kind === 'relation'
+        ? await api.initializeRelationField(tableId, values, idempotencyKey)
+        : await api.initializeLookupField(tableId, values, idempotencyKey)
       if (!isCurrent()) return
       const affectedViewIds = [...new Set([viewId, ...receipt.affected_view_ids])]
       await clearFieldMutationQueries(queryClient, scope, tableId, affectedViewIds)
@@ -663,7 +781,9 @@ function AppContent() {
     : builderPanel?.mode === 'table'
       ? <BuilderCreatePanel mode="table" onSubmit={(values, idempotencyKey) => createTable(builderPanel.base, values as { tableName: string }, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
       : builderPanel?.mode === 'field'
-        ? <FieldBuilderPanel onSubmit={(values, idempotencyKey) => createField(builderPanel.tableId, builderPanel.viewId, values, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
-        : null
+        ? <FieldBuilderPanel onSubmit={(values, idempotencyKey) => createField(builderPanel.tableId, builderPanel.viewId, values, idempotencyKey)} onOpenRelationLookup={() => { void openRelationLookupBuilder(builderPanel.tableId, builderPanel.viewId) }} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
+        : builderPanel?.mode === 'relation-lookup'
+          ? <RelationLookupFieldBuilderPanel currentTableId={builderPanel.tableId} tables={builderPanel.tables} schemas={builderPanel.schemas} onSubmit={(values, idempotencyKey) => createRelationLookupField(builderPanel.tableId, builderPanel.viewId, values, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
+          : null
   return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace}>{content}{builderOverlay}</AppShell>
 }

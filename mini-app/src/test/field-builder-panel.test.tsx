@@ -8,6 +8,17 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+test('exposes an explicit entry for relation and lookup fields without changing F1 field types', () => {
+  const onOpenRelationLookup = vi.fn()
+  render(<FieldBuilderPanel onSubmit={vi.fn()} onClose={() => undefined} onOpenRelationLookup={onOpenRelationLookup} />)
+
+  fireEvent.click(screen.getByRole('button', { name: '关联记录与查找' }))
+
+  expect(onOpenRelationLookup).toHaveBeenCalledTimes(1)
+  expect(screen.getByLabelText('字段类型')).toHaveTextContent('文本')
+  expect(screen.queryByRole('option', { name: '关联记录' })).not.toBeInTheDocument()
+})
+
 test('renders a focused field drawer, validates its visible inputs, and exposes choices only when needed', async () => {
   const onSubmit = vi.fn().mockResolvedValue(undefined)
   render(<FieldBuilderPanel onSubmit={onSubmit} onClose={() => undefined} />)
