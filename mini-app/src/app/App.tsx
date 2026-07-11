@@ -713,6 +713,8 @@ function AppContent() {
     if (!table) return
     const view = canvas.views.find((item) => item.table_id === table.id) ?? null
     abandonRecordDetail(canvas, readyState.home.workspace_id)
+    builderRequestVersion.current += 1
+    setBuilderPanel(undefined)
     const requestVersion = ++canvasRequestVersion.current
     createFormRequestVersion.current += 1
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
@@ -749,6 +751,8 @@ function AppContent() {
     const table = view?.table_id ? canvas.tables.find((item) => item.id === view.table_id) ?? null : null
     if (!view || !table) return
     abandonRecordDetail(canvas, readyState.home.workspace_id)
+    builderRequestVersion.current += 1
+    setBuilderPanel(undefined)
     const requestVersion = ++canvasRequestVersion.current
     createFormRequestVersion.current += 1
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }

@@ -18,15 +18,18 @@ function prepareDelayedRelationLookupSchema() {
     if (path === '/mini-app/bootstrap') return Promise.resolve(new Response(JSON.stringify({ identity: { user_id: 'owner-1', source: 'development_header' }, workspaces: [{ id: 'workspace-1', name: '运营中心', slug: 'operations', role: 'owner', capabilities: { can_read_bases: true, can_manage_workspace: false, can_manage_schema: true, can_review_drafts: false } }, { id: 'workspace-2', name: '项目中心', slug: 'projects', role: 'viewer', capabilities: { can_read_bases: true, can_manage_workspace: false, can_manage_schema: false, can_review_drafts: false } }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     if (path === '/workspaces/workspace-1/home') return Promise.resolve(new Response(JSON.stringify({ workspace_id: 'workspace-1', recent_bases: [{ id: 'base-1', name: '客户管理', source_type: 'blank' }], queue: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     if (path === '/workspaces/workspace-2/home') return Promise.resolve(new Response(JSON.stringify({ workspace_id: 'workspace-2', recent_bases: [], queue: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
-    if (path === '/bases/base-1/tables') return Promise.resolve(new Response(JSON.stringify({ tables: [{ id: 'table-orders', base_id: 'base-1', name: '订单', key: 'orders', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
-    if (path === '/bases/base-1/views') return Promise.resolve(new Response(JSON.stringify({ views: [{ id: 'view-orders', base_id: 'base-1', table_id: 'table-orders', name: '全部订单', view_type: 'grid', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/bases/base-1/tables') return Promise.resolve(new Response(JSON.stringify({ tables: [{ id: 'table-orders', base_id: 'base-1', name: '订单', key: 'orders', status: 'active' }, { id: 'table-customers', base_id: 'base-1', name: '客户表', key: 'customers', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/bases/base-1/views') return Promise.resolve(new Response(JSON.stringify({ views: [{ id: 'view-orders', base_id: 'base-1', table_id: 'table-orders', name: '全部订单', view_type: 'grid', status: 'active' }, { id: 'view-customers', base_id: 'base-1', table_id: 'table-customers', name: '全部客户', view_type: 'grid', status: 'active' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     if (path === '/tables/table-orders/schema') {
       schemaReads += 1
       if (schemaReads > 1) return delayedSchema
       return Promise.resolve(new Response(JSON.stringify({ table: { id: 'table-orders', name: '订单', key: 'orders' }, fields: [{ id: 'field-name', table_id: 'table-orders', name: '订单名称', key: 'name', field_type: 'text', required: true, options: {}, order_index: 0 }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     }
+    if (path === '/tables/table-customers/schema') return Promise.resolve(new Response(JSON.stringify({ table: { id: 'table-customers', name: '客户表', key: 'customers' }, fields: [{ id: 'field-customer-name', table_id: 'table-customers', name: '客户名称', key: 'name', field_type: 'text', required: true, options: {}, order_index: 0 }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     if (path === '/views/view-orders/presentation') return Promise.resolve(new Response(JSON.stringify({ view_id: 'view-orders', table_id: 'table-orders', view_type: 'grid', visible_field_keys: ['name'], group_by_field_key: null, date_field_key: null, form_field_keys: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     if (path === '/views/view-orders/records') return Promise.resolve(new Response(JSON.stringify({ view_id: 'view-orders', records: [], next_cursor: null, has_more: false }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/views/view-customers/presentation') return Promise.resolve(new Response(JSON.stringify({ view_id: 'view-customers', table_id: 'table-customers', view_type: 'grid', visible_field_keys: ['name'], group_by_field_key: null, date_field_key: null, form_field_keys: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/views/view-customers/records') return Promise.resolve(new Response(JSON.stringify({ view_id: 'view-customers', records: [], next_cursor: null, has_more: false }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     return Promise.resolve(new Response(JSON.stringify({ detail: `unexpected ${path}` }), { status: 404, headers: { 'Content-Type': 'application/json' } }))
   })
   return {
@@ -74,6 +77,21 @@ test('does not restore a relation builder after a workspace generation replaces 
 
   await waitFor(() => expect(screen.queryByRole('dialog', { name: '添加关联字段' })).not.toBeInTheDocument())
   expect(screen.queryByRole('dialog', { name: '正在加载关系字段' })).not.toBeInTheDocument()
+})
+
+test('clears obsolete F2 loading before a real table canvas transition resolves', async () => {
+  const preload = prepareDelayedRelationLookupSchema()
+  render(<App />)
+
+  fireEvent.click(await screen.findByRole('link', { name: '客户管理' }))
+  fireEvent.click(await screen.findByRole('button', { name: '添加字段' }))
+  fireEvent.click(screen.getByRole('button', { name: '关联记录与查找' }))
+  fireEvent.click(screen.getByRole('tab', { name: '客户表' }))
+
+  expect(screen.queryByRole('dialog', { name: '正在加载关系字段' })).not.toBeInTheDocument()
+  await act(async () => { preload.resolveSchema(); await Promise.resolve() })
+  expect(await screen.findByRole('columnheader', { name: '客户名称' })).toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: '添加关联字段' })).not.toBeInTheDocument()
 })
 
 test('reuses protected table schemas to initialize a relation field and verifies its safe receipt by reread', async () => {
