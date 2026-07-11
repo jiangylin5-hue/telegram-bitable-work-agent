@@ -25,6 +25,7 @@ from app.schemas.stage06_platform import (
     FieldResponse,
     FieldInitializationResponse,
     InitializeFieldRequest,
+    InitializeRelationFieldRequest,
     MiniAppBootstrapResponse,
     MiniAppWorkspaceHomeResponse,
     InitializeBaseRequest,
@@ -71,6 +72,7 @@ from app.services.stage06_platform import (
     get_view_presentation,
     initialize_base,
     initialize_field,
+    initialize_relation_field,
     initialize_table,
     list_workspace_members,
     list_bases_for_workspace,
@@ -609,6 +611,64 @@ def initialize_field_endpoint(
                     field_type=request.field_type,
                     required=request.required,
                     choices=choices,
+                    actor=actor,
+                )
+            ),
+        )
+    except (PlatformValidationError, Stage06AuthorizationError) as exc:
+        raise _http_error(exc) from exc
+    if replayed:
+        response.status_code = status.HTTP_200_OK
+    return initialization
+
+
+@router.post(
+    "/tables/{table_id}/relation-field-initializations",
+    response_model=FieldInitializationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def initialize_relation_field_endpoint(
+    table_id: UUID,
+    request: InitializeRelationFieldRequest,
+    response: Response,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=160),
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> FieldInitializationResponse:
+    try:
+        workspace_id = workspace_id_for_table(uow, table_id)
+        actor = authorize_workspace_action(uow, identity, workspace_id, "field.manage")
+        name = _validated_field_name(request.name)
+        try:
+            target_table_id = UUID(request.target_table_id)
+        except (TypeError, ValueError) as exc:
+            raise PlatformValidationError("table_not_found", "target_table") from exc
+        target_workspace_id = workspace_id_for_table(uow, target_table_id)
+        authorize_workspace_action(uow, identity, target_workspace_id, "table.read")
+        initialization, replayed = _run_atomic_builder_initialization(
+            uow,
+            workspace_id=workspace_id,
+            operation="stage07.relation_field.initialize",
+            idempotency_key=idempotency_key,
+            request_fingerprint=fingerprint_request(
+                {
+                    "workspace_id": workspace_id,
+                    "operation": "stage07.relation_field.initialize",
+                    "actor_user_id": identity.user_id,
+                    "table_id": table_id,
+                    "name": name,
+                    "target_table_id": target_table_id,
+                    "required": request.required,
+                }
+            ),
+            response_model=FieldInitializationResponse,
+            build=lambda: _field_initialization_response(
+                initialize_relation_field(
+                    uow,
+                    table_id,
+                    name=name,
+                    target_table_id=target_table_id,
+                    required=request.required,
                     actor=actor,
                 )
             ),

@@ -878,6 +878,80 @@ def initialize_field(
     return FieldInitializationResult(field=field, affected_view_ids=affected_view_ids)
 
 
+def initialize_relation_field(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID,
+    *,
+    name: str,
+    target_table_id: UUID,
+    required: bool,
+    actor: Actor,
+) -> FieldInitializationResult:
+    normalized_name = _normalized_f1_field_name(name)
+    table = _require_exists(
+        uow.lock_table_for_schema_mutation(table_id),
+        "table_not_found",
+    )
+    target_table = _require_exists(uow.get_table(target_table_id), "table_not_found")
+    if target_table.base_id != table.base_id:
+        raise PlatformValidationError("resource_scope_mismatch", "target_table")
+
+    existing_fields = uow.list_fields(table.id)
+    normalized_existing_names = {
+        field.name.strip().casefold()
+        for field in existing_fields
+    }
+    if normalized_name.casefold() in normalized_existing_names:
+        raise PlatformValidationError("duplicate_field_name", "field_name")
+
+    field = PlatformField(
+        id=uuid4(),
+        table_id=table.id,
+        name=normalized_name,
+        key=_generated_f1_field_key({field.key for field in existing_fields}),
+        field_type="linked_record",
+        required=required,
+        unique=False,
+        options={"target_table_id": str(target_table.id)},
+        permission_policy={},
+        order_index=max(
+            (field.order_index for field in existing_fields),
+            default=-1,
+        ) + 1,
+        status="active",
+    )
+    uow.add_field(field)
+
+    affected_view_ids: list[UUID] = []
+    for view in uow.list_views(table.id):
+        configured_fields = view.config.get("fields")
+        if view.status != "active" or not isinstance(configured_fields, list):
+            continue
+        if field.key in configured_fields:
+            continue
+        next_config = dict(view.config)
+        next_config["fields"] = [*configured_fields, field.key]
+        view.config = next_config
+        affected_view_ids.append(view.id)
+
+    _record_stage06_audit(
+        uow,
+        actor=actor,
+        event_type="stage07.relation_field_initialized",
+        entity_type="field",
+        entity_id=field.id,
+        after_state={
+            "table_id": str(table.id),
+            "field_key": field.key,
+            "field_type": field.field_type,
+            "required": field.required,
+            "order_index": field.order_index,
+            "affected_view_ids": [str(view_id) for view_id in affected_view_ids],
+        },
+    )
+    return FieldInitializationResult(field=field, affected_view_ids=affected_view_ids)
+
+
 def create_record(
     uow: Stage06PlatformUnitOfWork,
     table_id: UUID,
