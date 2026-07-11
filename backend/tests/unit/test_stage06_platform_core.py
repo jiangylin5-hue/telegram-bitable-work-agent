@@ -246,7 +246,7 @@ def test_stage06_linked_records_are_persisted_and_lookup_values_resolve_in_views
             "id": str(task.id),
             "fields": {
                 "title": "Launch",
-                "customer": [str(customer.id)],
+                "customer": [{"id": str(customer.id), "label": "Ada Co"}],
                 "customer_name": ["Ada Co"],
             },
         }
