@@ -57,6 +57,19 @@ These checks cover only the approved F2 same-Base relation, fixed lookup and Bui
 - [x] Local Browser fixtures cover F2 primary and negative behavior at 1440/1280/430/390. The final local-origin error/warn scan was `[]`; an in-app Browser long-panel pointer limitation is documented separately and is not misreported as a new PATCH-success visual proof.
 - [x] Fresh local verification is Mini App `18` files / `93` tests, production build, dedicated F2 PostgreSQL `6 passed` and full backend `477 passed, 17 historical Stage02 online-smoke skips`.
 
+### V1 Saved View Builder Design Gate
+
+These are planned V1 acceptance items. They remain unchecked until the user reviews the comprehensive V1 design package and implementation has recorded direct evidence.
+
+- [ ] The browser uses only typed V1 safe commands/read models; it never uses legacy raw view `config` or `permission_policy`.
+- [ ] New views start private; owner/editor/viewer access intersects with active membership and underlying Base/Table/Record/Field authority.
+- [ ] The existing system default Grid remains the only default and cannot be changed into a private/restricted view.
+- [ ] Grid has server-owned visible field order, flat typed `AND` filters, at most three stable sorts and at most one eligible group field.
+- [ ] Kanban, Calendar and Form each enforce their type-specific group/date/form-key constraint without a client fallback.
+- [ ] Relation filters use F2 safe candidates; numeric lookup filter/sort is bounded; relation/lookup grouping is rejected.
+- [ ] Real PostgreSQL evidence proves atomic create/grant replacement/replay/concurrency/default behavior and server filter/sort before pagination.
+- [ ] Browser evidence proves private/restricted sharing, owner/editor/viewer separation and all required states at 1440/1280/430/390 with safe console output.
+
 ## Governance And Security
 
 - [ ] Management routes and data reject unauthorized users independently of client navigation.

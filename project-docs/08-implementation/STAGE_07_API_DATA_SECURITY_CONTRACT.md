@@ -126,6 +126,26 @@ Internal relation/lookup options, target table/field IDs, aggregation, policy, r
 
 The full F2 endpoint/state/permission matrix is defined in STAGE_07_F2_RELATION_LOOKUP_SDD.md and STAGE_07_F2_RELATION_LOOKUP_BDD_AND_ACCEPTANCE.md. F2 adds no migration, physical database index, role/capability, persistent browser cache, DELETE endpoint/UI or cascade behavior.
 
+## 5.5 Proposed V1 Saved View Builder Contract
+
+V1 is proposed only and awaits user review. The legacy `POST /bases/{base_id}/views` response contains raw `config` and `permission_policy`; it is not a Mini App contract and must not be reused by the browser.
+
+V1 proposes typed server commands:
+
+| Endpoint | Required authority | Browser input | Safe response |
+| --- | --- | --- | --- |
+| `GET /tables/{table_id}/view-builder-context` | active member + table read + existing `view.manage` | none | safe field eligibility, accessible summaries and owner-only safe member candidates |
+| `POST /tables/{table_id}/view-initializations` | active member + `view.manage` | name, view type, typed presentation, `Idempotency-Key` | safe private-view receipt and affected ids |
+| `GET /views/{view_id}/builder` | owner/editor; system default requires `view.manage` | none | typed editable presentation, version, safe scope/access and owner-only grants |
+| `PATCH /views/{view_id}/presentation` | owner/editor; system default requires `view.manage` | expected version, optional name, typed presentation | safe summary/version |
+| `PUT /views/{view_id}/members` | owner only | expected version, full editor/viewer member list | safe summary, safe grants and version |
+
+The browser must never send/receive raw `config`, `permission_policy`, `is_default`, owner identity, raw member role/status, raw field option, hidden field key or audit body. The server owns `scope` (`system_default`, `private`, `restricted`), owner derivation, version increment, canonical configuration and default-view invariant. A view ACL intersects with existing workspace/Base/Table/Record/Field authority; it cannot grant a resource permission.
+
+Safe V1 presentation is limited to view/table/type, ordered safe visible/form keys, up to twelve flat `AND` filter conditions with fixed typed operators, up to three sorts, at most one group key and one Calendar date key. It excludes query text, `OR`, nested condition groups, formulas, client query semantics and arbitrary layout data. Relation filter values reuse F2 candidate projection; numeric lookup has bounded numeric filter/sort; relation/lookup never group.
+
+V1 requires an approved migration for durable owner/scope/version and a `view_member_grants` table. The existing one-default-per-table Grid invariant remains; V1 creates private views by default, may restrict them through explicit member grants, and does not provide a general Base-wide sharing or default reassignment path.
+
 ## 6. Client Security Rules
 
 - Do not derive permissions from navigation visibility or cached role strings.

@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 planning source of truth
 - Scope: Telegram Mini App and desktop browser UI for the generic workspace, Bitable and digital-employee platform
-- Current Progress: 2026-07-11 Package 1 and bounded Package 2 paths are implemented locally: approved bootstrap/Home/navigation, field-filtered Base/view/record reads, server-filtered scalar record creation, responsive renderers, scalar version-aware edit, authorized in-Base table switching, P3 atomic Base/Table Builder, F1 independent Field Builder and F2 relation/lookup Builder. P3/F1 have authorised disposable-local PostgreSQL rollback/replay/concurrency/default-view cases and F1 has eleven safe field types, choice-aware record controls, four-width browser evidence and a retained direct-edit artifact. P3/F1 remain `implemented-local`, never staging/production claims. F2 has its approved design/plan and dedicated BDD, SDD, work-surface and complex-feature-index documents; bounded transport, initializers, safe relation/lookup reads and writes, protected candidate Picker/create/direct-edit/rendering and the separate F2 Builder are now `implemented-local`. Fresh F2 evidence: Mini App `18` files / `93` tests and production build; authorised-disposable PostgreSQL `6 passed`, including all seven aggregation projections and relation/lookup transaction/guard scenarios; full backend `477 passed, 17 skipped` (only historical Stage02 online smoke skips); and four-width Browser coverage plus final 1440/390 safe same-record candidate exclusion with local-origin console `[]`. This is bounded local evidence, not Telegram, staging, production or whole-Stage07 acceptance. V1, imports/templates, Package 3 and Package 4 remain incomplete or contract-gated.
+- Current Progress: 2026-07-11 Package 1 and bounded Package 2 paths through F2 are `implemented-local`; their local test, PostgreSQL and Browser evidence remains recorded below. V1 is now in comprehensive design review: it specifies all four saved view types, private/restricted member view ACL, unchanged system default Grid, typed server filtering/sorting/grouping, safe presentation commands, proposed migration/index evidence and responsive work surface. No V1 runtime code, migration, endpoint, package, role/capability or raw browser contract has been implemented. User review of the V1 design package is required before any V1 implementation plan or code. Imports/templates, Package 3 and Package 4 remain incomplete or contract-gated.
 
 ## 1. Stage Goal
 
@@ -38,17 +38,22 @@ verified identity -> workspace member -> permission-filtered UI
 10. [Stage07 F2 Relation/Lookup SDD](STAGE_07_F2_RELATION_LOOKUP_SDD.md)
 11. [Stage07 F2 Relation/Lookup Work Surface](modules/STAGE_07_F2_RELATION_LOOKUP_WORK_SURFACE.md)
 12. [Stage07 F2 Relation/Lookup Complex Feature Index](STAGE_07_F2_RELATION_LOOKUP_COMPLEX_FEATURE_INDEX.md)
-13. [Stage 07 SDD](STAGE_07_SDD.md)
-14. [Stage 07 API Data Security Contract](STAGE_07_API_DATA_SECURITY_CONTRACT.md)
-15. [Stage 07 BDD And Acceptance](STAGE_07_BDD_AND_ACCEPTANCE.md)
-16. [Stage 07 Module Index](STAGE_07_MODULE_INDEX.md)
-17. [Stage 07 Test Plan](STAGE_07_TEST_PLAN.md)
-18. [Stage 07 Risk Register](STAGE_07_RISK_REGISTER.md)
-19. [Stage 07 Implementation Plan](STAGE_07_IMPLEMENTATION_PLAN.md)
-20. [Stage 07 Acceptance Checklist](STAGE_07_ACCEPTANCE_CHECKLIST.md)
-21. [Stage 07 Progress](STAGE_07_PROGRESS.md)
-22. [Stage 07 Requirement Traceability Audit](STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md)
-23. [Technical Decision 001: Protected Query State](STAGE_07_TECHNICAL_DECISION_001_PROTECTED_QUERY_STATE.md)
+13. [Stage07 V1 Saved View Builder Design](../../docs/superpowers/specs/2026-07-11-stage07-v1-saved-view-builder-design.md)
+14. [Stage07 V1 BDD And Acceptance](STAGE_07_V1_VIEW_BUILDER_BDD_AND_ACCEPTANCE.md)
+15. [Stage07 V1 SDD](STAGE_07_V1_VIEW_BUILDER_SDD.md)
+16. [Stage07 V1 Work Surface](modules/STAGE_07_V1_VIEW_BUILDER_WORK_SURFACE.md)
+17. [Stage07 V1 Complex Feature Index](STAGE_07_V1_VIEW_BUILDER_COMPLEX_FEATURE_INDEX.md)
+18. [Stage 07 SDD](STAGE_07_SDD.md)
+19. [Stage 07 API Data Security Contract](STAGE_07_API_DATA_SECURITY_CONTRACT.md)
+20. [Stage 07 BDD And Acceptance](STAGE_07_BDD_AND_ACCEPTANCE.md)
+21. [Stage 07 Module Index](STAGE_07_MODULE_INDEX.md)
+22. [Stage 07 Test Plan](STAGE_07_TEST_PLAN.md)
+23. [Stage 07 Risk Register](STAGE_07_RISK_REGISTER.md)
+24. [Stage 07 Implementation Plan](STAGE_07_IMPLEMENTATION_PLAN.md)
+25. [Stage 07 Acceptance Checklist](STAGE_07_ACCEPTANCE_CHECKLIST.md)
+26. [Stage 07 Progress](STAGE_07_PROGRESS.md)
+27. [Stage 07 Requirement Traceability Audit](STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md)
+28. [Technical Decision 001: Protected Query State](STAGE_07_TECHNICAL_DECISION_001_PROTECTED_QUERY_STATE.md)
 
 Stage06 is the backend contract baseline. Stage02-05 documents are historical capability evidence only.
 

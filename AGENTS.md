@@ -4,7 +4,7 @@
 
 - Document status: active project collaboration rule
 - Scope: Generic Telegram-first multidimensional table, no-code workspace and table-bound digital employee platform
-- Current Progress: 2026-07-11 Stage06 backend-stage acceptance remains the baseline. Stage07 bounded Package 2 substages P3, F1 and the user-approved F2 relation/lookup slice are `implemented-local`: F2 has detailed design/plan/BDD/SDD/work-surface/index, Mini App `18` files / `93` tests, a passing production build, six authorised-disposable PostgreSQL cases and full backend `477 passed, 17 historical Stage02 online-smoke skips`, plus four-width local Browser evidence. This does not accept Stage07, Telegram identity, staging or production. V1 additional views, imports/templates, Package 3/4 and deployment remain separate gates requiring their own approved documentation and contract decisions.
+- Current Progress: 2026-07-11 Stage06 backend-stage acceptance remains the baseline. Stage07 bounded Package 2 substages P3, F1 and the user-approved F2 relation/lookup slice are `implemented-local`. V1 Saved View Builder now has a comprehensive proposed design package—Grid/Kanban/Calendar/Form, private/restricted member ACL, system-default Grid invariant, typed server query semantics and required migration/index/test evidence—but no V1 runtime code, migration, endpoint, dependency, role/capability or Mini App behavior has changed. User review of that package is required before an implementation plan. This does not accept Stage07, Telegram identity, staging or production. Imports/templates, Package 3/4 and deployment remain separate gates requiring their own approved documentation and contract decisions.
 
 ## 1. Project Positioning
 
@@ -220,7 +220,7 @@ Prefer mature patterns and ecosystems:
 3. `project-docs/00-governance/IMPLEMENTATION_SOURCE_OF_TRUTH.md`.
 4. `project-docs/03-modules/BITABLE_SCHEMA_BLUEPRINT.md`.
 5. `project-docs/08-implementation/STAGE_06_SOURCE_OF_TRUTH.md` during Stage06.
-5a. `project-docs/08-implementation/STAGE_07_SOURCE_OF_TRUTH.md`, `STAGE_07_MINI_APP_UI_DESIGN.md` and their linked specification during Stage07 design/planning.
+5a. `project-docs/08-implementation/STAGE_07_SOURCE_OF_TRUTH.md`, `STAGE_07_MINI_APP_UI_DESIGN.md`, the approved F2 documents and the V1 Saved View Builder design/BDD/SDD/work-surface/index package during Stage07 design/planning.
 6. `project-docs/00-governance/TECHNICAL_DECISIONS.md`.
 7. Stage06 SDD, implementation plan, API/data/security contract and acceptance docs.
 8. Historical Stage02 to Stage05 implementation documents.

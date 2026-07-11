@@ -46,6 +46,16 @@
 - Browser cases use a disposable fixture only and cover 1440, 1280, 430 and 390 widths; they record Builder, Picker, relation create/edit, nested lookup, aggregation families, denial/invalid state, late scope switch and final console scan. Fixture/server/artifact cleanup is recorded before any F2 completion report.
 - The bounded F2 matrix below is implemented and verified locally. Local commits remain insufficient by themselves: the recorded automated, PostgreSQL and Browser evidence is required, and none of it is Telegram/staging/production evidence.
 
+## 2.3 V1 Saved View Builder Required Evidence
+
+- V1 is design-only until the user approves `docs/superpowers/specs/2026-07-11-stage07-v1-saved-view-builder-design.md` and its BDD/SDD/work-surface/index companions. No current V1 code/test result is acceptance evidence.
+- Unit/API cases must cover every typed field/operator eligibility branch, four view-type configurations, private/restricted/system-default scope rules, owner/editor/viewer separation, safe response redaction and all fixed error allowlist codes.
+- Disposable PostgreSQL cases must prove private initialization rollback, replay, changed-payload conflict, grant replacement rollback, unique recipient grant under concurrency, version conflict, one-default Grid invariant and server filter/sort before pagination.
+- Query tests must prove the server evaluates only flat `AND` conditions, applies at most three stable sort rules plus record-ID tie-break, rejects `OR`/nested/arbitrary expressions and does not make the browser reconstruct semantics.
+- F2 integration must prove relation filters use only server candidates, numeric lookup filter/sort works only over safe numeric output, and relation/lookup grouping is rejected.
+- Frontend cases must prove protected query-key isolation, create/replay/409/401/403/404 behavior, owner/editor/viewer controls, member candidate cleanup, no raw config/policy/member role render and exact authoritative reread after each successful command.
+- Browser cases must cover private creation, restricted sharing, editor/viewer separation, Grid filter/sort/group, Kanban group, Calendar date, Form order, invalid/denied/conflict states and console scan at 1440/1280/430/390. Every temporary server/fixture must be removed before reporting.
+
 ### F1 Automated Current Evidence
 
 - 2026-07-11: direct-record mutation safety repair added red/green application/query-state cases for late `403` after record switch, `401` versus a concurrent PATCH completion, detail-close cancellation, 401/403/404 save/conflict failures and exact 404 cleanup. Fresh Mini App regression: `14` passed test files and `67` passed tests; `npm.cmd run build` passed. This is TD001 cache/race evidence, not backend authorization proof.

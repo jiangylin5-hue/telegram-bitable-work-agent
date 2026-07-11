@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 design detail
 - Scope: UI architecture, module boundaries and interaction flows
-- Current Progress: AppShell, WorkspaceHome, BaseCanvas, field-filtered read models, RecordDetail and limited scalar direct edits are implemented. F1 independent Field Builder has an approved safe design and an implementation plan, but no F1 runtime evidence yet. The requirement traceability audit identifies all incomplete SDD paths and contract gates; this SDD remains the design boundary for later packages.
+- Current Progress: AppShell, WorkspaceHome, BaseCanvas, field-filtered read models, RecordDetail, P3 Base/Table Builder, F1 independent Field Builder and F2 relation/lookup Builder are bounded `implemented-local`; exact evidence is tracked in the requirement audit. V1 Saved View Builder has a comprehensive proposed design package awaiting user review, not runtime authorization. This SDD remains the design boundary for later packages and does not approve raw view config/policy in the browser.
 
 ## 1. Architecture Overview
 

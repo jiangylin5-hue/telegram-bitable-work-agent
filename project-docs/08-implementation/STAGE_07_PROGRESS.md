@@ -7,6 +7,12 @@
 
 ## Progress Log
 
+### 2026-07-11: V1 Comprehensive Saved View Builder Design Package (Awaiting Review)
+
+- The user asked to stop fragmenting the next stage into repeated micro-confirmations and instead document the complete design for one review. The V1 package therefore covers all saved view types (`grid`, `kanban`, `calendar`, `form`) rather than treating Grid as the endpoint of scope. It records selected constraints: newly created views are private, owner may explicitly grant active members `editor`/`viewer`, the system default remains the only shared default Grid, every ACL intersects with underlying platform authority, Grid uses server-only flat `AND` filters/up to three sorts/one group, and F2 relation/numeric lookup participation stays bounded.
+- Added a complete design specification, detailed BDD/acceptance matrix, SDD, module work-surface document and separate complex-feature/index inventory. They reject reuse of the legacy raw `POST /bases/{base_id}/views` config/policy contract, reuse P3/F1/F2 idempotency/audit/protected-query patterns, propose strict typed safe commands/read models, durable owner/scope/version and member grants, and define migration/query evidence before any implementation.
+- This documentation substage deliberately adds no V1 runtime source, migration, API route, dependency, role/capability, permission mutation, Browser fixture or test. All V1 acceptance rows remain `approved-design-unimplemented`; user review of the written package is the next gate, followed by a detailed TDD implementation plan.
+
 ### 2026-07-11: F2 Real PostgreSQL Closure, Same-Record Picker Guard And Bounded Local Acceptance
 
 - The authorised disposable `STAGE06_LOCAL_DATABASE_URL` was reset/migrated through `scripts/stage06_local_postgres_migration_smoke.py` before the dedicated F2 command passed `6` cases. The new projection case creates three readable target records (`2`, `2`, `5`) and one source relation, then reads one safe view record containing every approved aggregation: `values=[2,2,5]`, `count=3`, `count_distinct=2`, `sum=9`, `average=3`, `min=2`, `max=5`. The same suite also proves relation rollback, concurrent initializer ordering, same-key replay, lookup rollback and the reusable record/relation/target dependency guards. It ran only against the documented disposable local target.

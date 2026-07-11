@@ -49,6 +49,10 @@ This is deliberately narrower than the Package 2 deliverables: field creation/ed
 
 `docs/superpowers/specs/2026-07-10-stage07-f1-field-builder-design.md` and `STAGE_07_SUBSTAGE_F1_FIELD_BUILDER_PLAN.md` define the next bounded Package 2 substage. It creates only the approved independent field types through a safe atomic endpoint: the browser supplies display data and validated choices only; the server owns generated keys, default policy, durable order, saved-view visibility updates, audit and idempotent replay. F1 includes safe schema projection and choice-aware record create/direct edit so newly required choice fields are usable. Relation/lookup (F2), advanced JSON, field editing/reordering/deletion and additional views (V1) remain outside F1.
 
+### Proposed V1: Comprehensive Saved View Builder (Awaiting Design Review)
+
+V1 is not an implementation task yet. Its proposed package is `docs/superpowers/specs/2026-07-11-stage07-v1-saved-view-builder-design.md` plus the linked V1 BDD, SDD, work-surface and complex-feature-index documents. It covers Grid, Kanban, Calendar and Form together; private/restricted owner-editor-viewer ACL; unchanged system default Grid; typed server-only presentation semantics; and required migration/index/PostgreSQL/Browser evidence. It explicitly rejects Mini App use of the existing raw view config/policy route. User review is required before a V1 TDD implementation plan or runtime change.
+
 ### Deliverables
 
 - queue-first Workspace Home, recent Base rail and durable deep links;
