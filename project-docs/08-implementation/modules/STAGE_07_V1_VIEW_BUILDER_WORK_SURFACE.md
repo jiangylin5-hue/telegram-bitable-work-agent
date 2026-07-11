@@ -2,9 +2,9 @@
 
 ## Status
 
-- Document status: user-approved module/work-surface contract; implementation plan awaiting user approval
+- Document status: user-approved module/work-surface contract; approved implementation in progress
 - Scope: every V1 user-facing saved-view state in BaseCanvas, desktop and mobile
-- Current Progress: user-approved design and plan-review state only; current toolbar buttons remain non-mutating until the plan is approved and V1 is implemented.
+- Current Progress: V1-1 durable persistence has no Mini App effect. Current toolbar buttons remain non-mutating until the later typed service and Mini App tasks complete.
 
 ## 1. Module Purpose
 

@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 planning source of truth
 - Scope: Telegram Mini App and desktop browser UI for the generic workspace, Bitable and digital-employee platform
-- Current Progress: 2026-07-11 Package 1 and bounded Package 2 paths through F2 are `implemented-local`; their local test, PostgreSQL and Browser evidence remains recorded below. The user has approved V1's comprehensive design: all four saved view types, private/restricted member view ACL, unchanged system default Grid, typed server filtering/sorting/grouping, safe presentation commands, proposed migration/index evidence and responsive work surface. Its detailed TDD implementation plan awaits separate user approval. No V1 runtime code, migration, endpoint, package, role/capability or raw browser contract has been implemented. Imports/templates, Package 3 and Package 4 remain incomplete or contract-gated.
+- Current Progress: 2026-07-11 Package 1 and bounded Package 2 paths through F2 are `implemented-local`; their local test, PostgreSQL and Browser evidence remains recorded below. The user approved V1's comprehensive design and implementation plan. V1-1 has introduced the local durable foundation only: migration `20260711_0022`, `PlatformView` owner/scope/version state, `ViewMemberGrant` unique recipient rows and UoW primitives. Optional non-unique access/list indexes remain deferred until Task 7 records the required PostgreSQL `EXPLAIN` evidence. No V1 route, service authorization/configuration behavior, package, role/capability or raw browser contract has been implemented. Imports/templates, Package 3 and Package 4 remain incomplete or contract-gated.
 
 ## 1. Stage Goal
 

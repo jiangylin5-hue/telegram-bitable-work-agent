@@ -2,9 +2,9 @@
 
 ## Status
 
-- Document status: user-approved complexity/index inventory; implementation plan awaiting user approval
+- Document status: user-approved complexity/index inventory; approved implementation in progress
 - Scope: V1 configuration/ACL/query state, logical indexes, proposed physical PostgreSQL indexes and evidence ownership
-- Current Progress: user-approved design and plan-review state only. The listed physical indexes are not migrations and must not be created without measured evidence and implementation-plan approval.
+- Current Progress: V1-1 creates only the correctness-critical grant uniqueness constraint. The listed optional non-unique physical indexes are not migrations and remain forbidden until Task 7 records the required measured PostgreSQL evidence.
 
 ## 1. Purpose
 

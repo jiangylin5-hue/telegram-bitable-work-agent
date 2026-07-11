@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 from uuid import UUID, uuid4
 
-from sqlalchemy import delete, select
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.agent import AgentRun
@@ -15,6 +15,7 @@ from app.models.stage06_platform import (
     PlatformView,
     RecordLink,
     Stage06TelegramBinding,
+    ViewMemberGrant,
     Workspace,
     WorkspaceMember,
 )
@@ -197,7 +198,27 @@ class Stage06PlatformUnitOfWork(Protocol):
     def get_view(self, view_id: UUID) -> PlatformView | None:
         pass
 
+    def lock_view_for_mutation(self, view_id: UUID) -> PlatformView | None:
+        pass
+
     def list_views(self, table_id: UUID) -> list[PlatformView]:
+        pass
+
+    def list_view_grants(self, view_id: UUID) -> list[ViewMemberGrant]:
+        pass
+
+    def replace_view_grants(
+        self,
+        view_id: UUID,
+        grants: list[ViewMemberGrant],
+    ) -> None:
+        pass
+
+    def list_views_accessible_to_user(
+        self,
+        table_id: UUID,
+        user_id: str,
+    ) -> list[PlatformView]:
         pass
 
     def add_template(self, template: PlatformTemplate) -> None:
@@ -285,6 +306,7 @@ class InMemoryStage06PlatformUnitOfWork:
     records: list[PlatformRecord] = field(default_factory=list)
     record_links: list[RecordLink] = field(default_factory=list)
     views: list[PlatformView] = field(default_factory=list)
+    view_member_grants: list[ViewMemberGrant] = field(default_factory=list)
     templates: list[PlatformTemplate] = field(default_factory=list)
     template_installations: list[TemplateInstallation] = field(default_factory=list)
     import_jobs: list[ImportJob] = field(default_factory=list)
@@ -385,8 +407,45 @@ class InMemoryStage06PlatformUnitOfWork:
     def get_view(self, view_id: UUID) -> PlatformView | None:
         return _find_by_id(self.views, view_id)
 
+    def lock_view_for_mutation(self, view_id: UUID) -> PlatformView | None:
+        return self.get_view(view_id)
+
     def list_views(self, table_id: UUID) -> list[PlatformView]:
         return [view for view in self.views if view.table_id == table_id]
+
+    def list_view_grants(self, view_id: UUID) -> list[ViewMemberGrant]:
+        return [grant for grant in self.view_member_grants if grant.view_id == view_id]
+
+    def replace_view_grants(
+        self,
+        view_id: UUID,
+        grants: list[ViewMemberGrant],
+    ) -> None:
+        self.view_member_grants = [
+            grant for grant in self.view_member_grants if grant.view_id != view_id
+        ]
+        self.view_member_grants.extend(grants)
+
+    def list_views_accessible_to_user(
+        self,
+        table_id: UUID,
+        user_id: str,
+    ) -> list[PlatformView]:
+        granted_view_ids = {
+            grant.view_id
+            for grant in self.view_member_grants
+            if grant.user_id == user_id and grant.status == "active"
+        }
+        return [
+            view
+            for view in self.list_views(table_id)
+            if view.status == "active"
+            and (
+                view.scope == "system_default"
+                or view.owner_user_id == user_id
+                or (view.scope == "restricted" and view.id in granted_view_ids)
+            )
+        ]
 
     def add_template(self, template: PlatformTemplate) -> None:
         if self.get_template(template.id) is None:
@@ -591,10 +650,66 @@ class SqlAlchemyStage06PlatformUnitOfWork:
     def get_view(self, view_id: UUID) -> PlatformView | None:
         return self.session.get(PlatformView, view_id)
 
+    def lock_view_for_mutation(self, view_id: UUID) -> PlatformView | None:
+        return self.session.scalar(
+            select(PlatformView)
+            .where(PlatformView.id == view_id)
+            .with_for_update()
+        )
+
     def list_views(self, table_id: UUID) -> list[PlatformView]:
         return list(
             self.session.scalars(
                 select(PlatformView).where(PlatformView.table_id == table_id)
+            )
+        )
+
+    def list_view_grants(self, view_id: UUID) -> list[ViewMemberGrant]:
+        return list(
+            self.session.scalars(
+                select(ViewMemberGrant).where(ViewMemberGrant.view_id == view_id)
+            )
+        )
+
+    def replace_view_grants(
+        self,
+        view_id: UUID,
+        grants: list[ViewMemberGrant],
+    ) -> None:
+        self.session.execute(
+            delete(ViewMemberGrant).where(ViewMemberGrant.view_id == view_id)
+        )
+        self.session.add_all(grants)
+
+    def list_views_accessible_to_user(
+        self,
+        table_id: UUID,
+        user_id: str,
+    ) -> list[PlatformView]:
+        return list(
+            self.session.scalars(
+                select(PlatformView)
+                .outerjoin(
+                    ViewMemberGrant,
+                    and_(
+                        ViewMemberGrant.view_id == PlatformView.id,
+                        ViewMemberGrant.user_id == user_id,
+                        ViewMemberGrant.status == "active",
+                    ),
+                )
+                .where(
+                    PlatformView.table_id == table_id,
+                    PlatformView.status == "active",
+                    or_(
+                        PlatformView.scope == "system_default",
+                        PlatformView.owner_user_id == user_id,
+                        and_(
+                            PlatformView.scope == "restricted",
+                            ViewMemberGrant.id.is_not(None),
+                        ),
+                    ),
+                )
+                .distinct()
             )
         )
 

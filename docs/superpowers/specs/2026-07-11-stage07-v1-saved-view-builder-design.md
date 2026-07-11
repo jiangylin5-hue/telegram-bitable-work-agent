@@ -2,9 +2,9 @@
 
 ## Status
 
-- Document status: user-approved comprehensive V1 design; detailed implementation plan awaiting user approval
+- Document status: user-approved comprehensive V1 design; approved implementation in progress
 - Scope: all saved view types (`grid`, `kanban`, `calendar`, `form`), server-owned presentation semantics, personal/restricted member view access, safe creation/configuration and responsive Mini App work surface
-- Current Progress: user-approved design and detailed TDD plan only. No V1 runtime code, migration, endpoint, dependency or role/capability change has been made.
+- Current Progress: V1-1 local durable persistence is implemented; no V1 endpoint, authorization/configuration semantics, dependency, role/capability or Mini App behavior has been added.
 - Prerequisites: Stage07 P3, F1 and F2 are bounded `implemented-local` evidence; this proposal must not be interpreted as widening their accepted contracts.
 
 ## 1. Goal And Product Boundary
@@ -217,6 +217,6 @@ The creation Builder progresses through one typed draft for identity/type and pr
 
 ## 10. Acceptance Definition
 
-V1 is not accepted by this design document. The user has approved this package and its linked BDD/SDD/module/index documents; the detailed TDD implementation plan now requires separate user approval before implementation may begin.
+V1 is not accepted by this design document. The user has approved this package, its linked BDD/SDD/module/index documents and the detailed TDD implementation plan; implementation is underway and remains subject to the full acceptance gate.
 
 V1 local acceptance requires every V1-A row in the companion BDD matrix, real disposable PostgreSQL rollback/concurrency evidence, safe contract/authorization tests, all four width Browser scenarios, final console inspection and temporary-fixture cleanup. Telegram, production, broader Stage07 and Package 3/4 remain separate gates.

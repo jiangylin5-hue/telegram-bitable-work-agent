@@ -7,7 +7,7 @@ This handoff is for a new session with no prior context. It records the actual c
 - Repository worktree: `D:\telegram多维表格和工作智能体的开发\.worktrees\stage07-mini-app-ui`
 - Branch: `codex/stage07-mini-app-ui`
 - Latest baseline commit before the current F2 closure: `5fa9562 docs(stage07): record F2 mobile replay invalid evidence`
-- Current worktree includes the bounded F2 closure plus a user-approved comprehensive V1 Saved View Builder design and a detailed TDD plan awaiting user approval; inspect `git status --short` before any new change.
+- Current worktree includes the bounded F2 closure plus authorized V1 implementation. V1-1 has local durable ownership/grant persistence and migration `20260711_0022`; inspect `git status --short` and the V1 implementation plan before any new change.
 - User language: Chinese. Keep code, API, database and stable status identifiers in English.
 - Current delivery rule: document first; do not implement a new schema/API/permission/technical direction without the user’s explicit approval. A change already described and approved in the relevant Stage07 documents may proceed without another confirmation.
 
@@ -67,12 +67,12 @@ Stage07 is the responsive React/Vite Mini App and desktop browser surface over t
   - F2 Builder, Picker, create/direct-edit and cache/error paths at 1440/1280/430/390, including final 1440/390 current-record candidate exclusion and clean local console;
   - authorised disposable PostgreSQL `6 passed`, Mini App `18` files / `93` tests, production build, and full backend `477 passed, 17 historical Stage02 online-smoke skips`.
   - F2 is `implemented-local` only, not Telegram/staging/production/Stage07 acceptance.
-- V1 Saved View Builder has a user-approved design; its implementation plan awaits separate user approval:
+- V1 Saved View Builder design and implementation plan are user-approved; V1-1 has begun:
   - Grid, Kanban, Calendar and Form use one typed server-owned saved-view grammar;
   - new views are private, owner may grant active members `editor`/`viewer`, system default Grid remains unchanged;
   - typed flat `AND` filters, bounded sort/group/date/form semantics and F2 eligibility are specified;
   - raw legacy view config/policy endpoint is explicitly forbidden to Mini App;
-  - no V1 code, migration, API, dependency, capability or browser evidence exists yet; do not implement before plan approval.
+  - local model/migration/UoW evidence exists for owner/scope/version and unique member grants; no V1 API, authorization/configuration behavior, dependency, capability or Browser evidence exists yet.
 
 ### Deliberately not implemented / not accepted
 
@@ -168,7 +168,7 @@ P3, F1 and F2 remain bounded `implemented-local` substages. V1 now has its compl
 4. `project-docs/08-implementation/modules/STAGE_07_V1_VIEW_BUILDER_WORK_SURFACE.md`
 5. `project-docs/08-implementation/STAGE_07_V1_VIEW_BUILDER_COMPLEX_FEATURE_INDEX.md`
 
-On approval, write the detailed TDD implementation plan before changing code. Imports/templates, governance and Package 4 remain later separate decisions. No raw config/policy browser contract is authorized.
+The detailed TDD implementation plan is approved and V1-1 persistence is complete locally. Continue with its strict typed schema task before changing any API/browser contract. Imports/templates, governance and Package 4 remain later separate decisions. No raw config/policy browser contract is authorized.
 
 ## 7. Non-Negotiable Safety And Product Boundaries
 

@@ -2,9 +2,9 @@
 
 ## Status
 
-- Plan status: detailed TDD plan awaiting user approval.
-- Scope gate: the user approved the V1 design package; implementation may begin only after this plan receives separate approval.
-- Current Progress: planning only. No V1 runtime source, schema migration, API route, dependency, permission mutation or Mini App behavior has changed.
+- Plan status: user-approved detailed TDD plan; execution in progress.
+- Scope gate: the user approved the V1 design package and this implementation plan.
+- Current Progress: Task 1 is complete locally: model/migration/UoW foundation exists; typed schema/API/ACL/query/UI work remains pending.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -41,7 +41,7 @@
 - Consumes: `PlatformView`, existing `uq_views_one_default_per_table`, `SqlAlchemyStage06PlatformUnitOfWork`, `InMemoryStage06PlatformUnitOfWork`.
 - Produces: `PlatformView.owner_user_id`, `PlatformView.scope`, `PlatformView.version`, `ViewMemberGrant`, UoW grant CRUD and locked view mutation access.
 
-- [ ] **Step 1: Write failing migration/model tests**
+- [x] **Step 1: Write failing migration/model tests**
 
 ```python
 def test_stage07_saved_view_builder_migration_adds_owner_scope_version_and_grants() -> None:
@@ -55,20 +55,19 @@ def test_platform_view_declares_v1_owner_scope_and_version() -> None:
     assert ViewMemberGrant.__tablename__ == "view_member_grants"
 ```
 
-- [ ] **Step 2: Verify red test**
+- [x] **Step 2: Verify red test**
 
 Run: `python -m pytest -q tests/unit/test_stage07_view_builder_migration.py`
 
 Expected: FAIL because the revision/model/grant type is missing.
 
-- [ ] **Step 3: Add minimal durable model and migration**
+- [x] **Step 3: Add minimal durable model and migration**
 
 ```python
 class ViewMemberGrant(UuidPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "view_member_grants"
     __table_args__ = (
         UniqueConstraint("view_id", "user_id", name="uq_view_member_grants_view_user"),
-        Index("ix_view_member_grants_user_status", "user_id", "status"),
     )
     view_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("views.id"), nullable=False)
     user_id: Mapped[str] = mapped_column(String(160), nullable=False)
@@ -76,15 +75,15 @@ class ViewMemberGrant(UuidPrimaryKeyMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="active")
 ```
 
-Add nullable `owner_user_id`, non-null `scope` default `system_default`, and non-null `version` default `1` to `PlatformView`. The Alembic migration backfills existing rows to `system_default`, preserves the partial default Grid index, creates `view_member_grants` and only the approved grant/table-scope indexes. Add UoW methods `lock_view_for_mutation`, `list_view_grants`, `replace_view_grants` and `list_views_accessible_to_user` to both in-memory and SQLAlchemy adapters.
+Add nullable `owner_user_id`, non-null `scope` default `system_default`, and non-null `version` default `1` to `PlatformView`. The Alembic migration backfills existing rows to `system_default`, preserves the partial default Grid index and creates `view_member_grants` with the correctness-critical unique grant constraint. Do not create `ix_view_member_grants_user_status` or `ix_views_table_scope_status` yet: Task 7 must first record the required disposable-PostgreSQL `EXPLAIN` evidence; without that evidence they remain deferred. Add UoW methods `lock_view_for_mutation`, `list_view_grants`, `replace_view_grants` and `list_views_accessible_to_user` to both in-memory and SQLAlchemy adapters.
 
-- [ ] **Step 4: Verify migration/model tests green**
+- [x] **Step 4: Verify migration/model tests green**
 
 Run: `python -m pytest -q tests/unit/test_stage07_view_builder_migration.py tests/unit/test_stage06_builder_default_view_migration.py`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/alembic/versions/20260711_0022_stage07_saved_view_builder.py backend/app/models/stage06_platform.py backend/app/services/stage06_platform.py backend/tests/unit/test_stage07_view_builder_migration.py backend/tests/unit/test_stage06_builder_default_view_migration.py
@@ -141,7 +140,7 @@ Use a shared strict base with `extra="forbid"`; define typed operators, sort dir
 
 - [ ] **Step 4: Verify green and regression schemas**
 
-Run: `python -m pytest -q tests/unit/test_stage07_view_builder_schemas.py tests/unit/test_stage06_platform_schemas.py`
+Run: `python -m pytest -q tests/unit/test_stage07_view_builder_schemas.py tests/unit/test_stage06_platform_api.py`
 
 Expected: PASS; legacy schemas still parse unchanged.
 
@@ -406,7 +405,7 @@ git commit -m "feat(stage07): expose safe saved view builder routes"
 **Interfaces:**
 
 - Consumes: disposable local PostgreSQL fixture, migration chain and authorised API/service surface.
-- Produces: evidence for migration head, partial/default index preservation, grant uniqueness, concurrent conflict behavior and sensitive-field non-disclosure.
+- Produces: evidence for migration head, partial/default index preservation, grant uniqueness, concurrent conflict behavior, non-disclosure and a measured decision to add or defer optional non-unique indexes.
 
 - [ ] **Step 1: Write failing integration scenarios**
 
@@ -426,7 +425,7 @@ Expected: FAIL before Task 1--6 behavior exists.
 
 - [ ] **Step 3: Close gaps exposed only by real PostgreSQL**
 
-Do not alter product scope. If the fixture exposes a migration/default/transaction mismatch, fix the smallest model, migration, UoW or query implementation defect and add a regression test. Record database version, migration head, executed commands, sanitized test identifiers and pass/fail result in the evidence file. Do not include credentials, full record values, raw request bodies or sensitive field names.
+Do not alter product scope. If the fixture exposes a migration/default/transaction mismatch, fix the smallest model, migration, UoW or query implementation defect and add a regression test. Run and record the SDD-required `EXPLAIN (ANALYZE, BUFFERS)` evaluation before creating either optional access/list index. Add a follow-up migration only when the measured query shape justifies it; otherwise document both as explicitly deferred. Record database version, migration head, executed commands, sanitized test identifiers and pass/fail result in the evidence file. Do not include credentials, full record values, raw request bodies or sensitive field names.
 
 - [ ] **Step 4: Verify the real database suite**
 
@@ -710,8 +709,8 @@ git commit -m "test(stage07): cover saved view safety and responsive states"
 - Modify: `project-docs/08-implementation/STAGE_07_BDD_AND_ACCEPTANCE.md`
 - Modify: `project-docs/08-implementation/STAGE_07_TEST_PLAN.md`
 - Modify: `project-docs/08-implementation/STAGE_07_ACCEPTANCE_CHECKLIST.md`
-- Modify: `project-docs/08-implementation/STAGE_07_TRACEABILITY_MATRIX.md`
-- Modify: `project-docs/08-implementation/HANDOFF.md`
+- Modify: `project-docs/08-implementation/STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md`
+- Modify: `HANDOFF.md`
 - Modify: `project-docs/08-implementation/STAGE_07_V1_VIEW_BUILDER_BDD_AND_ACCEPTANCE.md`
 - Modify: `project-docs/08-implementation/STAGE_07_V1_VIEW_BUILDER_SDD.md`
 - Modify: `project-docs/08-implementation/modules/STAGE_07_V1_VIEW_BUILDER_WORK_SURFACE.md`

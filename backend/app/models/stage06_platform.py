@@ -210,6 +210,31 @@ class PlatformView(UuidPrimaryKeyMixin, TimestampMixin, Base):
     permission_policy: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="active")
+    owner_user_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    scope: Mapped[str] = mapped_column(
+        String(40), nullable=False, default="system_default"
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+
+class ViewMemberGrant(UuidPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "view_member_grants"
+    __table_args__ = (
+        UniqueConstraint(
+            "view_id",
+            "user_id",
+            name="uq_view_member_grants_view_user",
+        ),
+    )
+
+    view_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("views.id"),
+        nullable=False,
+    )
+    user_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    access_level: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="active")
 
 
 class PlatformForm(UuidPrimaryKeyMixin, TimestampMixin, Base):

@@ -128,7 +128,7 @@ The full F2 endpoint/state/permission matrix is defined in STAGE_07_F2_RELATION_
 
 ## 5.5 Proposed V1 Saved View Builder Contract
 
-V1's design is user-approved, while its detailed implementation plan awaits separate approval. The legacy `POST /bases/{base_id}/views` response contains raw `config` and `permission_policy`; it is not a Mini App contract and must not be reused by the browser.
+V1's design and detailed implementation plan are user-approved. The local V1-1 persistence foundation does not yet create a browser contract. The legacy `POST /bases/{base_id}/views` response contains raw `config` and `permission_policy`; it is not a Mini App contract and must not be reused by the browser.
 
 V1 proposes typed server commands:
 

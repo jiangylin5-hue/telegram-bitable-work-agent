@@ -2,9 +2,9 @@
 
 ## Status
 
-- Document status: user-approved technical design; implementation plan awaiting user approval
+- Document status: user-approved technical design; approved implementation in progress
 - Scope: durable V1 view ownership/ACL/configuration, safe server commands/read models and Mini App module boundary
-- Current Progress: user-approved design and detailed TDD plan only; implementation remains blocked until the plan receives separate approval.
+- Current Progress: V1-1 local persistence foundation is implemented; subsequent typed schema, service authorization, query, route and Mini App tasks remain pending. Optional access/list indexes remain deferred until the Task 7 PostgreSQL `EXPLAIN` evidence gate.
 
 ## 1. Architecture
 
