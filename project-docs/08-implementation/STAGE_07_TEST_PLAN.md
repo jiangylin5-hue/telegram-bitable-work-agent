@@ -53,6 +53,13 @@
 - 2026-07-11: fresh Mini App regression after the duplicate-feedback refinement: `13 passed` test files and `55 passed` tests; `npm.cmd run build` passed.
 - 2026-07-10: `alembic heads` reports only `20260710_0021 (head)`; `alembic upgrade head --sql` exited successfully.
 
+### F2 Automated Current Evidence
+
+- 2026-07-11: targeted backend F2/unit/API regression previously reported `53 passed`; the dedicated PostgreSQL relation/lookup suite is executable but remains `2 skipped` when the authorised disposable `STAGE06_LOCAL_DATABASE_URL` is absent. A skip is not PostgreSQL acceptance evidence.
+- 2026-07-11: the protected candidate transport/Pickers, create/direct-edit relation values, safe Detail/Canvas rendering and F2 Builder now have Mini App component/application coverage. The final fresh command `npm.cmd test -- --run` passed `17` files / `87` tests, and `npm.cmd run build` passed.
+- Builder coverage includes relation/lookup safe payload shapes, fixed aggregation choices, retry-only idempotency, 409 lock, protected schema prefetch, receipt reread, 403 failure, and delayed prefetch races on close/workspace/table/view replacement. Detail coverage includes ID-only PATCH mapping, lookup read-only behavior and exact candidate-cache cleanup.
+- Still required before an F2 acceptance report: a dedicated relation/lookup flow fixture, full backend regression after final integration, an authorised disposable PostgreSQL pass, and disposable Browser QA at 1440px, 1280px, 430px and 390px with console scan and cleanup.
+
 ### F1 PostgreSQL Current Evidence
 
 - 2026-07-11: after `scripts/stage06_local_postgres_migration_smoke.py` reset and migrated the authorised disposable local database to `20260710_0021`, `python -m pytest -q tests/integration/test_stage07_field_builder_postgres.py` passed all three F1 cases. The combined P3/F1 real-PostgreSQL command passed `6` cases with `2` unrelated cases deselected; it proves the documented local rollback, replay, row-lock ordering, view-append and default-view invariants. It is not staging or production evidence.

@@ -63,7 +63,7 @@ Stage07 is the responsive React/Vite Mini App and desktop browser surface over t
 
 ### Deliberately not implemented / not accepted
 
-- F2 relation/lookup is not accepted: user-approved design/plan and detailed BDD/SDD/module/index documents now exist. Local branch commits cover safe transport, atomic relation initialization and bounded lookup initialization; candidate selection, record write rechecks, lookup evaluation, PostgreSQL, frontend and browser evidence remain incomplete.
+- F2 relation/lookup is not accepted: user-approved design/plan and detailed BDD/SDD/module/index documents now exist. Local branch commits cover safe transport, initializers, candidate selection, relation write rechecks, lookup evaluation/guards, protected Picker/create/direct-edit, safe Detail/Canvas rendering and the separate Builder. PostgreSQL execution, end-to-end fixture coverage, four-width Browser QA and final acceptance remain incomplete.
 - V1 additional View Builder.
 - Server-recognized filter/sort/group UI behavior.
 - Template/import UI.
@@ -134,16 +134,16 @@ npm.cmd run build
 
 When a UI path changes, use the in-app Browser, inspect the actual rendered state at the required desktop/mobile widths, inspect console warnings/errors, then remove any disposable fixture/server. Do not cite a component test as browser evidence.
 
-## 6. Immediate Next Step: F2 Documentation Review, Then Resume Approved Plan
+## 6. Immediate Next Step: F2 Integration and Evidence Matrix
 
-P3 and F1 are closed bounded substages. F2 relation/lookup has user-approved design/plan and implementation authorization, but the user required prior-stage-quality BDD, SDD, module and complex-feature-index documentation before further runtime work. That document package is now present and F2 lookup work is paused pending review; do not treat narrow local commits as F2 acceptance.
+P3 and F1 are closed bounded substages. F2 relation/lookup has user-approved design/plan and implementation authorization; the required prior-stage-quality BDD, SDD, module and complex-feature-index package is present. Bounded backend and current frontend work is implemented locally, but do not treat local commits or Mini App component tests as F2 acceptance.
 
 - **F2 relation/lookup:** design/plan are recorded in the two docs/superpowers files above; BDD/SDD/work-surface/index are in project-docs/08-implementation. The bounded plan uses same-Base relation, two-level fixed aggregation lookup, fail-closed permission degradation and no new dependency/migration/role capability; it does not create a public delete route.
 - **V1 additional views:** Grid/Kanban/Calendar/Form creation/configuration, grouping/date/form-field choices, saved filter/sort semantics, default-view switching, field visibility, permission model, browser/mobile interaction and audit remain a separate later discussion.
 
 The F2 decisions alter API/data/permission/interaction contracts. Implementation authorization exists only for the reviewed bounded F2 contract; raw config/policy shapes remain unsafe client contracts. Do not add anything outside the documented F2 boundary.
 
-After the user accepts the reconciled F2 documentation package, resume its detailed plan test-first and perform real UI QA. V1 requires its own design and plan after F2. Import/template should be a separate later decision unless the user explicitly combines it.
+Resume the approved F2 plan with its integration/fixture/browser matrix: add the documented flow test, execute the authorised disposable PostgreSQL suite when available, run four-width real Browser QA with console scan and cleanup, then reconcile the F2 acceptance/traceability records. V1 requires its own design and plan after F2. Import/template should be a separate later decision unless the user explicitly combines it.
 
 ## 7. Non-Negotiable Safety And Product Boundaries
 

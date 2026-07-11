@@ -2,7 +2,7 @@
 
 ## Status
 
-- Document status: detailed F2 design source; implementation is paused pending documentation reconciliation review
+- Document status: active detailed F2 design and implementation source; runtime evidence is reconciled in the Stage07 Progress and Test Plan
 - Scope: service, API, data flow, permission, graph, projection, frontend boundary and verification design for F2 only
 - Authority: this document refines but never overrides `AGENTS.md`, Stage07 source, approved F2 design specification and the API/security contract.
 
