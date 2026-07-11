@@ -42,3 +42,20 @@ test('explains when the server marks a form as unavailable for this first slice'
   expect(screen.getByRole('alert')).toBeInTheDocument()
   expect(document.querySelector('form')).toBeNull()
 })
+
+test('submits relation picker selections as opaque IDs only', async () => {
+  const onCreate = vi.fn().mockResolvedValue(undefined)
+  const loadRelationCandidates = vi.fn().mockResolvedValue({
+    field_id: 'field-relation',
+    records: [{ id: 'record-acme', label: 'Acme' }],
+    next_cursor: null,
+    has_more: false,
+  })
+  render(<CreateRecordPanel form={{ table_id: 'table-1', can_create: true, fields: [{ id: 'field-relation', key: 'customer', name: 'Customer', field_type: 'linked_record', required: true, options: {}, order_index: 0 }] }} onCreate={onCreate} onClose={() => undefined} loadRelationCandidates={loadRelationCandidates} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Acme' }))
+  fireEvent.submit(document.querySelector('form')!)
+
+  await waitFor(() => expect(onCreate).toHaveBeenCalledWith({ customer: ['record-acme'] }))
+  expect(screen.queryByText('target_table_id')).not.toBeInTheDocument()
+})
