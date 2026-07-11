@@ -27,3 +27,6 @@ addopts = ["-p", "no:cacheprovider", "-p", "no:deepeval", "-ra"]
 filterwarnings = [
     "ignore:Using `httpx` with `starlette.testclient` is deprecated",
 ]
+markers = [
+    "postgres: requires the authorised disposable local PostgreSQL target",
+]

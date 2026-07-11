@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+import os
 from threading import Barrier
 from uuid import UUID, uuid4
 
@@ -25,6 +26,15 @@ from app.services.stage06_platform import (
     replace_v1_view_members,
 )
 from tests.integration.test_stage07_field_builder_postgres import Stage07Postgres, stage07_postgres
+
+
+pytestmark = [
+    pytest.mark.postgres,
+    pytest.mark.skipif(
+        not os.getenv("STAGE06_LOCAL_DATABASE_URL"),
+        reason="STAGE06_LOCAL_DATABASE_URL is required for disposable V1 PostgreSQL tests",
+    ),
+]
 
 
 def test_v1_migration_adds_durable_view_columns_and_unique_grants(

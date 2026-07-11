@@ -4,7 +4,7 @@
 
 - Document status: user-approved technical design; approved implementation in progress
 - Scope: durable V1 view ownership/ACL/configuration, safe server commands/read models and Mini App module boundary
-- Current Progress: V1-1 through V1-6 local persistence, strict typed-schema, canonicalization/safe-projection, ACL/versioned mutation, Grid filter/group/sort-before-pagination and five safe HTTP routes are implemented; Mini App tasks remain pending. Optional access/list indexes remain deferred until the Task 7 PostgreSQL `EXPLAIN` evidence gate.
+- Current Progress: V1-1 through V1-7 local persistence, strict typed-schema, canonicalization/safe-projection, ACL/versioned mutation, Grid filter/group/sort-before-pagination, five safe HTTP routes and PostgreSQL default/rollback/hidden-field/index-plan evidence are implemented; Mini App tasks remain pending. Optional access/list indexes remain deferred by the completed Task 7 `EXPLAIN` evidence.
 
 ## 1. Architecture
 
@@ -65,6 +65,8 @@ Existing `permission_policy` is legacy/server-internal. V1 does not expose, acce
 | existing `uq_views_one_default_per_table` | retain one default Grid invariant | migration regression, no duplicate default |
 
 The detailed logical/physical index inventory is maintained separately in `STAGE_07_V1_VIEW_BUILDER_COMPLEX_FEATURE_INDEX.md`. No index enters a migration merely because it is listed here.
+
+Task 7 measured the access-list query at PostgreSQL `18.4` with 128 V1 views and 32 grants. The plan used existing `ix_stage06_views_table_id` and `uq_view_member_grants_view_user`; neither optional non-unique candidate was justified, so both remain explicitly deferred. See `evidence/stage07-v1-view-builder-postgres.md`.
 
 ## 4. Authorization Algorithm
 

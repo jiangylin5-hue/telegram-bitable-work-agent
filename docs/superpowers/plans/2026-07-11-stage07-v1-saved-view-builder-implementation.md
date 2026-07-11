@@ -4,7 +4,7 @@
 
 - Plan status: user-approved detailed TDD plan; execution in progress.
 - Scope gate: the user approved the V1 design package and this implementation plan.
-- Current Progress: Tasks 1--6 are complete locally: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations, service-owned Grid filter/group/stable-sort execution before cursor pagination, and the five approved safe HTTP endpoints have focused/API and real PostgreSQL query evidence. Broader PostgreSQL/security/index proof, Mini App and four-width Browser tasks remain pending.
+- Current Progress: Tasks 1--7 are complete locally: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations, service-owned Grid filter/group/stable-sort execution before cursor pagination, five approved safe HTTP endpoints, and real PostgreSQL default/rollback/hidden-field/index-plan evidence. The optional non-unique indexes are explicitly deferred by measured evidence. Mini App and four-width Browser tasks remain pending.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -407,7 +407,7 @@ git commit -m "feat(stage07): expose safe saved view builder routes"
 - Consumes: disposable local PostgreSQL fixture, migration chain and authorised API/service surface.
 - Produces: evidence for migration head, partial/default index preservation, grant uniqueness, concurrent conflict behavior, non-disclosure and a measured decision to add or defer optional non-unique indexes.
 
-- [ ] **Step 1: Write failing integration scenarios**
+- [x] **Step 1: Write integration security and invariant scenarios**
 
 ```python
 def test_migration_keeps_one_system_default_grid_and_private_v1_rows_are_not_defaults(pg_session) -> None:
@@ -417,23 +417,23 @@ def test_denied_user_cannot_learn_hidden_field_from_builder_filter_sort_group_or
     ...
 ```
 
-- [ ] **Step 2: Verify red test at the target migration**
+- [x] **Step 2: Verify against the target migration**
 
 Run: `python -m pytest -q tests/integration/test_stage07_view_builder_security_postgres.py -m postgres`
 
-Expected: FAIL before Task 1--6 behavior exists.
+Actual: the scenarios were added after Tasks 1--6 had already been committed, so a historical RED rerun is not meaningful; they ran against the real migration head and passed only after the fixture's explicit `autoflush=False` visibility was handled with a test-local flush.
 
-- [ ] **Step 3: Close gaps exposed only by real PostgreSQL**
+- [x] **Step 3: Close gaps exposed only by real PostgreSQL**
 
 Do not alter product scope. If the fixture exposes a migration/default/transaction mismatch, fix the smallest model, migration, UoW or query implementation defect and add a regression test. Run and record the SDD-required `EXPLAIN (ANALYZE, BUFFERS)` evaluation before creating either optional access/list index. Add a follow-up migration only when the measured query shape justifies it; otherwise document both as explicitly deferred. Record database version, migration head, executed commands, sanitized test identifiers and pass/fail result in the evidence file. Do not include credentials, full record values, raw request bodies or sensitive field names.
 
-- [ ] **Step 4: Verify the real database suite**
+- [x] **Step 4: Verify the real database suite**
 
 Run: `python -m pytest -q tests/integration/test_stage07_view_builder_postgres.py tests/integration/test_stage07_view_builder_security_postgres.py -m postgres`
 
 Expected: PASS against a disposable real PostgreSQL database at Alembic head `20260711_0022`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/tests/integration/test_stage07_view_builder_postgres.py backend/tests/integration/test_stage07_view_builder_security_postgres.py project-docs/08-implementation/evidence/stage07-v1-view-builder-postgres.md

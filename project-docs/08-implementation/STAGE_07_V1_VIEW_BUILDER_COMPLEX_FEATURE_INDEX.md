@@ -4,7 +4,7 @@
 
 - Document status: user-approved complexity/index inventory; approved implementation in progress
 - Scope: V1 configuration/ACL/query state, logical indexes, proposed physical PostgreSQL indexes and evidence ownership
-- Current Progress: V1-1 through V1-6 create the correctness-critical grant uniqueness constraint, strict typed command/read boundary, canonical safe query-shape projection, service-owned Grid filter/group/stable-sort ordering before cursor pagination and five safe HTTP route boundaries. The latest disposable PostgreSQL proof covers a canonical numeric filter/group/sort cursor boundary; it is not a query-plan or index proof. The listed optional non-unique physical indexes are not migrations and remain forbidden until Task 7 records the required measured PostgreSQL evidence.
+- Current Progress: V1-1 through V1-7 create the correctness-critical grant uniqueness constraint, strict typed command/read boundary, canonical safe query-shape projection, service-owned Grid filter/group/stable-sort ordering before cursor pagination, five safe HTTP route boundaries and real PostgreSQL security/index-plan evidence. Task 7 measured the access query using existing `ix_stage06_views_table_id` and `uq_view_member_grants_view_user`; `ix_view_member_grants_user_status` and `ix_views_table_scope_status` remain explicitly deferred, not merely unimplemented.
 
 ## 1. Purpose
 
@@ -46,9 +46,9 @@ Every stored field reference is validated on mutation. Read paths re-evaluate cu
 
 | Candidate index | Query it serves | Required proof before migration | Current state |
 | --- | --- | --- | --- |
-| `uq_view_member_grants_view_user` | replace/read grants safely | concurrent duplicate-grant test and migration rollback proof | proposed only |
-| `ix_view_member_grants_user_status` | list restricted views accessible to recipient | `EXPLAIN (ANALYZE, BUFFERS)` with realistic recipient grant cardinality | proposed only |
-| `ix_views_table_scope_status` | list system/private/restricted active views for table | explain evidence against table with mixed scopes | proposed only |
+| `uq_view_member_grants_view_user` | replace/read grants safely | concurrent duplicate-grant test and migration rollback proof | implemented; real PostgreSQL proves physical uniqueness |
+| `ix_view_member_grants_user_status` | list restricted views accessible to recipient | `EXPLAIN (ANALYZE, BUFFERS)` with realistic recipient grant cardinality | explicitly deferred after Task 7; existing unique grant index serviced measured access query |
+| `ix_views_table_scope_status` | list system/private/restricted active views for table | explain evidence against table with mixed scopes | explicitly deferred after Task 7; existing table index serviced measured access query |
 | optional JSONB configuration index | no baseline query is approved | only if a measured server-side canonical config lookup requires it | explicitly not proposed |
 | record filter/sort field index | table data query | one migration decision per field/query pattern after workload measurement | explicitly deferred |
 

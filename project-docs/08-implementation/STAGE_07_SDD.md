@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 design detail
 - Scope: UI architecture, module boundaries and interaction flows
-- Current Progress: AppShell, WorkspaceHome, BaseCanvas, field-filtered read models, RecordDetail, P3 Base/Table Builder, F1 independent Field Builder and F2 relation/lookup Builder are bounded `implemented-local`; exact evidence is tracked in the requirement audit. V1 Saved View Builder is approved and in implementation: V1-1 through V1-6 persistence, strict schema, canonical projection, ACL/versioned mutation, server-side Grid filter/group/sort-before-pagination and five safe HTTP routes exist locally; Mini App behavior remains pending. This SDD remains the design boundary for later packages and does not approve raw view config/policy in the browser.
+- Current Progress: AppShell, WorkspaceHome, BaseCanvas, field-filtered read models, RecordDetail, P3 Base/Table Builder, F1 independent Field Builder and F2 relation/lookup Builder are bounded `implemented-local`; exact evidence is tracked in the requirement audit. V1 Saved View Builder is approved and in implementation: V1-1 through V1-7 persistence, strict schema, canonical projection, ACL/versioned mutation, server-side Grid filter/group/sort-before-pagination, five safe HTTP routes and local PostgreSQL security/index-plan evidence exist; Mini App behavior remains pending. This SDD remains the design boundary for later packages and does not approve raw view config/policy in the browser.
 
 ## 1. Architecture Overview
 
