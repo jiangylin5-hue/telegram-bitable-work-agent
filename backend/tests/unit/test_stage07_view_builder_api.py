@@ -68,6 +68,7 @@ def test_v1_routes_return_only_safe_projection_and_enforce_member_roles() -> Non
         context_fields = {
             field["key"]: field for field in context_response.json()["fields"]
         }
+        assert context_fields["state"]["field_id"]
         assert context_fields["state"]["filter_values"] == ["active", "closed"]
         assert context_fields["name"]["filter_values"] == []
         assert {"options", "permission_policy"}.isdisjoint(context_fields["state"])

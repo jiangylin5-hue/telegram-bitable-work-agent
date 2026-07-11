@@ -81,7 +81,7 @@ test('keeps only the allowlisted discrete filter values from Builder fields', as
       filters: [], sort_rules: [], group_by_field_key: null, date_field_key: null, form_field_keys: [],
     },
     fields: [{
-      key: 'state', label: 'State', field_type: 'status', filter_operators: ['is'],
+      field_id: 'field-state', key: 'state', label: 'State', field_type: 'status', filter_operators: ['is'],
       filter_values: ['active', 'closed'], sortable: true, groupable: true, form_eligible: true,
       options: { choices: ['active', 'closed'], internal: 'must-not-reach-browser' },
     }],
@@ -92,7 +92,7 @@ test('keeps only the allowlisted discrete filter values from Builder fields', as
   const builder = await api.viewBuilder('view-1')
 
   expect(builder.fields).toEqual([{
-    key: 'state', label: 'State', field_type: 'status', filter_operators: ['is'],
+    field_id: 'field-state', key: 'state', label: 'State', field_type: 'status', filter_operators: ['is'],
     filter_values: ['active', 'closed'], sortable: true, groupable: true, form_eligible: true,
   }])
   expect(builder.fields[0]).not.toHaveProperty('options')

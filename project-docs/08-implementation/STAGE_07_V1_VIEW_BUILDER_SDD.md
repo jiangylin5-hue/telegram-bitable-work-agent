@@ -28,7 +28,7 @@ The V1 service sits beside existing `stage06_platform` primitives. It reuses the
 | `view_builder_service` | validate typed config, compute effective view ACL, create/edit/replace grants, emit safe projections | evaluate client expressions or mutate Base/Table/Field permission |
 | `view_config` validator | normalize typed field IDs/keys/operators/order into canonical config | accept arbitrary JSON/document keys |
 | `view_query` adapter | apply validated filters/sorts before existing pagination; produce view-specific grouping metadata | run raw SQL or reorder browser windows |
-| `safe_view_projection` | produce summary/presentation/builder context from current caller authority, including only select-field `filter_values` needed by the typed chooser | leak owner/policy/raw field options or raw member state |
+| `safe_view_projection` | produce summary/presentation/builder context from current caller authority, including safe `field_id` for F2 candidate selection and only select-field `filter_values` needed by the typed chooser | leak owner/policy/raw field options or raw member state |
 | Mini App `ViewBuilderPanel` | collect only typed safe inputs and render server results | derive accessible fields/members or persist cache outside TD001 |
 | Mini App `ViewAccessPanel` | owner-only member grant UI | infer roles or expose inactive member data |
 
@@ -165,7 +165,7 @@ authorized table fields
 
 Relation `contains_record` validates selected target identity through the existing linked-field service. Numeric lookup relies on existing safe computed value semantics; nonnumeric lookup is never made sortable/filterable by V1. Grouping is applied before configured sorts and cursor pagination, only for status/single-select/user fields. A V1 grouped page returns `groups: [{ value, record_ids }]`; `value` is a current readable group value (or `null` for empty), and `record_ids` names only records present in that page. It is safe renderer metadata, never raw configuration or hidden-field data.
 
-`SafeViewField.filter_values` is an allowlisted UI affordance, not a raw field-options projection. It is `[]` for every field type except readable active `status`, `single_select` and `multi_select`, where it is the validated string choices already accepted by the canonical V1 filter validator. It never includes field policy, option metadata, colors, defaults, relation targets, lookup internals or hidden-field choices. User filters use the separate active safe member-candidate projection; relation filters retain the existing F2 candidate picker.
+`SafeViewField.field_id` is the same safe field-resource identifier already used by the F2 candidate route; it is required only to bind a visible relation filter to that existing scoped picker. `SafeViewField.filter_values` is an allowlisted UI affordance, not a raw field-options projection. It is `[]` for every field type except readable active `status`, `single_select` and `multi_select`, where it is the validated string choices already accepted by the canonical V1 filter validator. It never includes field policy, option metadata, colors, defaults, relation targets, lookup internals or hidden-field choices. User filters use the separate active safe member-candidate projection; relation filters retain the existing F2 candidate picker.
 
 ## 7. Client Integration
 

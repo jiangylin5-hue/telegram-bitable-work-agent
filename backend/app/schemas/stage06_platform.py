@@ -451,6 +451,7 @@ class SafeViewMemberCandidateResponse(StrictViewBuilderModel):
 
 
 class SafeViewFieldResponse(StrictViewBuilderModel):
+    field_id: str
     key: str
     label: str
     field_type: str

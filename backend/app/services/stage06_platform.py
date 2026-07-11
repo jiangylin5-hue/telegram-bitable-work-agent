@@ -1974,6 +1974,7 @@ def _v1_safe_field_context(
         raise PlatformValidationError("view_not_found", "view_table")
     return [
         {
+            "field_id": str(field.id),
             "key": field.key,
             "label": field.name,
             "field_type": field.field_type,

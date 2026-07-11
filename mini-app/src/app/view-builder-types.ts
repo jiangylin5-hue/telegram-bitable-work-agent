@@ -84,6 +84,7 @@ export type SafeViewSummary = {
 }
 
 export type SafeViewField = {
+  field_id: string
   key: string
   label: string
   field_type: string

@@ -40,6 +40,7 @@ Every stored field reference is validated on mutation. Read paths re-evaluate cu
 | `(view_id, version)` | presentation/member optimistic concurrency | `expected_version` must match locked server row |
 | `(view_id, field_key)` | canonical configuration validation | every configured key belongs to view table and is readable at read time |
 | `(field_id, readable actor, select-like type)` | Builder discrete filter choices | only validated readable `status`/`single_select`/`multi_select` choices project as `filter_values`; no raw options cross the boundary |
+| `(field_id, visible relation field, caller scope)` | F2 relation filter candidate selection | Builder carries only the safe existing field resource ID; the F2 route still enforces relationship and record visibility |
 | `(view_id, cursor, verified user/workspace)` | protected records cache | no cursor page crosses identity/scope |
 | `(relation_field_id, candidate query, cursor)` | F2 filter value picker | only F2 safe candidate projection supplies relation filter values |
 

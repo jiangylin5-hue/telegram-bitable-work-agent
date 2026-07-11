@@ -56,7 +56,7 @@ The visual grammar remains Workspace Ledger: white canvas, cool gray separators,
 
 ### 4.1 Visibility/order
 
-- Source is only `view-builder-context.safe_fields`.
+- Source is only `view-builder-context.safe_fields`, including the safe `field_id` needed to call the existing F2 candidate picker for a visible relation field.
 - Hidden/missing fields never enter the field list; the draft cannot retain a field key after a context/permission reread omits it.
 - Accessible keyboard commands move fields up/down; drag interaction may be added only as an enhancement, not as sole control.
 - Form field order uses the same safe source and does not grant edit permission.
