@@ -4,7 +4,7 @@
 
 - Document status: user-approved complexity/index inventory; approved implementation in progress
 - Scope: V1 configuration/ACL/query state, logical indexes, proposed physical PostgreSQL indexes and evidence ownership
-- Current Progress: V1-1 through V1-8 create the correctness-critical grant uniqueness constraint, strict typed command/read boundary, canonical safe query-shape projection, service-owned Grid filter/group/stable-sort ordering before cursor pagination, five safe HTTP route boundaries, real PostgreSQL security/index-plan evidence and typed browser transport that strips unknown response data before protected query state. Task 7 measured the access query using existing `ix_stage06_views_table_id` and `uq_view_member_grants_view_user`; `ix_view_member_grants_user_status` and `ix_views_table_scope_status` remain explicitly deferred, not merely unimplemented.
+- Current Progress: V1-1 through V1-10 create the correctness-critical grant uniqueness constraint, strict typed command/read boundary, canonical safe query-shape projection, service-owned Grid filter/group/stable-sort ordering before cursor pagination, five safe HTTP route boundaries, real PostgreSQL security/index-plan/list-read evidence, typed browser transport that strips unknown response data before protected query state, and explicit Canvas list/Builder/record reread keys. Task 7 measured the access query using existing `ix_stage06_views_table_id` and `uq_view_member_grants_view_user`; `ix_view_member_grants_user_status` and `ix_views_table_scope_status` remain explicitly deferred, not merely unimplemented.
 
 ## 1. Purpose
 
@@ -39,6 +39,7 @@ Every stored field reference is validated on mutation. Read paths re-evaluate cu
 | `(workspace_id, table_id, actor_id, builder capability)` | Builder context | no context crosses active member/table authority |
 | `(view_id, version)` | presentation/member optimistic concurrency | `expected_version` must match locked server row |
 | `(view_id, field_key)` | canonical configuration validation | every configured key belongs to view table and is readable at read time |
+| `(base_id, view_id, actor_id, resolved V1 read access)` | Canvas saved-view list | private/restricted V1 summaries are omitted unless the existing resolver permits the caller; no denied placeholder leaks the resource |
 | `(field_id, readable actor, select-like type)` | Builder discrete filter choices | only validated readable `status`/`single_select`/`multi_select` choices project as `filter_values`; no raw options cross the boundary |
 | `(field_id, visible relation field, caller scope)` | F2 relation filter candidate selection | Builder carries only the safe existing field resource ID; the F2 route still enforces relationship and record visibility |
 | `(view_id, cursor, verified user/workspace)` | protected records cache | no cursor page crosses identity/scope |

@@ -104,3 +104,11 @@ test.each(['grid', 'kanban', 'calendar', 'form'])('renders safe relation chips w
   expect(rendered.container).not.toHaveTextContent('record-acme')
   expect(rendered.container.querySelector('.relation-chip')).toBeInTheDocument()
 })
+
+test.each(['grid', 'kanban', 'calendar', 'form'])('renders the server-selected %s surface without browser query execution', (viewType) => {
+  const view = { id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: 'Server view', view_type: viewType, status: 'active' }
+  render(<BaseCanvas base={base} tables={[table]} views={[view]} table={table} view={view} schema={schema} records={records} presentation={{ view_id: 'view-1', table_id: 'table-1', view_type: viewType, visible_field_keys: ['name', 'status', 'due'], group_by_field_key: viewType === 'kanban' ? 'status' : null, date_field_key: viewType === 'calendar' ? 'due' : null, form_field_keys: ['name', 'status', 'due'] }} serverQuerySummary="服务端已应用 1 条筛选、1 条排序" onBack={() => undefined} onOpenRecord={() => undefined} onSelectView={() => undefined} />)
+
+  expect(screen.getByTestId(`view-${viewType}`)).toBeVisible()
+  expect(screen.getByLabelText('服务器查询摘要')).toHaveTextContent('服务端已应用 1 条筛选、1 条排序')
+})

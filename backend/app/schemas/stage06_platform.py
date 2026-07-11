@@ -292,8 +292,14 @@ class ViewSummaryResponse(BaseModel):
     status: str
 
 
+class ViewListSummaryResponse(ViewSummaryResponse):
+    scope: Literal["system_default", "private", "restricted"] | None = None
+    caller_access_level: Literal["owner", "editor", "viewer", "system_default"] | None = None
+    is_default: bool | None = None
+
+
 class ViewListResponse(BaseModel):
-    views: list[ViewSummaryResponse]
+    views: list[ViewListSummaryResponse]
 
 
 class BuilderInitializationResponse(BaseModel):

@@ -195,3 +195,93 @@ def test_unapproved_table_view_route_does_not_create_a_v1_view() -> None:
 
     assert response.status_code == 404
     assert uow.list_views(UUID(table_id)) == []
+
+
+def test_base_view_list_omits_private_v1_summary_from_ungranted_member() -> None:
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "owner-1"
+        workspace_id = client.post(
+            "/workspaces",
+            json={"name": "Acme", "owner_user_id": "owner-1"},
+        ).json()["id"]
+        base_id = client.post(
+            f"/workspaces/{workspace_id}/bases",
+            json={"name": "CRM"},
+        ).json()["id"]
+        table_id = client.post(
+            f"/bases/{base_id}/tables",
+            json={"name": "Customers", "key": "customers"},
+        ).json()["id"]
+        client.post(
+            f"/tables/{table_id}/fields",
+            json={"name": "Name", "key": "name", "field_type": "text"},
+        )
+        uow.add_workspace_member(
+            WorkspaceMember(
+                id=uuid4(),
+                workspace_id=UUID(workspace_id),
+                user_id="viewer-1",
+                role="viewer",
+                status="active",
+            )
+        )
+        created = client.post(
+            f"/tables/{table_id}/view-initializations",
+            json={
+                "name": "Owner private",
+                "view_type": "grid",
+                "presentation": {
+                    "view_type": "grid",
+                    "visible_field_keys": ["name"],
+                    "filters": [],
+                    "sort_rules": [],
+                    "group_by_field_key": None,
+                },
+            },
+            headers={"Idempotency-Key": "private-list"},
+        )
+        assert created.status_code == 201
+        owner_views = client.get(f"/bases/{base_id}/views")
+        client.headers["X-Stage06-User-Id"] = "viewer-1"
+        viewer_views = client.get(f"/bases/{base_id}/views")
+        viewer_presentation = client.get(
+            f"/views/{created.json()['view']['id']}/presentation"
+        )
+        client.headers["X-Stage06-User-Id"] = "owner-1"
+        granted = client.put(
+            f"/views/{created.json()['view']['id']}/members",
+            json={
+                "expected_version": 1,
+                "members": [{"user_id": "viewer-1", "access_level": "viewer"}],
+            },
+        )
+        client.headers["X-Stage06-User-Id"] = "viewer-1"
+        granted_views = client.get(f"/bases/{base_id}/views")
+
+    assert owner_views.status_code == 200
+    assert [view["name"] for view in owner_views.json()["views"]] == ["Owner private"]
+    assert owner_views.json()["views"][0] == {
+        "id": created.json()["view"]["id"],
+        "base_id": base_id,
+        "table_id": table_id,
+        "name": "Owner private",
+        "view_type": "grid",
+        "status": "active",
+        "scope": "private",
+        "caller_access_level": "owner",
+        "is_default": False,
+    }
+    assert viewer_views.status_code == 200
+    assert viewer_views.json()["views"] == []
+    assert viewer_presentation.status_code == 403
+    assert viewer_presentation.json()["detail"]["code"] == "view_access_denied"
+    assert granted.status_code == 200
+    assert [view["name"] for view in granted_views.json()["views"]] == ["Owner private"]
+    assert granted_views.json()["views"][0]["caller_access_level"] == "viewer"
+    assert {"owner_user_id", "permission_policy", "config"}.isdisjoint(
+        granted_views.json()["views"][0]
+    )

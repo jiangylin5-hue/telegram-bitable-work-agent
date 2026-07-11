@@ -4,7 +4,7 @@
 
 - Document status: user-approved technical design; approved implementation in progress
 - Scope: durable V1 view ownership/ACL/configuration, safe server commands/read models and Mini App module boundary
-- Current Progress: V1-1 through V1-9 local persistence, strict typed-schema, canonicalization/safe-projection, ACL/versioned mutation, Grid filter/group/sort-before-pagination, five safe HTTP routes, PostgreSQL default/rollback/hidden-field/index-plan evidence, typed Mini App transport/protected keys/error mapping and callback-driven Builder/Access/Query panels are implemented. V1-9 adds safe select `filter_values` and existing F2 `field_id` reuse to the safe field projection; it does not connect panels to `App`/`BaseCanvas`, supply an authoritative reread lifecycle, or constitute browser acceptance. Optional access/list indexes remain deferred by the completed Task 7 `EXPLAIN` evidence.
+- Current Progress: V1-1 through V1-10 local persistence, strict typed-schema, canonicalization/safe-projection, ACL/versioned mutation, Grid filter/group/sort-before-pagination, five safe HTTP routes, PostgreSQL default/rollback/hidden-field/index-plan/safe-list evidence, typed Mini App transport/protected keys/error mapping, callback-driven Builder/Access/Query panels and App/BaseCanvas authoritative rereads are implemented. V1-10 filters V1 Base-list summaries and direct presentation reads through the existing resolver, emits only safe V1 list markers, and rereads list/Builder/records after create or versioned save; it does not constitute browser acceptance. Optional access/list indexes remain deferred by the completed Task 7 `EXPLAIN` evidence.
 
 ## 1. Architecture
 
@@ -126,6 +126,8 @@ type ViewMembersReplaceRequest = {
 | `GET /views/{view_id}/builder` | underlying table read plus resolved owner/editor/default manager access | safe editable projection; grants only for owner |
 | `PATCH /views/{view_id}/presentation` | underlying table read plus resolved edit access; exact body version | safe view plus incremented version |
 | `PUT /views/{view_id}/members` | underlying table read plus owner access; exact body version | safe view, safe grants and incremented version |
+
+The existing `GET /bases/{base_id}/views` reader is also V1-sensitive: it filters V1 rows through `resolve_v1_view_access` before rendering Canvas tabs and serializes only the existing V1 safe-summary `scope`, caller access level and default marker on those rows; legacy summaries remain shape-compatible. Its paired existing `GET /views/{view_id}/presentation` reader resolves that same V1 read access and builds the safe V1 projection before any Canvas render. Neither route calls the Builder endpoint for list/read authority, neither returns a “denied” placeholder, and both leave legacy non-V1 resource-policy semantics intact.
 
 These routes use only the V1 models. They do not widen legacy create/view routes, and V1 `view_*` failures serialize a fixed code instead of the service exception text.
 

@@ -7,6 +7,7 @@ import type {
   SafeViewSummary,
   ViewBuilderContext,
   ViewBuilderResponse,
+  ViewAccessLevel,
   ViewFilterValue,
   ViewInitializationReceipt,
   ViewInitializationRequest,
@@ -15,6 +16,7 @@ import type {
   ViewPresentationMutationReceipt,
   ViewPresentationPatchRequest,
   ViewType,
+  ViewScope,
 } from './view-builder-types'
 
 export type {
@@ -70,7 +72,7 @@ export type WorkspaceHome = {
 
 export type BaseSummary = { id: string; name: string; source_type: string; status?: string }
 export type PlatformTable = { id: string; base_id: string; name: string; key: string; status: string }
-export type ViewSummary = { id: string; base_id: string; table_id: string | null; name: string; view_type: string; status: string }
+export type ViewSummary = { id: string; base_id: string; table_id: string | null; name: string; view_type: string; status: string; scope?: ViewScope; caller_access_level?: ViewAccessLevel; is_default?: boolean }
 export type BuilderInitializationReceipt = { base: BaseSummary; table: PlatformTable; default_view: ViewSummary }
 export type SafeTableField = {
   id: string
@@ -258,6 +260,23 @@ function safeViewSummary(value: unknown): SafeViewSummary {
   }
 }
 
+function safeBaseViewSummary(value: unknown): ViewSummary {
+  const source = jsonRecord(value)
+  const summary: ViewSummary = {
+    id: stringValue(source.id),
+    base_id: stringValue(source.base_id),
+    table_id: source.table_id === null ? null : stringValue(source.table_id),
+    name: stringValue(source.name),
+    view_type: stringValue(source.view_type),
+    status: stringValue(source.status),
+  }
+  if (source.scope !== undefined || source.caller_access_level !== undefined || source.is_default !== undefined) {
+    const safe = safeViewSummary(source)
+    return { ...summary, scope: safe.scope, caller_access_level: safe.caller_access_level, is_default: safe.is_default }
+  }
+  return summary
+}
+
 function safeViewField(value: unknown): SafeViewField {
   const source = jsonRecord(value)
   return {
@@ -384,7 +403,11 @@ export const api = {
     aggregation: values.aggregation,
   }, idempotencyKey),
   baseTables: (baseId: string, init?: RequestInit) => getJson<{ tables: PlatformTable[] }>(`/bases/${baseId}/tables`, init),
-  baseViews: (baseId: string, init?: RequestInit) => getJson<{ views: ViewSummary[] }>(`/bases/${baseId}/views`, init),
+  baseViews: async (baseId: string, init?: RequestInit): Promise<{ views: ViewSummary[] }> => {
+    const response = jsonRecord(await getJson<unknown>(`/bases/${baseId}/views`, init))
+    if (!Array.isArray(response.views)) throw new Error('Invalid view response')
+    return { views: response.views.map(safeBaseViewSummary) }
+  },
   tableSchema: (tableId: string, init?: RequestInit) => getJson<TableSchema>(`/tables/${tableId}/schema`, init),
   viewPresentation: (viewId: string, init?: RequestInit) => getJson<ViewPresentation>(`/views/${viewId}/presentation`, init),
   viewRecords: (viewId: string, cursor?: string, init?: RequestInit) => getJson<ViewRecords>(`/views/${viewId}/records${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`, init),

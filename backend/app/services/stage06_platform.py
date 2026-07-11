@@ -1673,14 +1673,36 @@ def list_tables_for_base(
 def list_views_for_base(
     uow: Stage06PlatformUnitOfWork,
     base_id: UUID,
+    *,
+    actor: Actor | None = None,
 ) -> list[PlatformView]:
     tables = list_tables_for_base(uow, base_id)
     return [
         view
         for table in tables
         for view in uow.list_views(table.id)
-        if view.status == "active"
+        if view.status == "active" and _can_actor_list_view_summary(uow, view, actor)
     ]
+
+
+def _can_actor_list_view_summary(
+    uow: Stage06PlatformUnitOfWork,
+    view: PlatformView,
+    actor: Actor | None,
+) -> bool:
+    """Keep V1 private/restricted summaries out of the legacy Canvas list."""
+    if actor is None or not _is_v1_saved_view(view):
+        return True
+    try:
+        return resolve_v1_view_access(uow, view, actor=actor).can_read
+    except PlatformValidationError as exc:
+        if exc.code == "view_access_denied":
+            return False
+        raise
+
+
+def _is_v1_saved_view(view: PlatformView) -> bool:
+    return isinstance(view.config, dict) and view.config.get("schema") == "stage07_v1"
 
 
 def get_table_schema(
@@ -1712,6 +1734,9 @@ def get_view_presentation(
     actor: Actor,
 ) -> dict[str, Any]:
     view = _require_exists(uow.get_view(view_id), "view_not_found")
+    if _is_v1_saved_view(view):
+        resolve_v1_view_access(uow, view, actor=actor)
+        return build_v1_safe_view_projection(uow, view, actor=actor)
     if not _can_actor_read_resource(actor, view.permission_policy):
         _deny_permission(
             uow,
@@ -2706,7 +2731,7 @@ def list_view_records(
     cursor: str | None = None,
 ) -> dict[str, Any]:
     view = _require_exists(uow.get_view(view_id), "view_not_found")
-    is_v1_view = isinstance(view.config, dict) and view.config.get("schema") == "stage07_v1"
+    is_v1_view = _is_v1_saved_view(view)
     if is_v1_view:
         resolve_v1_view_access(uow, view, actor=actor)
     elif not _can_actor_read_resource(actor, view.permission_policy):

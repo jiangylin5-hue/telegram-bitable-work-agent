@@ -4,7 +4,7 @@
 
 - Plan status: user-approved detailed TDD plan; execution in progress.
 - Scope gate: the user approved the V1 design package and this implementation plan.
-- Current Progress: Tasks 1--9 are complete locally: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations, service-owned Grid filter/group/stable-sort execution before cursor pagination, five approved safe HTTP endpoints, real PostgreSQL default/rollback/hidden-field/index-plan/safe-field evidence, Mini App typed transport/protected keys/fixed error mapping, and direct-tested callback-driven Builder/Access/Query panels. The optional non-unique indexes are explicitly deferred by measured evidence. Task 10 App/BaseCanvas lifecycle wiring and four-width Browser tasks remain pending.
+- Current Progress: Tasks 1--10 are complete locally: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations, service-owned Grid filter/group/stable-sort execution before cursor pagination, five approved safe HTTP endpoints, real PostgreSQL default/rollback/hidden-field/index-plan/safe-field/list-ACL evidence, Mini App typed transport/protected keys/fixed error mapping, callback-driven Builder/Access/Query panels, and App/BaseCanvas authoritative rereads. Task 10 also closes the discovered Base-list/direct-presentation V1 ACL bypass without changing legacy-view behavior: V1 list rows emit only safe scope/access/default markers. The optional non-unique indexes remain explicitly deferred by measured evidence. Task 11 failure/responsive coverage and Task 12 Browser/final acceptance remain pending.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -582,16 +582,24 @@ git commit -m "feat(stage07): add saved view builder panels"
 
 - Modify: `mini-app/src/app/App.tsx:15-900`
 - Modify: `mini-app/src/app/BaseCanvas.tsx:6-180`
-- Modify: `mini-app/src/app/App.tsx:15-900`
+- Modify: `mini-app/src/app/api.ts:1-700`
+- Modify: `backend/app/services/stage06_platform.py:1600-2400`
+- Modify: `backend/app/api/routes/stage06_platform.py:380-430`
+- Modify: `backend/app/schemas/stage06_platform.py:280-310`
 - Create: `mini-app/src/test/view-builder-lifecycle.test.tsx`
 - Modify: `mini-app/src/test/view-renderers.test.tsx`
+- Modify: `mini-app/src/test/view-builder-api.test.ts`
+- Modify: `backend/tests/unit/test_stage07_view_builder_api.py`
+- Modify: `backend/tests/integration/test_stage07_view_builder_security_postgres.py`
 
 **Interfaces:**
 
 - Consumes: selected view safe builder response, record list response and typed V1 capabilities.
 - Produces: authoritative selected-view lifecycle, Grid/Kanban/Calendar/Form rendering, safe query summaries and no locally authoritative view state.
 
-- [ ] **Step 1: Write failing lifecycle/rendering tests**
+Security correction within the approved V1 boundary: before Canvas consumes refreshed Base-view summaries, the existing effective V1 resolver filters `private`/`restricted` summaries. Direct V1 presentation reads use the same resolver. An emitted V1 list row adds only `scope`, `caller_access_level` and `is_default`; legacy list rows and the generic `ViewSummaryResponse` retain their existing shape.
+
+- [x] **Step 1: Write failing lifecycle/rendering tests**
 
 ```tsx
 it("invalidates then re-reads builder and records after a versioned presentation save", async () => {
@@ -609,13 +617,13 @@ it("renders each allowed view type without client-side filter execution", () => 
 })
 ```
 
-- [ ] **Step 2: Verify red test**
+- [x] **Step 2: Verify red test**
 
 Run: `npm run test -- --run src/test/view-builder-lifecycle.test.tsx src/test/view-renderers.test.tsx`
 
 Expected: FAIL because the canvas does not yet own V1 selected-view lifecycle.
 
-- [ ] **Step 3: Use a single selected-view state and authoritative rereads**
+- [x] **Step 3: Use a single selected-view state and authoritative rereads**
 
 ```tsx
 const selectedViewQuery = useQuery({
@@ -625,19 +633,19 @@ const selectedViewQuery = useQuery({
 })
 ```
 
-Replace inert toolbar placeholders only where the selected view reports the matching capability. Save paths must await the server mutation, invalidate builder/context/records keys and render the reread canonical data. Grid shows the server's applied filter/sort/group summary rather than computing predicates locally. Kanban groups only by the server-approved field/settings, Calendar uses the approved date field and Form exposes only its configured readable fields; all three use the existing safe record/detail entry path. Preserve Record Detail relation edit/safe rendering from F2. Do not add drag-and-drop mutation, delete view, default reassignment or client-managed ACL shadow state.
+First make the existing Base-view list filter V1 summaries through the established effective access resolver, so Canvas never receives a private/restricted tab that the caller cannot read. Replace inert toolbar placeholders only where the selected view reports the matching capability. Save paths must await the server mutation, invalidate builder/context/records keys and render the reread canonical data. Grid shows the server's applied filter/sort/group summary rather than computing predicates locally. Kanban groups only by the server-approved field/settings, Calendar uses the approved date field and Form exposes only its configured readable fields; all three use the existing safe record/detail entry path. Preserve Record Detail relation edit/safe rendering from F2. Do not add drag-and-drop mutation, delete view, default reassignment or client-managed ACL shadow state.
 
-- [ ] **Step 4: Verify green lifecycle and renderer suite**
+- [x] **Step 4: Verify green lifecycle and renderer suite**
 
 Run: `npm run test -- --run src/test/view-builder-lifecycle.test.tsx src/test/view-renderers.test.tsx src/test/record-mutation-safety.test.tsx`
 
 Expected: PASS; selected view state is coherent after create, patch and member changes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
-git add mini-app/src/app/App.tsx mini-app/src/app/BaseCanvas.tsx mini-app/src/test/view-builder-lifecycle.test.tsx mini-app/src/test/view-renderers.test.tsx
-git commit -m "feat(stage07): render selected saved views"
+git add backend/app/api/routes/stage06_platform.py backend/app/schemas/stage06_platform.py backend/app/services/stage06_platform.py backend/tests/integration/test_stage07_view_builder_security_postgres.py backend/tests/unit/test_stage07_view_builder_api.py mini-app/src/app/App.tsx mini-app/src/app/BaseCanvas.tsx mini-app/src/app/api.ts mini-app/src/styles.css mini-app/src/test/view-builder-api.test.ts mini-app/src/test/view-builder-lifecycle.test.tsx mini-app/src/test/view-renderers.test.tsx project-docs/08-implementation
+git commit -m "feat(stage07): wire saved view lifecycle"
 ```
 
 ---

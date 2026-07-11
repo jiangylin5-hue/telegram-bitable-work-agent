@@ -42,6 +42,7 @@ from app.schemas.stage06_platform import (
     ViewResponse,
     ViewPresentationResponse,
     ViewListResponse,
+    ViewListSummaryResponse,
     ViewBuilderContextResponse,
     ViewBuilderResponse,
     ViewInitializationRequest,
@@ -376,7 +377,11 @@ def list_tables_endpoint(
     )
 
 
-@router.get("/bases/{base_id}/views", response_model=ViewListResponse)
+@router.get(
+    "/bases/{base_id}/views",
+    response_model=ViewListResponse,
+    response_model_exclude_none=True,
+)
 def list_views_endpoint(
     base_id: UUID,
     identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
@@ -384,22 +389,30 @@ def list_views_endpoint(
 ) -> ViewListResponse:
     try:
         workspace_id = workspace_id_for_base(uow, base_id)
-        authorize_workspace_action(uow, identity, workspace_id, "table.read")
-        views = list_views_for_base(uow, base_id)
+        actor = authorize_workspace_action(uow, identity, workspace_id, "table.read")
+        views = list_views_for_base(uow, base_id, actor=actor)
     except (PlatformValidationError, Stage06AuthorizationError) as exc:
         raise _http_error(exc) from exc
-    return ViewListResponse(
-        views=[
-            ViewSummaryResponse(
-                id=str(view.id),
-                base_id=str(view.base_id),
-                table_id=None if view.table_id is None else str(view.table_id),
-                name=view.name,
-                view_type=view.view_type,
-                status=view.status,
+    summaries: list[ViewListSummaryResponse] = []
+    for view in views:
+        summary_payload: dict[str, Any] = {
+            "id": str(view.id),
+            "base_id": str(view.base_id),
+            "table_id": None if view.table_id is None else str(view.table_id),
+            "name": view.name,
+            "view_type": view.view_type,
+            "status": view.status,
+        }
+        if isinstance(view.config, dict) and view.config.get("schema") == "stage07_v1":
+            v1_summary = build_v1_safe_view_summary(uow, view, actor=actor)
+            summary_payload.update(
+                scope=v1_summary["scope"],
+                caller_access_level=v1_summary["caller_access_level"],
+                is_default=v1_summary["is_default"],
             )
-            for view in views
-        ]
+        summaries.append(ViewListSummaryResponse(**summary_payload))
+    return ViewListResponse(
+        views=summaries
     )
 
 

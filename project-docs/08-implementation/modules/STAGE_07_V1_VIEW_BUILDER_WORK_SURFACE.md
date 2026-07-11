@@ -4,7 +4,7 @@
 
 - Document status: user-approved module/work-surface contract; approved implementation in progress
 - Scope: every V1 user-facing saved-view state in BaseCanvas, desktop and mobile
-- Current Progress: V1-1 through V1-9 durable persistence, typed schema, canonicalization, ACL/versioned mutation, server-owned Grid filter/group/sort ordering, five safe HTTP routes, PostgreSQL security/index proof, typed safe Mini App transport and callback-driven Builder/Access/Query panels are implemented. The panel layer remains isolated until V1-10 connects it to the App/BaseCanvas authoritative reread path, so current toolbar buttons remain non-mutating and the browser must not infer query semantics or consume page-local group metadata.
+- Current Progress: V1-1 through V1-10 durable persistence, typed schema, canonicalization, ACL/versioned mutation, server-owned Grid filter/group/sort ordering, five safe HTTP routes, PostgreSQL security/index/list-read proof, typed safe Mini App transport, callback-driven Builder/Access/Query panels and App/BaseCanvas authoritative reread path are implemented. V1 Canvas replaces prior inert query buttons with authorized create/configure entry points, displays only a safe server-query summary, and never evaluates predicates or reorders the server record window. Browser evidence remains pending.
 
 ## 1. Module Purpose
 
@@ -23,7 +23,7 @@ BaseCanvas
 
 | Entry | Availability | Action | Forbidden behavior |
 | --- | --- | --- | --- |
-| saved view tab | any caller who receives summary | open selected safe view | infer/view hidden summaries |
+| saved view tab | caller whose server-filtered Base view list contains the safe summary | open selected safe view | infer/view hidden summaries or retain an ACL-denied tab locally |
 | `新建视图` | server-hinted builder + endpoint authorization | open private-view builder | create synthetic local tab |
 | Filter / Sort / Group | owner/editor of current configurable view | open typed configuration section | client-side record transform |
 | `视图设置` | owner/editor | edit name/presentation | show raw config/policy |

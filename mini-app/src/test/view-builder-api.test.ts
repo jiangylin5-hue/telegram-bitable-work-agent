@@ -98,6 +98,25 @@ test('keeps only the allowlisted discrete filter values from Builder fields', as
   expect(builder.fields[0]).not.toHaveProperty('options')
 })
 
+test('keeps only the documented V1 safe-summary extension in the Base view list', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    views: [{
+      id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: 'Private', view_type: 'grid', status: 'active',
+      scope: 'private', caller_access_level: 'owner', is_default: false,
+      owner_user_id: 'must-not-reach-browser', config: { secret: true }, permission_policy: { owner: 'write' },
+    }],
+  }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+  vi.stubGlobal('fetch', fetchMock)
+
+  const response = await api.baseViews('base-1')
+
+  expect(response.views).toEqual([{
+    id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: 'Private', view_type: 'grid', status: 'active',
+    scope: 'private', caller_access_level: 'owner', is_default: false,
+  }])
+  expect(response.views[0]).not.toHaveProperty('owner_user_id')
+})
+
 test('uses fixed allowlisted V1 errors and scoped protected query keys', () => {
   expect(toSafeViewError({ code: 'view_version_conflict', message: 'secret backend detail' }))
     .toBe('视图已被更新，请重新加载后再试。')

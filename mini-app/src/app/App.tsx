@@ -9,8 +9,10 @@ import { FieldBuilderPanel, type FieldBuilderValues } from './FieldBuilderPanel'
 import { CreateRecordPanel } from './CreateRecordPanel'
 import { RecordDetailPanel } from './RecordDetail'
 import { RelationLookupFieldBuilderPanel, type F2FieldBuilderValues } from './RelationLookupFieldBuilderPanel'
+import { ViewBuilderPanel } from './ViewBuilderPanel'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
-import { clearAllProtectedQueries, clearFieldMutationQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, createProtectedQueryClient, protectedQueryKey, relationCandidateQueryKey } from './protectedQuery'
+import { clearAllProtectedQueries, clearFieldMutationQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearViewBuilderQueries, createProtectedQueryClient, protectedQueryKey, relationCandidateQueryKey, viewBuilderKeys } from './protectedQuery'
+import type { ViewBuilderContext, ViewBuilderResponse, ViewInitializationRequest, ViewMemberReplaceRequest, ViewPresentationPatchRequest } from './view-builder-types'
 
 type BaseCanvasState = {
   base: BaseSummary
@@ -21,6 +23,7 @@ type BaseCanvasState = {
   schema: TableSchema | null
   records: ViewRecords | null
   presentation: ViewPresentation | null
+  serverQuerySummary?: string
   detail?: RecordDetail
   createForm?: CreateForm
   loadingMore?: boolean
@@ -40,9 +43,33 @@ type BuilderPanel =
   | { mode: 'field'; tableId: string; viewId: string }
   | { mode: 'relation-lookup-loading'; tableId: string; viewId: string }
   | { mode: 'relation-lookup'; tableId: string; viewId: string; tables: PlatformTable[]; schemas: TableSchema[] }
+  | { mode: 'view-loading'; tableId: string; viewId?: string }
+  | { mode: 'view'; tableId: string; context: ViewBuilderContext; builder?: ViewBuilderResponse }
 
 function isAbortError(error: unknown): boolean {
   return isCancelledError(error) || (error instanceof DOMException && error.name === 'AbortError')
+}
+
+function canvasPresentationFromV1Builder(builder: ViewBuilderResponse): ViewPresentation {
+  return {
+    view_id: builder.presentation.view_id,
+    table_id: builder.presentation.table_id,
+    view_type: builder.presentation.view_type,
+    visible_field_keys: builder.presentation.visible_field_keys,
+    group_by_field_key: builder.presentation.group_by_field_key,
+    date_field_key: builder.presentation.date_field_key,
+    form_field_keys: builder.presentation.form_field_keys,
+  }
+}
+
+function v1ServerQuerySummary(builder: ViewBuilderResponse): string {
+  const fieldLabels = new Map(builder.fields.map((field) => [field.key, field.label]))
+  const items: string[] = []
+  if (builder.presentation.filters.length) items.push(`${builder.presentation.filters.length} 条筛选`)
+  if (builder.presentation.sort_rules.length) items.push(`${builder.presentation.sort_rules.length} 条排序`)
+  if (builder.presentation.group_by_field_key) items.push(`按 ${fieldLabels.get(builder.presentation.group_by_field_key) ?? '字段'} 分组`)
+  if (builder.presentation.date_field_key) items.push(`日期：${fieldLabels.get(builder.presentation.date_field_key) ?? '字段'}`)
+  return items.length ? `服务端已应用 ${items.join('、')}` : '服务端已应用当前视图规则'
 }
 
 export function App() {
@@ -178,6 +205,20 @@ function AppContent() {
     await loadWorkspaceHome(readyState.bootstrap, workspaceId)
   }
 
+  async function readV1BuilderForCanvas(
+    scope: { userId: string; workspaceId: string },
+    view: ViewSummary,
+  ): Promise<ViewBuilderResponse | undefined> {
+    const workspace = readyState.bootstrap.workspaces.find((item) => item.id === scope.workspaceId)
+    if (!view.scope || !workspace?.capabilities.can_manage_schema) return undefined
+    try {
+      return await readV1Builder(scope, view.id)
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 403 || error.status === 404)) return undefined
+      throw error
+    }
+  }
+
   async function openBase(base: BaseSummary, target?: CanvasTarget, homeOverride: WorkspaceHome = readyState.home, builderVersion = ++builderRequestVersion.current): Promise<boolean> {
     const requestVersion = ++canvasRequestVersion.current
     createFormRequestVersion.current += 1
@@ -200,13 +241,14 @@ function AppContent() {
         setState({ ...canvasState, canvas: { base, tables, views, table, view, schema: null, records: null, presentation: null } })
         return true
       }
-      const [schema, presentation, records] = await Promise.all([
+      const [schema, presentation, records, builder] = await Promise.all([
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'table', table.id, 'schema'), queryFn: ({ signal }) => api.tableSchema(table.id, { signal }) }),
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'presentation'), queryFn: ({ signal }) => api.viewPresentation(view.id, { signal }) }),
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'records', null), queryFn: ({ signal }) => api.viewRecords(view.id, undefined, { signal }) }),
+        readV1BuilderForCanvas(scope, view),
       ])
       if (!isCurrent()) return false
-      setState({ ...canvasState, canvas: { base, tables, views, table, view, schema, presentation, records } })
+      setState({ ...canvasState, canvas: { base, tables, views, table, view, schema, presentation: builder ? canvasPresentationFromV1Builder(builder) : presentation, serverQuerySummary: builder ? v1ServerQuerySummary(builder) : undefined, records } })
       return true
     } catch (error) {
       if (!isCurrent() || isAbortError(error)) return false
@@ -474,6 +516,212 @@ function AppContent() {
     }
   }
 
+  async function refreshBaseViews(scope: { userId: string; workspaceId: string }, baseId: string) {
+    const viewsKey = protectedQueryKey(scope, 'base', baseId, 'views')
+    await queryClient.cancelQueries({ queryKey: viewsKey })
+    queryClient.removeQueries({ queryKey: viewsKey })
+    return queryClient.fetchQuery({
+      queryKey: viewsKey,
+      queryFn: ({ signal }) => api.baseViews(baseId, { signal }),
+    })
+  }
+
+  async function readV1Builder(scope: { userId: string; workspaceId: string }, viewId: string, version?: number) {
+    return queryClient.fetchQuery({
+      queryKey: viewBuilderKeys.builder(scope, viewId, version),
+      queryFn: ({ signal }) => api.viewBuilder(viewId, { signal }),
+    })
+  }
+
+  async function openViewBuilder(tableId: string, viewId?: string) {
+    const canvas = readyState.canvas
+    if (!canvas?.table || canvas.table.id !== tableId) return
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++builderRequestVersion.current
+    const canvasVersion = canvasRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && builderRequestVersion.current === requestVersion
+      && canvasRequestVersion.current === canvasVersion
+      && activeWorkspaceId.current === workspaceId
+    setBuilderPanel({ mode: 'view-loading', tableId, viewId })
+    try {
+      const context = await queryClient.fetchQuery({
+        queryKey: viewBuilderKeys.context(scope, tableId),
+        queryFn: ({ signal }) => api.viewBuilderContext(tableId, { signal }),
+      })
+      const builder = viewId ? await readV1Builder(scope, viewId) : undefined
+      if (!isCurrent()) return
+      setBuilderPanel({ mode: 'view', tableId, context, builder })
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await denyInvalidSession()
+      } else if (error instanceof ApiError && error.status === 403) {
+        await denyWorkspace(scope)
+      } else {
+        setState({ status: 'error' })
+      }
+      setBuilderPanel(undefined)
+    }
+  }
+
+  async function createV1View(tableId: string, request: ViewInitializationRequest, idempotencyKey: string): Promise<ViewBuilderResponse> {
+    const canvas = readyState.canvas
+    if (!canvas?.table || canvas.table.id !== tableId) throw new Error('Table is not available')
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = builderRequestVersion.current
+    const canvasVersion = canvasRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && builderRequestVersion.current === requestVersion
+      && canvasRequestVersion.current === canvasVersion
+      && activeWorkspaceId.current === workspaceId
+    try {
+      const receipt = await api.initializeView(tableId, request, idempotencyKey)
+      if (!isCurrent()) throw new DOMException('Obsolete view initialization', 'AbortError')
+      const recordsKey = protectedQueryKey(scope, 'view', receipt.view.id, 'records', null)
+      await Promise.all([
+        clearViewBuilderQueries(queryClient, scope, tableId, receipt.view.id),
+        queryClient.cancelQueries({ queryKey: recordsKey }),
+      ])
+      queryClient.removeQueries({ queryKey: recordsKey })
+      const [{ views }, builder, records] = await Promise.all([
+        refreshBaseViews(scope, canvas.base.id),
+        readV1Builder(scope, receipt.view.id),
+        queryClient.fetchQuery({ queryKey: recordsKey, queryFn: ({ signal }) => api.viewRecords(receipt.view.id, undefined, { signal }) }),
+      ])
+      if (!isCurrent()) throw new DOMException('Obsolete view initialization', 'AbortError')
+      const createdView = views.find((item) => item.id === receipt.view.id && item.table_id === tableId)
+      if (!createdView) throw new Error('Created view is unavailable')
+      setState((current) => current.status === 'ready'
+        && current.home.workspace_id === workspaceId
+        && current.canvas?.table?.id === tableId
+        ? {
+            ...current,
+            canvas: {
+              ...current.canvas,
+              views,
+              view: createdView,
+              presentation: canvasPresentationFromV1Builder(builder),
+              serverQuerySummary: v1ServerQuerySummary(builder),
+              records,
+              detail: undefined,
+              createForm: undefined,
+            },
+          }
+        : current)
+      setBuilderPanel((current) => current?.mode === 'view' && current.tableId === tableId
+        ? { ...current, builder }
+        : current)
+      return builder
+    } catch (error) {
+      if (isAbortError(error)) throw error
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else if (error instanceof ApiError && error.status === 404) setState({ status: 'error' })
+      throw error
+    }
+  }
+
+  async function saveV1ViewPresentation(tableId: string, request: ViewPresentationPatchRequest): Promise<ViewBuilderResponse> {
+    const canvas = readyState.canvas
+    const panel = builderPanel
+    if (!canvas?.table || canvas.table.id !== tableId || panel?.mode !== 'view' || !panel.builder) throw new Error('View is not available')
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const viewId = panel.builder.view.id
+    const requestVersion = builderRequestVersion.current
+    const canvasVersion = canvasRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && builderRequestVersion.current === requestVersion
+      && canvasRequestVersion.current === canvasVersion
+      && activeWorkspaceId.current === workspaceId
+    try {
+      const receipt = await api.patchViewPresentation(viewId, request)
+      if (!isCurrent()) throw new DOMException('Obsolete view presentation', 'AbortError')
+      const recordsKey = protectedQueryKey(scope, 'view', viewId, 'records', null)
+      await Promise.all([
+        clearViewBuilderQueries(queryClient, scope, tableId, viewId),
+        queryClient.cancelQueries({ queryKey: recordsKey }),
+      ])
+      queryClient.removeQueries({ queryKey: recordsKey })
+      const [{ views }, builder, records] = await Promise.all([
+        refreshBaseViews(scope, canvas.base.id),
+        readV1Builder(scope, viewId, receipt.version),
+        queryClient.fetchQuery({ queryKey: recordsKey, queryFn: ({ signal }) => api.viewRecords(viewId, undefined, { signal }) }),
+      ])
+      if (!isCurrent()) throw new DOMException('Obsolete view presentation', 'AbortError')
+      const selectedView = views.find((item) => item.id === viewId && item.table_id === tableId)
+      if (!selectedView) throw new Error('Updated view is unavailable')
+      setState((current) => current.status === 'ready'
+        && current.home.workspace_id === workspaceId
+        && current.canvas?.view?.id === viewId
+        ? {
+            ...current,
+            canvas: {
+              ...current.canvas,
+              views,
+              view: selectedView,
+              presentation: canvasPresentationFromV1Builder(builder),
+              serverQuerySummary: v1ServerQuerySummary(builder),
+              records,
+              detail: undefined,
+            },
+          }
+        : current)
+      setBuilderPanel((current) => current?.mode === 'view' && current.tableId === tableId
+        ? { ...current, builder }
+        : current)
+      return builder
+    } catch (error) {
+      if (isAbortError(error)) throw error
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else if (error instanceof ApiError && error.status === 404) setState({ status: 'error' })
+      throw error
+    }
+  }
+
+  async function replaceV1ViewMembers(tableId: string, request: ViewMemberReplaceRequest): Promise<void> {
+    const panel = builderPanel
+    const canvas = readyState.canvas
+    if (!canvas?.table || canvas.table.id !== tableId || panel?.mode !== 'view' || !panel.builder) throw new Error('View is not available')
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const viewId = panel.builder.view.id
+    const requestVersion = builderRequestVersion.current
+    const canvasVersion = canvasRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && builderRequestVersion.current === requestVersion
+      && canvasRequestVersion.current === canvasVersion
+      && activeWorkspaceId.current === workspaceId
+    try {
+      const receipt = await api.replaceViewMembers(viewId, request)
+      if (!isCurrent()) throw new DOMException('Obsolete view members', 'AbortError')
+      await clearViewBuilderQueries(queryClient, scope, tableId, viewId)
+      const [{ views }, builder] = await Promise.all([
+        refreshBaseViews(scope, canvas.base.id),
+        readV1Builder(scope, viewId, receipt.version),
+      ])
+      if (!isCurrent()) throw new DOMException('Obsolete view members', 'AbortError')
+      setState((current) => current.status === 'ready'
+        && current.home.workspace_id === workspaceId
+        && current.canvas?.view?.id === viewId
+        ? { ...current, canvas: { ...current.canvas, views, serverQuerySummary: v1ServerQuerySummary(builder) } }
+        : current)
+      setBuilderPanel((current) => current?.mode === 'view' && current.tableId === tableId
+        ? { ...current, builder }
+        : current)
+    } catch (error) {
+      if (isAbortError(error)) throw error
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else if (error instanceof ApiError && error.status === 404) setState({ status: 'error' })
+      throw error
+    }
+  }
+
   const selectedWorkspace = activeWorkspace
   async function openRecord(recordId: string) {
     if (!readyState.canvas) return
@@ -729,13 +977,14 @@ function AppContent() {
     }
     setState({ ...readyState, canvasLoading: true, canvas: undefined })
     try {
-      const [schema, presentation, records] = await Promise.all([
+      const [schema, presentation, records, builder] = await Promise.all([
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'table', table.id, 'schema'), queryFn: ({ signal }) => api.tableSchema(table.id, { signal }) }),
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'presentation'), queryFn: ({ signal }) => api.viewPresentation(view.id, { signal }) }),
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'records', null), queryFn: ({ signal }) => api.viewRecords(view.id, undefined, { signal }) }),
+        readV1BuilderForCanvas(scope, view),
       ])
       if (canvasRequestVersion.current !== requestVersion) return
-      setState({ ...readyState, canvas: { ...canvas, table, view, schema, presentation, records, detail: undefined, createForm: undefined } })
+      setState({ ...readyState, canvas: { ...canvas, table, view, schema, presentation: builder ? canvasPresentationFromV1Builder(builder) : presentation, records, serverQuerySummary: builder ? v1ServerQuerySummary(builder) : undefined, detail: undefined, createForm: undefined } })
     } catch (error) {
       if (canvasRequestVersion.current !== requestVersion || isAbortError(error)) return
       if (error instanceof ApiError && error.status === 401) {
@@ -766,12 +1015,13 @@ function AppContent() {
       const schema = canvas.table?.id === table.id && canvas.schema
         ? canvas.schema
         : await queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'table', table.id, 'schema'), queryFn: ({ signal }) => api.tableSchema(table.id, { signal }) })
-      const [presentation, records] = await Promise.all([
+      const [presentation, records, builder] = await Promise.all([
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'presentation'), queryFn: ({ signal }) => api.viewPresentation(view.id, { signal }) }),
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'records', null), queryFn: ({ signal }) => api.viewRecords(view.id, undefined, { signal }) }),
+        readV1BuilderForCanvas(scope, view),
       ])
       if (canvasRequestVersion.current !== requestVersion) return
-      setState({ ...readyState, canvas: { ...canvas, table, view, schema, presentation, records, detail: undefined } })
+      setState({ ...readyState, canvas: { ...canvas, table, view, schema, presentation: builder ? canvasPresentationFromV1Builder(builder) : presentation, records, serverQuerySummary: builder ? v1ServerQuerySummary(builder) : undefined, detail: undefined } })
     } catch (error) {
       if (canvasRequestVersion.current !== requestVersion || isAbortError(error)) return
       if (error instanceof ApiError && error.status === 401) {
@@ -788,7 +1038,7 @@ function AppContent() {
   const content = readyState.canvasLoading
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
-    ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
+    ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (canvas?.table) void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (canvas?.table && canvas.view) void openViewBuilder(canvas.table.id, canvas.view.id) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
       : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} />
   const builderOverlay = builderPanel?.mode === 'base'
     ? <BuilderCreatePanel mode="base" onSubmit={(values, idempotencyKey) => createBase(values as { baseName: string; tableName: string }, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
@@ -800,6 +1050,10 @@ function AppContent() {
           ? <div className="field-builder-backdrop" role="presentation"><aside className="field-builder-panel" aria-label="正在加载关系字段" aria-modal="true" role="dialog"><header className="field-builder-header"><div className="field-builder-heading"><div><p>关系字段</p><h2>正在加载关系字段</h2></div></div><button className="field-builder-close" type="button" aria-label="关闭" onClick={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }}>×</button></header><p className="field-builder-intro">正在加载当前 Base 的授权表结构。</p></aside></div>
           : builderPanel?.mode === 'relation-lookup'
             ? <RelationLookupFieldBuilderPanel currentTableId={builderPanel.tableId} tables={builderPanel.tables} schemas={builderPanel.schemas} onSubmit={(values, idempotencyKey) => createRelationLookupField(builderPanel.tableId, builderPanel.viewId, values, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
-            : null
+            : builderPanel?.mode === 'view-loading'
+              ? <div className="view-builder-backdrop" role="presentation"><aside className="view-builder-panel" aria-label="正在加载视图配置" aria-modal="true" role="dialog"><header className="view-builder-header"><div className="view-builder-heading"><div><p>VIEW BUILDER</p><h2>正在加载视图配置</h2></div></div><button className="field-builder-close" type="button" aria-label="关闭视图配置" onClick={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }}>×</button></header><p className="field-builder-intro">正在读取当前权限范围内的安全视图配置。</p></aside></div>
+              : builderPanel?.mode === 'view'
+                ? <ViewBuilderPanel context={builderPanel.context} builder={builderPanel.builder} onCreate={(request, idempotencyKey) => createV1View(builderPanel.tableId, request, idempotencyKey)} onSave={(request) => saveV1ViewPresentation(builderPanel.tableId, request)} onReplaceMembers={(request) => replaceV1ViewMembers(builderPanel.tableId, request)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} loadRelationCandidates={loadRelationCandidates} />
+                : null
   return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace}>{content}{builderOverlay}</AppShell>
 }

@@ -73,6 +73,85 @@ def test_v1_postgres_context_projects_only_safe_field_identifier_and_select_valu
     assert {"options", "permission_policy", "target_table_id"}.isdisjoint(fields["state"])
 
 
+def test_v1_postgres_base_list_omits_private_summary_until_granted(
+    stage07_postgres: Stage07Postgres,
+) -> None:
+    owner = _actor("pg-list-owner", "owner")
+    viewer = _actor("pg-list-viewer", "viewer")
+    table_id = _create_table(
+        stage07_postgres,
+        owner,
+        members=[(viewer.actor_id, viewer.role)],
+    )
+    with stage07_postgres.session_factory() as session:
+        uow = SqlAlchemyStage06PlatformUnitOfWork(session)
+        view = initialize_v1_view(
+            uow,
+            table_id,
+            request=ViewInitializationRequest.model_validate(
+                {
+                    "name": "Private list proof",
+                    "view_type": "grid",
+                    "presentation": {
+                        "view_type": "grid",
+                        "visible_field_keys": ["title"],
+                        "filters": [],
+                        "sort_rules": [],
+                        "group_by_field_key": None,
+                    },
+                }
+            ),
+            idempotency_key="pg-private-list-proof",
+            actor=owner,
+        ).view
+        base_id = uow.get_table(table_id).base_id
+        session.commit()
+
+    app = _postgres_app(stage07_postgres)
+    with TestClient(app) as client:
+        hidden = client.get(
+            f"/bases/{base_id}/views",
+            headers={"X-Stage06-User-Id": viewer.actor_id},
+        )
+        hidden_presentation = client.get(
+            f"/views/{view.id}/presentation",
+            headers={"X-Stage06-User-Id": viewer.actor_id},
+        )
+
+    with stage07_postgres.session_factory() as session:
+        replace_v1_view_members(
+            SqlAlchemyStage06PlatformUnitOfWork(session),
+            view.id,
+            expected_version=1,
+            members=[ViewMemberCommand(user_id=viewer.actor_id, access_level="viewer")],
+            actor=owner,
+        )
+        session.commit()
+
+    with TestClient(app) as client:
+        visible = client.get(
+            f"/bases/{base_id}/views",
+            headers={"X-Stage06-User-Id": viewer.actor_id},
+        )
+        visible_presentation = client.get(
+            f"/views/{view.id}/presentation",
+            headers={"X-Stage06-User-Id": viewer.actor_id},
+        )
+
+    assert hidden.status_code == 200
+    assert hidden.json()["views"] == []
+    assert hidden_presentation.status_code == 403
+    assert visible.status_code == 200
+    assert [item["id"] for item in visible.json()["views"]] == [str(view.id)]
+    assert visible.json()["views"][0]["scope"] == "restricted"
+    assert visible.json()["views"][0]["caller_access_level"] == "viewer"
+    assert {"owner_user_id", "permission_policy", "config"}.isdisjoint(
+        visible.json()["views"][0]
+    )
+    assert visible_presentation.status_code == 200
+    assert visible_presentation.json()["visible_field_keys"] == ["title"]
+
+
 def test_v1_postgres_preserves_one_default_grid_and_private_rows_are_not_defaults(
     stage07_postgres: Stage07Postgres,
 ) -> None:
