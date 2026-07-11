@@ -4,7 +4,7 @@
 
 - Document status: active detailed F2 behavior and acceptance source
 - Scope: Stage07 Package 2 / F2 same-Base multi-select relation, bounded nested/aggregated lookup, safe candidate selection and record create/direct-edit follow-through
-- Current Progress: approved F2 backend transport/initializers/read-write/lookup work and the bounded Mini App Picker, create/direct-edit, safe-rendering and Builder paths have local commits. The frontend has fresh `17` files / `87` tests and a passing production build after task-level independent review. No F2 end-to-end fixture acceptance, executable PostgreSQL acceptance or four-width Browser acceptance is claimed.
+- Current Progress: approved F2 backend transport/initializers/read-write/lookup work and the bounded Mini App Picker, create/direct-edit, safe-rendering and Builder paths have local commits. The frontend has fresh `18` files / `90` tests and a passing production build after task-level independent review. A disposable local Browser fixture exercised the primary Builder/Picker/create/direct-edit/read-only-lookup flow at 1440/1280/430/390 with final console logs `[]`; it is not the complete F2 Browser matrix. No executable PostgreSQL acceptance or final F2 acceptance is claimed.
 - Preconditions: approved F2 choices recorded in `docs/superpowers/specs/2026-07-11-stage07-f2-relation-lookup-design.md`; this document makes their behavior and evidence measurable.
 
 ## 1. Scope and Outcome

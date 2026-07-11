@@ -63,7 +63,7 @@ Stage07 is the responsive React/Vite Mini App and desktop browser surface over t
 
 ### Deliberately not implemented / not accepted
 
-- F2 relation/lookup is not accepted: user-approved design/plan and detailed BDD/SDD/module/index documents now exist. Local branch commits cover safe transport, initializers, candidate selection, relation write rechecks, lookup evaluation/guards, protected Picker/create/direct-edit, safe Detail/Canvas rendering and the separate Builder. PostgreSQL execution, end-to-end fixture coverage, four-width Browser QA and final acceptance remain incomplete.
+- F2 relation/lookup is not accepted: user-approved design/plan and detailed BDD/SDD/module/index documents now exist. Local branch commits cover safe transport, initializers, candidate selection, relation write rechecks, lookup evaluation/guards, protected Picker/create/direct-edit, safe Detail/Canvas rendering and the separate Builder. A disposable fixture exercised the primary flow at all four required widths with a clean final console, but PostgreSQL execution, rejection/nested/replay Browser cases and final acceptance remain incomplete.
 - V1 additional View Builder.
 - Server-recognized filter/sort/group UI behavior.
 - Template/import UI.
@@ -143,7 +143,7 @@ P3 and F1 are closed bounded substages. F2 relation/lookup has user-approved des
 
 The F2 decisions alter API/data/permission/interaction contracts. Implementation authorization exists only for the reviewed bounded F2 contract; raw config/policy shapes remain unsafe client contracts. Do not add anything outside the documented F2 boundary.
 
-Resume the approved F2 plan with its integration/fixture/browser matrix: add the documented flow test, execute the authorised disposable PostgreSQL suite when available, run four-width real Browser QA with console scan and cleanup, then reconcile the F2 acceptance/traceability records. V1 requires its own design and plan after F2. Import/template should be a separate later decision unless the user explicitly combines it.
+Resume the approved F2 plan with its remaining evidence: execute the authorised disposable PostgreSQL suite when available; add Browser cases for denied/invalid/replay/nested lookup; run the full backend regression; then reconcile the F2 acceptance/traceability records. V1 requires its own design and plan after F2. Import/template should be a separate later decision unless the user explicitly combines it.
 
 ## 7. Non-Negotiable Safety And Product Boundaries
 

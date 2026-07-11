@@ -56,9 +56,10 @@
 ### F2 Automated Current Evidence
 
 - 2026-07-11: targeted backend F2/unit/API regression previously reported `53 passed`; the dedicated PostgreSQL relation/lookup suite is executable but remains `2 skipped` when the authorised disposable `STAGE06_LOCAL_DATABASE_URL` is absent. A skip is not PostgreSQL acceptance evidence.
-- 2026-07-11: the protected candidate transport/Pickers, create/direct-edit relation values, safe Detail/Canvas rendering and F2 Builder now have Mini App component/application coverage. The final fresh command `npm.cmd test -- --run` passed `17` files / `87` tests, and `npm.cmd run build` passed.
+- 2026-07-11: the protected candidate transport/Pickers, create/direct-edit relation values, safe Detail/Canvas rendering and F2 Builder now have Mini App component/application coverage. The final fresh command `npm.cmd test -- --run` passed `18` files / `90` tests, and `npm.cmd run build` passed. Fresh targeted F2 backend unit/API verification passed `39`; this is not a full-backend regression.
 - Builder coverage includes relation/lookup safe payload shapes, fixed aggregation choices, retry-only idempotency, 409 lock, protected schema prefetch, receipt reread, 403 failure, and delayed prefetch races on close/workspace/table/view replacement. Detail coverage includes ID-only PATCH mapping, lookup read-only behavior and exact candidate-cache cleanup.
-- Still required before an F2 acceptance report: a dedicated relation/lookup flow fixture, full backend regression after final integration, an authorised disposable PostgreSQL pass, and disposable Browser QA at 1440px, 1280px, 430px and 390px with console scan and cleanup.
+- 2026-07-11: a disposable local proxy fixture exercised actual Mini App interactions at 1440px (relation builder, numeric lookup builder, candidate cursor page, record create and direct relation edit), 1280px (Detail/chip/lookup rendering), 430px (full-height F2 builder bounds) and 390px (Relation Picker bounds). The final console error/warn query was empty, and fixture/Vite processes plus the temporary script were removed. This is primary-flow Browser evidence, not the complete rejection/nested/replay matrix.
+- Still required before an F2 acceptance report: browser cases for denied/invalid/replay/nested lookup states, full backend regression after final integration, an authorised disposable PostgreSQL pass, and the final requirement-by-requirement acceptance audit.
 
 ### F1 PostgreSQL Current Evidence
 
