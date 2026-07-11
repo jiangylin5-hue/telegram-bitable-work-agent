@@ -1,6 +1,7 @@
 import { ArrowLeft, ChevronDown, MoreHorizontal, Plus, Table2 } from 'lucide-react'
 
 import type { BaseSummary, PlatformTable, TableSchema, ViewPresentation, ViewRecords, ViewSummary } from './api'
+import { RelationChips, relationLabels } from './RelationChips'
 
 type BaseCanvasProps = { base: BaseSummary; tables: PlatformTable[]; views: ViewSummary[]; table: PlatformTable | null; view: ViewSummary | null; schema: TableSchema | null; records: ViewRecords | null; presentation: ViewPresentation | null; loadingMore?: boolean; loadMoreError?: boolean; onBack: () => void; onOpenRecord: (recordId: string) => void; onSelectTable?: (tableId: string) => void; onSelectView: (viewId: string) => void; onLoadMore?: (cursor: string) => void; onCreateRecord?: () => void; canManageSchema?: boolean; onCreateTable?: () => void; onCreateField?: () => void }
 
@@ -16,35 +17,45 @@ export function BaseCanvas({ base, tables, views, table, view, schema, records, 
 }
 
 type Field = TableSchema['fields'][number]
-type RecordsProps = { fields: Field[]; records: ViewRecords; onOpenRecord: (recordId: string) => void }
+type RecordsProps = { fields: Field[]; allFields: Field[]; records: ViewRecords; onOpenRecord: (recordId: string) => void }
 
 function ViewSurface({ presentation, schema, records, onOpenRecord }: { presentation: ViewPresentation; schema: TableSchema; records: ViewRecords; onOpenRecord: (recordId: string) => void }) {
   const fields = schema.fields.filter((field) => presentation.visible_field_keys.includes(field.key))
-  if (presentation.view_type === 'kanban') return <KanbanSurface fields={fields} records={records} groupBy={presentation.group_by_field_key} onOpenRecord={onOpenRecord} />
-  if (presentation.view_type === 'calendar') return <CalendarSurface fields={fields} records={records} dateField={presentation.date_field_key} onOpenRecord={onOpenRecord} />
-  if (presentation.view_type === 'form') return <FormSurface fields={fields} record={records.records[0]} formFieldKeys={presentation.form_field_keys} onOpenRecord={onOpenRecord} />
-  return <GridSurface fields={fields} records={records} onOpenRecord={onOpenRecord} />
+  if (presentation.view_type === 'kanban') return <KanbanSurface fields={fields} allFields={schema.fields} records={records} groupBy={presentation.group_by_field_key} onOpenRecord={onOpenRecord} />
+  if (presentation.view_type === 'calendar') return <CalendarSurface fields={fields} allFields={schema.fields} records={records} dateField={presentation.date_field_key} onOpenRecord={onOpenRecord} />
+  if (presentation.view_type === 'form') return <FormSurface fields={fields} allFields={schema.fields} record={records.records[0]} formFieldKeys={presentation.form_field_keys} onOpenRecord={onOpenRecord} />
+  return <GridSurface fields={fields} allFields={schema.fields} records={records} onOpenRecord={onOpenRecord} />
 }
 
 function GridSurface({ fields, records, onOpenRecord }: RecordsProps) {
-  return <><div className="grid-scroll"><table className="record-grid"><thead><tr><th aria-label="选择记录" /><th scope="col">#</th>{fields.map((field) => <th scope="col" key={field.id}>{field.name}</th>)}</tr></thead><tbody>{records.records.map((record, index) => <tr key={record.id} onClick={() => onOpenRecord(record.id)}><td><span className="row-check" /></td><td>{index + 1}</td>{fields.map((field) => <td key={field.id}>{displayCell(record.fields[field.key])}</td>)}</tr>)}</tbody></table></div>{records.records.length === 0 && <div className="grid-empty">当前视图没有可访问记录。</div>}</>
+  return <><div className="grid-scroll"><table className="record-grid"><thead><tr><th aria-label="选择记录" /><th scope="col">#</th>{fields.map((field) => <th scope="col" key={field.id}>{field.name}</th>)}</tr></thead><tbody>{records.records.map((record, index) => <tr key={record.id} onClick={() => onOpenRecord(record.id)}><td><span className="row-check" /></td><td>{index + 1}</td>{fields.map((field) => <td key={field.id}>{displayCell(field, record.fields[field.key])}</td>)}</tr>)}</tbody></table></div>{records.records.length === 0 && <div className="grid-empty">当前视图没有可访问记录。</div>}</>
 }
 
-function KanbanSurface({ fields, records, groupBy, onOpenRecord }: RecordsProps & { groupBy: string | null }) {
+function KanbanSurface({ fields, allFields, records, groupBy, onOpenRecord }: RecordsProps & { groupBy: string | null }) {
   const groups = new Map<string, typeof records.records>()
-  for (const record of records.records) { const key = groupBy ? displayCell(record.fields[groupBy]) || '未分组' : '未分组'; groups.set(key, [...(groups.get(key) ?? []), record]) }
-  return <div className="kanban-surface">{[...groups.entries()].map(([name, items]) => <section className="kanban-column" key={name}><header><strong>{name}</strong><span>{items.length}</span></header>{items.map((record) => <button type="button" key={record.id} onClick={() => onOpenRecord(record.id)}>{fields.slice(0, 3).map((field) => <span key={field.id}><small>{field.name}</small>{displayCell(record.fields[field.key])}</span>)}</button>)}</section>)}</div>
+  const groupField = allFields.find((field) => field.key === groupBy)
+  for (const record of records.records) { const key = groupBy ? displayText(groupField, record.fields[groupBy]) || '未分组' : '未分组'; groups.set(key, [...(groups.get(key) ?? []), record]) }
+  return <div className="kanban-surface">{[...groups.entries()].map(([name, items]) => <section className="kanban-column" key={name}><header><strong>{name}</strong><span>{items.length}</span></header>{items.map((record) => <button type="button" key={record.id} onClick={() => onOpenRecord(record.id)}>{fields.slice(0, 3).map((field) => <span key={field.id}><small>{field.name}</small>{displayCell(field, record.fields[field.key])}</span>)}</button>)}</section>)}</div>
 }
 
-function CalendarSurface({ fields, records, dateField, onOpenRecord }: RecordsProps & { dateField: string | null }) {
+function CalendarSurface({ fields, allFields, records, dateField, onOpenRecord }: RecordsProps & { dateField: string | null }) {
   const groups = new Map<string, typeof records.records>()
-  for (const record of records.records) { const key = dateField ? displayCell(record.fields[dateField]) || '未排期' : '未排期'; groups.set(key, [...(groups.get(key) ?? []), record]) }
-  return <div className="calendar-surface">{[...groups.entries()].map(([date, items]) => <section key={date}><h2>{date}</h2>{items.map((record) => <button type="button" key={record.id} onClick={() => onOpenRecord(record.id)}>{fields.map((field) => <span key={field.id}>{displayCell(record.fields[field.key])}</span>)}</button>)}</section>)}</div>
+  const dateFieldDefinition = allFields.find((field) => field.key === dateField)
+  for (const record of records.records) { const key = dateField ? displayText(dateFieldDefinition, record.fields[dateField]) || '未排期' : '未排期'; groups.set(key, [...(groups.get(key) ?? []), record]) }
+  return <div className="calendar-surface">{[...groups.entries()].map(([date, items]) => <section key={date}><h2>{date}</h2>{items.map((record) => <button type="button" key={record.id} onClick={() => onOpenRecord(record.id)}>{fields.map((field) => <span key={field.id}>{displayCell(field, record.fields[field.key])}</span>)}</button>)}</section>)}</div>
 }
 
-function FormSurface({ fields, record, formFieldKeys, onOpenRecord }: { fields: Field[]; record: ViewRecords['records'][number] | undefined; formFieldKeys: string[]; onOpenRecord: (recordId: string) => void }) {
+function FormSurface({ fields, record, formFieldKeys, onOpenRecord }: { fields: Field[]; allFields: Field[]; record: ViewRecords['records'][number] | undefined; formFieldKeys: string[]; onOpenRecord: (recordId: string) => void }) {
   if (!record) return <div className="grid-empty">当前表单没有可访问记录。</div>
-  return <form className="record-form" onSubmit={(event) => event.preventDefault()}>{fields.filter((field) => formFieldKeys.includes(field.key)).map((field) => <label key={field.id}>{field.name}<output>{displayCell(record.fields[field.key])}</output></label>)}<button type="button" onClick={() => onOpenRecord(record.id)}>查看记录详情</button></form>
+  return <form className="record-form" onSubmit={(event) => event.preventDefault()}>{fields.filter((field) => formFieldKeys.includes(field.key)).map((field) => <label key={field.id}>{field.name}<output>{displayCell(field, record.fields[field.key])}</output></label>)}<button type="button" onClick={() => onOpenRecord(record.id)}>查看记录详情</button></form>
 }
 
-function displayCell(value: unknown): string { if (value === null || value === undefined) return ''; return typeof value === 'string' ? value : JSON.stringify(value) }
+function displayCell(field: Field, value: unknown) {
+  return field.field_type === 'linked_record' ? <RelationChips value={value} /> : displayText(field, value)
+}
+
+function displayText(field: Field | undefined, value: unknown): string {
+  if (field?.field_type === 'linked_record') return relationLabels(value).join(', ')
+  if (value === null || value === undefined) return ''
+  return typeof value === 'string' ? value : JSON.stringify(value)
+}

@@ -67,3 +67,44 @@ test('edits configured select fields from their safe options without constructin
   await waitFor(() => expect(onSave).toHaveBeenCalledWith({ status: '跟进中', tags: ['vip', 'trial'] }))
   expect(screen.queryByRole('checkbox', { name: 'unknown' })).not.toBeInTheDocument()
 })
+
+test('edits a relation with server candidates, submits opaque IDs, and leaves lookup read-only', async () => {
+  const linkedDetail: RecordDetail = {
+    ...detail,
+    values: {
+      customer: [{ id: 'record-acme', label: 'Acme Co' }],
+      revenue: 42,
+    },
+  }
+  const linkedSchema = {
+    table: schema.table,
+    fields: [
+      { id: 'field-customer', table_id: 'table-1', name: 'Customer', key: 'customer', field_type: 'linked_record', required: false, options: {}, order_index: 0 },
+      { id: 'field-revenue', table_id: 'table-1', name: 'Revenue', key: 'revenue', field_type: 'lookup', required: false, options: {}, order_index: 1 },
+    ],
+  }
+  const loadRelationCandidates = vi.fn().mockResolvedValue({
+    field_id: 'field-customer',
+    records: [
+      { id: 'record-acme', label: 'Acme Co' },
+      { id: 'record-beacon', label: 'Beacon Ltd' },
+    ],
+    next_cursor: null,
+    has_more: false,
+  })
+  const onSave = vi.fn().mockResolvedValue({ ...linkedDetail, version: 4 })
+
+  const view = render(<RecordDetailPanel detail={linkedDetail} schema={linkedSchema} onClose={() => undefined} onSave={onSave} loadRelationCandidates={loadRelationCandidates} />)
+
+  expect(view.container).toHaveTextContent('Acme Co')
+  expect(view.container).not.toHaveTextContent('record-acme')
+  expect(view.container).toHaveTextContent('42')
+
+  fireEvent.click(view.container.querySelector('.detail-edit')!)
+  expect(await screen.findByRole('button', { name: 'Beacon Ltd' })).toBeInTheDocument()
+  expect(screen.queryByLabelText('Revenue')).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Beacon Ltd' }))
+  fireEvent.click(view.container.querySelector('button[type="submit"]')!)
+
+  await waitFor(() => expect(onSave).toHaveBeenCalledWith({ customer: ['record-acme', 'record-beacon'] }))
+})

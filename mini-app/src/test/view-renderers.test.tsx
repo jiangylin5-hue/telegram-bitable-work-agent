@@ -79,3 +79,28 @@ test('retains the authorized record window and offers retry after a next-page fa
   fireEvent.click(screen.getByRole('button', { name: '加载更多记录' }))
   expect(onLoadMore).toHaveBeenCalledWith('cursor-2')
 })
+
+test.each(['grid', 'kanban', 'calendar', 'form'])('renders safe relation chips without opaque IDs in %s', (viewType) => {
+  const relationSchema = {
+    table: schema.table,
+    fields: [
+      { id: 'field-name', table_id: 'table-1', name: 'Name', key: 'name', field_type: 'text', required: true, options: {}, order_index: 0 },
+      { id: 'field-customer', table_id: 'table-1', name: 'Customer', key: 'customer', field_type: 'linked_record', required: false, options: {}, order_index: 1 },
+      { id: 'field-revenue', table_id: 'table-1', name: 'Revenue', key: 'revenue', field_type: 'lookup', required: false, options: {}, order_index: 2 },
+    ],
+  }
+  const relationRecords = {
+    view_id: 'view-1',
+    records: [{ id: 'record-1', fields: { name: 'Launch plan', customer: [{ id: 'record-acme', label: 'Acme Co' }], revenue: 42 } }],
+    next_cursor: null,
+    has_more: false,
+  }
+  const view = { id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: 'Current view', view_type: viewType, status: 'active' }
+
+  const rendered = render(<BaseCanvas base={base} tables={[table]} views={[view]} table={table} view={view} schema={relationSchema} records={relationRecords} presentation={{ view_id: 'view-1', table_id: 'table-1', view_type: viewType, visible_field_keys: ['name', 'customer', 'revenue'], group_by_field_key: null, date_field_key: null, form_field_keys: ['name', 'customer', 'revenue'] }} onBack={() => undefined} onOpenRecord={() => undefined} onSelectView={() => undefined} />)
+
+  expect(rendered.container).toHaveTextContent('Acme Co')
+  expect(rendered.container).toHaveTextContent('42')
+  expect(rendered.container).not.toHaveTextContent('record-acme')
+  expect(rendered.container.querySelector('.relation-chip')).toBeInTheDocument()
+})
