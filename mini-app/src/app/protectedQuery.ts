@@ -10,6 +10,15 @@ export function protectedQueryKey(scope: ProtectedScope, ...segments: (string | 
   return [...protectedWorkspaceKey(scope), ...segments]
 }
 
+export function relationCandidateQueryKey(
+  scope: ProtectedScope,
+  fieldId: string,
+  query: string,
+  cursor: string | null,
+): QueryKey {
+  return protectedQueryKey(scope, 'relation-candidates', fieldId, query, cursor)
+}
+
 export function createProtectedQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
@@ -66,4 +75,14 @@ export async function clearRecordMutationQueries(
   ]
   await Promise.all(queryKeys.map((queryKey) => queryClient.cancelQueries({ queryKey })))
   for (const queryKey of queryKeys) queryClient.removeQueries({ queryKey })
+}
+
+export async function clearRelationCandidateQueries(
+  queryClient: QueryClient,
+  scope: ProtectedScope,
+  fieldId: string,
+): Promise<void> {
+  const queryKey = protectedQueryKey(scope, 'relation-candidates', fieldId)
+  await queryClient.cancelQueries({ queryKey })
+  queryClient.removeQueries({ queryKey })
 }

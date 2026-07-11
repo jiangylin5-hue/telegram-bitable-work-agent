@@ -1,6 +1,6 @@
 import { expect, test, vi } from 'vitest'
 
-import { clearAllProtectedQueries, clearProtectedWorkspace, clearRecordMutationQueries, createProtectedQueryClient, protectedQueryKey } from '../app/protectedQuery'
+import { clearAllProtectedQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, createProtectedQueryClient, protectedQueryKey, relationCandidateQueryKey } from '../app/protectedQuery'
 
 test('keys protected data by verified user and workspace before resource segments', () => {
   expect(protectedQueryKey({ userId: 'user-1', workspaceId: 'workspace-1' }, 'record', 'record-1')).toEqual(['stage07', 'user-1', 'workspace-1', 'record', 'record-1'])
@@ -62,4 +62,22 @@ test('removes only the current record and initial view window after a record-lev
   expect(client.getQueryData(anotherRecord)).toEqual({ values: { name: 'Grace' } })
   expect(client.getQueryData(nextWindow)).toEqual({ records: ['Celia'] })
   expect(client.getQueryData(anotherView)).toEqual({ records: ['Northstar'] })
+})
+
+test('keys and clears only relation candidate pages for the active verified scope', async () => {
+  const client = createProtectedQueryClient()
+  const scope = { userId: 'user-1', workspaceId: 'workspace-1' }
+  const candidate = relationCandidateQueryKey(scope, 'field-1', 'ac', null)
+  const anotherField = relationCandidateQueryKey(scope, 'field-2', 'ac', null)
+  const anotherScope = relationCandidateQueryKey({ userId: 'user-1', workspaceId: 'workspace-2' }, 'field-1', 'ac', null)
+  client.setQueryData(candidate, { records: ['Acme'] })
+  client.setQueryData(anotherField, { records: ['Bravo'] })
+  client.setQueryData(anotherScope, { records: ['Northstar'] })
+
+  await clearRelationCandidateQueries(client, scope, 'field-1')
+
+  expect(candidate).toEqual(['stage07', 'user-1', 'workspace-1', 'relation-candidates', 'field-1', 'ac', null])
+  expect(client.getQueryData(candidate)).toBeUndefined()
+  expect(client.getQueryData(anotherField)).toEqual({ records: ['Bravo'] })
+  expect(client.getQueryData(anotherScope)).toEqual({ records: ['Northstar'] })
 })
