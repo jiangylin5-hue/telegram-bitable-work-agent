@@ -48,13 +48,13 @@
 
 ## 2.3 V1 Saved View Builder Required Evidence
 
-- V1 is design-only until the user approves `docs/superpowers/specs/2026-07-11-stage07-v1-saved-view-builder-design.md` and its BDD/SDD/work-surface/index companions. No current V1 code/test result is acceptance evidence.
+- V1 implementation is user-approved and is `partial-local`. The detailed requirements remain in `docs/superpowers/specs/2026-07-11-stage07-v1-saved-view-builder-design.md` and its BDD/SDD/work-surface/index companions; only the explicitly recorded focused/API/PostgreSQL/client/Browser observations count as evidence.
 - Unit/API cases must cover every typed field/operator eligibility branch, four view-type configurations, private/restricted/system-default scope rules, owner/editor/viewer separation, safe response redaction and all fixed error allowlist codes.
 - Disposable PostgreSQL cases must prove private initialization rollback, replay, changed-payload conflict, grant replacement rollback, unique recipient grant under concurrency, version conflict, one-default Grid invariant and server filter/sort before pagination.
 - Query tests must prove the server evaluates only flat `AND` conditions, applies at most three stable sort rules plus record-ID tie-break, rejects `OR`/nested/arbitrary expressions and does not make the browser reconstruct semantics.
 - F2 integration must prove relation filters use only server candidates, numeric lookup filter/sort works only over safe numeric output, and relation/lookup grouping is rejected.
 - Frontend cases must prove protected query-key isolation, create/replay/409/401/403/404 behavior, owner/editor/viewer controls, member candidate cleanup, no raw config/policy/member role render and exact authoritative reread after each successful command.
-- Browser cases must cover private creation, restricted sharing, editor/viewer separation, Grid filter/sort/group, Kanban group, Calendar date, Form order, invalid/denied/conflict states and console scan at 1440/1280/430/390. Every temporary server/fixture must be removed before reporting.
+- Browser cases must cover private creation, restricted sharing, editor/viewer separation, Grid filter/sort/group, Kanban group, Calendar date, Form order, invalid/denied/conflict states and console scan at 1440/1280/430/390. Task 12 observed a partial matrix: Grid 1440, Kanban 1280, Calendar/access sheet 430, Form/focus 390, owner grant and safe `409` reread with console `[]`. Multi-role, invalid/F2 and real-backend traffic are still outstanding. Every temporary server/fixture was removed before reporting.
 
 ### F1 Automated Current Evidence
 

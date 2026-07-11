@@ -4,7 +4,7 @@
 
 - Document status: active acceptance design
 - Scope: user-visible UI behavior, safety and responsive acceptance
-- Current Progress: Scenarios 1, 3, 4 and 5 have bounded local evidence for implemented slices; no scenario is accepted end-to-end. Scenarios 6-12 remain incomplete or contract-gated as recorded in the requirement traceability audit.
+- Current Progress: Scenarios 1, 3, 4 and 5 have bounded local evidence for implemented slices; no scenario is accepted end-to-end. V1 Task 12 adds partial disposable-fixture Browser evidence for Scenario 4 at 1440/1280/430/390, but does not prove multi-role, invalid/F2 or real-backend Browser behavior. Scenarios 6-12 remain incomplete or contract-gated as recorded in the requirement traceability audit.
 
 ## 1. BDD Scenarios
 
@@ -105,6 +105,6 @@ Given the server rejects a normalized duplicate field name with `422.detail.code
 - [ ] Bot scopes, private assistant context and per-user memory boundaries are visible and enforced.
 - [ ] Every Bot write is confirmed through `record_change_draft` with an audit outcome.
 - [ ] No unapproved Stage07 contract extension is silently implemented.
-- [ ] F1 remains limited to approved independent field types, generated keys and safe choice metadata; F2 has its separately approved bounded contract and detailed companion BDD/SDD/module/index. V1 Saved View Builder has approved implementation in progress: V1-1/2/3 durability, strict schemas and canonical projection are local-only, while no end-to-end V1 runtime behavior is accepted.
+- [ ] F1 remains limited to approved independent field types, generated keys and safe choice metadata; F2 has its separately approved bounded contract and detailed companion BDD/SDD/module/index. V1 Saved View Builder is `partial-local`: V1-1 through V1-12 have durable typed/canonical behavior and a four-width disposable Browser core matrix, but no complete end-to-end/real-backend role matrix is accepted.
 - [ ] F1 schema/receipt/form responses exclude field policy and raw non-choice options; hidden fields remain absent.
 - [ ] F1 has automated replay, rollback, concurrent-order and cross-workspace-denial evidence plus four-width visual comparison.

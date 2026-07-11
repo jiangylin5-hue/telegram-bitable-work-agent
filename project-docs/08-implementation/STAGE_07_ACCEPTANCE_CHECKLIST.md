@@ -57,9 +57,9 @@ These checks cover only the approved F2 same-Base relation, fixed lookup and Bui
 - [x] Local Browser fixtures cover F2 primary and negative behavior at 1440/1280/430/390. The final local-origin error/warn scan was `[]`; an in-app Browser long-panel pointer limitation is documented separately and is not misreported as a new PATCH-success visual proof.
 - [x] Fresh local verification is Mini App `18` files / `93` tests, production build, dedicated F2 PostgreSQL `6 passed` and full backend `477 passed, 17 historical Stage02 online-smoke skips`.
 
-### V1 Saved View Builder Design Gate
+### V1 Saved View Builder Local Evidence
 
-These are planned V1 acceptance items. They remain unchecked until the user reviews the comprehensive V1 design package and implementation has recorded direct evidence.
+The design and implementation plan are user-approved. The items remain unchecked as Stage07 acceptance because V1 is only `partial-local`: focused backend `24 passed`, local PostgreSQL `11 passed`, full backend `512 passed, 17 skipped`, Mini App `24 files / 114 tests`, build and a partial four-width disposable Browser matrix are recorded in the V1 evidence documents. The Browser run did not switch rendered owner/editor/viewer identities or cover every invalid/F2/real-backend state.
 
 - [ ] The browser uses only typed V1 safe commands/read models; it never uses legacy raw view `config` or `permission_policy`.
 - [ ] New views start private; owner/editor/viewer access intersects with active membership and underlying Base/Table/Record/Field authority.

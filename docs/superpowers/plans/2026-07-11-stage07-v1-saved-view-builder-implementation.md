@@ -4,7 +4,7 @@
 
 - Plan status: user-approved detailed TDD plan; execution in progress.
 - Scope gate: the user approved the V1 design package and this implementation plan.
-- Current Progress: Tasks 1--11 are complete locally: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations, service-owned Grid filter/group/stable-sort execution before cursor pagination, five approved safe HTTP endpoints, real PostgreSQL default/rollback/hidden-field/index-plan/safe-field/list-ACL evidence, Mini App typed transport/protected keys/fixed error mapping, callback-driven Builder/Access/Query panels, App/BaseCanvas authoritative rereads, conflict recovery and narrow-viewport focus/touch safeguards. Task 10 also closes the discovered Base-list/direct-presentation V1 ACL bypass without changing legacy-view behavior: V1 list rows emit only safe scope/access/default markers. Task 11 proves presentation and member `409` recovery against a canonical reread, retains safe `422`/`5xx` drafts, suppresses server detail and returns focus to the Canvas trigger at 390px. The optional non-unique indexes remain explicitly deferred by measured evidence. Task 12 Browser/final acceptance remains pending.
+- Current Progress: Tasks 1--12 are complete as implementation/reconciliation work, with V1 truthfully `partial-local`: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations, server-owned Grid filter/group/stable-sort execution before cursor pagination, five approved safe HTTP endpoints, real PostgreSQL default/rollback/hidden-field/index-plan/safe-field/list-ACL evidence, typed transport, panels, Canvas rereads and narrow-viewport recovery all exist. Task 12 records a disposable Browser core matrix at 1440/1280/430/390, owner grant, safe `409` canonical reread and console `[]`, then deletes the fixture. It deliberately does not accept multi-role, invalid/F2 or real-backend Browser behavior. Optional non-unique indexes remain explicitly deferred by measured evidence.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -733,7 +733,7 @@ git commit -m "test(stage07): cover saved view safety and responsive states"
 - Consumes: completed implementation, real disposable PostgreSQL result, Mini App dev server and the approved requirement documents.
 - Produces: evidence-backed acceptance status for each V1 requirement, UI screenshots/observations and an accurate handoff without production claims.
 
-- [ ] **Step 1: Run focused and full automated verification**
+- [x] **Step 1: Run focused and full automated verification**
 
 ```bash
 cd backend
@@ -747,7 +747,7 @@ npm run build
 
 Expected: every command passes except explicitly documented historical skips; capture exact counts and skip reasons without inventing production/staging evidence.
 
-- [ ] **Step 2: Perform manual UI acceptance in a real browser**
+- [x] **Step 2: Perform the available manual UI matrix in a real browser and record gaps**
 
 Start the existing Mini App development command and use the browser-control verification workflow. Test with controlled fixtures at 1440px, 1280px, 430px and 390px:
 
@@ -761,11 +761,11 @@ Start the existing Mini App development command and use the browser-control veri
 
 Save sanitized screenshots/observations and browser console result in the UI evidence document. End the browser-control session after evidence is captured; do not issue further browser actions in that session.
 
-- [ ] **Step 3: Reconcile every requirement and state boundary**
+- [x] **Step 3: Reconcile every requirement and state boundary**
 
 For A01--A10 and every BDD scenario, mark `pass`, `blocked` or `not implemented` only with linked test/UI evidence. Update `Current Progress` and handoff with actual test counts, migration head, browser matrix, retained temporary artifacts and the explicit non-goals: no public link/group/delegation, no delete/default reassignment, no import/template/Telegram/Bot/production work, no expression DSL and no Stage08 scope. If any required check fails, leave the status unaccepted, document the failing behavior and return to the smallest owning task; do not call Stage07 complete.
 
-- [ ] **Step 4: Verify documentation integrity and clean working state**
+- [x] **Step 4: Verify documentation integrity and clean working state**
 
 Run: `git diff --check`
 
@@ -775,7 +775,7 @@ Run: `git status --short`
 
 Expected: no whitespace errors; every requirement has an evidence-backed state; only intentional, tracked files remain.
 
-- [ ] **Step 5: Commit evidence-only closure candidate**
+- [x] **Step 5: Commit evidence-only closure candidate**
 
 ```bash
 git add project-docs/08-implementation

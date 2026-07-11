@@ -4,7 +4,7 @@
 
 - Document status: user-approved module/work-surface contract; approved implementation in progress
 - Scope: every V1 user-facing saved-view state in BaseCanvas, desktop and mobile
-- Current Progress: V1-1 through V1-11 durable persistence, typed schema, canonicalization, ACL/versioned mutation, server-owned Grid filter/group/sort ordering, five safe HTTP routes, PostgreSQL security/index/list-read proof, typed safe Mini App transport, callback-driven Builder/Access/Query panels, App/BaseCanvas authoritative reread path and conflict/responsive recovery are implemented. V1 Canvas replaces prior inert query buttons with authorized create/configure entry points, displays only a safe server-query summary, never evaluates predicates or reorders the server record window, rereads canonical presentation/member state after `409`, and keeps V1 entries/action targets reachable on 390px. Browser evidence remains pending.
+- Current Progress: V1-1 through V1-12 durable persistence, typed schema, canonicalization, ACL/versioned mutation, server-owned Grid filter/group/sort ordering, five safe HTTP routes, PostgreSQL security/index/list-read proof, typed safe Mini App transport, callback-driven Builder/Access/Query panels, App/BaseCanvas authoritative reread path and conflict/responsive recovery are implemented. V1 Canvas replaces prior inert query buttons with authorized create/configure entry points, displays only a safe server-query summary, never evaluates predicates or reorders the server record window, rereads canonical presentation/member state after `409`, and keeps V1 entries/action targets reachable on 390px. A disposable Browser matrix observed the four renderers, owner grant, conflict redaction and focus return; it does not replace multi-role, invalid-state, F2 or real-backend Browser proof.
 
 ## 1. Module Purpose
 
@@ -117,7 +117,7 @@ Receipt success is a pointer only. Client invalidates exact table view list, vie
 | 430 | new/configure/access opens labelled full-screen sheet; safe field/filter rows scroll independently |
 | 390 | same command path; relation Picker/search and fixed error text remain visible without raw IDs/details |
 
-All four widths need fresh Browser evidence for private create, restricted share, editor/viewer separation, a typed filter/sort/group state, a type-specific view, denial/conflict containment and final console scan. Existing F1/F2 Browser artifacts do not count as V1 evidence.
+Task 12 now has fresh V1 Browser observations for private create, one owner grant, typed Grid filter/sort/group, one type-specific renderer at each of 1440/1280/430/390, conflict containment and final console scan. Restricted sharing under a switched identity, editor/viewer separation, invalid/F2 states and real-backend traffic remain required before complete V1 Browser acceptance. Existing F1/F2 Browser artifacts still do not count as V1 evidence.
 
 ## 8. Deliberately Not Shipped By This Module
 
