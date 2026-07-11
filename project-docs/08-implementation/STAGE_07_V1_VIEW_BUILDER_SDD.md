@@ -4,7 +4,7 @@
 
 - Document status: user-approved technical design; approved implementation in progress
 - Scope: durable V1 view ownership/ACL/configuration, safe server commands/read models and Mini App module boundary
-- Current Progress: V1-1 through V1-7 local persistence, strict typed-schema, canonicalization/safe-projection, ACL/versioned mutation, Grid filter/group/sort-before-pagination, five safe HTTP routes and PostgreSQL default/rollback/hidden-field/index-plan evidence are implemented; Mini App tasks remain pending. Optional access/list indexes remain deferred by the completed Task 7 `EXPLAIN` evidence.
+- Current Progress: V1-1 through V1-8 local persistence, strict typed-schema, canonicalization/safe-projection, ACL/versioned mutation, Grid filter/group/sort-before-pagination, five safe HTTP routes, PostgreSQL default/rollback/hidden-field/index-plan evidence and typed Mini App transport/protected keys/error mapping are implemented; Builder UI tasks remain pending. Optional access/list indexes remain deferred by the completed Task 7 `EXPLAIN` evidence.
 
 ## 1. Architecture
 

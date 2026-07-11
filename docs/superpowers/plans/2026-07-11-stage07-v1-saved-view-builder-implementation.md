@@ -4,7 +4,7 @@
 
 - Plan status: user-approved detailed TDD plan; execution in progress.
 - Scope gate: the user approved the V1 design package and this implementation plan.
-- Current Progress: Tasks 1--7 are complete locally: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations, service-owned Grid filter/group/stable-sort execution before cursor pagination, five approved safe HTTP endpoints, and real PostgreSQL default/rollback/hidden-field/index-plan evidence. The optional non-unique indexes are explicitly deferred by measured evidence. Mini App and four-width Browser tasks remain pending.
+- Current Progress: Tasks 1--8 are complete locally: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations, service-owned Grid filter/group/stable-sort execution before cursor pagination, five approved safe HTTP endpoints, real PostgreSQL default/rollback/hidden-field/index-plan evidence, and Mini App typed transport/protected keys/fixed error mapping. The optional non-unique indexes are explicitly deferred by measured evidence. Builder UI and four-width Browser tasks remain pending.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -457,7 +457,7 @@ git commit -m "test(stage07): prove saved view PostgreSQL invariants"
 - Consumes: the five V1 safe endpoints and authenticated Mini App transport.
 - Produces: typed browser client methods, cache keys namespaced by table/view/version, safe error labels and no raw configuration transport type.
 
-- [ ] **Step 1: Write failing transport tests**
+- [x] **Step 1: Write failing transport tests**
 
 ```tsx
 it("sends Idempotency-Key only when initializing a private view", async () => {
@@ -473,13 +473,13 @@ it("maps an allowlisted version conflict without rendering server text", () => {
 })
 ```
 
-- [ ] **Step 2: Verify red test**
+- [x] **Step 2: Verify red test**
 
 Run: `npm run test -- --run src/test/view-builder-api.test.ts`
 
 Expected: FAIL because V1 client functions/types are missing.
 
-- [ ] **Step 3: Add typed requests and protected transport helpers**
+- [x] **Step 3: Add typed requests and protected transport helpers**
 
 ```ts
 export const viewBuilderKeys = {
@@ -496,13 +496,13 @@ export async function patchViewPresentation(
 
 Model only safe V1 response fields; use `encodeURIComponent` for every path parameter; send exactly the server's documented JSON; keep credentials/auth behavior consistent with F1/F2. Use the existing query client's optimistic-update policy only if its rollback/invalidate pattern is already proven; otherwise invalidate and authoritative reread after each successful mutation. Map only documented codes to fixed Chinese labels and log no raw payload/error body.
 
-- [ ] **Step 4: Verify green and previous transport tests**
+- [x] **Step 4: Verify green and previous transport tests**
 
 Run: `npm run test -- --run src/test/view-builder-api.test.ts src/test/api.test.ts`
 
 Expected: PASS; F2 transport remains unchanged.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add mini-app/src/app/api.ts mini-app/src/app/protectedQuery.ts mini-app/src/app/view-builder-types.ts mini-app/src/test/api.test.ts mini-app/src/test/view-builder-api.test.ts

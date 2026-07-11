@@ -4,7 +4,7 @@
 
 - Document status: user-approved complexity/index inventory; approved implementation in progress
 - Scope: V1 configuration/ACL/query state, logical indexes, proposed physical PostgreSQL indexes and evidence ownership
-- Current Progress: V1-1 through V1-7 create the correctness-critical grant uniqueness constraint, strict typed command/read boundary, canonical safe query-shape projection, service-owned Grid filter/group/stable-sort ordering before cursor pagination, five safe HTTP route boundaries and real PostgreSQL security/index-plan evidence. Task 7 measured the access query using existing `ix_stage06_views_table_id` and `uq_view_member_grants_view_user`; `ix_view_member_grants_user_status` and `ix_views_table_scope_status` remain explicitly deferred, not merely unimplemented.
+- Current Progress: V1-1 through V1-8 create the correctness-critical grant uniqueness constraint, strict typed command/read boundary, canonical safe query-shape projection, service-owned Grid filter/group/stable-sort ordering before cursor pagination, five safe HTTP route boundaries, real PostgreSQL security/index-plan evidence and typed browser transport that strips unknown response data before protected query state. Task 7 measured the access query using existing `ix_stage06_views_table_id` and `uq_view_member_grants_view_user`; `ix_view_member_grants_user_status` and `ix_views_table_scope_status` remain explicitly deferred, not merely unimplemented.
 
 ## 1. Purpose
 

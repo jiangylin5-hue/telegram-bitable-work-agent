@@ -6,7 +6,7 @@ export function protectedWorkspaceKey(scope: ProtectedScope): QueryKey {
   return ['stage07', scope.userId, scope.workspaceId]
 }
 
-export function protectedQueryKey(scope: ProtectedScope, ...segments: (string | null)[]): QueryKey {
+export function protectedQueryKey(scope: ProtectedScope, ...segments: (string | number | null)[]): QueryKey {
   return [...protectedWorkspaceKey(scope), ...segments]
 }
 
@@ -17,6 +17,29 @@ export function relationCandidateQueryKey(
   cursor: string | null,
 ): QueryKey {
   return protectedQueryKey(scope, 'relation-candidates', fieldId, query, cursor)
+}
+
+export const viewBuilderKeys = {
+  context: (scope: ProtectedScope, tableId: string): QueryKey => (
+    protectedQueryKey(scope, 'view-builder-context', tableId)
+  ),
+  builder: (scope: ProtectedScope, viewId: string, version?: number): QueryKey => (
+    protectedQueryKey(scope, 'view-builder', viewId, version ?? null)
+  ),
+}
+
+export async function clearViewBuilderQueries(
+  queryClient: QueryClient,
+  scope: ProtectedScope,
+  tableId: string,
+  viewId?: string,
+): Promise<void> {
+  const queryKeys: QueryKey[] = [
+    viewBuilderKeys.context(scope, tableId),
+    ...(viewId ? [protectedQueryKey(scope, 'view-builder', viewId)] : []),
+  ]
+  await Promise.all(queryKeys.map((queryKey) => queryClient.cancelQueries({ queryKey })))
+  for (const queryKey of queryKeys) queryClient.removeQueries({ queryKey })
 }
 
 export function createProtectedQueryClient(): QueryClient {

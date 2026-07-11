@@ -4,7 +4,7 @@
 
 - Document status: user-approved detailed V1 behavior and acceptance source; approved implementation in progress
 - Scope: saved Grid/Kanban/Calendar/Form creation and configuration, personal/restricted member view access, safe query/presentation behavior and responsive Mini App surface
-- Current Progress: V1-1 through V1-7 local durability, typed command/read-schema, canonicalization, ACL/versioned mutation, Grid query, safe HTTP and real database foundations are implemented: `PlatformView` ownership/scope/version, `ViewMemberGrant`, migration `20260711_0022`, narrow UoW methods, strict presentation commands, server-composed safe projection, idempotent private initialization, effective owner/editor/viewer access, atomic grants, canonical filter/group/stable-sort execution before cursor pagination, five fixed-code safe routes and local PostgreSQL default/rollback/hidden-field/index-plan proof. No V1 Mini App state exists.
+- Current Progress: V1-1 through V1-8 local durability, typed command/read-schema, canonicalization, ACL/versioned mutation, Grid query, safe HTTP, real database and transport foundations are implemented: `PlatformView` ownership/scope/version, `ViewMemberGrant`, migration `20260711_0022`, narrow UoW methods, strict presentation commands, server-composed safe projection, idempotent private initialization, effective owner/editor/viewer access, atomic grants, canonical filter/group/stable-sort execution before cursor pagination, five fixed-code safe routes, local PostgreSQL default/rollback/hidden-field/index-plan proof and typed Mini App safe transport/key/error helpers. No V1 Builder UI state exists.
 - Design companion: `docs/superpowers/specs/2026-07-11-stage07-v1-saved-view-builder-design.md`
 
 ## 1. Actor And Resource Vocabulary
@@ -180,7 +180,7 @@ No required mutation is hover-only, and no mobile path turns a denied/partial re
 | V1-A06 | server filter/sort/group before pagination | unit/integration + real PostgreSQL | implemented-local: Grid filter/group/sort-before-pagination and page-local safe group metadata are proven locally; Mini App remains pending |
 | V1-A07 | F2 relation/numeric lookup eligibility | unit/API + Picker contract tests | partial-local: canonical service eligibility is covered; V1 Builder transport/UI remains pending |
 | V1-A08 | Kanban/Calendar/Form configuration validation | unit/API tests | partial-local: strict canonical unit coverage exists; route/UI matrix remains pending |
-| V1-A09 | protected query/cancellation/error containment | Mini App component/application tests | approved-design-unimplemented |
+| V1-A09 | protected query/cancellation/error containment | Mini App component/application tests | partial-local: typed V1 query keys and fixed error mapping are unit-tested; component lifecycle/scope cancellation remains pending |
 | V1-A10 | four-width actual Browser matrix | disposable local fixture + console scan | approved-design-unimplemented |
 
 ## 5. Completion Report Requirements

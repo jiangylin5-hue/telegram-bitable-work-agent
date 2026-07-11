@@ -4,7 +4,7 @@
 
 - Document status: user-approved comprehensive V1 design; approved implementation in progress
 - Scope: all saved view types (`grid`, `kanban`, `calendar`, `form`), server-owned presentation semantics, personal/restricted member view access, safe creation/configuration and responsive Mini App work surface
-- Current Progress: V1-1 through V1-7 local durable persistence, strict typed command/read schemas, canonical safe projection, versioned ACL mutation, V1 server query execution, the five approved safe HTTP endpoints and disposable PostgreSQL default/rollback/hidden-field/index-plan evidence are implemented. Backend proof is local only; Mini App transport/state, Browser evidence, Telegram and production remain pending.
+- Current Progress: V1-1 through V1-8 local durable persistence, strict typed command/read schemas, canonical safe projection, versioned ACL mutation, V1 server query execution, the five approved safe HTTP endpoints, disposable PostgreSQL default/rollback/hidden-field/index-plan evidence and Mini App typed transport/protected keys/fixed error mapping are implemented. Builder state/UI, Browser evidence, Telegram and production remain pending.
 - Prerequisites: Stage07 P3, F1 and F2 are bounded `implemented-local` evidence; this proposal must not be interpreted as widening their accepted contracts.
 
 ## 1. Goal And Product Boundary
