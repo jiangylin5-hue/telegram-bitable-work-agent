@@ -86,7 +86,13 @@ function AppContent() {
   function abandonRecordDetail(canvas: BaseCanvasState | undefined, workspaceId: string) {
     recordRequestVersion.current += 1
     if (!canvas?.detail || !canvas.view) return
-    void discardRecordMutationQueries({ userId: readyState.bootstrap.identity.user_id, workspaceId }, canvas.detail.id, canvas.view.id)
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    void Promise.all([
+      discardRecordMutationQueries(scope, canvas.detail.id, canvas.view.id),
+      ...(canvas.schema?.fields ?? [])
+        .filter((field) => field.field_type === 'linked_record')
+        .map((field) => clearRelationCandidateQueries(queryClient, scope, field.id)),
+    ])
   }
 
   const bootstrapQuery = useQuery({
