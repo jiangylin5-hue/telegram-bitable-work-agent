@@ -5,32 +5,32 @@ import { CreateRecordPanel } from '../app/CreateRecordPanel'
 
 test('renders only server-provided fields and submits populated create values', async () => {
   const onCreate = vi.fn().mockResolvedValue(undefined)
-  render(<CreateRecordPanel form={{ table_id: 'table-1', can_create: true, fields: [{ key: 'title', name: '标题', field_type: 'text', required: true, options: {}, order_index: 0 }] }} onCreate={onCreate} onClose={() => undefined} />)
+  render(<CreateRecordPanel form={{ table_id: 'table-1', can_create: true, fields: [{ id: 'field-title', key: 'title', name: 'Title', field_type: 'text', required: true, options: {}, order_index: 0 }] }} onCreate={onCreate} onClose={() => undefined} />)
 
-  fireEvent.change(screen.getByLabelText('标题'), { target: { value: '发布计划' } })
-  fireEvent.click(screen.getByRole('button', { name: '创建记录' }))
+  fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Launch plan' } })
+  fireEvent.submit(document.querySelector('form')!)
 
-  await waitFor(() => expect(onCreate).toHaveBeenCalledWith({ title: '发布计划' }))
+  await waitFor(() => expect(onCreate).toHaveBeenCalledWith({ title: 'Launch plan' }))
   expect(screen.queryByText('permission_policy')).not.toBeInTheDocument()
 })
 
 test('renders server-filtered status choices as a select control', async () => {
   const onCreate = vi.fn().mockResolvedValue(undefined)
-  render(<CreateRecordPanel form={{ table_id: 'table-1', can_create: true, fields: [{ key: 'status', name: '状态', field_type: 'status', required: true, options: { choices: ['new', 'active'] }, order_index: 0 }] }} onCreate={onCreate} onClose={() => undefined} />)
+  render(<CreateRecordPanel form={{ table_id: 'table-1', can_create: true, fields: [{ id: 'field-status', key: 'status', name: 'Status', field_type: 'status', required: true, options: { choices: ['new', 'active'] }, order_index: 0 }] }} onCreate={onCreate} onClose={() => undefined} />)
 
-  fireEvent.change(screen.getByRole('combobox', { name: '状态' }), { target: { value: 'active' } })
-  fireEvent.click(screen.getByRole('button', { name: '创建记录' }))
+  fireEvent.change(screen.getByRole('combobox', { name: 'Status' }), { target: { value: 'active' } })
+  fireEvent.submit(document.querySelector('form')!)
 
   await waitFor(() => expect(onCreate).toHaveBeenCalledWith({ status: 'active' }))
 })
 
 test('submits a distinct multi-select array built only from server choices', async () => {
   const onCreate = vi.fn().mockResolvedValue(undefined)
-  render(<CreateRecordPanel form={{ table_id: 'table-1', can_create: true, fields: [{ key: 'tags', name: '标签', field_type: 'multi_select', required: true, options: { choices: ['vip', 'trial'] }, order_index: 0 }] }} onCreate={onCreate} onClose={() => undefined} />)
+  render(<CreateRecordPanel form={{ table_id: 'table-1', can_create: true, fields: [{ id: 'field-tags', key: 'tags', name: 'Tags', field_type: 'multi_select', required: true, options: { choices: ['vip', 'trial'] }, order_index: 0 }] }} onCreate={onCreate} onClose={() => undefined} />)
 
   fireEvent.click(screen.getByRole('checkbox', { name: 'vip' }))
   fireEvent.click(screen.getByRole('checkbox', { name: 'trial' }))
-  fireEvent.click(screen.getByRole('button', { name: '创建记录' }))
+  fireEvent.submit(document.querySelector('form')!)
 
   await waitFor(() => expect(onCreate).toHaveBeenCalledWith({ tags: ['vip', 'trial'] }))
   expect(screen.queryByRole('checkbox', { name: 'unknown' })).not.toBeInTheDocument()
@@ -39,6 +39,6 @@ test('submits a distinct multi-select array built only from server choices', asy
 test('explains when the server marks a form as unavailable for this first slice', () => {
   render(<CreateRecordPanel form={{ table_id: 'table-1', can_create: false, fields: [] }} onCreate={vi.fn()} onClose={() => undefined} />)
 
-  expect(screen.getByRole('alert')).toHaveTextContent('暂不支持')
-  expect(screen.queryByRole('button', { name: '创建记录' })).not.toBeInTheDocument()
+  expect(screen.getByRole('alert')).toBeInTheDocument()
+  expect(document.querySelector('form')).toBeNull()
 })

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -161,6 +161,7 @@ class CreateRecordRequest(BaseModel):
 
 
 class CreateFormFieldResponse(BaseModel):
+    id: str
     key: str
     name: str
     field_type: str
@@ -215,6 +216,47 @@ class InitializeFieldRequest(BaseModel):
 class FieldInitializationResponse(BaseModel):
     field: SafeTableFieldResponse
     affected_view_ids: list[str]
+
+
+class InitializeRelationFieldRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    target_table_id: str
+    required: bool = False
+
+
+class InitializeLookupFieldRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    source_relation_field_id: str
+    target_field_id: str
+    aggregation: Literal[
+        "values",
+        "count",
+        "count_distinct",
+        "sum",
+        "average",
+        "min",
+        "max",
+    ]
+
+
+class RelationCandidateResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    label: str
+
+
+class RelationCandidatePageResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    field_id: str
+    records: list[RelationCandidateResponse]
+    next_cursor: str | None
+    has_more: bool
 
 
 class TableSchemaResponse(BaseModel):

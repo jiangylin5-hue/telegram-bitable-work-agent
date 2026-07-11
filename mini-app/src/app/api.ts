@@ -46,13 +46,41 @@ export type SafeTableField = {
   order_index: number
 }
 export type FieldInitializationReceipt = { field: SafeTableField; affected_view_ids: string[] }
+export type RelationCell = { id: string; label: string }
+export type RelationCandidate = RelationCell
+export type RelationCandidatePage = {
+  field_id: string
+  records: RelationCandidate[]
+  next_cursor: string | null
+  has_more: boolean
+}
+export type RelationFieldInitializationValues = {
+  name: string
+  targetTableId: string
+  required: boolean
+}
+export type LookupAggregation = 'values' | 'count' | 'count_distinct' | 'sum' | 'average' | 'min' | 'max'
+export type LookupFieldInitializationValues = {
+  name: string
+  sourceRelationFieldId: string
+  targetFieldId: string
+  aggregation: LookupAggregation
+}
 export type TableSchema = { table: { id: string; name: string; key: string }; fields: SafeTableField[] }
 export type ViewRecords = { view_id: string; records: { id: string; fields: Record<string, unknown> }[]; next_cursor: string | null; has_more: boolean }
 export type ViewPresentation = { view_id: string; table_id: string; view_type: string; visible_field_keys: string[]; group_by_field_key: string | null; date_field_key: string | null; form_field_keys: string[] }
 export type RecordDetail = { id: string; table_id: string; values: Record<string, unknown>; record_status: string; version: number }
-export type CreateForm = { table_id: string; can_create: boolean; fields: { key: string; name: string; field_type: string; required: boolean; options: Record<string, unknown>; order_index: number }[] }
+export type CreateForm = { table_id: string; can_create: boolean; fields: { id: string; key: string; name: string; field_type: string; required: boolean; options: Record<string, unknown>; order_index: number }[] }
 
-export type SafeApiErrorCode = 'duplicate_field_name'
+export type SafeApiErrorCode =
+  | 'duplicate_field_name'
+  | 'relation_self_reference'
+  | 'lookup_source_not_relation'
+  | 'lookup_target_incompatible'
+  | 'lookup_dependency_cycle'
+  | 'lookup_depth_exceeded'
+  | 'record_is_referenced'
+  | 'field_has_dependencies'
 
 export class ApiError extends Error {
   constructor(public readonly status: number, public readonly code?: SafeApiErrorCode) {
@@ -66,13 +94,26 @@ const choiceFieldTypes = new Set<FieldBuilderValues['fieldType']>([
   'multi_select',
 ])
 
+const safeApiErrorCodes = new Set<SafeApiErrorCode>([
+  'duplicate_field_name',
+  'relation_self_reference',
+  'lookup_source_not_relation',
+  'lookup_target_incompatible',
+  'lookup_dependency_cycle',
+  'lookup_depth_exceeded',
+  'record_is_referenced',
+  'field_has_dependencies',
+])
+
 async function safeErrorCode(response: Response): Promise<SafeApiErrorCode | undefined> {
   try {
     const body: unknown = await response.json()
     if (!body || typeof body !== 'object' || !('detail' in body)) return undefined
     const detail = body.detail
     if (!detail || typeof detail !== 'object' || !('code' in detail)) return undefined
-    return detail.code === 'duplicate_field_name' ? detail.code : undefined
+    return typeof detail.code === 'string' && safeApiErrorCodes.has(detail.code as SafeApiErrorCode)
+      ? detail.code as SafeApiErrorCode
+      : undefined
   } catch {
     return undefined
   }
@@ -112,12 +153,36 @@ export const api = {
     required: values.required,
     ...(choiceFieldTypes.has(values.fieldType) ? { choices: values.choices } : {}),
   }, idempotencyKey),
+  initializeRelationField: (tableId: string, values: RelationFieldInitializationValues, idempotencyKey: string) => postJson<FieldInitializationReceipt>(`/tables/${tableId}/relation-field-initializations`, {
+    name: values.name,
+    target_table_id: values.targetTableId,
+    required: values.required,
+  }, idempotencyKey),
+  initializeLookupField: (tableId: string, values: LookupFieldInitializationValues, idempotencyKey: string) => postJson<FieldInitializationReceipt>(`/tables/${tableId}/lookup-field-initializations`, {
+    name: values.name,
+    source_relation_field_id: values.sourceRelationFieldId,
+    target_field_id: values.targetFieldId,
+    aggregation: values.aggregation,
+  }, idempotencyKey),
   baseTables: (baseId: string, init?: RequestInit) => getJson<{ tables: PlatformTable[] }>(`/bases/${baseId}/tables`, init),
   baseViews: (baseId: string, init?: RequestInit) => getJson<{ views: ViewSummary[] }>(`/bases/${baseId}/views`, init),
   tableSchema: (tableId: string, init?: RequestInit) => getJson<TableSchema>(`/tables/${tableId}/schema`, init),
   viewPresentation: (viewId: string, init?: RequestInit) => getJson<ViewPresentation>(`/views/${viewId}/presentation`, init),
   viewRecords: (viewId: string, cursor?: string, init?: RequestInit) => getJson<ViewRecords>(`/views/${viewId}/records${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`, init),
   recordDetail: (recordId: string, init?: RequestInit) => getJson<RecordDetail>(`/records/${recordId}`, init),
+  relationCandidates: async (fieldId: string, query: string | undefined, cursor: string | undefined, init?: RequestInit): Promise<RelationCandidatePage> => {
+    const parameters = new URLSearchParams()
+    if (query) parameters.set('q', query)
+    if (cursor) parameters.set('cursor', cursor)
+    const suffix = parameters.size > 0 ? `?${parameters.toString()}` : ''
+    const page = await getJson<RelationCandidatePage>(`/fields/${fieldId}/relation-candidates${suffix}`, init)
+    return {
+      field_id: page.field_id,
+      records: page.records.map(({ id, label }) => ({ id, label })),
+      next_cursor: page.next_cursor,
+      has_more: page.has_more,
+    }
+  },
   createForm: (tableId: string, init?: RequestInit) => getJson<CreateForm>(`/tables/${tableId}/create-form`, init),
   createRecord: (tableId: string, values: Record<string, unknown>) => getJson<RecordDetail>(`/tables/${tableId}/records`, {
     method: 'POST',

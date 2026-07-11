@@ -85,3 +85,66 @@ test('exposes only the duplicate-field allowlist code from a field initializatio
     'field-idempotency-duplicate',
   )).rejects.toMatchObject({ status: 422, code: 'duplicate_field_name' })
 })
+
+test('posts only approved F2 initializer keys and parses safe candidate records', async () => {
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({
+      field: { id: 'field-relation', table_id: 'table-1', name: '关联客户', key: 'fld_relation', field_type: 'linked_record', required: true, options: {}, order_index: 1 },
+      affected_view_ids: ['view-1'],
+    }), { status: 201, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({
+      field: { id: 'field-lookup', table_id: 'table-1', name: '客户金额', key: 'fld_lookup', field_type: 'lookup', required: false, options: {}, order_index: 2 },
+      affected_view_ids: ['view-1'],
+    }), { status: 201, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({
+      field_id: 'field-relation',
+      records: [{ id: 'record-1', label: 'Acme', policy: { hidden: true } }],
+      next_cursor: 'cursor-2',
+      has_more: true,
+      options: { target_table_id: 'must-not-reach-browser' },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+  vi.stubGlobal('fetch', fetchMock)
+
+  await api.initializeRelationField('table-1', {
+    name: '关联客户',
+    targetTableId: 'table-target',
+    required: true,
+  }, 'relation-idempotency-1')
+  await api.initializeLookupField('table-1', {
+    name: '客户金额',
+    sourceRelationFieldId: 'field-relation',
+    targetFieldId: 'field-amount',
+    aggregation: 'sum',
+  }, 'lookup-idempotency-1')
+  const candidates = await api.relationCandidates('field-relation', 'Acme', 'cursor-1')
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/tables/table-1/relation-field-initializations',
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ name: '关联客户', target_table_id: 'table-target', required: true }),
+    }),
+  )
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/tables/table-1/lookup-field-initializations',
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({
+        name: '客户金额',
+        source_relation_field_id: 'field-relation',
+        target_field_id: 'field-amount',
+        aggregation: 'sum',
+      }),
+    }),
+  )
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/fields/field-relation/relation-candidates?q=Acme&cursor=cursor-1',
+    expect.any(Object),
+  )
+  expect(candidates).toEqual({
+    field_id: 'field-relation',
+    records: [{ id: 'record-1', label: 'Acme' }],
+    next_cursor: 'cursor-2',
+    has_more: true,
+  })
+})

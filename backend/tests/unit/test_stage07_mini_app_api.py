@@ -324,8 +324,8 @@ def test_create_form_returns_only_server_writable_fields_without_policy() -> Non
         workspace_id = client.post("/workspaces", json={"name": "Acme", "owner_user_id": "owner-1"}).json()["id"]
         base_id = client.post(f"/workspaces/{workspace_id}/bases", json={"name": "Operations"}).json()["id"]
         table_id = client.post(f"/bases/{base_id}/tables", json={"name": "Projects", "key": "projects"}).json()["id"]
-        client.post(f"/tables/{table_id}/fields", json={"name": "Title", "key": "title", "field_type": "text", "required": True, "permission_policy": {"operator": "write"}})
-        client.post(f"/tables/{table_id}/fields", json={"name": "Status", "key": "status", "field_type": "status", "options": {"choices": ["new", "active"], "internal_rule": "must-not-leak"}, "permission_policy": {"operator": "write"}})
+        title_field = client.post(f"/tables/{table_id}/fields", json={"name": "Title", "key": "title", "field_type": "text", "required": True, "permission_policy": {"operator": "write"}}).json()
+        status_field = client.post(f"/tables/{table_id}/fields", json={"name": "Status", "key": "status", "field_type": "status", "options": {"choices": ["new", "active"], "internal_rule": "must-not-leak"}, "permission_policy": {"operator": "write"}}).json()
         client.post(f"/tables/{table_id}/fields", json={"name": "Related accounts", "key": "accounts", "field_type": "linked_record", "required": True, "options": {"target_table_id": str(uuid4())}, "permission_policy": {"operator": "write"}})
         client.post(f"/tables/{table_id}/fields", json={"name": "Internal", "key": "internal", "field_type": "text", "permission_policy": {"operator": "read"}})
         uow.add_workspace_member(WorkspaceMember(id=uuid4(), workspace_id=UUID(workspace_id), user_id="operator-1", role="operator", status="active"))
@@ -336,8 +336,8 @@ def test_create_form_returns_only_server_writable_fields_without_policy() -> Non
     assert response.json()["table_id"] == table_id
     assert response.json()["can_create"] is False
     assert response.json()["fields"] == [
-        {"key": "title", "name": "Title", "field_type": "text", "required": True, "options": {}, "order_index": 0},
-        {"key": "status", "name": "Status", "field_type": "status", "required": False, "options": {"choices": ["new", "active"]}, "order_index": 1},
+        {"id": title_field["id"], "key": "title", "name": "Title", "field_type": "text", "required": True, "options": {}, "order_index": 0},
+        {"id": status_field["id"], "key": "status", "name": "Status", "field_type": "status", "required": False, "options": {"choices": ["new", "active"]}, "order_index": 1},
     ]
     assert "permission_policy" not in response.text
     assert "internal" not in response.text
@@ -388,8 +388,9 @@ def test_create_form_and_record_api_support_configured_multi_select_choices() ->
         "table_id": table_id,
         "can_create": True,
         "fields": [
-            {
-                "key": field["key"],
+                {
+                    "id": field["id"],
+                    "key": field["key"],
                 "name": "Tags",
                 "field_type": "multi_select",
                 "required": True,

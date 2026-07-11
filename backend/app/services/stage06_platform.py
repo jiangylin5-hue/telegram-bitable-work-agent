@@ -925,6 +925,7 @@ def get_create_form(uow: Stage06PlatformUnitOfWork, table_id: UUID, *, actor: Ac
         "can_create": can_create,
         "fields": [
             {
+                "id": str(field.id),
                 "key": field.key,
                 "name": field.name,
                 "field_type": field.field_type,

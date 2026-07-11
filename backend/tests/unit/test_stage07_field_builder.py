@@ -522,6 +522,7 @@ def test_configured_choice_fields_validate_create_update_and_keep_legacy_status_
         "can_create": True,
         "fields": [
             {
+                "id": str(tags.id),
                 "key": tags.key,
                 "name": "Tags",
                 "field_type": "multi_select",
@@ -530,6 +531,7 @@ def test_configured_choice_fields_validate_create_update_and_keep_legacy_status_
                 "order_index": 0,
             },
             {
+                "id": str(legacy_status.id),
                 "key": "legacy_status",
                 "name": "Legacy status",
                 "field_type": "status",
