@@ -740,3 +740,129 @@ def test_relation_write_rejects_same_table_self_reference_and_safe_responses() -
     assert created.json()["values"][relation.key] == [{"id": str(target.id), "label": "Target"}]
     assert form.json()["can_create"] is True
     assert next(field for field in form.json()["fields"] if field["key"] == relation.key)["id"] == str(relation.id)
+
+
+@pytest.mark.parametrize(
+    ("aggregation", "expected"),
+    [
+        ("values", [2, 2, 5]),
+        ("count", 3),
+        ("count_distinct", 2),
+        ("sum", 9),
+        ("average", 3),
+        ("min", 2),
+        ("max", 5),
+    ],
+)
+def test_lookup_projection_evaluates_every_approved_fixed_aggregation(
+    aggregation: str,
+    expected: int | list[int],
+) -> None:
+    uow, owner, source, relation, target_field = _lookup_fixture()
+    target = uow.get_table(target_field.table_id)
+    source_base = uow.get_base(source.base_id)
+    assert target is not None
+    assert source_base is not None
+    label_field = create_field(
+        uow,
+        target.id,
+        name="Customer name",
+        key="customer_name",
+        field_type="text",
+        actor=owner,
+    )
+    target.primary_field_id = label_field.id
+    targets = [
+        create_record(
+            uow,
+            target.id,
+            values={label_field.key: label, target_field.key: amount},
+            actor=owner,
+        )
+        for label, amount in (("Acme", 2), ("Bravo", 2), ("Cyan", 5))
+    ]
+    source_record = create_record(
+        uow,
+        source.id,
+        values={relation.key: [str(record.id) for record in targets]},
+        actor=owner,
+    )
+    lookup = initialize_lookup_field(
+        uow,
+        source.id,
+        name=f"Customer {aggregation}",
+        source_relation_field_id=relation.id,
+        target_field_id=target_field.id,
+        aggregation=aggregation,
+        actor=owner,
+    ).field
+    view = create_form_view(
+        uow,
+        source_base.id,
+        source.id,
+        name="Projects",
+        view_type="grid",
+        config={"fields": [lookup.key]},
+        actor=owner,
+    )
+
+    response = list_view_records(uow, view.id, actor=owner, limit=50, cursor=None)
+
+    assert response["records"] == [{
+        "id": str(source_record.id),
+        "fields": {lookup.key: expected},
+    }]
+
+
+def test_lookup_projection_omits_the_whole_value_when_a_target_hop_is_hidden() -> None:
+    uow, owner, source, relation, target_field = _lookup_fixture()
+    target = uow.get_table(target_field.table_id)
+    source_base = uow.get_base(source.base_id)
+    assert target is not None
+    assert source_base is not None
+    label_field = create_field(
+        uow,
+        target.id,
+        name="Customer name",
+        key="customer_name",
+        field_type="text",
+        actor=owner,
+    )
+    target.primary_field_id = label_field.id
+    target_record = create_record(
+        uow,
+        target.id,
+        values={label_field.key: "Acme", target_field.key: 7},
+        actor=owner,
+    )
+    source_record = create_record(
+        uow,
+        source.id,
+        values={relation.key: [str(target_record.id)]},
+        actor=owner,
+    )
+    lookup = initialize_lookup_field(
+        uow,
+        source.id,
+        name="Hidden amount",
+        source_relation_field_id=relation.id,
+        target_field_id=target_field.id,
+        aggregation="sum",
+        actor=owner,
+    ).field
+    target_field.permission_policy = {"viewer": "hidden"}
+    view = create_form_view(
+        uow,
+        source_base.id,
+        source.id,
+        name="Projects",
+        view_type="grid",
+        config={"fields": [lookup.key]},
+        actor=owner,
+    )
+    viewer = Actor(actor_type="user", actor_id="viewer-1", role="viewer")
+
+    response = list_view_records(uow, view.id, actor=viewer, limit=50, cursor=None)
+
+    assert response["records"] == [{"id": str(source_record.id), "fields": {}}]
+    assert target_field.key not in repr(response)

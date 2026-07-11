@@ -1935,35 +1935,87 @@ def _lookup_field_value(
     record: PlatformRecord,
     field: PlatformField,
     actor: Actor,
-) -> list[Any] | object:
-    source_field_key = field.options.get("source_field_key")
-    target_field_key = field.options.get("target_field_key")
-    if not source_field_key or not target_field_key:
-        return []
-    linked_ids = record.values.get(source_field_key) or []
+) -> list[Any] | int | float | None | object:
+    source_table = uow.get_table(field.table_id)
+    source_relation = _stored_lookup_source_relation(uow, field)
+    target_field = _stored_lookup_target_field(uow, field)
+    if source_table is None or source_relation is None or target_field is None:
+        return _MISSING
+    if not _can_actor_read_field(actor, source_relation) or not _can_actor_read_field(actor, target_field):
+        return _MISSING
+    try:
+        target_table = _relation_target_table(uow, source_table, source_relation)
+        _lookup_terminal_field(uow, candidate_id=field.id, target_field=target_field)
+    except PlatformValidationError:
+        return _MISSING
+    linked_ids = record.values.get(source_relation.key) or []
     if not isinstance(linked_ids, list):
-        return []
+        return _MISSING
     values: list[Any] = []
+    readable_count = 0
     for linked_id in linked_ids:
         target_record_id = _optional_uuid(linked_id)
-        if target_record_id is None:
-            continue
-        target_record = uow.get_record(target_record_id)
-        if target_record is None:
-            continue
-        target_field = next(
-            (
-                candidate
-                for candidate in uow.list_fields(target_record.table_id)
-                if candidate.key == target_field_key
-            ),
-            None,
-        )
-        if not _can_actor_read_field(actor, target_field):
+        target_record = None if target_record_id is None else uow.get_record(target_record_id)
+        if target_record is None or target_record.table_id != target_table.id:
             return _MISSING
-        if target_field_key in target_record.values:
-            values.append(target_record.values[target_field_key])
-    return values
+        if _safe_relation_label(uow, target_table, target_record, actor) is None:
+            return _MISSING
+        readable_count += 1
+        if target_field.field_type == "lookup":
+            value = _lookup_field_value(uow, target_record, target_field, actor)
+            if value is _MISSING:
+                return _MISSING
+        else:
+            value = target_record.values.get(target_field.key, _MISSING)
+        if value is _MISSING:
+            continue
+        values.extend(_flatten_lookup_value(value))
+    aggregation = field.options.get("aggregation", "values")
+    if aggregation == "count":
+        return readable_count
+    if aggregation == "count_distinct":
+        return len({(type(value).__name__, repr(value)) for value in values})
+    if aggregation == "values":
+        return values
+    if aggregation not in NUMERIC_LOOKUP_AGGREGATIONS or not all(
+        isinstance(value, (int, float)) and not isinstance(value, bool)
+        for value in values
+    ):
+        return _MISSING
+    if not values:
+        return None
+    if aggregation == "sum":
+        return sum(values)
+    if aggregation == "average":
+        return sum(values) / len(values)
+    if aggregation == "min":
+        return min(values)
+    return max(values)
+
+
+def _stored_lookup_source_relation(
+    uow: Stage06PlatformUnitOfWork,
+    lookup_field: PlatformField,
+) -> PlatformField | None:
+    source_fields = uow.list_fields(lookup_field.table_id)
+    source_relation_id = _optional_uuid(lookup_field.options.get("source_field_id"))
+    if source_relation_id is not None:
+        return _field_for_table(uow, lookup_field.table_id, source_relation_id)
+    source_relation_key = lookup_field.options.get("source_field_key")
+    return next((field for field in source_fields if field.key == source_relation_key), None)
+
+
+def _flatten_lookup_value(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        flattened: list[Any] = []
+        for item in value:
+            flattened.extend(_flatten_lookup_value(item))
+        return flattened
+    if value is None:
+        return []
+    if isinstance(value, (str, int, float, bool)):
+        return [value]
+    return []
 
 
 def _safe_field_options(field: PlatformField) -> dict[str, Any]:
