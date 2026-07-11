@@ -4,7 +4,7 @@
 
 - Document status: user-approved detailed V1 behavior and acceptance source; approved implementation in progress
 - Scope: saved Grid/Kanban/Calendar/Form creation and configuration, personal/restricted member view access, safe query/presentation behavior and responsive Mini App surface
-- Current Progress: V1-1 through V1-10 local durability, typed command/read-schema, canonicalization, ACL/versioned mutation, Grid query, safe HTTP, real database and transport foundations are implemented: `PlatformView` ownership/scope/version, `ViewMemberGrant`, migration `20260711_0022`, narrow UoW methods, strict presentation commands, server-composed safe projection, idempotent private initialization, effective owner/editor/viewer access, atomic grants, canonical filter/group/stable-sort execution before cursor pagination, five fixed-code safe routes, local PostgreSQL default/rollback/hidden-field/index-plan/safe-list proof, typed Mini App safe transport/key/error helpers, reusable V1 Builder/Access/Query panels, and App/BaseCanvas authoritative reread integration. V1 Canvas receives server-filtered V1 summary markers, safe presentation and records only; save/create rereads list, Builder and record window. Browser acceptance remains pending.
+- Current Progress: V1-1 through V1-11 local durability, typed command/read-schema, canonicalization, ACL/versioned mutation, Grid query, safe HTTP, real database and transport foundations are implemented: `PlatformView` ownership/scope/version, `ViewMemberGrant`, migration `20260711_0022`, narrow UoW methods, strict presentation commands, server-composed safe projection, idempotent private initialization, effective owner/editor/viewer access, atomic grants, canonical filter/group/stable-sort execution before cursor pagination, five fixed-code safe routes, local PostgreSQL default/rollback/hidden-field/index-plan/safe-list proof, typed Mini App safe transport/key/error helpers, reusable V1 Builder/Access/Query panels, App/BaseCanvas authoritative reread integration and safe conflict/responsive recovery. V1 Canvas receives server-filtered V1 summary markers, safe presentation and records only; save/create rereads list, Builder and record window. Presentation/member `409` clears incompatible drafts, rereads canonical protected state and emits only fixed local feedback; `422`/`5xx` retains a safe local draft without implicit retry. Browser acceptance remains pending.
 - Design companion: `docs/superpowers/specs/2026-07-11-stage07-v1-saved-view-builder-design.md`
 
 ## 1. Actor And Resource Vocabulary
@@ -150,7 +150,7 @@ And a direct legacy presentation-read URL cannot bypass this omission: V1 access
 
 Given an owner/editor has a Builder draft
 When a conflicting update changes the server version
-Then `409` locks the panel until reload/close and no blind retry occurs.
+Then the incompatible presentation or member draft is discarded, exact protected state is reread from the server, and only the fixed local conflict text is shown; no blind retry occurs.
 When 401/403/404, workspace switch, table switch, view switch or unmount occurs
 Then exact protected builder/member/candidate/query state is cancelled or removed; a delayed response cannot restore the prior view or grant list.
 
@@ -167,8 +167,8 @@ No required mutation is hover-only, and no mobile path turns a denied/partial re
 | Surface | Required states | Terminal rule |
 | --- | --- | --- |
 | new view Builder | idle, locally-invalid, pending, success-awaiting-reread, replayed, conflict-locked, validation, denied, missing, retryable, cancelled, scope-invalidated | only authoritative safe list/context reread makes a new view visible |
-| presentation editor | idle, dirty, field-ineligible, pending, conflict-locked, saved, denied, stale-response-discarded | no optimistic tab/config insertion; version is authoritative |
-| member editor | owner-readable, no-recipient, recipient-search, invalid-recipient, pending, conflict-locked, saved-private, saved-restricted, denied | grants replace atomically; editor/viewer never see owner controls |
+| presentation editor | idle, dirty, field-ineligible, pending, conflict-rereading, canonical-reread, saved, denied, stale-response-discarded | no optimistic tab/config insertion; version is authoritative |
+| member editor | owner-readable, no-recipient, recipient-search, invalid-recipient, pending, conflict-rereading, canonical-reread, saved-private, saved-restricted, denied | grants replace atomically; editor/viewer never see owner controls |
 | view reader | loading, empty, filtered, grouped, denied, hidden-field-omitted, expired, missing | server ordering/filtering and field projection are rendered as received |
 | default view | existing-system-default, inaccessible-config, management-denied | never converted to private/restricted or reassigned by V1 |
 
@@ -184,7 +184,7 @@ No required mutation is hover-only, and no mobile path turns a denied/partial re
 | V1-A06 | server filter/sort/group before pagination | unit/integration + real PostgreSQL + Mini App lifecycle | implemented-local: Grid filter/group/sort-before-pagination and page-local safe group metadata are proven locally; Canvas renders server-provided order and a safe server-query summary without browser query execution |
 | V1-A07 | F2 relation/numeric lookup eligibility | unit/API + Picker contract tests | partial-local: canonical service eligibility is covered; the direct Builder panel reuses the existing F2 candidate picker through safe `field_id`, while App lifecycle and Browser proof remain pending |
 | V1-A08 | Kanban/Calendar/Form configuration validation | unit/API + panel/renderer tests | partial-local: strict canonical unit coverage, direct type-specific panel controls and server-selected Grid/Kanban/Calendar/Form renderer tests exist; route/UI matrix remains pending |
-| V1-A09 | protected query/cancellation/error containment | Mini App component/application tests | partial-local: typed V1 query keys/fixed error mapping are unit-tested; App lifecycle tests prove exact list/Builder/record authoritative rereads after V1 save/create, while panel failure/pending and scope-replacement coverage remain pending Task 11 |
+| V1-A09 | protected query/cancellation/error containment | Mini App component/application tests | partial-local: typed V1 query keys/fixed error mapping are unit-tested; App tests prove save/create rereads, member replace rereads without an unnecessary record fetch, presentation/member `409` canonical recovery with suppressed server detail, safe `422` retention and 390px focus return. Actual Browser/scope-replacement evidence remains Task 12. |
 | V1-A10 | four-width actual Browser matrix | disposable local fixture + console scan | approved-design-unimplemented |
 
 ## 5. Completion Report Requirements

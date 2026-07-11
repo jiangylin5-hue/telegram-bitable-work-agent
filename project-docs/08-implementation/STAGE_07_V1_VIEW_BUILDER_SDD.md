@@ -4,7 +4,7 @@
 
 - Document status: user-approved technical design; approved implementation in progress
 - Scope: durable V1 view ownership/ACL/configuration, safe server commands/read models and Mini App module boundary
-- Current Progress: V1-1 through V1-10 local persistence, strict typed-schema, canonicalization/safe-projection, ACL/versioned mutation, Grid filter/group/sort-before-pagination, five safe HTTP routes, PostgreSQL default/rollback/hidden-field/index-plan/safe-list evidence, typed Mini App transport/protected keys/error mapping, callback-driven Builder/Access/Query panels and App/BaseCanvas authoritative rereads are implemented. V1-10 filters V1 Base-list summaries and direct presentation reads through the existing resolver, emits only safe V1 list markers, and rereads list/Builder/records after create or versioned save; it does not constitute browser acceptance. Optional access/list indexes remain deferred by the completed Task 7 `EXPLAIN` evidence.
+- Current Progress: V1-1 through V1-11 local persistence, strict typed-schema, canonicalization/safe-projection, ACL/versioned mutation, Grid filter/group/sort-before-pagination, five safe HTTP routes, PostgreSQL default/rollback/hidden-field/index-plan/safe-list evidence, typed Mini App transport/protected keys/error mapping, callback-driven Builder/Access/Query panels, App/BaseCanvas authoritative rereads and conflict/responsive recovery are implemented. V1-10 filters V1 Base-list summaries and direct presentation reads through the existing resolver, emits only safe V1 list markers, and rereads list/Builder/records after create or versioned save. V1-11 clears/reloads presentation/member state on `409`, retains only safe validation/network drafts, restores Canvas-trigger focus on close and keeps V1 controls reachable at 390px; it does not constitute Browser acceptance. Optional access/list indexes remain deferred by the completed Task 7 `EXPLAIN` evidence.
 
 ## 1. Architecture
 
@@ -191,7 +191,7 @@ Desktop uses a left/right workspace drawer appropriate to existing BaseCanvas st
 | recipient inactive/invalid | `422` fixed code | retain unrelated grant rows; no server detail |
 | permission/membership denial | generic `403` | clear affected scope and generic denied boundary |
 | missing view/resource | non-disclosing `404` | remove exact view and Builder query state |
-| stale expected version | `409` | conflict-lock until close/reload; no blind retry |
+| stale presentation/member version | `409` | clear incompatible draft, remove exact protected Builder/context/record state as applicable, reread canonical state, fixed local error; no blind retry |
 | create network/5xx | retryable failure | retain one creation idempotency key for explicit retry |
 | edit/ACL network/5xx | retryable failure | retain local draft but never replay implicitly |
 

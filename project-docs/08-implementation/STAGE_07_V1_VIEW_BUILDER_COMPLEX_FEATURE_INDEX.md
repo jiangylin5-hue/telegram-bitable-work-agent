@@ -4,7 +4,7 @@
 
 - Document status: user-approved complexity/index inventory; approved implementation in progress
 - Scope: V1 configuration/ACL/query state, logical indexes, proposed physical PostgreSQL indexes and evidence ownership
-- Current Progress: V1-1 through V1-10 create the correctness-critical grant uniqueness constraint, strict typed command/read boundary, canonical safe query-shape projection, service-owned Grid filter/group/stable-sort ordering before cursor pagination, five safe HTTP route boundaries, real PostgreSQL security/index-plan/list-read evidence, typed browser transport that strips unknown response data before protected query state, and explicit Canvas list/Builder/record reread keys. Task 7 measured the access query using existing `ix_stage06_views_table_id` and `uq_view_member_grants_view_user`; `ix_view_member_grants_user_status` and `ix_views_table_scope_status` remain explicitly deferred, not merely unimplemented.
+- Current Progress: V1-1 through V1-11 create the correctness-critical grant uniqueness constraint, strict typed command/read boundary, canonical safe query-shape projection, service-owned Grid filter/group/stable-sort ordering before cursor pagination, five safe HTTP route boundaries, real PostgreSQL security/index-plan/list-read evidence, typed browser transport that strips unknown response data before protected query state, explicit Canvas list/Builder/record reread keys, and separate presentation/member conflict-reread paths. Task 7 measured the access query using existing `ix_stage06_views_table_id` and `uq_view_member_grants_view_user`; `ix_view_member_grants_user_status` and `ix_views_table_scope_status` remain explicitly deferred, not merely unimplemented.
 
 ## 1. Purpose
 
@@ -110,7 +110,7 @@ Unknown/malformed error bodies, 401/403/404 and provider/database errors do not 
 | config grammar | unit/API parameter matrix | every field/operator/type rule |
 | execution correctness | integration query tests | filter/sort before pagination, deterministic tie-break |
 | hidden field leakage | response scans and revocation tests | summary/presentation/records/builder all omit it |
-| stale state | Mini App application tests | view/workspace/session replacement cancels exact keys |
+| stale state | Mini App application tests | view/workspace/session replacement cancels exact keys; `409` presentation/member mutations clear incompatible drafts and reread canonical protected state |
 | responsive safety | actual Browser fixture | 1440/1280/430/390, console `[]` |
 
 ## 9. Explicit Non-Indexes

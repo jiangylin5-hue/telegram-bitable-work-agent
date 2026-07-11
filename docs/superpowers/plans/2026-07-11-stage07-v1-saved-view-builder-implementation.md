@@ -4,7 +4,7 @@
 
 - Plan status: user-approved detailed TDD plan; execution in progress.
 - Scope gate: the user approved the V1 design package and this implementation plan.
-- Current Progress: Tasks 1--10 are complete locally: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations, service-owned Grid filter/group/stable-sort execution before cursor pagination, five approved safe HTTP endpoints, real PostgreSQL default/rollback/hidden-field/index-plan/safe-field/list-ACL evidence, Mini App typed transport/protected keys/fixed error mapping, callback-driven Builder/Access/Query panels, and App/BaseCanvas authoritative rereads. Task 10 also closes the discovered Base-list/direct-presentation V1 ACL bypass without changing legacy-view behavior: V1 list rows emit only safe scope/access/default markers. The optional non-unique indexes remain explicitly deferred by measured evidence. Task 11 failure/responsive coverage and Task 12 Browser/final acceptance remain pending.
+- Current Progress: Tasks 1--11 are complete locally: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations, service-owned Grid filter/group/stable-sort execution before cursor pagination, five approved safe HTTP endpoints, real PostgreSQL default/rollback/hidden-field/index-plan/safe-field/list-ACL evidence, Mini App typed transport/protected keys/fixed error mapping, callback-driven Builder/Access/Query panels, App/BaseCanvas authoritative rereads, conflict recovery and narrow-viewport focus/touch safeguards. Task 10 also closes the discovered Base-list/direct-presentation V1 ACL bypass without changing legacy-view behavior: V1 list rows emit only safe scope/access/default markers. Task 11 proves presentation and member `409` recovery against a canonical reread, retains safe `422`/`5xx` drafts, suppresses server detail and returns focus to the Canvas trigger at 390px. The optional non-unique indexes remain explicitly deferred by measured evidence. Task 12 Browser/final acceptance remains pending.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -654,18 +654,20 @@ git commit -m "feat(stage07): wire saved view lifecycle"
 
 **Files:**
 
-- Modify: `mini-app/src/app/ViewBuilderPanel.tsx`
-- Modify: `mini-app/src/app/ViewAccessPanel.tsx`
 - Modify: `mini-app/src/app/App.tsx`
+- Modify: `mini-app/src/app/BaseCanvas.tsx`
+- Modify: `mini-app/src/styles.css`
 - Create: `mini-app/src/test/view-builder-errors.test.tsx`
 - Create: `mini-app/src/test/view-builder-responsive.test.tsx`
+
+`ViewBuilderPanel.tsx` and `ViewAccessPanel.tsx` required no implementation change in this task: their existing fixed-error mapping, pending lock and safe local-draft behavior are exercised through the new application tests.
 
 **Interfaces:**
 
 - Consumes: version conflict, access denial, unsupported query, network failure and narrow viewport states.
 - Produces: safe recovery paths, no raw data disclosure, usable mobile layout and tested keyboard behavior.
 
-- [ ] **Step 1: Write failing edge-case tests**
+- [x] **Step 1: Write failing edge-case tests**
 
 ```tsx
 it("reloads canonical state after a version conflict and keeps no stale grant controls", async () => {
@@ -682,17 +684,17 @@ it("keeps panel actions reachable at 390px and sends focus back to the trigger o
 })
 ```
 
-- [ ] **Step 2: Verify red test**
+- [x] **Step 2: Verify red test**
 
 Run: `npm run test -- --run src/test/view-builder-errors.test.tsx src/test/view-builder-responsive.test.tsx`
 
 Expected: FAIL until error recovery and responsive behavior are implemented.
 
-- [ ] **Step 3: Implement bounded recovery and responsive layout**
+- [x] **Step 3: Implement bounded recovery and responsive layout**
 
 Handle 401/403/404/409/422/5xx only through fixed user messages. On conflict/denial, clear incompatible local draft, invalidate protected keys and re-read when the current identity still has access. Retain draft only for validation errors when the safe response permits it; never render hidden member/field data. Ensure builder and access panels use scroll-safe content, sticky action bar when needed, minimum 44px targets, no horizontal overflow at 390px, and desktop two-column composition only where space permits. Keep mutation controls disabled while pending; do not retry non-idempotent create automatically.
 
-- [ ] **Step 4: Verify green and production type/build gate**
+- [x] **Step 4: Verify green and production type/build gate**
 
 Run: `npm run test -- --run src/test/view-builder-errors.test.tsx src/test/view-builder-responsive.test.tsx`
 
@@ -700,10 +702,10 @@ Run: `npm run build`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
-git add mini-app/src/app/App.tsx mini-app/src/app/ViewBuilderPanel.tsx mini-app/src/app/ViewAccessPanel.tsx mini-app/src/test/view-builder-errors.test.tsx mini-app/src/test/view-builder-responsive.test.tsx
+git add mini-app/src/app/App.tsx mini-app/src/app/BaseCanvas.tsx mini-app/src/styles.css mini-app/src/test/view-builder-errors.test.tsx mini-app/src/test/view-builder-responsive.test.tsx project-docs/08-implementation
 git commit -m "test(stage07): cover saved view safety and responsive states"
 ```
 
