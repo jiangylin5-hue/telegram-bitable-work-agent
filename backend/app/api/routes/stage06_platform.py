@@ -562,13 +562,7 @@ def create_record_endpoint(
     except (PlatformValidationError, Stage06AuthorizationError) as exc:
         raise _http_error(exc) from exc
     _commit_if_sqlalchemy(uow)
-    return RecordResponse(
-        id=str(record.id),
-        table_id=str(record.table_id),
-        values=record.values,
-        record_status=record.record_status,
-        version=record.version,
-    )
+    return RecordResponse(**read_record_for_actor(uow, record.id, actor=actor))
 
 
 @router.post(
@@ -814,13 +808,7 @@ def update_record_endpoint(
         _commit_if_sqlalchemy(uow)
         raise _http_error(exc) from exc
     _commit_if_sqlalchemy(uow)
-    return RecordResponse(
-        id=str(record.id),
-        table_id=str(record.table_id),
-        values=record.values,
-        record_status=record.record_status,
-        version=record.version,
-    )
+    return RecordResponse(**read_record_for_actor(uow, record.id, actor=actor))
 
 
 @router.get("/tables/{table_id}/schema", response_model=TableSchemaResponse)

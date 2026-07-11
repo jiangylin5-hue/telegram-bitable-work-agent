@@ -93,6 +93,7 @@ CREATE_FORM_SCALAR_FIELD_TYPES = frozenset(
         "url",
         "email",
         "phone",
+        "linked_record",
     }
 )
 _MISSING = object()
@@ -1175,7 +1176,7 @@ def create_record(
 ) -> PlatformRecord:
     _require_exists(uow.get_table(table_id), "table_not_found")
     fields = uow.list_fields(table_id)
-    _validate_record_values(fields, values, uow=uow)
+    _validate_record_values(fields, values, uow=uow, actor=actor)
     normalized_values = _normalize_record_values(fields, values)
     record = PlatformRecord(
         id=uuid4(),
@@ -1203,9 +1204,13 @@ def get_create_form(uow: Stage06PlatformUnitOfWork, table_id: UUID, *, actor: Ac
     _require_exists(uow.get_table(table_id), "table_not_found")
     all_fields = uow.list_fields(table_id)
     writable_fields = [field for field in all_fields if _can_actor_write_field(actor, field)]
-    fields = [field for field in writable_fields if field.field_type in CREATE_FORM_SCALAR_FIELD_TYPES]
+    fields = [
+        field
+        for field in writable_fields
+        if _is_create_form_editable_field(uow, table_id, field, actor)
+    ]
     can_create = not any(
-        field.required and (field not in writable_fields or field.field_type not in CREATE_FORM_SCALAR_FIELD_TYPES)
+        field.required and field not in fields
         for field in all_fields
     )
     return {
@@ -1230,6 +1235,32 @@ def _create_form_options(field: PlatformField) -> dict[str, Any]:
     return _safe_field_options(field)
 
 
+def _is_create_form_editable_field(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID,
+    field: PlatformField,
+    actor: Actor,
+) -> bool:
+    if field.field_type not in CREATE_FORM_SCALAR_FIELD_TYPES:
+        return False
+    if field.field_type != "linked_record":
+        return True
+    if not _can_actor_read_field(actor, field):
+        return False
+    source_table = uow.get_table(table_id)
+    if source_table is None:
+        return False
+    try:
+        target_table = _relation_target_table(uow, source_table, field)
+    except PlatformValidationError:
+        return False
+    return any(
+        candidate.field_type in RELATION_LABEL_FIELD_TYPES
+        and _can_actor_read_field(actor, candidate)
+        for candidate in uow.list_fields(target_table.id)
+    )
+
+
 def update_record(
     uow: Stage06PlatformUnitOfWork,
     record_id: UUID,
@@ -1244,7 +1275,14 @@ def update_record(
 
     fields = uow.list_fields(record.table_id)
     field_by_key = {field.key: field for field in fields}
-    _validate_record_values(fields, values, uow=uow, partial=True)
+    _validate_record_values(
+        fields,
+        values,
+        uow=uow,
+        actor=actor,
+        source_record_id=record.id,
+        partial=True,
+    )
     for key in values:
         if not _can_actor_write_field(actor, field_by_key.get(key)):
             _deny_permission(
@@ -1653,6 +1691,8 @@ def _validate_record_values(
     values: dict[str, Any],
     *,
     uow: Stage06PlatformUnitOfWork | None = None,
+    actor: Actor | None = None,
+    source_record_id: UUID | None = None,
     partial: bool = False,
 ) -> None:
     field_by_key = {field.key: field for field in fields}
@@ -1660,6 +1700,13 @@ def _validate_record_values(
         if field.required and field.key not in values:
             if partial:
                 continue
+            raise PlatformValidationError("missing_required_field", field.key)
+        if (
+            field.required
+            and field.field_type == "linked_record"
+            and field.key in values
+            and values[field.key] in (None, [])
+        ):
             raise PlatformValidationError("missing_required_field", field.key)
     for key, value in values.items():
         field = field_by_key.get(key)
@@ -1669,7 +1716,13 @@ def _validate_record_values(
             raise PlatformValidationError("invalid_field_value", key)
         _validate_configured_choice_value(field, value)
         if field.field_type == "linked_record":
-            _validate_linked_record_value(uow, field, value)
+            _validate_linked_record_value(
+                uow,
+                field,
+                value,
+                actor=actor,
+                source_record_id=source_record_id,
+            )
 
 
 def _value_matches_field_type(value: Any, field_type: str) -> bool:
@@ -1711,17 +1764,28 @@ def _validate_linked_record_value(
     uow: Stage06PlatformUnitOfWork | None,
     field: PlatformField,
     value: Any,
+    *,
+    actor: Actor | None,
+    source_record_id: UUID | None,
 ) -> None:
     if uow is None or value is None:
         return
     target_table_id = _optional_uuid(field.options.get("target_table_id"))
+    if target_table_id is None:
+        raise PlatformValidationError("invalid_link_target", field.key)
     source_table = uow.get_table(field.table_id)
     if source_table is None:
         raise PlatformValidationError("table_not_found", str(field.table_id))
+    seen_target_ids: set[UUID] = set()
     for item in value:
         target_record_id = _optional_uuid(item)
         if target_record_id is None:
             raise PlatformValidationError("invalid_link_target", field.key)
+        if target_record_id in seen_target_ids:
+            raise PlatformValidationError("invalid_link_target", field.key)
+        seen_target_ids.add(target_record_id)
+        if source_record_id is not None and target_record_id == source_record_id:
+            raise PlatformValidationError("relation_self_reference", field.key)
         target_record = uow.get_record(target_record_id)
         if target_record is None:
             raise PlatformValidationError("invalid_link_target", field.key)
@@ -1730,7 +1794,14 @@ def _validate_linked_record_value(
             raise PlatformValidationError("invalid_link_target", field.key)
         if target_table.base_id != source_table.base_id:
             raise PlatformValidationError("resource_scope_mismatch", field.key)
-        if target_table_id is not None and target_record.table_id != target_table_id:
+        if target_record.table_id != target_table_id:
+            raise PlatformValidationError("invalid_link_target", field.key)
+        if actor is not None and _safe_relation_label(
+            uow,
+            target_table,
+            target_record,
+            actor,
+        ) is None:
             raise PlatformValidationError("invalid_link_target", field.key)
 
 

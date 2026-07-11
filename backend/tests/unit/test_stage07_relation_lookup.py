@@ -27,6 +27,8 @@ from app.services.stage06_platform import (
     list_relation_candidates,
     list_view_records,
     safe_table_schema_field,
+    get_create_form,
+    update_record,
 )
 
 
@@ -608,3 +610,133 @@ def test_relation_candidate_endpoint_returns_only_safe_records() -> None:
     }
     assert "target_table_id" not in response.text
     assert "permission_policy" not in response.text
+
+
+def test_relation_write_rechecks_required_target_label_table_and_duplicates() -> None:
+    uow, owner, source, relation, target_field = _lookup_fixture()
+    target = uow.get_table(target_field.table_id)
+    source_base = uow.get_base(source.base_id)
+    assert target is not None
+    assert source_base is not None
+    label_field = create_field(
+        uow,
+        target.id,
+        name="Customer name",
+        key="customer_name",
+        field_type="text",
+        actor=owner,
+    )
+    target.primary_field_id = label_field.id
+    readable_target = create_record(
+        uow,
+        target.id,
+        values={label_field.key: "Acme"},
+        actor=owner,
+    )
+    unlabelled_target = create_record(uow, target.id, values={}, actor=owner)
+    other_table = create_table(
+        uow,
+        source_base.id,
+        name="Invoices",
+        key="invoices",
+        actor=owner,
+    )
+    other_target = create_record(uow, other_table.id, values={}, actor=owner)
+    relation.required = True
+
+    with pytest.raises(PlatformValidationError) as empty_create:
+        create_record(uow, source.id, values={relation.key: []}, actor=owner)
+    created = create_record(
+        uow,
+        source.id,
+        values={relation.key: [str(readable_target.id)]},
+        actor=owner,
+    )
+    with pytest.raises(PlatformValidationError) as duplicate_update:
+        update_record(
+            uow,
+            created.id,
+            values={relation.key: [str(readable_target.id), str(readable_target.id)]},
+            expected_version=created.version,
+            actor=owner,
+        )
+    with pytest.raises(PlatformValidationError) as wrong_table:
+        update_record(
+            uow,
+            created.id,
+            values={relation.key: [str(other_target.id)]},
+            expected_version=created.version,
+            actor=owner,
+        )
+    with pytest.raises(PlatformValidationError) as unreadable_target:
+        update_record(
+            uow,
+            created.id,
+            values={relation.key: [str(unlabelled_target.id)]},
+            expected_version=created.version,
+            actor=owner,
+        )
+
+    assert empty_create.value.code == "missing_required_field"
+    assert duplicate_update.value.code == "invalid_link_target"
+    assert wrong_table.value.code == "invalid_link_target"
+    assert unreadable_target.value.code == "invalid_link_target"
+    assert created.values[relation.key] == [str(readable_target.id)]
+    assert created.version == 1
+
+
+def test_relation_write_rejects_same_table_self_reference_and_safe_responses() -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="Acme", owner_user_id=owner.actor_id, actor=owner)
+    base = create_base(uow, workspace.id, name="Operations", actor=owner)
+    table = create_table(uow, base.id, name="Projects", key="projects", actor=owner)
+    label_field = create_field(
+        uow,
+        table.id,
+        name="Title",
+        key="title",
+        field_type="text",
+        actor=owner,
+    )
+    table.primary_field_id = label_field.id
+    relation = initialize_relation_field(
+        uow,
+        table.id,
+        name="Related projects",
+        target_table_id=table.id,
+        required=False,
+        actor=owner,
+    ).field
+    target = create_record(uow, table.id, values={label_field.key: "Target"}, actor=owner)
+    source = create_record(
+        uow,
+        table.id,
+        values={label_field.key: "Source", relation.key: [str(target.id)]},
+        actor=owner,
+    )
+
+    with pytest.raises(PlatformValidationError) as self_reference:
+        update_record(
+            uow,
+            source.id,
+            values={relation.key: [str(source.id)]},
+            expected_version=source.version,
+            actor=owner,
+        )
+
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = owner.actor_id
+        created = client.post(
+            f"/tables/{table.id}/records",
+            json={"values": {label_field.key: "API source", relation.key: [str(target.id)]}},
+        )
+        form = client.get(f"/tables/{table.id}/create-form")
+
+    assert self_reference.value.code == "relation_self_reference"
+    assert created.status_code == 200
+    assert created.json()["values"][relation.key] == [{"id": str(target.id), "label": "Target"}]
+    assert form.json()["can_create"] is True
+    assert next(field for field in form.json()["fields"] if field["key"] == relation.key)["id"] == str(relation.id)
