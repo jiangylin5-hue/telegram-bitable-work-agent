@@ -14,6 +14,8 @@ from app.schemas.stage06_platform import (
 )
 from app.services.permissions import Actor
 from app.services.stage06_platform import (
+    assert_field_has_no_relation_lookup_dependents,
+    assert_record_has_no_incoming_relation_links,
     InMemoryStage06PlatformUnitOfWork,
     PlatformValidationError,
     create_base,
@@ -866,3 +868,67 @@ def test_lookup_projection_omits_the_whole_value_when_a_target_hop_is_hidden() -
 
     assert response["records"] == [{"id": str(source_record.id), "fields": {}}]
     assert target_field.key not in repr(response)
+
+
+def test_nested_lookup_evaluates_one_extra_lookup_level_and_omits_hidden_leaf() -> None:
+    uow, owner, source, relation, amount_field = _lookup_fixture()
+    target = uow.get_table(amount_field.table_id)
+    source_base = uow.get_base(source.base_id)
+    assert target is not None
+    assert source_base is not None
+    label = create_field(uow, target.id, name="Name", key="name", field_type="text", actor=owner)
+    target.primary_field_id = label.id
+    nested_relation = initialize_relation_field(
+        uow, target.id, name="Nested customers", target_table_id=target.id, required=False, actor=owner,
+    ).field
+    leaf = create_record(uow, target.id, values={label.key: "Leaf", amount_field.key: 4}, actor=owner)
+    parent = create_record(
+        uow, target.id, values={label.key: "Parent", nested_relation.key: [str(leaf.id)]}, actor=owner,
+    )
+    inner = initialize_lookup_field(
+        uow, target.id, name="Inner amount", source_relation_field_id=nested_relation.id,
+        target_field_id=amount_field.id, aggregation="sum", actor=owner,
+    ).field
+    outer = initialize_lookup_field(
+        uow, source.id, name="Outer amount", source_relation_field_id=relation.id,
+        target_field_id=inner.id, aggregation="sum", actor=owner,
+    ).field
+    source_record = create_record(uow, source.id, values={relation.key: [str(parent.id)]}, actor=owner)
+    view = create_form_view(
+        uow, source_base.id, source.id, name="Projects", view_type="grid",
+        config={"fields": [outer.key]}, actor=owner,
+    )
+
+    permitted = list_view_records(uow, view.id, actor=owner, limit=50, cursor=None)
+    amount_field.permission_policy = {"viewer": "hidden"}
+    viewer = Actor(actor_type="user", actor_id="viewer-1", role="viewer")
+    denied = list_view_records(uow, view.id, actor=viewer, limit=50, cursor=None)
+
+    assert permitted["records"][0]["fields"][outer.key] == 4
+    assert denied["records"] == [{"id": str(source_record.id), "fields": {}}]
+
+
+def test_delete_guards_conflict_for_incoming_links_and_field_dependencies() -> None:
+    uow, owner, source, relation, target_field = _lookup_fixture()
+    target = uow.get_table(target_field.table_id)
+    assert target is not None
+    label = create_field(uow, target.id, name="Name", key="name", field_type="text", actor=owner)
+    target.primary_field_id = label.id
+    target_record = create_record(uow, target.id, values={label.key: "Acme"}, actor=owner)
+    create_record(uow, source.id, values={relation.key: [str(target_record.id)]}, actor=owner)
+    lookup = initialize_lookup_field(
+        uow, source.id, name="Amount", source_relation_field_id=relation.id,
+        target_field_id=target_field.id, aggregation="sum", actor=owner,
+    ).field
+
+    with pytest.raises(PlatformValidationError) as record_error:
+        assert_record_has_no_incoming_relation_links(uow, target_record.id)
+    with pytest.raises(PlatformValidationError) as relation_error:
+        assert_field_has_no_relation_lookup_dependents(uow, relation.id)
+    with pytest.raises(PlatformValidationError) as target_error:
+        assert_field_has_no_relation_lookup_dependents(uow, target_field.id)
+
+    assert record_error.value.code == "record_is_referenced"
+    assert relation_error.value.code == "field_has_dependencies"
+    assert target_error.value.code == "field_has_dependencies"
+    assert lookup.id is not None

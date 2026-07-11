@@ -188,6 +188,9 @@ class Stage06PlatformUnitOfWork(Protocol):
     def delete_record_links_for_record(self, record_id: UUID) -> None:
         pass
 
+    def list_record_links_to(self, record_id: UUID) -> list[RecordLink]:
+        pass
+
     def add_view(self, view: PlatformView) -> None:
         pass
 
@@ -367,6 +370,13 @@ class InMemoryStage06PlatformUnitOfWork:
     def delete_record_links_for_record(self, record_id: UUID) -> None:
         self.record_links = [
             link for link in self.record_links if link.source_record_id != record_id
+        ]
+
+    def list_record_links_to(self, record_id: UUID) -> list[RecordLink]:
+        return [
+            link
+            for link in self.record_links
+            if link.target_record_id == record_id
         ]
 
     def add_view(self, view: PlatformView) -> None:
@@ -566,6 +576,13 @@ class SqlAlchemyStage06PlatformUnitOfWork:
     def delete_record_links_for_record(self, record_id: UUID) -> None:
         self.session.execute(
             delete(RecordLink).where(RecordLink.source_record_id == record_id)
+        )
+
+    def list_record_links_to(self, record_id: UUID) -> list[RecordLink]:
+        return list(
+            self.session.scalars(
+                select(RecordLink).where(RecordLink.target_record_id == record_id)
+            )
         )
 
     def add_view(self, view: PlatformView) -> None:
@@ -2003,6 +2020,33 @@ def _stored_lookup_source_relation(
         return _field_for_table(uow, lookup_field.table_id, source_relation_id)
     source_relation_key = lookup_field.options.get("source_field_key")
     return next((field for field in source_fields if field.key == source_relation_key), None)
+
+
+def assert_record_has_no_incoming_relation_links(
+    uow: Stage06PlatformUnitOfWork,
+    record_id: UUID,
+) -> None:
+    if uow.list_record_links_to(record_id):
+        raise PlatformValidationError("record_is_referenced", "record")
+
+
+def assert_field_has_no_relation_lookup_dependents(
+    uow: Stage06PlatformUnitOfWork,
+    field_id: UUID,
+) -> None:
+    field = _require_exists(uow.get_field(field_id), "field_not_found")
+    table = _require_exists(uow.get_table(field.table_id), "table_not_found")
+    for candidate_table in uow.list_tables(table.base_id):
+        for candidate in uow.list_fields(candidate_table.id):
+            if candidate.field_type != "lookup":
+                continue
+            source_relation = _stored_lookup_source_relation(uow, candidate)
+            target_field = _stored_lookup_target_field(uow, candidate)
+            if (
+                (source_relation is not None and source_relation.id == field.id)
+                or (target_field is not None and target_field.id == field.id)
+            ):
+                raise PlatformValidationError("field_has_dependencies", "field")
 
 
 def _flatten_lookup_value(value: Any) -> list[Any]:
