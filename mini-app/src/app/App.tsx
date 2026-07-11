@@ -538,7 +538,12 @@ function AppContent() {
       } else if (error instanceof ApiError && error.status === 403) {
         await denyWorkspace(scope)
       } else if (error instanceof ApiError && error.status === 404) {
-        await discardRecordMutationQueries(scope, detail.id, canvas.view.id)
+        await Promise.all([
+          discardRecordMutationQueries(scope, detail.id, canvas.view.id),
+          ...(canvas.schema?.fields ?? [])
+            .filter((field) => field.field_type === 'linked_record')
+            .map((field) => clearRelationCandidateQueries(queryClient, scope, field.id)),
+        ])
         if (isCurrent()) setState({ status: 'denied' })
       }
       throw error
