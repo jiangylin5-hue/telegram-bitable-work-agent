@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: accepted for implementation; no S4 implementation evidence exists yet.
+- Status: implementation evidence reconciled; GW-A06/GW-A07 retain the explicit negative-lifecycle gaps below.
 - Authority: Technical Decision 004 and the Governance Write Design.
 
 ## BDD Scenarios
@@ -81,14 +81,14 @@ Then selection, confirmation, pending, conflict, denied, retry and focus return 
 
 | ID | Requirement | Required evidence | Status |
 | --- | --- | --- | --- |
-| GW-A01 | role command independently authorizes and preserves owner/admin invariants | unit/API denial and mutation tests | proposed |
-| GW-A02 | membership version, lock and idempotency replay/conflict are atomic | disposable PostgreSQL concurrency/replay tests | proposed |
-| GW-A03 | field policy schema is fixed, versioned and cannot alter field/record data | service/API negative tests plus PostgreSQL rollback | proposed |
-| GW-A04 | field read/write enforcement remains intersectional | hidden/read/write regression across schema/presentation/detail/update | proposed |
-| GW-A05 | V1 view grant path is reused with no broader policy endpoint | contract and UI integration tests | proposed |
-| GW-A06 | protected QueryClient cleanup and authoritative reread are exact | parser/query/App tests for 401/403/404/409/scope replacement | proposed |
-| GW-A07 | built UI is reachable and safe at four widths | Browser synthetic fixture, console scan and retained observation | proposed |
-| GW-A08 | audit/redaction and temporary cleanup are reconciled | BDD evidence document and cleanup proof | proposed |
+| GW-A01 | role command independently authorizes and preserves owner/admin invariants | unit/API denial and mutation tests | implemented-local |
+| GW-A02 | membership version, lock and idempotency replay/conflict are atomic | disposable PostgreSQL concurrency/replay tests | implemented-local |
+| GW-A03 | field policy schema is fixed, versioned and cannot alter field/record data | service/API negative tests plus PostgreSQL rollback | implemented-local |
+| GW-A04 | field read/write enforcement remains intersectional | hidden/read/write regression across schema/presentation/detail/update | implemented-local |
+| GW-A05 | V1 view grant path is reused with no broader policy endpoint | contract and UI integration tests | implemented-local |
+| GW-A06 | protected QueryClient cleanup and authoritative reread are exact | parser/query/App tests for 401/403/404/409/scope replacement | partial-local — planned exhaustive governance-write App-flow permutations remain open |
+| GW-A07 | built UI is reachable and safe at four widths | Browser synthetic fixture, console scan and retained observation | partial-local — success/four-width/console pass; Browser stale/denied/retry/focus-return permutations remain open |
+| GW-A08 | audit/redaction and temporary cleanup are reconciled | BDD evidence document and cleanup proof | implemented-local |
 
 ## Prohibited Claims
 
