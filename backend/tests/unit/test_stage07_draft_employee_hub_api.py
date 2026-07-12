@@ -146,6 +146,56 @@ def test_s5_draft_read_models_filter_hidden_values_and_metadata() -> None:
     assert "private-trace" not in detail.text
 
 
+def test_s5_draft_reread_hides_a_field_revoked_after_creation_and_recomputes_confirm() -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="S5 revoked field", owner_user_id="owner-1", actor=owner)
+    operator = WorkspaceMember(
+        id=uuid4(), workspace_id=workspace.id, user_id="operator-1", role="operator", status="active"
+    )
+    uow.add_workspace_member(operator)
+    base = create_base(uow, workspace.id, name="Operations", actor=owner)
+    table = create_table(uow, base.id, name="Tasks", key="tasks", actor=owner)
+    field = create_field(
+        uow,
+        table.id,
+        name="Status",
+        key="status",
+        field_type="text",
+        permission_policy={"operator": "write"},
+        actor=owner,
+    )
+    record = create_record(uow, table.id, values={"status": "Before"}, actor=owner)
+    draft = RecordChangeDraft(
+        id=uuid4(), workspace_id=workspace.id, base_id=base.id, table_id=table.id,
+        record_id=record.id, draft_type="update_record", proposed_values={"status": "After"},
+        before_values={"status": "Before"}, created_by_type="digital_employee", created_by_id="private",
+        status="pending_confirmation", confirmation_policy={}, trace_id="private-trace",
+        expected_version=record.version, version=1,
+    )
+    uow.add_record_change_draft(draft)
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_runtime_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "operator-1"
+        before_revoke = client.get(f"/mini-app/drafts/{draft.id}")
+        field.permission_policy = {"operator": "hidden"}
+        after_revoke = client.get(f"/mini-app/drafts/{draft.id}")
+
+    assert before_revoke.status_code == after_revoke.status_code == 200
+    assert before_revoke.json()["fields"] == [{
+        "key": "status", "label": "Status", "field_type": "text",
+        "before_value": "Before", "proposed_value": "After",
+    }]
+    assert before_revoke.json()["actions"] == {"can_confirm": True, "can_reject": True}
+    assert after_revoke.json()["fields"] == []
+    assert after_revoke.json()["actions"] == {"can_confirm": False, "can_reject": True}
+    assert "Before" not in after_revoke.text
+    assert "After" not in after_revoke.text
+
+
 def test_s5_draft_queue_lists_only_pending_drafts_newest_first_with_keyset_cursor() -> None:
     uow = InMemoryStage06PlatformUnitOfWork()
     owner = Actor(actor_type="user", actor_id="owner-1", role="owner")

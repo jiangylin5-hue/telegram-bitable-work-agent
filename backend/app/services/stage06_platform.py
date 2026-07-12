@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from functools import cmp_to_key
-from typing import Any, Protocol
+from typing import Any, Iterable, Protocol
 from uuid import UUID, uuid4
 
 from sqlalchemy import and_, delete, or_, select
@@ -1808,6 +1808,25 @@ def update_record(
         },
     )
     return record
+
+
+def can_actor_write_record_fields(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID,
+    field_keys: Iterable[str],
+    *,
+    actor: Actor,
+) -> bool:
+    fields_by_key = {field.key: field for field in uow.list_fields(table_id)}
+    for key in field_keys:
+        field = fields_by_key.get(key)
+        if (
+            field is None
+            or field.status != "active"
+            or not _can_actor_write_field(actor, field)
+        ):
+            return False
+    return True
 
 
 def create_form_view(

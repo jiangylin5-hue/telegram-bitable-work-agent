@@ -44,6 +44,7 @@ from app.services.stage06_idempotency import (
 from app.services.stage06_platform import (
     PlatformValidationError,
     Stage06PlatformUnitOfWork,
+    can_actor_write_record_fields,
     get_table_schema,
     list_bases_for_workspace,
     list_view_records,
@@ -290,11 +291,24 @@ def get_safe_draft(
             )
         )
     pending = draft.status == "pending_confirmation"
+    record = None if draft.record_id is None else uow.get_record(draft.record_id)
+    can_confirm = (
+        pending
+        and record is not None
+        and record.table_id == draft.table_id
+        and action_allowed_for_role(actor.role, "record_change_draft.confirm")
+        and can_actor_write_record_fields(
+            uow,
+            draft.table_id,
+            draft.proposed_values.keys(),
+            actor=actor,
+        )
+    )
     return SafeDraftDetailResponse(
         **_safe_draft_summary(draft).model_dump(),
         fields=fields,
         actions=SafeDraftActionsResponse(
-            can_confirm=pending and action_allowed_for_role(actor.role, "record_change_draft.confirm"),
+            can_confirm=can_confirm,
             can_reject=pending and action_allowed_for_role(actor.role, "record_change_draft.reject"),
         ),
         terminal_audit_event_id=(None if draft.terminal_audit_event_id is None else str(draft.terminal_audit_event_id)),
