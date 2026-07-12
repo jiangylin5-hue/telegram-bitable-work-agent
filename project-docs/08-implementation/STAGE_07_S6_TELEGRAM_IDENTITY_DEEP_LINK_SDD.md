@@ -4,7 +4,7 @@
 
 - Status: TD007 Option A is `partial-local` implementation. Backend validation/identity/storage/resolver and Mini App memory/handoff code exist; external delivery and unaccepted evidence remain outside this SDD's implemented boundary.
 - Scope: server identity adaptation and opaque destination resolution for Telegram Mini App launches.
-- Current Progress: S6.1 route, schema/migration, frontend header and local synthetic validation exist. No Telegram configuration, external message or real Telegram identity test exists; Browser target-state four-width evidence is also unaccepted.
+- Current Progress: S6.1 route, schema/migration, frontend header and local synthetic validation exist. A disposable safe-DTO Browser fixture observed recovery and Record handoff at 1440/1280/430/390, including the 44px recovery action and raw-token absence. No Telegram configuration, external message or real Telegram identity test exists; exhaustive failure/supersession and external evidence remain unaccepted.
 
 ## Architecture
 

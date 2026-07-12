@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 delivery roadmap
 - Purpose: organize Stage07 as coherent substages rather than individual UI/API fragments
-- Current active substage: S6.1 Telegram Mini App identity/deep-link local acceptance reconciliation. S5 remains partial-local with separate provider/Browser evidence gaps; S4 retains its negative-lifecycle evidence gap.
+- Current active substage: Stage07 evidence reconciliation and remaining acceptance work. S6.1 implementation and synthetic four-width Browser evidence are reconciled locally; its exhaustive negative-state matrix and separately authorized S6.2 external evidence remain open. S5 remains partial-local with separate provider/Browser evidence gaps; S4 retains its negative-lifecycle evidence gap.
 
 ## Delivery Rule
 
@@ -28,7 +28,7 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 | S3 | Governance Readback | safe paged member directory and Base audit timeline | implemented-local; Browser external evidence pending | Technical Decision 003 |
 | S4 | Governance Write | bounded member-role, field-policy and existing V1 view-grant operations | implemented-local; negative lifecycle evidence partial | Technical Decision 004 |
 | S5 | Draft and Digital Employee Hub | field-filtered draft review, contacts and assistant surface | partial-local; provider/Browser/acceptance evidence pending | approved Technical Decision 005 Option A and TD006 Option A |
-| S6 | Telegram identity, deep link and final acceptance | verified identity/deep link, bounded external smoke and final safety/visual matrix | S6.1 `partial-local`: implementation, focused backend/Mini App tests and PostgreSQL evidence exist; four-width target Browser and S6.2 external evidence pending | TD007 Option A plus later user authority for test bot/delivery |
+| S6 | Telegram identity, deep link and final acceptance | verified identity/deep link, bounded external smoke and final safety/visual matrix | S6.1 `partial-local`: implementation, focused backend/Mini App tests, PostgreSQL and synthetic 1440/1280/430/390 Browser recovery/Record evidence exist; exhaustive negative-state and S6.2 external evidence pending | TD007 Option A plus later user authority for test bot/delivery |
 
 ## S3 Governance Readback
 
@@ -152,15 +152,15 @@ TD005 Option A is approved for S5 implementation. It authorizes only the two dra
 | design | docs/superpowers/specs/2026-07-12-stage07-s6-telegram-identity-deep-link-design.md |
 | BDD / SDD | STAGE_07_S6_TELEGRAM_IDENTITY_DEEP_LINK_BDD_AND_ACCEPTANCE.md / STAGE_07_S6_TELEGRAM_IDENTITY_DEEP_LINK_SDD.md |
 | work surface / complex index | modules/STAGE_07_S6_TELEGRAM_IDENTITY_DEEP_LINK_WORK_SURFACE.md / STAGE_07_S6_TELEGRAM_IDENTITY_DEEP_LINK_COMPLEX_FEATURE_INDEX.md |
-| implementation plan | created only after this package is reviewed |
+| implementation plan | docs/superpowers/plans/2026-07-12-stage07-s6-telegram-identity-deep-link-implementation.md |
 | final evidence | created only after implementation; real smoke requires user authority |
 
 ### S6.1 Implementation Exit Criteria
 
-- S6-A01 through S6-A09 have fresh local code, negative security and disposable PostgreSQL/client evidence.
+- S6-A01/S6-A02/S6-A08 have bounded local evidence; S6-A03--S6-A07/S6-A09 retain the exact matrix gaps recorded in the S6 BDD acceptance table.
 - The validator, binding resolver and opaque pointer each retain no raw launch data/token/message in DTO, error, audit, cache or DOM.
 - Resolver's unique token lookup, expiry/revocation and current authorization are proven against real local PostgreSQL; no unmeasured extra index is created.
-- Desktop/local fallback remains functional and a 1440/1280/430/390 built UI recovery matrix is observed using synthetic fixtures.
+- Desktop/local fallback remains functional and a 1440/1280/430/390 built UI recovery matrix was observed using synthetic fixtures; that is not real Telegram proof.
 - No send/API delivery, BotFather change, webhook registration, external provider action, memory or lifecycle feature is added.
 
 ### S6.2 External Evidence Gate

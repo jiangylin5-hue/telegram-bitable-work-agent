@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: S6.1 code is `partial-local`. TD007 Option A identity, opaque-pointer, resolver and Mini App handoff code exist with focused local/disposable PostgreSQL evidence. Four-width target-state Browser proof and real Telegram smoke remain unaccepted.
+- Status: S6.1 code is `partial-local`. TD007 Option A identity, opaque-pointer, resolver and Mini App handoff code exist with focused local/disposable PostgreSQL evidence. The synthetic safe-DTO recovery and Record-handoff Browser matrix has been observed at 1440/1280/430/390; real Telegram smoke, S6.2 delivery and the exhaustive negative-state matrix remain unaccepted.
 - Scope: verified Telegram Mini App identity, active binding/member resolution, safe opaque deep-link resolution and client recovery only.
 - Exclusions: Bot delivery/configuration, automatic replies, memory, knowledge, personal assistant, employee lifecycle, external execution, staging/production release and Stage07 completion.
 
