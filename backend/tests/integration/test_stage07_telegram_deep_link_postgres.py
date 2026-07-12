@@ -1,14 +1,24 @@
 from datetime import UTC, datetime, timedelta
+import hashlib
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import inspect, text, update
+from sqlalchemy import inspect, select, text, update
 from sqlalchemy.exc import IntegrityError, OperationalError
 
+from app.models.audit import OpsAuditEvent
+from app.models.stage06_platform import Stage06TelegramBinding
 from app.models.stage07_telegram import Stage07TelegramDeepLink
 from app.services.stage06_platform import (
     SqlAlchemyStage06PlatformUnitOfWork,
+    create_base,
+    create_table,
     create_workspace,
+)
+from app.services.stage06_identity import Stage06RequestIdentity
+from app.services.stage07_telegram_deep_links import resolve_telegram_deep_link
+from app.services.stage07_telegram_mini_app_identity import (
+    ValidatedTelegramMiniAppLaunch,
 )
 from tests.integration.test_stage07_governance_postgres import (
     Stage06Postgres,
@@ -121,3 +131,81 @@ def test_s6_active_link_lock_blocks_a_concurrent_revoke(
             revoke_session.rollback()
 
         resolver_session.rollback()
+
+
+def test_s6_resolved_audit_row_persists_only_closed_metadata(
+    stage06_postgres: Stage06Postgres,
+) -> None:
+    now = datetime.now(UTC)
+    start_param = "auditOpaqueToken_123456"
+    with stage06_postgres.session_factory() as session:
+        uow = SqlAlchemyStage06PlatformUnitOfWork(session)
+        workspace = create_workspace(
+            uow,
+            name="S6 Telegram audit",
+            owner_user_id="s6-owner",
+        )
+        session.flush()
+        member = uow.list_workspace_members(workspace.id)[0]
+        base = create_base(uow, workspace.id, name="Audit Base")
+        create_table(uow, base.id, name="Tasks", key="tasks")
+        uow.add_telegram_binding(
+            Stage06TelegramBinding(
+                id=uuid4(),
+                workspace_id=workspace.id,
+                workspace_member_id=member.id,
+                telegram_chat_id="synthetic-chat",
+                telegram_user_id="synthetic-user",
+                binding_type="member",
+                default_base_id=base.id,
+                default_digital_employee_id=None,
+                scope_policy={},
+                status="active",
+            )
+        )
+        link = Stage07TelegramDeepLink(
+            id=uuid4(),
+            token_hash=hashlib.sha256(start_param.encode("ascii")).hexdigest(),
+            workspace_id=workspace.id,
+            subject_telegram_user_id="synthetic-user",
+            source_telegram_chat_id="synthetic-chat",
+            destination_kind="base",
+            destination_id=base.id,
+            status="active",
+            expires_at=now + timedelta(minutes=10),
+            created_by_type="system",
+            created_by_id="test",
+        )
+        uow.add_telegram_deep_link(link)
+        session.commit()
+
+        destination = resolve_telegram_deep_link(
+            uow,
+            identity=Stage06RequestIdentity(
+                user_id="s6-owner",
+                source="telegram_binding",
+                telegram_user_id="synthetic-user",
+            ),
+            launch=ValidatedTelegramMiniAppLaunch(
+                "synthetic-user", now, start_param, "private", "opaque-chat"
+            ),
+            start_param=start_param,
+            now=now,
+        )
+        assert destination is not None
+        session.commit()
+
+        audit = session.scalar(
+            select(OpsAuditEvent).where(
+                OpsAuditEvent.event_type == "stage07.telegram_deep_link_resolved"
+            )
+        )
+        assert audit is not None
+        assert audit.after_state == {
+            "outcome": "resolved",
+            "destination_kind": "base",
+            "destination_id": str(base.id),
+        }
+        serialized = repr(audit)
+        for forbidden in (start_param, "synthetic-user", "synthetic-chat", "opaque-chat"):
+            assert forbidden not in serialized
