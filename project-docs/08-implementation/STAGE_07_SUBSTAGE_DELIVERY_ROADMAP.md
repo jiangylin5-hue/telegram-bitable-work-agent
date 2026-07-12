@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 delivery roadmap
 - Purpose: organize Stage07 as coherent substages rather than individual UI/API fragments
-- Current active substage: S6 evidence reconciliation. TD008 Option A S6.2 is `partial-local` with the code/migration/terminal-state package complete; its dual-Worker/logger-depth and real evidence remain open. S6.1's exhaustive negative-state matrix and all real Telegram evidence remain open. S5 remains partial-local with separate provider/Browser evidence gaps; S4 retains its negative-lifecycle evidence gap.
+- Current active substage: S6 evidence reconciliation. TD008 Option A S6.2 is `partial-local` with the code/migration/terminal-state package complete; its dual-Worker/logger-depth and real evidence remain open. S6.1's complete local App matrix is now implemented; only real Telegram evidence remains open. S5 remains partial-local with separate provider/Browser evidence gaps; S4 retains its negative-lifecycle evidence gap.
 
 ## Delivery Rule
 
@@ -157,7 +157,7 @@ TD005 Option A is approved for S5 implementation. It authorizes only the two dra
 
 ### S6.1 Implementation Exit Criteria
 
-- S6-A01/S6-A02/S6-A03/S6-A04/S6-A05/S6-A06/S6-A08/S6-A09 have bounded local evidence. Only S6-A07 (exhaustive App failures/supersession) retains the local matrix gap recorded in the S6 BDD acceptance table.
+- S6-A01 through S6-A09 have bounded local evidence. S6-A07 now covers target `401`/`403` denied, `404`/`409`/`422`/network recovery and late unmount supersession; this remains synthetic local evidence, not real Telegram proof.
 - The validator, binding resolver and opaque pointer each retain no raw launch data/token/message in DTO, error, audit, cache or DOM.
 - Resolver's unique token lookup, expiry/revocation and current authorization are proven against real local PostgreSQL; no unmeasured extra index is created.
 - Desktop/local fallback remains functional and a 1440/1280/430/390 built UI recovery matrix was observed using synthetic fixtures; that is not real Telegram proof.

@@ -33,7 +33,7 @@ test('Telegram recovery resolves once and returns to a focusable Workspace Home 
   render(<App />)
 
   const recovery = await screen.findByRole('button', { name: '返回工作区首页' })
-  expect(recovery).toHaveFocus()
+  await waitFor(() => expect(recovery).toHaveFocus())
   expect(screen.queryByText('opaqueToken_123456')).not.toBeInTheDocument()
   await waitFor(() => expect(fetchMock.mock.calls.filter(([input]) => String(input) === '/mini-app/telegram/deep-links/resolve')).toHaveLength(1))
   const [, resolveInit] = fetchMock.mock.calls.find(([input]) => String(input) === '/mini-app/telegram/deep-links/resolve') as [string, RequestInit]
@@ -78,7 +78,7 @@ test('a resolved record pointer re-reads Base, View and Record before showing th
   expect(screen.queryByText('opaqueToken_123456')).not.toBeInTheDocument()
 })
 
-test.each([401, 403])('a %i during resolved target reread remains denied instead of recovering to Home', async (status) => {
+test.each([401, 403, 404, 409, 422, 'network'])('a %s during resolved target reread follows the safe terminal state', async (status) => {
   ;(window as TelegramWindow).Telegram = {
     WebApp: { initData: 'raw-signed-init-data', initDataUnsafe: { start_param: 'opaqueToken_123456' } },
   }
@@ -94,14 +94,50 @@ test.each([401, 403])('a %i during resolved target reread remains denied instead
     if (path === '/tables/table-1/schema') return response({ table: { id: 'table-1', name: 'Tasks', key: 'tasks' }, fields: [] })
     if (path === '/views/view-1/presentation') return response({ view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: [], group_by_field_key: null, date_field_key: null, form_field_keys: [] })
     if (path === '/views/view-1/records') return response({ view_id: 'view-1', records: [], next_cursor: null, has_more: false })
-    if (path === '/records/record-1') return response({ error: { code: 'target_access_denied' } }, status)
+    if (path === '/records/record-1') return status === 'network'
+      ? Promise.reject(new Error('synthetic network failure'))
+      : response({ error: { code: 'target_access_denied' } }, typeof status === 'number' ? status : 500)
     return Promise.reject(new Error(`Unexpected request: ${path}`))
   })
   vi.stubGlobal('fetch', fetchMock)
 
   render(<App />)
 
-  await waitFor(() => expect(document.querySelector('.app-state')).toHaveAttribute('aria-label', '无工作区访问权限'))
-  expect(screen.queryByRole('button', { name: '返回工作区首页' })).not.toBeInTheDocument()
+  if (status === 401 || status === 403) {
+    await waitFor(() => expect(document.querySelector('.app-state')).toHaveAttribute('aria-label', '无工作区访问权限'))
+    expect(screen.queryByRole('button', { name: '返回工作区首页' })).not.toBeInTheDocument()
+  } else {
+    const recovery = await screen.findByRole('button', { name: '返回工作区首页' })
+    await waitFor(() => expect(recovery).toHaveFocus())
+  }
   expect(screen.queryByText('opaqueToken_123456')).not.toBeInTheDocument()
+})
+
+test('an unmounted launch ignores a late resolver result without loading Home or target data', async () => {
+  ;(window as TelegramWindow).Telegram = {
+    WebApp: { initData: 'raw-signed-init-data', initDataUnsafe: { start_param: 'opaqueToken_123456' } },
+  }
+  const paths: string[] = []
+  let resolveResolver: ((value: Response) => void) | undefined
+  const fetchMock = vi.fn((input: string | URL | Request) => {
+    const path = typeof input === 'string' ? input : input instanceof URL ? input.pathname : new URL(input.url).pathname
+    paths.push(path)
+    if (path === '/mini-app/bootstrap') return Promise.resolve(new Response(JSON.stringify({
+      identity: { user_id: 'member-1', source: 'telegram_binding' },
+      workspaces: [{ id: 'workspace-1', name: 'Operations', slug: 'operations', role: 'viewer', capabilities: { can_read_bases: true, can_manage_workspace: false, can_manage_schema: false, can_review_drafts: false } }],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    if (path === '/mini-app/telegram/deep-links/resolve') return new Promise<Response>((resolve) => { resolveResolver = resolve })
+    return Promise.reject(new Error(`Unexpected request: ${path}`))
+  })
+  vi.stubGlobal('fetch', fetchMock)
+
+  const rendered = render(<App />)
+  await waitFor(() => expect(paths).toContain('/mini-app/telegram/deep-links/resolve'))
+  rendered.unmount()
+  resolveResolver?.(new Response(JSON.stringify({ outcome: 'recovery' }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+  await Promise.resolve()
+  await Promise.resolve()
+
+  expect(paths).not.toContain('/workspaces/workspace-1/home')
+  expect(paths).not.toContain('/workspaces/workspace-1/bases')
 })

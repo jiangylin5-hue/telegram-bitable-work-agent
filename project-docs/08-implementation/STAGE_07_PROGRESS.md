@@ -19,7 +19,7 @@
 
 - A red Mini App flow test exposed that a resolved Record target reread `401` could run the generic Home recovery after `denyInvalidSession`, replacing the correct denied state with a perpetual loading boundary. The same boolean return could affect `403` after the workspace invalidation path.
 - `telegramDestinationHandoff` now captures its launch generation and permits recovery only while the generation is unchanged and the session remains valid. `openBase`-triggered `401`/`403` therefore retains denied state; ordinary stale/missing target cases retain recovery behavior.
-- Verification: focused flow `4 passed`; full Mini App `46 files / 172 tests`; `npm.cmd run build` passed. No backend/API/schema/permission model, fixture, Bot configuration or external Telegram operation changed. Browser was not counted as new evidence because this repair does not add a UI surface and no real backend fixture was started; prior synthetic four-width S6 evidence remains unchanged.
+- Verification: expanded focused flow `9 passed`; full Mini App `46 files / 177 tests`; `npm.cmd run build` passed. No backend/API/schema/permission model, fixture, Bot configuration or external Telegram operation changed. Browser was not counted as new evidence because this repair does not add a UI surface and no real backend fixture was started; prior synthetic four-width S6 evidence remains unchanged.
 
 ### 2026-07-13: S6.1 Resolver Lock and Closed-Audit Security Subpackage
 
