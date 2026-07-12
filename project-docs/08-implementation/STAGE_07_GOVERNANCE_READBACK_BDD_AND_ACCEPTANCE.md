@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed, awaiting Technical Decision 003 and user approval
+- Status: implemented-local; external Browser evidence remains pending
 - Scope: read-only member directory and Base audit timeline only
 
 ## BDD Scenarios
@@ -79,12 +79,12 @@ Then every control has a labelled reachable path, continuation control, retry st
 
 | ID | Requirement | Evidence required | Status |
 | --- | --- | --- | --- |
-| GR-A01 | server-authorised, paginated safe member read model | API/unit/integration denial and pagination tests | proposed |
-| GR-A02 | server-authorised, redacted audit read model | DTO/redaction/legacy endpoint isolation tests | proposed |
-| GR-A03 | exact protected query cleanup/race containment | App/query tests for 401/403/404/scope replacement | proposed |
-| GR-A04 | no raw governance/audit data reaches UI state | parser/component negative tests | proposed |
-| GR-A05 | disposable PostgreSQL authorization and cursor path | local PostgreSQL evidence | proposed |
-| GR-A06 | focused Browser reachability and console scan | built client, synthetic local data | proposed |
+| GR-A01 | server-authorised, paginated safe member read model | API/unit/integration denial and pagination tests | implemented-local |
+| GR-A02 | server-authorised, redacted audit read model | DTO/redaction/legacy endpoint isolation tests | implemented-local |
+| GR-A03 | exact protected query cleanup/race containment | App/query tests for 401/403/404/scope replacement | partial-local |
+| GR-A04 | no raw governance/audit data reaches UI state | parser/component negative tests | implemented-local |
+| GR-A05 | disposable PostgreSQL authorization and cursor path | local PostgreSQL evidence | implemented-local |
+| GR-A06 | focused Browser reachability and console scan | built client, synthetic local data | external-environment-pending |
 
 ## Prohibited Claims
 

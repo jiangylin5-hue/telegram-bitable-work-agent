@@ -4,7 +4,7 @@
 
 - Document status: active current-state requirement audit
 - Scope: Stage07 source of truth, SDD, BDD, API/data/security contract, module documents, implementation plan, test plan and acceptance checklist mapped to current source, tests and browser evidence
-- Current Progress: P3/F1/F2 remain bounded `implemented-local` evidence. V1-1 through V1-14 is `partial-local`: real FastAPI + disposable PostgreSQL Browser evidence adds owner/editor/viewer Canvas separation, allowed Base/Table/Field intersection, hidden-field omission and numeric lookup projection. V1-14 repaired a viewer create-entry visibility defect with existing server-derived roles and an unknown-role fail-closed path; no new authority was added. Complete real Detail relation/stale/type-invalid Browser flows remain unaccepted. Base-list/direct-presentation reads resolve the same effective ACL; only permitted V1 list rows carry safe scope/access/default markers. Imports, Package 3 governance and all Package 4 Digital Employee scope remain incomplete or contract-gated.
+- Current Progress: P3/F1/F2 remain bounded `implemented-local` evidence. V1-1 through V1-14 is `partial-local`: real FastAPI + disposable PostgreSQL Browser evidence adds owner/editor/viewer Canvas separation, allowed Base/Table/Field intersection, hidden-field omission and numeric lookup projection. V1-14 repaired a viewer create-entry visibility defect with existing server-derived roles and an unknown-role fail-closed path; no new authority was added. Complete real Detail relation/stale/type-invalid Browser flows remain unaccepted. Base-list/direct-presentation reads resolve the same effective ACL; only permitted V1 list rows carry safe scope/access/default markers. Template/import and S3 Governance Readback have bounded `implemented-local` evidence; S3 Browser external-environment proof, governance writes and all Package 4 Digital Employee scope remain incomplete or contract-gated.
 
 ## 1. Purpose
 
@@ -95,10 +95,10 @@ This table closes only F2-A01 through F2-A10. Each item remains subject to the g
 
 | Requirement | Source | Status | Evidence | Remaining work / acceptance condition |
 | --- | --- | --- | --- | --- |
-| Capability-gated management entry | Source Package 3; Governance module | `partial-local` | `AppShell` hides management entries without capabilities | Links target an unimplemented route and have no independent server read / denied-state flow. |
-| Member readback | Plan Package 3 | `existing-contract-unimplemented` | `GET /workspaces/{workspace_id}/members` requires `member.read` | No UI, pagination or role/permission mutation path. |
+| Capability-gated management entry | TD003; Governance work-surface | `implemented-local` | `AppShell` uses existing capability hint for the entry; both safe routes independently authorize server-side | Browser external-environment reachability remains pending; local visibility is never authority. |
+| Member readback | TD003; Governance BDD/SDD | `implemented-local` | `GET /mini-app/workspaces/{workspace_id}/governance/members` requires `member.read`, emits closed paged DTOs; unit and PostgreSQL tests cover denial/paging | No invite, role/policy or member mutation path. |
 | Role/permission editor | Source §5; BDD 11 | `contract-gated` | Stage06 exposes authorization enforcement but no approved management mutation/read model for roles or field/view policies | Requires a dedicated authorization/API decision; client must not reconstruct policy semantics. |
-| Audit readback | Source Package 3; Acceptance checklist | `existing-contract-unimplemented` | `GET /bases/{base_id}/audit-events` paginates sanitized state | No UI, pagination, empty/denied handling or browser redaction evidence. |
+| Audit readback | TD003; Governance BDD/SDD | `implemented-local` | `GET /mini-app/bases/{base_id}/governance/audit-events` requires Base scope plus `audit.read` and constructs a redacted closed DTO; UI supports authorised Base selection and cursor continuation | Browser external-environment visual/console proof remains pending; no forensic/raw audit view is introduced. |
 | Management mutation cache refresh | Governance module | `not-implemented` | no management mutations/UI cache | Depends on approved management capability and a selected cache architecture. |
 
 ## 7. Package 4: Digital Employee, Draft And Telegram
@@ -134,7 +134,7 @@ This table closes only F2-A01 through F2-A10. Each item remains subject to the g
 
 ## 10. Exit Gate Audit
 
-Stage07 acceptance is **not proven**. The following required exit items currently lack evidence: complete Package 2, all Package 3, all Package 4, protected-state revocation/expiry handling, four-width visual QA, approved Telegram smoke and requirement-by-requirement automated/negative tests.
+Stage07 acceptance is **not proven**. The following required exit items currently lack evidence: remaining Package 2 matrix, S3 Browser external-environment proof and deeper 401/403/404 App-flow coverage, all governance write and Package 4 scope, protected-state revocation/expiry handling, four-width visual QA, approved Telegram smoke and requirement-by-requirement automated/negative tests.
 
 No Stage07 document, commit or test result may be used to claim stage completion until this audit's incomplete and contract-gated rows have explicit implementation/evidence or a revised, user-approved scope decision.
 

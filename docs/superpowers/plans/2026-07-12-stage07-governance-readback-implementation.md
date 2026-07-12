@@ -1,6 +1,6 @@
 # Stage07 Governance Readback Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Execution status (2026-07-12):** G1 and G2 are implemented locally; G3 has focused automated, build and cleanup evidence. The Browser environment could not navigate to the local built client, so Browser acceptance is explicitly pending rather than passed.
 
 **Goal:** Deliver the approved Package 3 read-only Governance workbench: safe paged member readback and Base audit timeline in the Stage07 Mini App.
 
@@ -58,7 +58,7 @@
 - Produces GET /mini-app/workspaces/{workspace_id}/governance/members?limit=1..100&cursor?
 - Produces GET /mini-app/bases/{base_id}/governance/audit-events?limit=1..100&cursor?
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ~~~python
 def test_governance_member_projection_is_paged_and_closed(client, workspace_id):
@@ -74,13 +74,13 @@ def test_governance_audit_projection_excludes_legacy_audit_fields(client, base_i
     assert forbidden.isdisjoint(response.json()["events"][0])
 ~~~
 
-- [ ] **Step 2: Confirm red**
+- [x] **Step 2: Confirm red**
 
 Run: cd backend; python -m pytest -q tests/unit/test_stage07_governance_api.py
 
 Expected: FAIL because the safe route/schema does not exist.
 
-- [ ] **Step 3: Implement exact closed DTOs and route checks**
+- [x] **Step 3: Implement exact closed DTOs and route checks**
 
 ~~~python
 class GovernanceAuditEventResponse(BaseModel):
@@ -120,13 +120,13 @@ def list_governance_audit_events(
 
 Member route independently requires member.read. Both use Query(default=50, ge=1, le=100). Construct audit DTOs from model fields only; never serialize or filter the legacy HTTP response.
 
-- [ ] **Step 4: Confirm green behavior**
+- [x] **Step 4: Confirm green behavior**
 
 Run: cd backend; python -m pytest -q tests/unit/test_stage07_governance_api.py
 
 Expected: PASS for owner/admin success, viewer/cross-workspace/Base denial, invalid cursor fixed 422 and no raw fields.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ~~~bash
 git add backend/app/schemas/stage07_governance.py backend/app/api/routes/stage07_governance.py backend/app/main.py backend/tests/unit/test_stage07_governance_api.py
@@ -139,7 +139,7 @@ git commit -m "feat(stage07): add safe governance read projections"
 
 - Create: backend/tests/integration/test_stage07_governance_postgres.py
 
-- [ ] **Step 1: Write failing synthetic scope/redaction/pagination case**
+- [x] **Step 1: Write failing synthetic scope/redaction/pagination case**
 
 ~~~python
 def test_governance_postgres_audit_is_scoped_paged_and_redacted(stage06_postgres):
@@ -159,19 +159,19 @@ def test_governance_postgres_audit_is_scoped_paged_and_redacted(stage06_postgres
     assert "legacy-hidden-value" not in first.text + second.text
 ~~~
 
-- [ ] **Step 2: Confirm red, then complete only compatibility required by Task 1**
+- [x] **Step 2: Confirm red, then complete only compatibility required by Task 1**
 
 Run: cd backend; $env:DATABASE_URL=$env:STAGE06_LOCAL_DATABASE_URL; python -m pytest -q tests/integration/test_stage07_governance_postgres.py
 
 Expected: red before route completion; no migration, index or serializer expansion may be added.
 
-- [ ] **Step 3: Confirm green and migration smoke**
+- [x] **Step 3: Confirm green and migration smoke**
 
 Run: cd backend; $env:DATABASE_URL=$env:STAGE06_LOCAL_DATABASE_URL; python scripts/stage06_local_postgres_migration_smoke.py; python -m pytest -q tests/integration/test_stage07_governance_postgres.py
 
 Expected: current Alembic head and passing synthetic disposable proof.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ~~~bash
 git add backend/tests/integration/test_stage07_governance_postgres.py
@@ -194,7 +194,7 @@ git commit -m "test(stage07): cover governance readback postgres boundary"
 
 - Produces api.listGovernanceMembers, api.listGovernanceAuditEvents, governanceKeys and clearGovernanceQueries.
 
-- [ ] **Step 1: Write failing parser/key tests**
+- [x] **Step 1: Write failing parser/key tests**
 
 ~~~ts
 expect(await api.listGovernanceAuditEvents("base-1")).toEqual(expect.objectContaining({ baseId: "base-1" }))
@@ -202,13 +202,13 @@ expect(fetchMock).toHaveBeenCalledWith("/mini-app/bases/base-1/governance/audit-
 expect(JSON.stringify(parsed)).not.toContain("trace-secret")
 ~~~
 
-- [ ] **Step 2: Confirm red**
+- [x] **Step 2: Confirm red**
 
 Run: cd mini-app; npm.cmd test -- --run src/test/governance-api.test.ts src/test/governance-query.test.ts
 
 Expected: FAIL because types, parsers and governance keys do not exist.
 
-- [ ] **Step 3: Implement closed types, URL creation and cleanup**
+- [x] **Step 3: Implement closed types, URL creation and cleanup**
 
 ~~~ts
 export type GovernanceAuditEvent = {
@@ -222,7 +222,7 @@ export const governanceKeys = {
 
 Use URLSearchParams, encodeURIComponent and exact allowlisted parsers. Exact Base removal clears its audit subtree; close/403/workspace replacement clears the Governance workspace subtree.
 
-- [ ] **Step 4: Confirm green and commit**
+- [x] **Step 4: Confirm green and commit**
 
 Run: cd mini-app; npm.cmd test -- --run src/test/governance-api.test.ts src/test/governance-query.test.ts
 
@@ -244,7 +244,7 @@ git commit -m "feat(stage07): add protected governance transport"
 - Test: mini-app/src/test/governance-workbench.test.tsx
 - Test: mini-app/src/test/governance-app-flow.test.tsx
 
-- [ ] **Step 1: Write failing panel/lifecycle tests**
+- [x] **Step 1: Write failing panel/lifecycle tests**
 
 ~~~tsx
 test("shows safe members then selected Base audit only", async () => {
@@ -257,21 +257,21 @@ test("shows safe members then selected Base audit only", async () => {
 
 Also test 401 global denial, 403 workspace denial, 404 exact Base clear, failed next page preserves first rows, and delayed Workspace A response cannot render in Workspace B.
 
-- [ ] **Step 2: Confirm red**
+- [x] **Step 2: Confirm red**
 
 Run: cd mini-app; npm.cmd test -- --run src/test/governance-workbench.test.tsx src/test/governance-app-flow.test.tsx
 
 Expected: FAIL because the workbench and lifecycle are absent.
 
-- [ ] **Step 3: Implement minimal read-only UI**
+- [x] **Step 3: Implement minimal read-only UI**
 
 AppShell accepts onOpenGovernance and exposes it only behind existing can_manage_workspace. App owns a governance request generation. Selecting a Base clears previous audit state before a new request. The panel maps known role/status/event values to fixed labels, maps unknown values to fixed generic labels, supports load-more/retry, and has no mutation control.
 
-- [ ] **Step 4: Add responsive/accessibility contract**
+- [x] **Step 4: Add responsive/accessibility contract**
 
 Desktop has labelled members/audit panes. Mobile has one labelled full-height dialog/sheet. Base selector, retry and continuation are keyboard reachable at 390px. Close returns focus to the opening entry; no horizontal scroll is necessary to identify role/status/event.
 
-- [ ] **Step 5: Confirm green/build and commit**
+- [x] **Step 5: Confirm green/build and commit**
 
 Run: cd mini-app; npm.cmd test -- --run src/test/governance-workbench.test.tsx src/test/governance-app-flow.test.tsx; npm.cmd run build
 
@@ -294,7 +294,7 @@ git commit -m "feat(stage07): add governance readback workbench"
 - Modify: project-docs/08-implementation/STAGE_07_GOVERNANCE_READBACK_BDD_AND_ACCEPTANCE.md
 - Modify: project-docs/08-implementation/STAGE_07_TEST_PLAN.md
 
-- [ ] **Step 1: Run focused verification**
+- [x] **Step 1: Run focused verification**
 
 ~~~powershell
 cd backend
@@ -309,15 +309,15 @@ npm.cmd run build
 
 Expected: record actual counts only.
 
-- [ ] **Step 2: Focused Browser path**
+- [ ] **Step 2: Focused Browser path (blocked by Browser local-origin navigation policy; no pass claimed)**
 
 Use synthetic local data only. Observe desktop/mobile entry, safe member rows, selected Base timeline, one continuation or empty state, one denial/retry state and final console error/warn scan. Do not claim any unexecuted width, raw audit inspection, Telegram, staging or production flow.
 
-- [ ] **Step 3: Clean temporary material**
+- [x] **Step 3: Clean temporary material**
 
 Finalize Browser, stop local services, delete temporary fixture/proxy/logs with apply_patch, rerun the disposable migration smoke if it owns the test DB, and prove temporary ports are closed.
 
-- [ ] **Step 4: Reconcile BDD row-by-row and commit**
+- [x] **Step 4: Reconcile BDD row-by-row and commit**
 
 Mark only observed/tested GR-A rows implemented-local. Retain unexecuted Browser widths or negatives as partial-local.
 

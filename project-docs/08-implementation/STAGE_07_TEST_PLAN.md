@@ -28,6 +28,7 @@
 - F1 field types: `text`, `number`, `date`, `status`, `single_select`, `multi_select`, `user`, `checkbox`, `url`, `email`, `phone`; relation/lookup/JSON remain negative cases.
 - F1 failure states: blank/duplicate name with the allowlisted local feedback only, invalid/missing choices, raw request extras, schema-policy leak, 401/403/404/409/5xx and failed view update rollback.
 - F2 relation/lookup: use the separate F2 BDD, SDD and complex-feature index as the exhaustive state source. Required cases include same-Base/permission denial, replay/conflict/rollback, candidate search/cursor/label omission, relation required/self/unreadable-target writes, all fixed aggregates, two-level/cycle failure, whole-lookup fail-closed omission, future delete guards, protected-cache cancellation and four-width UI QA.
+- S3 Governance Readback: API tests prove independent `member.read` / Base-scoped `audit.read`, closed DTO shapes, denial and opaque cursor behavior; disposable PostgreSQL proves isolation/redaction/paging; frontend tests prove strict parser/key/workbench paths. A Browser run is required for desktop/mobile entry, safe rows/timeline, retry/denial and console scan, but remains external-environment-pending until the in-app Browser can reach the local built client.
 
 ## 2.1 F1 Required Evidence
 
