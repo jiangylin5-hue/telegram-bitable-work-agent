@@ -166,7 +166,7 @@ Run `npm.cmd test -- --run src/test/digital-employee-management-workbench.test.t
 - Create `mini-app/src/test/digital-employee-management-app-flow.test.tsx`.
 - Modify `mini-app/src/test/app-shell-navigation.test.tsx`.
 
-**RED tests:** 
+**RED tests:**
 
 ```tsx
 test('creates configures assigns activates and pauses through authoritative rereads', async () => {
