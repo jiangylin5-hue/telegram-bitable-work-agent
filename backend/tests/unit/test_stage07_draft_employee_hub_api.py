@@ -355,9 +355,12 @@ def test_s5_summary_invocation_uses_live_runtime_and_drops_generic_runtime_outpu
     workspace = create_workspace(uow, name="S5 live invoke", owner_user_id=owner.actor_id, actor=owner)
     base = create_base(uow, workspace.id, name="Operations", actor=owner)
     table = create_table(uow, base.id, name="Tasks", key="tasks", actor=owner)
+    view = create_form_view(
+        uow, base.id, table.id, name="Task grid", view_type="grid", config={"fields": []}, actor=owner,
+    )
     employee = create_digital_employee(
         uow, base.id, name="Assistant", description="Safe", telegram_alias=None,
-        accessible_tables=[str(table.id)], accessible_views=[], allowed_actions=["summarize"], actor=owner,
+        accessible_tables=[str(table.id)], accessible_views=[str(view.id)], allowed_actions=["summarize"], actor=owner,
     )
     captured: dict[str, object] = {}
 
@@ -379,7 +382,7 @@ def test_s5_summary_invocation_uses_live_runtime_and_drops_generic_runtime_outpu
         client.headers["X-Stage06-User-Id"] = owner.actor_id
         response = client.post(
             f"/mini-app/digital-employees/{employee.id}/invocations",
-            json={"intent": "summarize", "base_id": str(base.id), "view_id": str(uuid4())},
+            json={"intent": "summarize", "base_id": str(base.id), "view_id": str(view.id)},
         )
 
     assert response.status_code == 200
@@ -429,9 +432,13 @@ def test_s5_draft_invocation_replays_the_same_safe_draft_pointer_once(
     workspace = create_workspace(uow, name="S5 draft replay", owner_user_id=owner.actor_id, actor=owner)
     base = create_base(uow, workspace.id, name="Operations", actor=owner)
     table = create_table(uow, base.id, name="Tasks", key="tasks", actor=owner)
+    view = create_form_view(
+        uow, base.id, table.id, name="Task grid", view_type="grid", config={"fields": []}, actor=owner,
+    )
+    record = create_record(uow, table.id, values={}, actor=owner)
     employee = create_digital_employee(
         uow, base.id, name="Assistant", description="Safe", telegram_alias=None,
-        accessible_tables=[str(table.id)], accessible_views=[], allowed_actions=["draft_update"], actor=owner,
+        accessible_tables=[str(table.id)], accessible_views=[str(view.id)], allowed_actions=["draft_update"], actor=owner,
     )
     draft_id = uuid4()
     calls = 0
@@ -445,7 +452,7 @@ def test_s5_draft_invocation_replays_the_same_safe_draft_pointer_once(
     app = create_app()
     app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
     app.dependency_overrides[get_stage06_runtime_uow] = lambda: uow
-    payload = {"intent": "draft_update", "base_id": str(base.id), "view_id": str(uuid4()), "record_id": str(uuid4())}
+    payload = {"intent": "draft_update", "base_id": str(base.id), "view_id": str(view.id), "record_id": str(record.id)}
 
     with TestClient(app) as client:
         client.headers["X-Stage06-User-Id"] = owner.actor_id
@@ -535,5 +542,46 @@ def test_s5_cross_base_summary_context_fails_before_live_runtime() -> None:
 
     assert response.status_code == 422
     assert response.json()["detail"]["code"] == "digital_employee_scope_denied"
+    assert uow.record_change_drafts == []
+    assert uow.agent_runs == []
+
+
+def test_s5_revoked_view_context_fails_before_live_runtime(monkeypatch) -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="S5 revoked view", owner_user_id=owner.actor_id, actor=owner)
+    operator = WorkspaceMember(
+        id=uuid4(), workspace_id=workspace.id, user_id="operator-1", role="operator", status="active"
+    )
+    uow.add_workspace_member(operator)
+    base = create_base(uow, workspace.id, name="Operations", actor=owner)
+    table = create_table(uow, base.id, name="Tasks", key="tasks", actor=owner)
+    view = create_form_view(
+        uow, base.id, table.id, name="Task grid", view_type="grid", config={"fields": []},
+        permission_policy={"operator": "read"}, actor=owner,
+    )
+    employee = create_digital_employee(
+        uow, base.id, name="Assistant", description="Safe", telegram_alias=None,
+        accessible_tables=[str(table.id)], accessible_views=[str(view.id)], allowed_actions=["summarize"], actor=owner,
+    )
+
+    def fail_if_invoked(*args, **kwargs):
+        raise AssertionError("runtime must not run after view access is revoked")
+
+    monkeypatch.setattr(draft_employee_hub_routes, "invoke_digital_employee", fail_if_invoked)
+    view.permission_policy = {"operator": "hidden"}
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_runtime_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "operator-1"
+        response = client.post(
+            f"/mini-app/digital-employees/{employee.id}/invocations",
+            json={"intent": "summarize", "base_id": str(base.id), "view_id": str(view.id)},
+        )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "permission_denied"
     assert uow.record_change_drafts == []
     assert uow.agent_runs == []

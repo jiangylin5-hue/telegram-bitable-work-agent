@@ -153,6 +153,8 @@ def invoke_safe_digital_employee(
     if request.intent == "draft_update" and idempotency_key is None:
         raise HTTPException(status_code=422, detail=error_detail("idempotency_key_required", "idempotency_key_required"))
     try:
+        if view_id is not None:
+            list_view_records(uow, view_id, actor=actor, limit=1)
         invocation_decision = None
         if request.intent == "draft_update":
             assert idempotency_key is not None
