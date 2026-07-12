@@ -4,6 +4,7 @@
 
 - Document status: planned stage acceptance checklist
 - Scope: implementation acceptance, not documentation-package approval
+- Current Progress: this checklist is reconciled to the latest local evidence. Checked rows prove only the stated approved local contract/code/test evidence; they do not replace the remaining Browser, real-provider, Telegram or whole-stage exit gates.
 
 ## Foundation
 
@@ -59,22 +60,22 @@ These checks cover only the approved F2 same-Base relation, fixed lookup and Bui
 
 ### V1 Saved View Builder Local Evidence
 
-The design and implementation plan are user-approved. The items remain unchecked as Stage07 acceptance because V1 is only `partial-local`: focused backend `24 passed`, local PostgreSQL `11 passed`, full backend `512 passed, 17 skipped`, Mini App `24 files / 114 tests`, build and a partial four-width disposable Browser matrix are recorded in the V1 evidence documents. The Browser run did not switch rendered owner/editor/viewer identities or cover every invalid/F2/real-backend state.
+The design and implementation plan are user-approved. V1 is `partial-local`: V1-1 through V1-15 have current typed/server/real-local-PostgreSQL and focused client evidence, while full all-width real-backend invalid/F2/role Browser coverage remains open. The current full backend regression is `600 passed, 17 skipped`; V1's dedicated PostgreSQL matrix is `11 passed`.
 
-- [ ] The browser uses only typed V1 safe commands/read models; it never uses legacy raw view `config` or `permission_policy`.
-- [ ] New views start private; owner/editor/viewer access intersects with active membership and underlying Base/Table/Record/Field authority.
-- [ ] The existing system default Grid remains the only default and cannot be changed into a private/restricted view.
-- [ ] Grid has server-owned visible field order, flat typed `AND` filters, at most three stable sorts and at most one eligible group field.
-- [ ] Kanban, Calendar and Form each enforce their type-specific group/date/form-key constraint without a client fallback.
-- [ ] Relation filters use F2 safe candidates; numeric lookup filter/sort is bounded; relation/lookup grouping is rejected.
-- [ ] Real PostgreSQL evidence proves atomic create/grant replacement/replay/concurrency/default behavior and server filter/sort before pagination.
+- [x] The client uses only typed V1 safe commands/read models; it never consumes legacy raw view `config` or `permission_policy`.
+- [x] New views start private; owner/editor/viewer access intersects with active membership and underlying Base/Table/Record/Field authority.
+- [x] The existing system default Grid remains the only default and cannot be changed into a private/restricted view.
+- [x] Grid has server-owned visible field order, flat typed `AND` filters, at most three stable sorts and at most one eligible group field.
+- [x] Kanban, Calendar and Form each enforce their type-specific group/date/form-key constraint without a client fallback.
+- [x] Relation filters use F2 safe candidates; numeric lookup filter/sort is bounded; relation/lookup grouping is rejected.
+- [x] Real PostgreSQL evidence proves atomic create/grant replacement/replay/concurrency/default behavior and server filter/sort before pagination.
 - [ ] Browser evidence proves private/restricted sharing, owner/editor/viewer separation and all required states at 1440/1280/430/390 with safe console output.
 
 ## Governance And Security
 
-- [ ] Management routes and data reject unauthorized users independently of client navigation.
+- [x] S3/S4 management routes and data reject unauthorized users independently of client navigation; server-side fixed actions and resource scope remain authoritative.
 - [ ] Hidden fields and inaccessible resources do not appear in rendered states, cache, telemetry or sanitized visual evidence.
-- [ ] Audit readback is paginated and redacted.
+- [x] Audit readback is paginated and redacted through the approved S3 safe DTO; no raw forensic detail is rendered.
 
 ## Digital Employees
 
@@ -84,9 +85,18 @@ The design and implementation plan are user-approved. The items remain unchecked
 - [ ] Every Bot write remains `record_change_draft` until explicit confirmation.
 - [ ] Confirm/reject/replay/conflict/expired states produce one authoritative outcome and audit reference.
 
+### S5 Bounded Draft And Digital-Employee Evidence
+
+These rows cover only approved TD005/TD006 contact, context and draft-review paths. They do not create employee lifecycle, personal-assistant, memory, knowledge or publication scope.
+
+- [x] Safe active contacts, fixed `summarize`/`draft_update` intents and allowlisted result transport are server-authorized; generic runtime payloads never enter Mini App state.
+- [x] `draft_update` rechecks selected Base, employee View/table scope, caller-readable target and current View membership before runtime or invocation-ledger reservation.
+- [x] Safe draft detail is field-filtered on every reread; confirm/reject are versioned/idempotent, confirm rechecks current field-write authority, and reject does not write a record.
+- [ ] Field-filtered Browser draft lifecycle and configured real OpenRouter evidence remain required before S5 can leave `partial-local`.
+
 ### S6.1 Telegram Identity and Deep-Link Local Evidence
 
-TD007 is `partial-local`, not a delivery or production approval. The checked rows below reflect bounded local evidence only; S6-A03--S6-A07/S6-A09 retain the exact gaps in the S6 BDD matrix.
+TD007 is `partial-local`, not a delivery or production approval. The checked rows below reflect the complete approved local identity/resolver/client matrix; only a real Telegram identity/deep-link smoke remains external evidence.
 
 - [x] Telegram Mini App `initData` is validated server-side with official HMAC/freshness, duplicate-input and malformed/forged rejection coverage; an invalid present Telegram proof cannot fall back to the development header.
 - [x] A validated Telegram user resolves through active bindings to exactly one active internal member user or fails closed.
@@ -107,18 +117,18 @@ TD008 Option A is `partial-local`. It reuses the existing confirmation/Outbox/Wo
 - [x] A two-session PostgreSQL claimed-Worker collision makes at most one Bot call, does not call the replay client and revokes the pointer into `delivery_unknown`.
 - [x] Direct Service/Worker/typed-client inventory has no logger sink; the exception route writes only fixed redacted codes.
 - [ ] Real private-chat delivery and real Telegram `initData` -> resolver -> reread require per-environment authority.
-- [ ] Definite rejection and uncertain-send paths revoke the pointer and never retry automatically.
-- [ ] Disposable PostgreSQL migration/lock/rollback and typed Bot URL-button tests pass.
+- [x] Definite rejection and uncertain-send paths revoke the pointer and never retry automatically in the local fake-client and disposable-PostgreSQL terminal-state matrix.
+- [x] Disposable PostgreSQL migration/lock/rollback and typed Bot URL-button tests pass.
 - [ ] One user-authorized non-production delivery and actual Telegram Mini App smoke produce sanitized evidence only.
 
 ## Evidence
 
-- [ ] Automated unit, integration, contract and negative security tests pass.
+- [x] Approved local unit, integration, contract and negative security suites pass: current backend `600 passed, 17 historical external skips`; focused frontend/build and substage PostgreSQL evidence are recorded in the linked BDD/evidence documents.
 - [ ] Visual QA passes at 1440px, 1280px, 430px and 390px against selected design direction.
 - [ ] Telegram deep-link smoke is recorded only in an approved test environment.
-- [ ] Evidence is sanitized and production launch is not claimed.
+- [x] Recorded local evidence is sanitized and no production launch is claimed.
 
 ### P3 Evidence Boundary
 
 - [x] P3 documentation records a synthetic-only fixture, safe receipts and cleanup, and explicitly excludes production/Telegram claims, raw policies/configuration, audit bodies, credentials, field data and real user records.
-- [ ] Stage07-wide evidence remains incomplete: all Package 2 deliverables, Package 3, Package 4, four-width visual fidelity, approved Telegram smoke and the final exit audit still require their own evidence.
+- [ ] Stage07-wide evidence remains incomplete: remaining Package 2/V1 and S3/S4/S5 Browser evidence, real provider proof, approved Telegram smoke, contract-gated Package 4 expansion and the final exit audit still require their own evidence.

@@ -4,7 +4,7 @@
 
 - Document status: active acceptance design
 - Scope: user-visible UI behavior, safety and responsive acceptance
-- Current Progress: Scenarios 1, 3, 4 and 5 have bounded local evidence for implemented slices; no scenario is accepted end-to-end. V1 Task 12 adds partial disposable-fixture Browser evidence for Scenario 4 at 1440/1280/430/390, but does not prove multi-role, invalid/F2 or real-backend Browser behavior. Scenarios 6-12 remain incomplete or contract-gated as recorded in the requirement traceability audit.
+- Current Progress: Scenarios 1, 3, 4 and 5 have bounded local evidence for implemented slices; S3/S4 governance, the TD005/TD006 bounded draft loop and TD007/TD008 local safety paths have their own reconciled BDD evidence. No Stage07 scenario is accepted end-to-end. V1 has partial disposable and real-local-backend Browser evidence at 1440/1280/430/390, but does not prove every multi-role, stale/type-invalid or all-width real-backend path. Team Bot lifecycle, personal assistant, knowledge and memory remain contract-gated; real provider/Telegram and whole-stage visual evidence remain incomplete as recorded in the requirement traceability audit.
 
 ## 1. BDD Scenarios
 
