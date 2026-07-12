@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 delivery roadmap
 - Purpose: organize Stage07 as coherent substages rather than individual UI/API fragments
-- Current active substage: S3 Governance Readback
+- Current active substage: S4 Governance Write documentation and user-review gate
 
 ## Delivery Rule
 
@@ -25,8 +25,8 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 | S0 | Foundation and protected UI state | verified bootstrap, workspace switching, shell and safe cache/error boundary | implemented-local | existing Stage06 contracts |
 | S1 | Bitable authoring and records | Base/Table, F1 field, F2 relation/lookup and Record Detail work | implemented-local / partial-local | existing builder contracts |
 | S2 | Views, template and import | saved views, template/install/save, CSV/XLSX server preview/import | implemented-local / partial-local | existing contracts; Browser file upload unproven |
-| S3 | Governance Readback | safe paged member directory and Base audit timeline | approved, active | Technical Decision 003 |
-| S4 | Governance Write | member/role/field/view permission edits | contract-gated | separate permission/API decision |
+| S3 | Governance Readback | safe paged member directory and Base audit timeline | implemented-local; Browser external evidence pending | Technical Decision 003 |
+| S4 | Governance Write | bounded member-role, field-policy and existing V1 view-grant operations | proposed, awaiting review | Technical Decision 004 |
 | S5 | Draft and Digital Employee Hub | field-filtered draft review, contacts and assistant surface | contract-gated | separate draft/employee/context decision |
 | S6 | Telegram and final acceptance | verified identity/deep link, full safety/visual matrix and release evidence | external-evidence-pending | approved test environment and user authority |
 
@@ -65,9 +65,41 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 - Disposable local PostgreSQL and focused built-UI paths use synthetic data only.
 - Temporary fixtures/services are removed; no production/Telegram claim is made.
 
+## S4 Governance Write
+
+### Proposed Scope
+
+- Versioned change of an existing active member's fixed role, under server-side owner/admin target constraints.
+- Versioned replacement of a field's fixed five-role `hidden/read/write` policy.
+- Reuse of existing V1 restricted-view grant replacement; no second view-policy engine.
+
+### Not In Scope
+
+- Invitation, deactivation, owner transfer, custom role/action editor, group/per-user policy or access simulation.
+- Field configuration/value changes, public view sharing, generic audit detail/export, Bot/draft/Telegram/deployment work.
+
+### Required Documents Before Code
+
+| Artifact | Location |
+| --- | --- |
+| decision | STAGE_07_TECHNICAL_DECISION_004_GOVERNANCE_WRITE_CONTRACT.md |
+| design | docs/superpowers/specs/2026-07-12-stage07-governance-write-design.md |
+| BDD / SDD | STAGE_07_GOVERNANCE_WRITE_BDD_AND_ACCEPTANCE.md / STAGE_07_GOVERNANCE_WRITE_SDD.md |
+| work surface / complex index | modules/STAGE_07_GOVERNANCE_WRITE_WORK_SURFACE.md / STAGE_07_GOVERNANCE_WRITE_COMPLEX_FEATURE_INDEX.md |
+| implementation plan | created only after explicit approval of TD004/specification |
+| final evidence | created only after implementation and reconciliation |
+
+### Exit Criteria
+
+- GW-A01 through GW-A08 have evidence; every rejected mutation proves no write.
+- Revision migration upgrade/rollback/replay and concurrent mutations pass against disposable local PostgreSQL.
+- Field visibility/write behavior remains enforced across schema, presentation, record detail, lookup and record update.
+- Existing V1 grant route remains the only view-member mutation path.
+- Built UI Browser evidence covers all required widths with synthetic data; cleanup is documented.
+
 ## Sequencing Guard
 
-S4 cannot start because S3 UI exists; policy writes need their own contract. S5 cannot consume generic runtime payloads; it needs field-filtered draft and employee/context authority design. S6 cannot treat local header identity or disposable PostgreSQL as Telegram proof.
+S4 implementation cannot start merely because S3 UI exists; TD004 requires explicit approval before its schema/API/permission changes. S5 cannot consume generic runtime payloads; it needs field-filtered draft and employee/context authority design. S6 cannot treat local header identity or disposable PostgreSQL as Telegram proof.
 
 ## Checkpoint Report
 

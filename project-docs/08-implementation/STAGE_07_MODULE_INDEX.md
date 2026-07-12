@@ -16,6 +16,7 @@
 | [Digital Employee Hub](modules/STAGE_07_DIGITAL_EMPLOYEE_HUB.md) | team contacts, personal assistant, Telegram handoff and drafts | AppShell, Bitable surface, draft service and proposed contract gate |
 | [Governance And Permission UI](modules/STAGE_07_GOVERNANCE_AND_PERMISSION_UI.md) | members, roles, field permissions, audit and Bot administration | AppShell, Bitable schema and server authorization |
 | [Governance Readback Work Surface](modules/STAGE_07_GOVERNANCE_READBACK_WORK_SURFACE.md) | bounded first Governance package: safe paged members and Base audit timeline | Technical Decision 003, AppShell, protected query state and Stage06 authorization/pagination |
+| [Governance Write Work Surface](modules/STAGE_07_GOVERNANCE_WRITE_WORK_SURFACE.md) | proposed bounded member-role and field-policy commands plus existing V1 view-grant reuse | Technical Decision 004, Governance Readback, AppShell, existing Stage06 authorization/idempotency/audit and V1 grants |
 
 No module may bypass `AppShell` route context, server permission results, shared error states or the controlled draft lifecycle.
 
@@ -25,4 +26,4 @@ V1 is design-only until user review. Its complete proposed contract lives in [V1
 
 The selected template/import package is `implemented-local`. Its implementation boundary remains [Template/Import Design](../../docs/superpowers/specs/2026-07-12-stage07-template-import-design.md), [BDD](STAGE_07_TEMPLATE_IMPORT_BDD_AND_ACCEPTANCE.md), [SDD](STAGE_07_TEMPLATE_IMPORT_SDD.md) and [Complex Feature Index](STAGE_07_TEMPLATE_IMPORT_COMPLEX_FEATURE_INDEX.md). It uses existing contracts only: no backend contract expansion, while Browser file-upload evidence remains explicitly unaccepted. See [local evidence](evidence/stage07-template-import-ui.md).
 
-The next proposed coherent package is [Governance Readback](modules/STAGE_07_GOVERNANCE_READBACK_WORK_SURFACE.md). It is deliberately read-only and contract-gated by [Technical Decision 003](STAGE_07_TECHNICAL_DECISION_003_GOVERNANCE_SAFE_READ_MODEL.md): existing generic audit responses cannot be used in a browser because their fields exceed the Stage07 safe UI boundary. No implementation starts before user approval.
+Governance Readback is `implemented-local`, with Browser external-environment evidence pending. The current proposed coherent package is [Governance Write](modules/STAGE_07_GOVERNANCE_WRITE_WORK_SURFACE.md), contract-gated by [Technical Decision 004](STAGE_07_TECHNICAL_DECISION_004_GOVERNANCE_WRITE_CONTRACT.md). It deliberately reuses the fixed Stage06 RBAC, idempotency/audit patterns and existing V1 grants instead of adding a general authorization engine. No S4 implementation starts before user approval.

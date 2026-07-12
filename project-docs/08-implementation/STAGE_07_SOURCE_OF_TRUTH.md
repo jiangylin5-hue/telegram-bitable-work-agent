@@ -4,11 +4,11 @@
 
 - Document status: active Stage07 planning source of truth
 - Scope: Telegram Mini App and desktop browser UI for the generic workspace, Bitable and digital-employee platform
-- Current Progress: 2026-07-12 Package 1 and bounded Package 2 paths through F2 are `implemented-local`. V1-1 through V1-15 are `partial-local`: real FastAPI + disposable PostgreSQL Browser evidence proves owner/editor/viewer Canvas separation, allowed Base/Table/Field intersection, hidden-field omission, numeric lookup projection and one owner Record Detail relation edit through the existing versioned PATCH with authoritative reread. The complete existing-contract template/import package is `implemented-local`: its typed transport, shelf/install, draft-template save, server preview, scalar mapping and explicit commit have component/API, local PostgreSQL, production-build and focused Browser evidence. Browser file selection is explicitly unaccepted because the provided Browser API cannot choose a file. Real stale/type-invalid states, numeric-filter mutation, Telegram, staging and production remain unaccepted. Measured `EXPLAIN` retains both optional non-unique access/list indexes as deferred; no index migration exists. Package 3 and Package 4 remain incomplete or contract-gated.
+- Current Progress: 2026-07-12 Package 1 and bounded Package 2 paths through F2 are `implemented-local`. V1-1 through V1-15 are `partial-local`: real FastAPI + disposable PostgreSQL Browser evidence proves owner/editor/viewer Canvas separation, allowed Base/Table/Field intersection, hidden-field omission, numeric lookup projection and one owner Record Detail relation edit through the existing versioned PATCH with authoritative reread. The complete existing-contract template/import package is `implemented-local`: its typed transport, shelf/install, draft-template save, server preview, scalar mapping and explicit commit have component/API, local PostgreSQL, production-build and focused Browser evidence. S3 Governance Readback is `implemented-local` with Browser external-environment evidence pending. S4 Governance Write now has a proposed, user-review-gated decision/specification package only; no S4 code, migration, endpoint or permission-action change exists. Browser file selection is explicitly unaccepted because the provided Browser API cannot choose a file. Real stale/type-invalid states, numeric-filter mutation, Telegram, staging and production remain unaccepted. Measured `EXPLAIN` retains both optional non-unique access/list indexes as deferred; no index migration exists. Package 4 remains contract-gated.
 
 - Template/Import Package Update: the approved existing-contract package is `implemented-local`. Typed template/import transport, shelf/install, draft-template save, server preview, scalar mapping and explicit commit have fresh component/API, build, real disposable PostgreSQL and focused Browser evidence. Browser CSV/XLSX upload is explicitly unaccepted because the available automation API cannot choose a file. No schema/API/permission/dependency expansion was made; Telegram, staging and production remain unaccepted. See [local evidence](evidence/stage07-template-import-ui.md).
-- Governance Package Update: a coherent read-only Governance proposal is documented. It exposes a required decision: existing members are unpaged and existing audit HTTP responses contain fields forbidden to the Mini App. No Governance code is authorised until the user approves the proposed two safe Mini App read projections in Technical Decision 003.
-- Substage Delivery Update: Stage07 now uses the S0--S6 coherent-substage roadmap. S3 Governance Readback is active and approved; S4 Governance Write, S5 Draft/Digital Employee and S6 Telegram/final acceptance remain independently contract- or evidence-gated. See [Substage Delivery Roadmap](STAGE_07_SUBSTAGE_DELIVERY_ROADMAP.md).
+- Governance Package Update: S3 has delivered the approved read-only projections locally. S4 now proposes narrowly versioned member-role and field-policy commands plus existing V1 view-grant reuse. It requires explicit approval of Technical Decision 004 before any migration, new action, endpoint or frontend mutation work.
+- Substage Delivery Update: Stage07 now uses the S0--S6 coherent-substage roadmap. S4 Governance Write is in document-review state; S5 Draft/Digital Employee and S6 Telegram/final acceptance remain independently contract- or evidence-gated. See [Substage Delivery Roadmap](STAGE_07_SUBSTAGE_DELIVERY_ROADMAP.md).
 
 ## 1. Stage Goal
 
@@ -62,18 +62,24 @@ verified identity -> workspace member -> permission-filtered UI
 30. [Stage07 Governance Readback Work Surface](modules/STAGE_07_GOVERNANCE_READBACK_WORK_SURFACE.md)
 31. [Stage07 Governance Readback Complex Feature Index](STAGE_07_GOVERNANCE_READBACK_COMPLEX_FEATURE_INDEX.md)
 32. [Stage07 Governance Readback Implementation Plan](../../docs/superpowers/plans/2026-07-12-stage07-governance-readback-implementation.md)
-33. [Stage 07 SDD](STAGE_07_SDD.md)
-34. [Stage 07 API Data Security Contract](STAGE_07_API_DATA_SECURITY_CONTRACT.md)
-35. [Stage 07 BDD And Acceptance](STAGE_07_BDD_AND_ACCEPTANCE.md)
-36. [Stage 07 Module Index](STAGE_07_MODULE_INDEX.md)
-37. [Stage 07 Test Plan](STAGE_07_TEST_PLAN.md)
-38. [Stage 07 Risk Register](STAGE_07_RISK_REGISTER.md)
-39. [Stage 07 Implementation Plan](STAGE_07_IMPLEMENTATION_PLAN.md)
-40. [Stage 07 Acceptance Checklist](STAGE_07_ACCEPTANCE_CHECKLIST.md)
-41. [Stage07 Substage Delivery Roadmap](STAGE_07_SUBSTAGE_DELIVERY_ROADMAP.md)
-33. [Stage 07 Progress](STAGE_07_PROGRESS.md)
-34. [Stage 07 Requirement Traceability Audit](STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md)
-35. [Technical Decision 001: Protected Query State](STAGE_07_TECHNICAL_DECISION_001_PROTECTED_QUERY_STATE.md)
+33. [Stage07 Governance Write Decision](STAGE_07_TECHNICAL_DECISION_004_GOVERNANCE_WRITE_CONTRACT.md)
+34. [Stage07 Governance Write Design](../../docs/superpowers/specs/2026-07-12-stage07-governance-write-design.md)
+35. [Stage07 Governance Write BDD And Acceptance](STAGE_07_GOVERNANCE_WRITE_BDD_AND_ACCEPTANCE.md)
+36. [Stage07 Governance Write SDD](STAGE_07_GOVERNANCE_WRITE_SDD.md)
+37. [Stage07 Governance Write Work Surface](modules/STAGE_07_GOVERNANCE_WRITE_WORK_SURFACE.md)
+38. [Stage07 Governance Write Complex Feature Index](STAGE_07_GOVERNANCE_WRITE_COMPLEX_FEATURE_INDEX.md)
+39. [Stage 07 SDD](STAGE_07_SDD.md)
+40. [Stage 07 API Data Security Contract](STAGE_07_API_DATA_SECURITY_CONTRACT.md)
+41. [Stage 07 BDD And Acceptance](STAGE_07_BDD_AND_ACCEPTANCE.md)
+42. [Stage 07 Module Index](STAGE_07_MODULE_INDEX.md)
+43. [Stage 07 Test Plan](STAGE_07_TEST_PLAN.md)
+44. [Stage 07 Risk Register](STAGE_07_RISK_REGISTER.md)
+45. [Stage 07 Implementation Plan](STAGE_07_IMPLEMENTATION_PLAN.md)
+46. [Stage 07 Acceptance Checklist](STAGE_07_ACCEPTANCE_CHECKLIST.md)
+47. [Stage07 Substage Delivery Roadmap](STAGE_07_SUBSTAGE_DELIVERY_ROADMAP.md)
+48. [Stage 07 Progress](STAGE_07_PROGRESS.md)
+49. [Stage 07 Requirement Traceability Audit](STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md)
+50. [Technical Decision 001: Protected Query State](STAGE_07_TECHNICAL_DECISION_001_PROTECTED_QUERY_STATE.md)
 
 Stage06 is the backend contract baseline. Stage02-05 documents are historical capability evidence only.
 

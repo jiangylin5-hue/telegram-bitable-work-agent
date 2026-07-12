@@ -14,6 +14,12 @@
 - Stage07 now follows a one-stage/multiple-substages rhythm instead of user-facing micro-fragments. S0 Foundation, S1 Bitable authoring and S2 views/template/import retain their documented local states; S3 Governance Readback is active and approved; S4 Governance Write, S5 Draft/Digital Employee and S6 Telegram/final acceptance remain separately gated.
 - Each substage must complete its document package, have one approval for its technical boundary, deliver a coherent vertical implementation, run proportional verification including built UI where applicable, and publish evidence-backed closure. The roadmap records scope, exclusions and exit criteria.
 
+### 2026-07-12: Proposed S4 Governance Write — Documentation Only
+
+- Technical Decision 004 proposes a narrow, mature-contract extension rather than a new permission engine: fixed current roles, row-lock/revision/idempotency/audit patterns already present in Stage06, two additive revision columns, safe Mini App member/field projections and reuse of the existing V1 view-grant command.
+- The complete design, BDD/acceptance matrix, SDD, work-surface and complex-feature index specify role target constraints, field policy grammar, stale/replay/denied transitions, field-enforcement regressions, cache rereads, mobile accessibility, audit redaction and every explicit non-goal.
+- This is documentation only. No S4 code, schema migration, authorization-action change, endpoint, test fixture, dependency or external write has been created. The package awaits one user review/approval before its implementation plan and code are written.
+
 ### 2026-07-12: Package 3 Governance Readback — Local Implementation And Reconciliation
 
 - The generic member/audit routes remain deliberately unused by the browser: their contracts do not meet the cursor/redaction boundary. Two narrow Mini App projections now independently require `member.read` and `audit.read`, return only closed DTOs, preserve opaque cursor pagination and leave legacy endpoints unchanged.
