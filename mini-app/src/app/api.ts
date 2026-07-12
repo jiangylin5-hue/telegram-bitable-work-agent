@@ -18,6 +18,17 @@ import type {
   ViewType,
   ViewScope,
 } from './view-builder-types'
+import type {
+  CommitImportValues,
+  CreateImportValues,
+  ImportCommitReceipt,
+  ImportMapping,
+  ImportPreview,
+  ImportScalarFieldType,
+  SaveTemplateValues,
+  TemplateInstallationReceipt,
+  TemplateSummary,
+} from './template-import-types'
 
 export type {
   SafeViewErrorCode,
@@ -36,6 +47,17 @@ export type {
   ViewPresentationMutationReceipt,
   ViewPresentationPatchRequest,
 } from './view-builder-types'
+export type {
+  CommitImportValues,
+  CreateImportValues,
+  ImportCommitReceipt,
+  ImportMapping,
+  ImportPreview,
+  ImportScalarFieldType,
+  SaveTemplateValues,
+  TemplateInstallationReceipt,
+  TemplateSummary,
+} from './template-import-types'
 
 export type WorkspaceCapabilities = {
   can_read_bases: boolean
@@ -120,6 +142,21 @@ export type SafeApiErrorCode =
   | 'lookup_depth_exceeded'
   | 'record_is_referenced'
   | 'field_has_dependencies'
+  | 'import_payload_limit_exceeded'
+  | 'import_row_limit_exceeded'
+  | 'import_column_limit_exceeded'
+  | 'import_cell_limit_exceeded'
+  | 'import_has_no_rows'
+  | 'import_missing_header'
+  | 'import_missing_sheet'
+  | 'unsupported_import_source'
+  | 'invalid_import_mapping'
+  | 'unsupported_field_type'
+  | 'resource_scope_mismatch'
+  | 'import_job_invalid_state'
+  | 'template_not_found'
+  | 'idempotency_conflict'
+  | 'idempotency_in_progress'
   | SafeViewErrorCode
 
 export class ApiError extends Error {
@@ -143,6 +180,21 @@ const safeApiErrorCodes = new Set<SafeApiErrorCode>([
   'lookup_depth_exceeded',
   'record_is_referenced',
   'field_has_dependencies',
+  'import_payload_limit_exceeded',
+  'import_row_limit_exceeded',
+  'import_column_limit_exceeded',
+  'import_cell_limit_exceeded',
+  'import_has_no_rows',
+  'import_missing_header',
+  'import_missing_sheet',
+  'unsupported_import_source',
+  'invalid_import_mapping',
+  'unsupported_field_type',
+  'resource_scope_mismatch',
+  'import_job_invalid_state',
+  'template_not_found',
+  'idempotency_conflict',
+  'idempotency_in_progress',
   'view_name_invalid',
   'view_type_unsupported',
   'view_version_conflict',
@@ -235,6 +287,95 @@ function booleanValue(value: unknown): boolean {
 function numberValue(value: unknown): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error('Invalid view response')
   return value
+}
+
+function nullableStringValue(value: unknown): string | null {
+  if (value === null) return null
+  return stringValue(value)
+}
+
+const importScalarFieldTypes = new Set<ImportScalarFieldType>(['text', 'number', 'date', 'checkbox'])
+
+function safeTemplateSummary(value: unknown): TemplateSummary {
+  const record = jsonRecord(value)
+  return {
+    id: stringValue(record.id),
+    name: stringValue(record.name),
+    category: stringValue(record.category),
+    description: stringValue(record.description),
+    version: stringValue(record.version),
+    status: stringValue(record.status),
+  }
+}
+
+function safeImportScalarFieldType(value: unknown): ImportScalarFieldType {
+  if (typeof value !== 'string' || !importScalarFieldTypes.has(value as ImportScalarFieldType)) throw new Error('Invalid import response')
+  return value as ImportScalarFieldType
+}
+
+function safeImportMapping(value: unknown): ImportMapping {
+  const record = jsonRecord(value)
+  const name = record.name
+  if (name !== undefined && typeof name !== 'string') throw new Error('Invalid import response')
+  return {
+    sourceKey: stringValue(record.source_key),
+    targetKey: stringValue(record.target_key),
+    fieldType: safeImportScalarFieldType(record.field_type),
+    ...(typeof name === 'string' ? { name } : {}),
+  }
+}
+
+function safePreviewRow(value: unknown): Record<string, unknown> {
+  const record = jsonRecord(value)
+  for (const item of Object.values(record)) {
+    if (item !== null && typeof item !== 'string' && typeof item !== 'number' && typeof item !== 'boolean') throw new Error('Invalid import response')
+  }
+  return record
+}
+
+function safeImportPreview(value: unknown): ImportPreview {
+  const record = jsonRecord(value)
+  const sourceType = record.source_type
+  const status = record.status
+  if (sourceType !== 'csv' && sourceType !== 'excel') throw new Error('Invalid import response')
+  if (status !== 'awaiting_confirmation' && status !== 'committed') throw new Error('Invalid import response')
+  if (!Array.isArray(record.detected_schema) || !Array.isArray(record.preview_rows) || !Array.isArray(record.mapping)) throw new Error('Invalid import response')
+  return {
+    id: stringValue(record.id),
+    workspaceId: stringValue(record.workspace_id),
+    baseId: nullableStringValue(record.base_id),
+    sourceType,
+    detectedSchema: record.detected_schema.map((item) => {
+      const field = jsonRecord(item)
+      return { key: stringValue(field.key), name: stringValue(field.name), fieldType: safeImportScalarFieldType(field.field_type) }
+    }),
+    previewRows: record.preview_rows.map(safePreviewRow),
+    mapping: record.mapping.map(safeImportMapping),
+    status,
+  }
+}
+
+function safeTemplateInstallationReceipt(value: unknown): TemplateInstallationReceipt {
+  const record = jsonRecord(value)
+  return {
+    id: stringValue(record.id),
+    workspaceId: stringValue(record.workspace_id),
+    baseId: stringValue(record.base_id),
+    templateId: stringValue(record.template_id),
+    templateVersion: stringValue(record.template_version),
+  }
+}
+
+function safeImportCommitReceipt(value: unknown): ImportCommitReceipt {
+  const record = jsonRecord(value)
+  const resourceMap = jsonRecord(record.resource_map)
+  if (record.status !== 'committed') throw new Error('Invalid import response')
+  return {
+    importJobId: stringValue(record.import_job_id),
+    status: 'committed',
+    baseId: stringValue(resourceMap.base_id),
+    tableId: stringValue(resourceMap.table_id),
+  }
 }
 
 function stringArray(value: unknown): string[] {
@@ -383,6 +524,44 @@ export function toSafeViewError(error: unknown): string {
 export const api = {
   bootstrap: (init?: RequestInit) => getJson<BootstrapResponse>('/mini-app/bootstrap', init),
   workspaceHome: (workspaceId: string, init?: RequestInit) => getJson<WorkspaceHome>(`/workspaces/${workspaceId}/home`, init),
+  listTemplates: async (init?: RequestInit): Promise<TemplateSummary[]> => {
+    const response = jsonRecord(await getJson<unknown>('/templates', init))
+    if (!Array.isArray(response.templates)) throw new Error('Invalid import response')
+    return response.templates.map(safeTemplateSummary)
+  },
+  installTemplate: async (workspaceId: string, templateId: string, installedByUserId: string, idempotencyKey: string): Promise<TemplateInstallationReceipt> => safeTemplateInstallationReceipt(
+    await postJson<unknown>(`/workspaces/${encodeURIComponent(workspaceId)}/template-installations`, {
+      template_id: templateId,
+      installed_by_user_id: installedByUserId,
+    }, idempotencyKey),
+  ),
+  saveBaseAsTemplate: async (baseId: string, values: SaveTemplateValues): Promise<TemplateSummary> => safeTemplateSummary(
+    await getJson<unknown>(`/bases/${encodeURIComponent(baseId)}/templates`, {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: values.name, category: values.category, description: values.description, created_by_user_id: values.createdByUserId }),
+    }),
+  ),
+  createImport: async (workspaceId: string, values: CreateImportValues, idempotencyKey: string): Promise<ImportPreview> => safeImportPreview(
+    await postJson<unknown>(`/workspaces/${encodeURIComponent(workspaceId)}/imports`, {
+      source_type: values.sourceType,
+      file_name: values.fileName,
+      content: values.content,
+      created_by_user_id: values.createdByUserId,
+      ...(values.baseId ? { base_id: values.baseId } : {}),
+    }, idempotencyKey),
+  ),
+  importJob: async (importJobId: string, init?: RequestInit): Promise<ImportPreview> => safeImportPreview(
+    await getJson<unknown>(`/imports/${encodeURIComponent(importJobId)}`, init),
+  ),
+  commitImport: async (importJobId: string, values: CommitImportValues, idempotencyKey: string): Promise<ImportCommitReceipt> => safeImportCommitReceipt(
+    await postJson<unknown>(`/imports/${encodeURIComponent(importJobId)}/commit`, {
+      base_name: values.baseName,
+      table_name: values.tableName,
+      table_key: values.tableKey,
+      ...(values.fieldMapping ? { field_mapping: values.fieldMapping.map((item) => ({ source_key: item.sourceKey, target_key: item.targetKey, field_type: item.fieldType, ...(item.name ? { name: item.name } : {}) })) } : {}),
+    }, idempotencyKey),
+  ),
   initializeBase: (workspaceId: string, values: { baseName: string; tableName: string }, idempotencyKey: string) => postJson<BuilderInitializationReceipt>(`/workspaces/${workspaceId}/base-initializations`, { base_name: values.baseName, table_name: values.tableName }, idempotencyKey),
   initializeTable: (baseId: string, values: { tableName: string }, idempotencyKey: string) => postJson<BuilderInitializationReceipt>(`/bases/${baseId}/table-initializations`, { table_name: values.tableName }, idempotencyKey),
   initializeField: (tableId: string, values: FieldBuilderValues, idempotencyKey: string) => postJson<FieldInitializationReceipt>(`/tables/${tableId}/field-initializations`, {

@@ -28,6 +28,24 @@ export const viewBuilderKeys = {
   ),
 }
 
+export const templateImportKeys = {
+  templates: (scope: ProtectedScope): QueryKey => protectedQueryKey(scope, 'templates'),
+  importJob: (scope: ProtectedScope, importJobId: string): QueryKey => protectedQueryKey(scope, 'import', importJobId),
+}
+
+export async function clearTemplateImportQueries(
+  queryClient: QueryClient,
+  scope: ProtectedScope,
+  importJobId?: string,
+): Promise<void> {
+  const queryKeys: QueryKey[] = [
+    templateImportKeys.templates(scope),
+    ...(importJobId ? [templateImportKeys.importJob(scope, importJobId)] : []),
+  ]
+  await Promise.all(queryKeys.map((queryKey) => queryClient.cancelQueries({ queryKey })))
+  for (const queryKey of queryKeys) queryClient.removeQueries({ queryKey })
+}
+
 export async function clearViewBuilderQueries(
   queryClient: QueryClient,
   scope: ProtectedScope,
