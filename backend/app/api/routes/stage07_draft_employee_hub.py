@@ -9,6 +9,10 @@ from app.core.errors import error_detail
 from app.schemas.stage07_draft_employee_hub import (
     DigitalEmployeeContactPageResponse,
     DigitalEmployeeContactResponse,
+    SafeAssistantContextEmployeeResponse,
+    SafeAssistantContextPageResponse,
+    SafeAssistantContextViewResponse,
+    SafeAssistantSelectedViewResponse,
     SafeDraftActionsResponse,
     SafeDraftDetailResponse,
     SafeDraftFieldResponse,
@@ -45,8 +49,10 @@ from app.services.stage06_platform import (
     PlatformValidationError,
     Stage06PlatformUnitOfWork,
     can_actor_write_record_fields,
+    get_view_presentation,
     get_table_schema,
     list_bases_for_workspace,
+    list_views_for_base,
     list_view_records,
     read_record_for_actor,
 )
@@ -118,6 +124,75 @@ def list_digital_employee_contacts(
         ],
         next_cursor=page.next_cursor,
         has_more=page.has_more,
+    )
+
+
+@router.get(
+    "/mini-app/digital-employees/{employee_id}/assistant-context",
+    response_model=SafeAssistantContextPageResponse,
+)
+def list_assistant_context(
+    employee_id: UUID,
+    limit: int = Query(default=50, ge=1, le=100),
+    cursor: str | None = Query(default=None),
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> SafeAssistantContextPageResponse:
+    try:
+        employee, _actor, views = _resolve_assistant_context(uow, employee_id, identity)
+        page = paginate_items(views, limit=limit, cursor=cursor)
+    except Stage06AuthorizationError as exc:
+        raise _authorization_error(exc) from exc
+    except Stage06PaginationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=error_detail("assistant_context_invalid_cursor", "assistant_context_invalid_cursor"),
+        ) from exc
+    return SafeAssistantContextPageResponse(
+        employee=SafeAssistantContextEmployeeResponse(
+            id=str(employee.id),
+            name=employee.name,
+            description=employee.description,
+            base_id=str(employee.base_id),
+        ),
+        views=[
+            SafeAssistantContextViewResponse(
+                id=str(view.id),
+                name=view.name,
+                view_type=view.view_type,
+            )
+            for view in page.items
+        ],
+        next_cursor=page.next_cursor,
+        has_more=page.has_more,
+    )
+
+
+@router.get(
+    "/mini-app/digital-employees/{employee_id}/assistant-context/views/{view_id}",
+    response_model=SafeAssistantSelectedViewResponse,
+)
+def read_assistant_context_view(
+    employee_id: UUID,
+    view_id: UUID,
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> SafeAssistantSelectedViewResponse:
+    try:
+        employee, _actor, views = _resolve_assistant_context(uow, employee_id, identity)
+    except Stage06AuthorizationError as exc:
+        raise _authorization_error(exc) from exc
+    view = next((item for item in views if item.id == view_id), None)
+    if view is None:
+        raise HTTPException(
+            status_code=404,
+            detail=error_detail("assistant_context_not_found", "assistant_context_not_found"),
+        )
+    return SafeAssistantSelectedViewResponse(
+        id=str(view.id),
+        name=view.name,
+        view_type=view.view_type,
+        base_id=str(employee.base_id),
     )
 
 
@@ -399,6 +474,45 @@ def confirm_safe_draft(
         raise _platform_error(exc) from exc
     _commit_if_sqlalchemy(uow)
     return _terminal_receipt(terminal)
+
+
+_SAFE_ASSISTANT_VIEW_TYPES = {"grid", "kanban", "calendar", "form"}
+
+
+def _resolve_assistant_context(
+    uow: Stage06PlatformUnitOfWork,
+    employee_id: UUID,
+    identity: Stage06RequestIdentity,
+):
+    employee = uow.get_digital_employee(employee_id)
+    if employee is None or employee.status != "active":
+        raise HTTPException(
+            status_code=404,
+            detail=error_detail("assistant_context_not_found", "assistant_context_not_found"),
+        )
+    actor = authorize_workspace_action(
+        uow,
+        identity,
+        employee.workspace_id,
+        "digital_employee.invoke",
+    )
+    if employee.base_id not in {base.id for base in list_bases_for_workspace(uow, employee.workspace_id)}:
+        raise HTTPException(
+            status_code=404,
+            detail=error_detail("assistant_context_not_found", "assistant_context_not_found"),
+        )
+    allowed_view_ids = set(employee.accessible_views)
+    views = []
+    for view in list_views_for_base(uow, employee.base_id, actor=actor):
+        if str(view.id) not in allowed_view_ids or view.view_type not in _SAFE_ASSISTANT_VIEW_TYPES:
+            continue
+        try:
+            get_view_presentation(uow, view.id, actor=actor)
+        except PlatformValidationError:
+            continue
+        views.append(view)
+    views.sort(key=lambda view: (view.name.casefold(), str(view.id)))
+    return employee, actor, views
 
 
 _UNSAFE = object()

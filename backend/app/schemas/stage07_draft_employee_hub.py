@@ -19,6 +19,33 @@ class DigitalEmployeeContactPageResponse(BaseModel):
     has_more: bool = False
 
 
+class SafeAssistantContextEmployeeResponse(BaseModel):
+    id: str
+    name: str
+    description: str
+    base_id: str
+
+
+class SafeAssistantContextViewResponse(BaseModel):
+    id: str
+    name: str
+    view_type: Literal["grid", "kanban", "calendar", "form"]
+
+
+class SafeAssistantContextPageResponse(BaseModel):
+    employee: SafeAssistantContextEmployeeResponse
+    views: list[SafeAssistantContextViewResponse]
+    next_cursor: str | None = None
+    has_more: bool = False
+
+
+class SafeAssistantSelectedViewResponse(BaseModel):
+    id: str
+    name: str
+    view_type: Literal["grid", "kanban", "calendar", "form"]
+    base_id: str
+
+
 class SafeDraftSummaryResponse(BaseModel):
     id: str
     base_id: str
