@@ -92,8 +92,8 @@ The design and implementation plan are user-approved. V1 is `partial-local`: V1-
 
 ## Digital Employees
 
-- [ ] Team Bot and personal assistant contexts are visibly different and server-authorized.
-- [ ] Personal assistant has no work context until user selection.
+- [ ] Team Bot and personal assistant contexts are visibly different and server-authorized across the full product.
+- [x] TD009 Personal Assistant has no Home work context until a user selects an existing safe contact and a server-projected permitted view.
 - [ ] Team Bot memory is user-partitioned under the separately approved contract.
 - [ ] Every Bot write remains `record_change_draft` until explicit confirmation.
 - [ ] Confirm/reject/replay/conflict/expired states produce one authoritative outcome and audit reference.
@@ -106,6 +106,18 @@ These rows cover only approved TD005/TD006 contact, context and draft-review pat
 - [x] `draft_update` rechecks selected Base, employee View/table scope, caller-readable target and current View membership before runtime or invocation-ledger reservation.
 - [x] Safe draft detail is field-filtered on every reread; confirm/reject are versioned/idempotent, confirm rechecks current field-write authority, and reject does not write a record.
 - [ ] Field-filtered Browser draft lifecycle and configured real OpenRouter evidence remain required before S5 can leave `partial-local`.
+
+### TD009 Home Personal-Assistant Context Discovery
+
+These checks cover only the approved Home contact-to-view-to-summary slice. They do not accept the future Team Bot, employee lifecycle, memory, knowledge, record picker, Telegram or external-action surfaces.
+
+- [x] Home opens a labelled workbench with no inferred contact, Base, view, record or persisted context.
+- [x] Contacts remain the existing safe S5 projection; the server catalog returns only the active employee's current caller-readable scoped views.
+- [x] The selected view is reread through the exact safe route immediately before the fixed `summarize` command; Home cannot issue `draft_update`.
+- [x] Query keys are user/workspace scoped; close, selection replacement and workspace replacement invalidate assistant context state.
+- [x] Only an explicit action opens the same authorized Base; the workbench has no record picker, lifecycle, memory, knowledge, migration, new permission action or external operation.
+- [x] Local evidence: focused backend `17 passed`, full Mini App `51 files / 204 tests`, TypeScript/Vite production build passed.
+- [ ] TD009 disposable PostgreSQL intersection/revocation, dedicated delayed workspace-replacement and user-controlled visual review remain required before this package can be promoted beyond `partial-local`.
 
 ### S6.1 Telegram Identity and Deep-Link Local Evidence
 

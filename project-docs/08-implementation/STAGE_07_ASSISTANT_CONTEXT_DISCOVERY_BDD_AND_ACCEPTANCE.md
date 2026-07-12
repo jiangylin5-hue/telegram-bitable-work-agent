@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed under TD009 Option B; no implementation evidence yet.
+- Status: bounded `partial-local` implementation evidence reconciled on 2026-07-13; this is not Stage07, browser, PostgreSQL, Telegram, staging or production acceptance.
 - Scope: authorized Home contact-to-view selection and existing safe `summarize` invocation only.
 
 ## BDD Scenarios
@@ -77,6 +77,20 @@ Then it contains no employee lifecycle, multi-Base scope, record picker, primary
 | view catalog | complete protected-state expiry | workspace/S5 subtree denied | clear selected contact/context | cursor/reselection state only | fixed retry, no old views |
 | selected-view re-read | complete protected-state expiry | workspace/S5 subtree denied | clear exact selected view | fixed reselect | fixed retry, no prior invoke |
 | summary invocation | complete protected-state expiry | workspace/S5 subtree denied | clear exact context | keep only typed instruction; require reread | fixed retry, no answer/citations |
+
+## Evidence Reconciliation
+
+| Scenario | Current evidence | Status |
+| --- | --- | --- |
+| ACD-01--ACD-02 | Home opens with no inferred context; only the existing strict S5 contact DTO is read. `assistant-context-workbench.test.tsx` and `draft-employee-app-flow.test.tsx` cover the closed initial surface. | implemented-local |
+| ACD-03 | `test_stage07_assistant_context_api.py` covers the approved server catalog projection; resolver uses active employee, `digital_employee.invoke`, Base membership, employee view scope and current `list_views_for_base`/presentation checks. | implemented-local, no PostgreSQL revoke proof |
+| ACD-04 | `assistant-context-app-flow.test.tsx` proves one selected-view read followed by a second read before the existing summary POST; full Mini App regression remains green. | implemented-local |
+| ACD-05 | Workbench DOM has no draft action and Home summary sends only `summarize`; existing Canvas-only `draft_update` tests remain green. | implemented-local |
+| ACD-06 | Empty/failed UI branches use fixed local copy; contacts retry is covered. View-empty, malformed catalog and network permutations are source-covered but not separately exercised. | partial-local |
+| ACD-07--ACD-08 | Session/workspace cleanup and request generations are wired into the existing protected App state. Dedicated TD009 delayed workspace/revocation tests and real PostgreSQL evidence remain open. | partial-local |
+| ACD-09 | Source/route inventory adds no Package4 lifecycle, memory, knowledge, record picker, migration or external operation. | implemented-local |
+
+Commands: `python -m pytest -q backend/tests/unit/test_stage07_draft_employee_hub_api.py backend/tests/unit/test_stage07_assistant_context_api.py` (`17 passed`); `npm.cmd test -- --run` (`51 files / 204 tests`); `npm.cmd run build` (passed). No browser was controlled and no disposable PostgreSQL test was run for TD009.
 
 ## Acceptance Matrix
 

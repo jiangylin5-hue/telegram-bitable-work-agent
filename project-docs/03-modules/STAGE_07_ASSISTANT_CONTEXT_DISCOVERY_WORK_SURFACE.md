@@ -2,12 +2,12 @@
 
 ## Status
 
-- Status: proposed; implementation is blocked until TD009 Option B receives explicit approval.
+- Status: implemented as a bounded `partial-local` TD009 Option B surface on 2026-07-13.
 - Scope: Home personal-assistant context discovery through existing safe employee contacts and one server-composed saved-view catalog.
 
 ## Functional Modules
 
-| Module | Existing base | Proposed responsibility | Explicit boundary |
+| Module | Existing base | Implemented responsibility | Explicit boundary |
 | --- | --- | --- | --- |
 | Home assistant entry | `WorkspaceHome.tsx` | opens the context workbench with no selected context | no default contact, search or context persistence |
 | Contact selector | S5 `DraftEmployeeHub` safe contacts | selects existing active safe contact | no employee edit/publish/configuration data |
@@ -49,4 +49,4 @@
 1. TD009 Option B approval.
 2. Existing S5 contact and invocation safety behavior remains unchanged.
 3. Existing view/Base authorization can produce a closed permitted-view intersection without returning generic view configuration.
-4. New BDD/SDD tests prove error and scope-replacement behavior before UI code.
+4. Focused DTO/API/component/App-flow tests and a full Mini App regression pass prove the implemented local path; dedicated delayed replacement/revocation and database evidence remain open.

@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed decision index; no migration, API or implementation exists until TD009 Option B approval.
+- Status: implementation index reconciled for the bounded TD009 Option B local package on 2026-07-13.
 
 | Feature | Complexity source | Required invariant | Evidence needed before local acceptance |
 | --- | --- | --- | --- |
@@ -17,6 +17,8 @@
 ## Data and Index Decision
 
 TD009 Option B adds no database table, index, migration or persistent client structure. It uses current `DigitalEmployee.base_id`, approved employee view scope and existing Base/view authorization. If a later decision adds a record picker, primary display-field rule, employee lifecycle or durable memory, it must supply its own schema/index/retention document rather than extending this package implicitly.
+
+Verification confirms no TD009 migration or dependency was added. A local PostgreSQL intersection/revoke matrix is deliberately still absent, so no database performance or revocation claim is made.
 
 ## Failure Containment Rules
 

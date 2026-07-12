@@ -2,9 +2,16 @@
 
 ## Status
 
-- Decision status: approved Option B on 2026-07-13; implementation plan review remains required before code.
+- Decision status: approved Option B on 2026-07-13; implemented as a bounded `partial-local` package on 2026-07-13.
 - Scope: one coherent Home-to-assistant context-discovery slice over existing Stage06 digital employees and the approved S5 safe adapter.
 - Does not authorize: employee publication lifecycle, knowledge sources, durable memory, generic chat history, record search, Telegram group/contact routing, external send or deployment.
+
+## Implementation Evidence
+
+- Backend: the two approved read routes now resolve only the active employee/Base/caller/view intersection and re-check selected-view membership. Their focused API file plus the existing S5 route suite passed `17` tests.
+- Mini App: Home opens a separate `AssistantContextWorkbench`; it reuses only the existing safe contact query and S5 `summarize` command. The selected view is removed from the protected cache and fetched again immediately before invocation.
+- Verification: focused Assistant/Home workbench tests passed `11` tests; the full Mini App suite passed `51 files / 204 tests`; `npm.cmd run build` passed.
+- No migration, model/schema change, permission-action change, dependency, provider call, Telegram operation, browser control, local PostgreSQL assertion, staging or production action was performed.
 
 ## Problem
 

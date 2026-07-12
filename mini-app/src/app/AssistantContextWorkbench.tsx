@@ -116,7 +116,7 @@ export function AssistantContextWorkbench({
                   <p>当前视图：{selectedView.name}</p>
                   <label>
                     补充说明
-                    <textarea aria-label="补充说明" value={instruction} onChange={(event) => setInstruction(event.target.value)} placeholder="可选：说明你希望关注的事项" />
+                    <textarea aria-label="补充说明" maxLength={1000} value={instruction} onChange={(event) => setInstruction(event.target.value)} placeholder="可选：说明你希望关注的事项" />
                   </label>
                   <button type="button" disabled={loading || submitting} onClick={() => void summarize()}>{submitting ? '处理中…' : '执行摘要'}</button>
                 </div>

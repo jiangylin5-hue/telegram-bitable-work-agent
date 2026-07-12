@@ -2,9 +2,9 @@
 
 ## Status
 
-- Status: TD009 Option B design approved on 2026-07-13; implementation plan review remains required before code.
+- Status: TD009 Option B approved and implemented as a bounded `partial-local` local package on 2026-07-13.
 - Recommended decision: TD009 Option B — server-composed contact-to-view catalog.
-- Implementation precondition: explicit approval of the detailed implementation plan. No code, migration or endpoint exists because of this document.
+- Implementation boundary: the approved detailed plan is implemented; no migration, new permission action, employee lifecycle, memory, knowledge, record picker, Telegram action or external delivery was added.
 
 ## User Outcome
 

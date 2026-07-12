@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed implementation boundary; requires explicit TD009 Option B approval.
+- Status: approved boundary implemented locally on 2026-07-13; remaining revocation/database/browser acceptance is explicitly open.
 - Scope: server-composed Home view discovery for one selected existing digital employee.
 
 ## Architecture
@@ -50,6 +50,13 @@ The parser rejects unknown `viewType`, missing/empty identifiers, extra response
 | `GET /mini-app/digital-employees/{employee_id}/assistant-context/views/{view_id}` | verified identity | `AssistantSelectedView` | presentation/configuration, records, fields, permissions or raw errors |
 
 The selected-view re-read runs immediately before existing S5 summary invocation. A client must not invoke using a catalog item that has not been re-read in the current generation.
+
+## Implementation Correspondence
+
+- `backend/app/api/routes/stage07_draft_employee_hub.py` exposes only the two specified read routes and uses the existing authorization/UoW/view-presentation services.
+- `mini-app/src/app/api.ts` rejects unknown root keys and view types for both DTOs; `protectedQuery.ts` isolates and removes only the `assistant-context` subtree.
+- `AssistantContextWorkbench.tsx` is a separate Home-only surface. `App.tsx` invalidates it on close/workspace replacement and removes the exact selected-view cache before a summary invocation.
+- The workbench has no draft command, record picker, Base/view URL state, client persistence, runtime picker or raw-error rendering.
 
 ## Backend Resolution Algorithm
 

@@ -312,7 +312,7 @@ git commit -m "feat(stage07): connect home assistant context discovery"
 **Files:**
 - Modify: TD009/design/BDD/SDD/work-surface/index and Stage07 source/roadmap/progress/traceability/acceptance docs.
 
-- [ ] **Step 1: Run package regressions**
+- [x] **Step 1: Run package regressions**
 
 ~~~powershell
 python -m pytest -q backend/tests/unit/test_stage07_draft_employee_hub_api.py
@@ -322,11 +322,11 @@ npm.cmd run build
 
 Expected: all pass. If an authorized disposable PostgreSQL URL is available, add/run dedicated context intersection/revocation; otherwise record no database claim.
 
-- [ ] **Step 2: Reconcile ACD-A01 through ACD-A10**
+- [x] **Step 2: Reconcile ACD-A01 through ACD-A10**
 
 Mark only evidenced local rows implemented-local. Keep manual visual review, external provider/Telegram proof and excluded Package4 capabilities pending. Record commands/counts, skipped database/browser evidence, no migration/dependency proof and cleanup.
 
-- [ ] **Step 3: Run document checks and commit**
+- [x] **Step 3: Run document checks and commit**
 
 ~~~powershell
 git diff --check
