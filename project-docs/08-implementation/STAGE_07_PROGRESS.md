@@ -34,6 +34,11 @@
 - A subsequent S4 lifecycle repair made a selected Base `404` exact rather than workspace-wide: the protected governance Base/table/view subtree is removed, the selector resets and a fixed local alert appears; workspace Home and governance readback remain available. Component tests add immediate `401/403`, exact `404` and focus-return coverage. A synthetic built-client 404 fixture confirmed the path with console `[]`; delayed terminal-mutation negative combinations remain explicitly open.
 - This is not whole-S4 acceptance: exhaustive delayed governance-write `401/403/404/409` App-flow tests and Browser stale/denied/retry/focus-return observations remain open. No invitation, deactivation, owner transfer, custom/general RBAC, public sharing, Telegram, deployment or production claim is made.
 
+### 2026-07-12: S4 409 Explicit Reread Follow-up
+
+- The governed workbench now keeps a typed 409 conflict local state and exposes only an explicit context-specific reread: member-role conflicts reread the safe member editor; field-policy conflicts reread the safe field-permission projection. No mutation is retried automatically and no raw server detail is rendered. Unexpected field reread failure retains a fixed error/retry boundary; `401`/`403` and exact `404` keep their established fail-closed handling.
+- Fresh Mini App evidence is `5 files / 15 tests passed` and `npm.cmd run build` passed. A disposable PostgreSQL cleanup smoke passed at Alembic head `20260712_0023` after synthetic-data reset. A new local Browser attempt could not reach its loopback fixture despite direct backend bootstrap, so it is explicitly not promoted to Browser evidence. Temporary scripts were deleted and ports `8004`/`4178` were confirmed closed.
+
 ### 2026-07-12: Package 3 Governance Readback — Local Implementation And Reconciliation
 
 - The generic member/audit routes remain deliberately unused by the browser: their contracts do not meet the cursor/redaction boundary. Two narrow Mini App projections now independently require `member.read` and `audit.read`, return only closed DTOs, preserve opaque cursor pagination and leave legacy endpoints unchanged.

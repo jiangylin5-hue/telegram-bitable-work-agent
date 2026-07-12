@@ -24,6 +24,8 @@ type GovernanceWriteWorkbenchProps = {
   onSelectTable: (tableId: string) => void
   onChangeRole: (memberId: string, role: GovernanceAssignableRole, expectedVersion: number) => Promise<void>
   onReplacePolicy: (fieldId: string, policy: GovernanceFieldPermissionPolicy, expectedVersion: number) => Promise<void>
+  onReloadMembers?: () => Promise<void>
+  onReloadFields?: () => Promise<void>
   onOpenViewAccess: (viewId: string) => void
   onClose: () => void
 }
@@ -43,6 +45,13 @@ function fixedError(error: unknown): string {
   return '无法提交权限更改，请稍后重试。'
 }
 
+function errorStatus(error: unknown): number | undefined {
+  const status = error && typeof error === 'object' && 'status' in error
+    ? (error as { status?: unknown }).status
+    : undefined
+  return typeof status === 'number' ? status : undefined
+}
+
 export function GovernanceWriteWorkbench({
   bases,
   tables,
@@ -59,6 +68,8 @@ export function GovernanceWriteWorkbench({
   onSelectTable,
   onChangeRole,
   onReplacePolicy,
+  onReloadMembers,
+  onReloadFields,
   onOpenViewAccess,
   onClose,
 }: GovernanceWriteWorkbenchProps) {
@@ -69,6 +80,7 @@ export function GovernanceWriteWorkbench({
   const [selectedViewId, setSelectedViewId] = useState('')
   const [pendingKey, setPendingKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [reloadTarget, setReloadTarget] = useState<'members' | 'fields' | null>(null)
 
   useEffect(() => { headingRef.current?.focus() }, [])
   useEffect(() => {
@@ -89,11 +101,13 @@ export function GovernanceWriteWorkbench({
 
   async function submitRole(memberId: string, role: GovernanceAssignableRole, expectedVersion: number) {
     setError(null)
+    setReloadTarget(null)
     setPendingKey(`role:${memberId}`)
     try {
       await onChangeRole(memberId, role, expectedVersion)
     } catch (reason) {
       setError(fixedError(reason))
+      if (errorStatus(reason) === 409) setReloadTarget('members')
     } finally {
       setPendingKey(null)
     }
@@ -102,11 +116,28 @@ export function GovernanceWriteWorkbench({
   async function submitPolicy() {
     if (!selectedField || !selectedPolicy) return
     setError(null)
+    setReloadTarget(null)
     setPendingKey(`policy:${selectedField.id}`)
     try {
       await onReplacePolicy(selectedField.id, selectedPolicy, selectedField.permissionVersion)
     } catch (reason) {
       setError(fixedError(reason))
+      if (errorStatus(reason) === 409) setReloadTarget('fields')
+    } finally {
+      setPendingKey(null)
+    }
+  }
+
+  async function reloadConflictContext() {
+    const reload = reloadTarget === 'members' ? onReloadMembers : onReloadFields
+    if (!reload) return
+    setPendingKey('reload')
+    try {
+      await reload()
+      setError(null)
+      setReloadTarget(null)
+    } catch {
+      setError('无法重新读取权限状态，请稍后重试。')
     } finally {
       setPendingKey(null)
     }
@@ -123,6 +154,7 @@ export function GovernanceWriteWorkbench({
         <button type="button" aria-label="关闭权限设置" onClick={onClose}>×</button>
       </header>
       {error && <p className="governance-write-error" role="alert">{error}</p>}
+      {reloadTarget && (reloadTarget === 'members' ? onReloadMembers : onReloadFields) && <button className="governance-write-reload" type="button" disabled={pendingKey === 'reload'} onClick={() => { void reloadConflictContext() }}>{pendingKey === 'reload' ? '重新读取中…' : reloadTarget === 'members' ? '重新读取成员角色' : '重新读取字段权限'}</button>}
       {contextError && <p className="governance-write-error" role="alert">{contextError === 'base_not_available' ? '所选 Base 已不可用，请重新选择。' : '所选数据表已不可用，请重新选择。'}</p>}
       <div className="governance-write-columns">
         <section className="governance-write-section" aria-label="成员角色设置">

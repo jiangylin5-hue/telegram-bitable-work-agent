@@ -71,6 +71,10 @@ Then all Stage07 protected state is cancelled and removed before expired-session
 Given `403`, `404`, `409`, `422`, `5xx` or network failure
 Then cleanup scope, retained safe local draft, fixed feedback and retry behavior match the SDD; server detail never enters DOM or telemetry.
 
+Given a versioned role or field-policy command returns `409`
+When the Mini App keeps the safe local selection and shows the fixed conflict message
+Then it offers an explicit context-specific reread control, never retries the mutation automatically, and only clears the conflict state after the authoritative safe context resolves.
+
 ### GW-08 Responsive confirm path is complete
 
 Given 1440, 1280, 430 and 390 widths
@@ -86,7 +90,7 @@ Then selection, confirmation, pending, conflict, denied, retry and focus return 
 | GW-A03 | field policy schema is fixed, versioned and cannot alter field/record data | service/API negative tests plus PostgreSQL rollback | implemented-local |
 | GW-A04 | field read/write enforcement remains intersectional | hidden/read/write regression across schema/presentation/detail/update | implemented-local |
 | GW-A05 | V1 view grant path is reused with no broader policy endpoint | contract and UI integration tests | implemented-local |
-| GW-A06 | protected QueryClient cleanup and authoritative reread are exact | parser/query/App tests for 401/403/404/409/scope replacement | partial-local — immediate 401/403, exact Base 404 and focus return are covered; planned delayed mutation permutations remain open |
+| GW-A06 | protected QueryClient cleanup and authoritative reread are exact | parser/query/App tests for 401/403/404/409/scope replacement | partial-local — immediate 401/403, exact Base 404, explicit 409 field-policy reread and focus return are covered; planned delayed mutation permutations remain open |
 | GW-A07 | built UI is reachable and safe at four widths | Browser synthetic fixture, console scan and retained observation | partial-local — success/four-width/console plus safe Base 404 pass; Browser stale/denied/retry terminal-mutation permutations remain open |
 | GW-A08 | audit/redaction and temporary cleanup are reconciled | BDD evidence document and cleanup proof | implemented-local |
 

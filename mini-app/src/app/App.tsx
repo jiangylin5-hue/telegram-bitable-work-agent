@@ -594,6 +594,47 @@ function AppContent() {
     }
   }
 
+  async function reloadGovernanceWriteFieldContext(): Promise<void> {
+    const panel = governanceWritePanel
+    const tableId = panel?.selectedTableId
+    if (!tableId) throw new Error('No governance table is selected.')
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    setGovernanceWritePanel((current) => current?.selectedTableId === tableId
+      ? { ...current, fieldsLoading: true, contextError: undefined }
+      : current)
+    try {
+      await clearGovernanceWriteQueries(queryClient, scope, tableId)
+      const fields = await queryClient.fetchQuery({
+        queryKey: governanceWriteKeys.fieldPermissions(scope, tableId),
+        queryFn: ({ signal }) => api.listGovernanceFieldPermissions(tableId, { signal }),
+      })
+      setGovernanceWritePanel((current) => current?.selectedTableId === tableId
+        ? { ...current, fields, fieldsLoading: false }
+        : current)
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        await denyInvalidSession()
+        return
+      }
+      if (error instanceof ApiError && error.status === 403) {
+        await denyWorkspace(scope)
+        return
+      }
+      if (error instanceof ApiError && error.status === 404) {
+        await clearGovernanceWriteQueries(queryClient, scope, tableId)
+        setGovernanceWritePanel((current) => current?.selectedTableId === tableId
+          ? { ...current, selectedTableId: null, fields: null, fieldsLoading: false, contextError: 'table_not_available' }
+          : current)
+        return
+      }
+      setGovernanceWritePanel((current) => current?.selectedTableId === tableId
+        ? { ...current, fieldsLoading: false }
+        : current)
+      throw error
+    }
+  }
+
   async function selectGovernanceBase(baseId: string) {
     if (!baseId || !governancePanel) return
     const workspaceId = readyState.home.workspace_id
@@ -1770,6 +1811,8 @@ function AppContent() {
       onSelectTable={(tableId) => { void selectGovernanceWriteTable(tableId) }}
       onChangeRole={changeGovernanceWriteRole}
       onReplacePolicy={replaceGovernanceWriteFieldPolicy}
+      onReloadMembers={() => refreshGovernanceWriteMemberContext({ userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id })}
+      onReloadFields={reloadGovernanceWriteFieldContext}
       onOpenViewAccess={(viewId) => { void openGovernanceV1ViewAccess(viewId) }}
       onClose={closeGovernanceWrite}
     />

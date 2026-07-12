@@ -35,6 +35,7 @@ test('submits only an assignable versioned role and never renders raw response d
 
 test('retains a typed policy after a conflict and keeps owner permission fixed', async () => {
   const onReplacePolicy = vi.fn().mockRejectedValue({ status: 409, detail: 'raw-server-detail' })
+  const onReloadFields = vi.fn().mockResolvedValue(undefined)
   render(<GovernanceWriteWorkbench
     bases={[{ id: 'base-1', name: 'CRM', source_type: 'manual' }]}
     tables={[{ id: 'table-1', base_id: 'base-1', name: 'Customers', key: 'customers', status: 'active' }]}
@@ -50,6 +51,7 @@ test('retains a typed policy after a conflict and keeps owner permission fixed',
     onSelectTable={vi.fn()}
     onChangeRole={vi.fn()}
     onReplacePolicy={onReplacePolicy}
+    onReloadFields={onReloadFields}
     onOpenViewAccess={vi.fn()}
     onClose={vi.fn()}
   />)
@@ -61,6 +63,8 @@ test('retains a typed policy after a conflict and keeps owner permission fixed',
   await screen.findByText('数据已更新，请重新读取后再提交。')
   expect(screen.getByLabelText('字段 Internal 的 viewer 权限')).toHaveValue('read')
   expect(screen.queryByText('raw-server-detail')).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '重新读取字段权限' }))
+  await waitFor(() => expect(onReloadFields).toHaveBeenCalledOnce())
 })
 
 test('only offers existing restricted views owned by the caller to the V1 access editor', () => {

@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 delivery roadmap
 - Purpose: organize Stage07 as coherent substages rather than individual UI/API fragments
-- Current active substage: S4 Governance Write documentation and user-review gate
+- Current active substage: S4 Governance Write acceptance reconciliation; S5 is specified and awaits one TD005 approval.
 
 ## Delivery Rule
 
