@@ -29,3 +29,13 @@ test('parses only safe S5 contacts and draft detail fields', async () => {
     fields: [{ key: 'title', label: 'Title', fieldType: 'text', beforeValue: 'Before', proposedValue: 'After' }], actions: { canConfirm: true, canReject: true }, terminalAuditEventId: null,
   })
 })
+
+test('submits only a versioned terminal command and keeps the opaque audit receipt', async () => {
+  const fetchMock = vi.fn((input: RequestInfo | URL) => Promise.resolve(json({
+    id: 'draft-1', status: 'confirmed', version: 2, terminal_audit_event_id: 'audit-1', trace_id: 'never-reach-client',
+  })))
+  vi.stubGlobal('fetch', fetchMock)
+
+  await expect(api.confirmS5Draft('draft-1', 1, 'confirm-key')).resolves.toEqual({ id: 'draft-1', status: 'confirmed', version: 2, terminalAuditEventId: 'audit-1' })
+  expect(fetchMock).toHaveBeenCalledWith('/mini-app/drafts/draft-1/confirm', expect.objectContaining({ method: 'POST', body: JSON.stringify({ expected_version: 1 }), headers: expect.objectContaining({ 'idempotency-key': 'confirm-key' }) }))
+})

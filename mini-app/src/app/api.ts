@@ -48,7 +48,7 @@ import type {
   GovernanceMemberRoleReceipt,
   GovernanceRole,
 } from './governance-write-types'
-import type { S5Contact, S5ContactPage, S5DraftDetail, S5DraftField, S5Intent } from './draft-employee-types'
+import type { S5Contact, S5ContactPage, S5DraftDetail, S5DraftField, S5Intent, S5TerminalReceipt } from './draft-employee-types'
 
 export type {
   SafeViewErrorCode,
@@ -518,6 +518,13 @@ function safeS5DraftDetail(value: unknown): S5DraftDetail {
   return { id: stringValue(record.id), baseId: stringValue(record.base_id), tableId: stringValue(record.table_id), recordId: nullableStringValue(record.record_id), draftType: stringValue(record.draft_type), status: s5Status(record.status), version: record.version as number, fields: record.fields.map(safeS5DraftField), actions: { canConfirm: booleanValue(actions.can_confirm), canReject: booleanValue(actions.can_reject) }, terminalAuditEventId: nullableStringValue(record.terminal_audit_event_id) }
 }
 
+function safeS5TerminalReceipt(value: unknown): S5TerminalReceipt {
+  const record = jsonRecord(value)
+  const status = record.status
+  if ((status !== 'confirmed' && status !== 'rejected') || !Number.isInteger(record.version)) throw new Error('Invalid S5 response')
+  return { id: stringValue(record.id), status, version: record.version as number, terminalAuditEventId: stringValue(record.terminal_audit_event_id) }
+}
+
 function safeTemplateSummary(value: unknown): TemplateSummary {
   const record = jsonRecord(value)
   return {
@@ -839,6 +846,12 @@ export const api = {
   },
   getS5Draft: async (draftId: string, init?: RequestInit): Promise<S5DraftDetail> => safeS5DraftDetail(
     await getJson<unknown>(`/mini-app/drafts/${encodeURIComponent(draftId)}`, init),
+  ),
+  confirmS5Draft: async (draftId: string, expectedVersion: number, idempotencyKey: string): Promise<S5TerminalReceipt> => safeS5TerminalReceipt(
+    await postJson<unknown>(`/mini-app/drafts/${encodeURIComponent(draftId)}/confirm`, { expected_version: expectedVersion }, idempotencyKey),
+  ),
+  rejectS5Draft: async (draftId: string, expectedVersion: number, idempotencyKey: string): Promise<S5TerminalReceipt> => safeS5TerminalReceipt(
+    await postJson<unknown>(`/mini-app/drafts/${encodeURIComponent(draftId)}/reject`, { expected_version: expectedVersion }, idempotencyKey),
   ),
   listTemplates: async (init?: RequestInit): Promise<TemplateSummary[]> => {
     const response = jsonRecord(await getJson<unknown>('/templates', init))
