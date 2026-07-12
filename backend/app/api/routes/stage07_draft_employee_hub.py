@@ -58,6 +58,9 @@ from app.services.stage06_platform import (
 )
 from app.services.stage07_draft_employee_hub import confirm_s5_draft, reject_s5_draft
 from app.services.stage06_digital_employees import invoke_digital_employee
+from app.services.stage07_digital_employee_management import (
+    is_member_eligible_for_employee,
+)
 
 
 router = APIRouter(tags=["stage07-draft-employee-hub"])
@@ -78,7 +81,12 @@ def list_digital_employee_contacts(
     uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
 ) -> DigitalEmployeeContactPageResponse:
     try:
-        authorize_workspace_action(uow, identity, workspace_id, "digital_employee.read")
+        actor = authorize_workspace_action(
+            uow,
+            identity,
+            workspace_id,
+            "digital_employee.read",
+        )
         bases = list_bases_for_workspace(uow, workspace_id)
     except Stage06AuthorizationError as exc:
         raise HTTPException(
@@ -97,7 +105,9 @@ def list_digital_employee_contacts(
         for selected_base_id in sorted(allowed_base_ids)
         if base_id is None or selected_base_id == base_id
         for employee in uow.list_digital_employees(selected_base_id)
-        if employee.status == "active" and employee.workspace_id == workspace_id
+        if employee.status == "active"
+        and employee.workspace_id == workspace_id
+        and is_member_eligible_for_employee(uow, employee, actor.actor_id)
     ]
     contacts.sort(key=lambda employee: (employee.name.casefold(), str(employee.id)))
     try:
@@ -214,6 +224,11 @@ def invoke_safe_digital_employee(
         actor = authorize_workspace_action(uow, identity, employee.workspace_id, "digital_employee.invoke")
     except Stage06AuthorizationError as exc:
         raise _authorization_error(exc) from exc
+    if not is_member_eligible_for_employee(uow, employee, actor.actor_id):
+        raise HTTPException(
+            status_code=404,
+            detail=error_detail("digital_employee_not_found", "digital_employee_not_found"),
+        )
     try:
         base_id = UUID(request.base_id)
         view_id = None if request.view_id is None else UUID(request.view_id)
@@ -496,6 +511,11 @@ def _resolve_assistant_context(
         employee.workspace_id,
         "digital_employee.invoke",
     )
+    if not is_member_eligible_for_employee(uow, employee, actor.actor_id):
+        raise HTTPException(
+            status_code=404,
+            detail=error_detail("assistant_context_not_found", "assistant_context_not_found"),
+        )
     if employee.base_id not in {base.id for base in list_bases_for_workspace(uow, employee.workspace_id)}:
         raise HTTPException(
             status_code=404,
