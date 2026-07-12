@@ -2,7 +2,7 @@
 
 ## Status
 
-- Evidence status: expanded partial local Browser acceptance, including a real FastAPI + disposable PostgreSQL pass; it does not accept V1 or Stage07 as a whole
+- Evidence status: expanded partial local Browser acceptance, including real FastAPI + disposable PostgreSQL role/intersection and Record Detail relation-edit passes; it does not accept V1 or Stage07 as a whole
 - Date: 2026-07-12
 - Scope: approved V1 saved-view UI only
 - Environment: disposable local fixture serving the built Mini App at `127.0.0.1:4174`; fixed safe fixture responses only
@@ -59,14 +59,27 @@ The local database migration smoke reset the explicitly disposable `STAGE06_LOCA
 The repair is a UI visibility guard only: it reuses the server-derived existing workspace role and permits the create entry only for `owner`, `admin`, `builder` or `operator`. `viewer` and unknown roles are hidden fail-closed. The existing FastAPI `record.create` authorization remains the mutation authority; no schema, API route, capability or permission-table change was introduced.
 
 - Both real Browser passes returned page-level `error` log count `0`.
-- This pass proves a real Base/Table/Field intersection and role-specific Canvas projection. It does **not** prove the complete F2 Record Detail relation-edit or stale-version interaction matrix.
+- This pass proves a real Base/Table/Field intersection and role-specific Canvas projection. The later V1-15 follow-up adds the permitted Record Detail relation-edit path; real stale-version and type-invalid interaction matrices remain unaccepted.
+
+## V1-15: Real Record Detail Relation-Edit Follow-up
+
+After a Codex Desktop restart restored local Browser navigation, the disposable PostgreSQL smoke again reset the explicitly local database to Alembic head `20260711_0022`. A one-use FastAPI process and same-origin built-client proxy then used a synthetic `owner` identity only. The seed created `Tasks`, `Accounts`, a direct `Account` relation, a numeric `sum` lookup and one Grid sorted by that lookup and grouped by `Status`.
+
+| Required main-path check | Actual Browser observation | Result |
+| --- | --- | --- |
+| relation candidate projection | Record Detail for `Editable task` entered edit mode; the `Account` Relation picker exposed `Editable account` as a button. No opaque UUID was rendered as the candidate label. | observed |
+| existing versioned PATCH path | Selecting `Editable account` and submitting `保存更改` changed the persisted record from version `1` to version `2`. | observed |
+| authoritative reread | After save, both Record Detail and the Grid rendered `Editable account`; the server-computed `Account score` lookup rendered `7`. | observed |
+| console | Page-level `error` scan, excluding an external Browser telemetry timeout outside the page, returned `[]`. | observed |
+
+This is a local disposable-data proof of the already approved F2 direct-edit path. It adds no product route, schema, permission rule, client authority or persistent artifact.
 
 ## Deliberately Unaccepted Browser Cases
 
 The following required V1 checks were **not** re-run as Browser actions in this evidence session and therefore remain automated/contract evidence only:
 
 1. a real underlying Base/Table/Field **denial screen** after a valid grant; the real-backend pass did prove the allowed-field intersection and hidden-field omission, but not this denial presentation;
-2. a server-produced unsupported-operator payload, numeric lookup filter mutation and Record Detail relation-edit regression in the real Browser;
+2. a server-produced unsupported-operator payload, numeric lookup filter mutation, stale-version interaction and type-invalid response matrix in the real Browser;
 3. every Kanban/Calendar/Form invalid configuration state at Browser level;
 4. Escape-key/live-region coverage beyond the observed focus return.
 
@@ -75,7 +88,7 @@ Those gaps keep V1-A02, V1-A05, V1-A07, V1-A08 and V1-A10 at `partial-local`. V1
 ## Cleanup
 
 - Stopped both local fixture processes; ports `4174` and `4175` had no listening socket in their post-run checks.
-- Stopped the temporary FastAPI/proxy processes; ports `8001` and `4176` had no listening socket in the post-run check.
+- Stopped the temporary FastAPI/proxy processes; ports `8001`, `4176`, `8002` and `5173` had no listening socket in their post-run checks.
 - Deleted all fixture/seed/proxy scripts and temporary `.out.log` / `.err.log` files.
 - Re-ran the local PostgreSQL migration smoke after Browser work, which erased the synthetic V1 rows and reached Alembic head `20260711_0022`.
 - No screenshots, test records, secrets, external writes or running Browser session were retained.

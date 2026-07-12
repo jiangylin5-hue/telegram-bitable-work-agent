@@ -139,9 +139,9 @@ Verify owner member controls, editor presentation save without member controls, 
 
 As viewer, verify `Internal` is absent from Canvas/schema/record/detail while allowed fields render. Do not derive a hidden key from an error response.
 
-- [ ] **Step 3: Remaining F2 and conflict behavior**
+- [ ] **Step 3: Remaining F2 and conflict behavior (partially observed)**
 
-Use safe relation candidates, numeric lookup filter/sort controls and one permitted Record Detail relation edit. Verify authoritative reread and fixed local stale-version text only.
+The real owner Browser pass now observed safe relation candidates and one permitted Record Detail relation edit: selecting `Editable account` committed the existing versioned PATCH from `1` to `2`, then Canvas/Detail reread the safe relation and numeric lookup `7`. Numeric lookup filter mutation and fixed local stale-version text are intentionally still unobserved.
 
 - [x] **Step 4: Console and cleanup**
 
