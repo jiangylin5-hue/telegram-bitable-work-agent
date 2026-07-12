@@ -95,7 +95,7 @@ Pydantic models use `extra='forbid'`; TypeScript parsing allowlists all enum val
 
 ## Cache and Error Rules
 
-All keys nest below `['stage07', userId, workspaceId, 's5', ...]`. A terminal mutation cancels/removes exact draft, Base queue, contact/context and active record/view paths, then rereads. `401` clears the complete protected workspace; `403` removes its S5 subtree; `404` removes exact resource keys; `409`/`422` retain typed local intent only; unknown failures map to a fixed generic failure.
+All keys nest below `['stage07', userId, workspaceId, 's5', ...]`. A terminal mutation captures its request generation, then cancels/removes exact draft, Base queue, contact/context and active record/view paths before rereading only while that generation is current. A delayed terminal `401`/`403` from an old workspace clears only old scoped state and cannot deny or repopulate the replacement workspace. For current requests, `401` clears the complete protected workspace; `403` removes its S5 subtree; `404` removes exact resource keys; `409`/`422` retain typed local intent only; unknown failures map to a fixed generic failure.
 
 ### Implemented UI Boundary and Current-Canvas Context
 

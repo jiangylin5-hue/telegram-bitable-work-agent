@@ -574,7 +574,9 @@ function AppContent() {
     try {
       if (action === 'confirm') await api.confirmS5Draft(draftId, expectedVersion, crypto.randomUUID())
       else await api.rejectS5Draft(draftId, expectedVersion, crypto.randomUUID())
+      if (!isCurrent()) return
       await clearDraftEmployeeTerminalQueries(queryClient, scope, draft)
+      if (!isCurrent()) return
       const [contacts, rereadDraft] = await Promise.all([
         queryClient.fetchQuery({
           queryKey: draftEmployeeKeys.contacts(scope, null),
@@ -585,8 +587,16 @@ function AppContent() {
           queryFn: ({ signal }) => api.getS5Draft(draftId, { signal }),
         }),
       ])
-      if (isCurrent()) setDraftEmployeePanel({ contacts: contacts.contacts, draft: rereadDraft, loading: false, targetDraftId: draftId, failed: false })
+      if (!isCurrent()) {
+        await clearDraftEmployeeTerminalQueries(queryClient, scope, draft)
+        return
+      }
+      setDraftEmployeePanel({ contacts: contacts.contacts, draft: rereadDraft, loading: false, targetDraftId: draftId, failed: false })
     } catch (error) {
+      if (!isCurrent()) {
+        await clearDraftEmployeeTerminalQueries(queryClient, scope, draft)
+        return
+      }
       if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
       else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
       else if (error instanceof ApiError && error.status === 404) {

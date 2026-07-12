@@ -6,6 +6,12 @@ import { App } from '../app/App'
 function json(body: unknown, status = 200) { return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }) }
 afterEach(() => vi.unstubAllGlobals())
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((nextResolve) => { resolve = nextResolve })
+  return { promise, resolve }
+}
+
 test('opens the S5 Hub only through the safe contacts endpoint', async () => {
   vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
     const path = String(input)
@@ -155,4 +161,38 @@ test('keeps the safe draft visible after a conflict and rereads only when reques
   fireEvent.click(screen.getByRole('button', { name: '重新读取' }))
   expect(await screen.findByText(/状态：confirmed/)).toBeVisible()
   expect(draftReads).toBe(2)
+})
+
+test.each([401, 403])('does not let a delayed terminal draft command for the old workspace deny a replacement workspace on %s', async (status) => {
+  const terminal = deferred<Response>()
+  const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const path = String(input)
+    if (path === '/mini-app/bootstrap') return Promise.resolve(json({
+      identity: { user_id: 'owner-1', source: 'header' },
+      workspaces: [
+        { id: 'workspace-1', name: 'Acme', slug: 'acme', role: 'owner', capabilities: { can_read_bases: true, can_manage_workspace: true, can_manage_schema: true, can_review_drafts: true } },
+        { id: 'workspace-2', name: 'Northwind', slug: 'northwind', role: 'owner', capabilities: { can_read_bases: true, can_manage_workspace: true, can_manage_schema: true, can_review_drafts: true } },
+      ],
+    }))
+    if (path === '/workspaces/workspace-1/home') return Promise.resolve(json({ workspace_id: 'workspace-1', recent_bases: [], queue: [{ id: 'queue-1', kind: 'record_change_draft', title: 'Update customer', status: 'pending_confirmation', destination: { base_id: 'base-1', draft_id: 'draft-1' }, action_availability: { can_confirm: true, can_reject: true } }] }))
+    if (path === '/workspaces/workspace-2/home') return Promise.resolve(json({ workspace_id: 'workspace-2', recent_bases: [], queue: [] }))
+    if (path === '/mini-app/workspaces/workspace-1/digital-employee-contacts?limit=50') return Promise.resolve(json({ workspace_id: 'workspace-1', contacts: [], next_cursor: null, has_more: false }))
+    if (path === '/mini-app/drafts/draft-1') return Promise.resolve(json({ id: 'draft-1', base_id: 'base-1', table_id: 'table-1', record_id: 'record-1', draft_type: 'update_record', status: 'pending_confirmation', version: 1, fields: [{ key: 'status', label: 'Status', field_type: 'text', before_value: 'Before', proposed_value: 'After' }], actions: { can_confirm: true, can_reject: true }, terminal_audit_event_id: null }))
+    if (path === '/mini-app/drafts/draft-1/confirm' && init?.method === 'POST') return terminal.promise
+    return Promise.resolve(json({ detail: 'unexpected raw server detail' }, 404))
+  })
+  vi.stubGlobal('fetch', fetchMock)
+
+  render(<App />)
+  fireEvent.click(await screen.findByRole('link', { name: '查看草稿' }))
+  fireEvent.click(await screen.findByRole('button', { name: '确认变更' }))
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/mini-app/drafts/draft-1/confirm', expect.objectContaining({ method: 'POST' })))
+
+  fireEvent.change(screen.getByLabelText('切换工作区（桌面）'), { target: { value: 'workspace-2' } })
+  expect(await screen.findByRole('main', { name: '工作区首页' })).toHaveTextContent('Northwind')
+  terminal.resolve(json({ detail: 'expired or denied identity' }, status))
+
+  await waitFor(() => expect(screen.getByRole('main', { name: '工作区首页' })).toHaveTextContent('Northwind'))
+  expect(screen.queryByRole('main', { name: '无工作区访问权限' })).not.toBeInTheDocument()
+  expect(screen.queryByText('expired or denied identity')).not.toBeInTheDocument()
 })
