@@ -37,6 +37,7 @@ class WorkspaceMember(UuidPrimaryKeyMixin, TimestampMixin, Base):
     user_id: Mapped[str] = mapped_column(String(120), nullable=False)
     role: Mapped[str] = mapped_column(String(40), nullable=False)
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="active")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
 
 class Stage06TelegramBinding(UuidPrimaryKeyMixin, TimestampMixin, Base):
@@ -126,6 +127,11 @@ class PlatformField(UuidPrimaryKeyMixin, TimestampMixin, Base):
     options: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     default_value: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     permission_policy: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    permission_version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+    )
     order_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="active")
 

@@ -12,11 +12,13 @@ ROLE_ACTIONS: dict[str, frozenset[str]] = {
         {
             "workspace.read",
             "member.read",
+            "member.manage",
             "base.create",
             "base.read",
             "table.create",
             "table.read",
             "field.manage",
+            "field.permission.manage",
             "view.manage",
             "record.read",
             "record.create",
