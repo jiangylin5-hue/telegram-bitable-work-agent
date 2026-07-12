@@ -119,6 +119,12 @@ These checks cover only the approved Home contact-to-view-to-summary slice. They
 - [x] Local evidence: focused backend `17 passed`, full Mini App `51 files / 204 tests`, TypeScript/Vite production build passed.
 - [ ] TD009 disposable PostgreSQL intersection/revocation, dedicated delayed workspace-replacement and user-controlled visual review remain required before this package can be promoted beyond `partial-local`.
 
+### TD010 Digital Employee Management — Proposed Only
+
+- [ ] User approves the additive employee version/access-mode and member-grant schema/API/permission behavior before any implementation plan or code.
+- [ ] Future implementation proves manager/use-member separation, legacy `workspace` compatibility, row-lock/version/idempotency, scope intersection, active alias collision and strict safe DTO boundaries.
+- [ ] Future implementation proves active/paused contact/context/invocation eligibility behavior without creating multi-Base scope, memory, knowledge, record picker, Telegram or external-action behavior.
+
 ### S6.1 Telegram Identity and Deep-Link Local Evidence
 
 TD007 is `partial-local`, not a delivery or production approval. The checked rows below reflect the complete approved local identity/resolver/client matrix; only a real Telegram identity/deep-link smoke remains external evidence.

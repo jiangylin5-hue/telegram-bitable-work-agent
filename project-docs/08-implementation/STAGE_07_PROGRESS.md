@@ -15,6 +15,12 @@
 
 ## Progress Log
 
+### 2026-07-13: TD010 Digital Employee Management And Work Scope — Documentation Package
+
+- The next coherent product package is documented only: managers would create a Base-bound digital employee as `draft`, configure only readable table/view scopes and fixed `summarize|draft_update` intents, optionally assign eligible members, then explicitly activate or pause it. Existing runtime policies, confirmation policy, provider settings and raw runtime routes remain unavailable to the Mini App.
+- TD010 compares a minimal Base-bound management plane, a rejected multi-Base scope model and a forbidden generic Stage06 browser wrapper. The recommended Option A proposes additive employee `version`/`access_mode`, one member-grant table, existing action reuse and S4-style lock/version/idempotency/audit behavior. Legacy active employees would remain `workspace` eligibility, avoiding an implicit contact-access regression.
+- Written artifacts: TD010, design, BDD/acceptance, SDD, module surface and complex/index decision. No source, migration, endpoint, permission action, dependency, test fixture, provider/Telegram call, browser control, database operation or deployment changed. The package awaits one user review before a detailed implementation plan.
+
 ### 2026-07-13: TD009 Home Personal Assistant Context Discovery — Bounded Local Delivery
 
 - Implemented the approved Option B only: Home `智能汇总` opens a separate context workbench, reuses the existing safe contact page, obtains only a server-composed permitted-view catalog, re-reads the exact view immediately before the existing fixed `summarize` command, and can open the same authorized Base only through an explicit action.
