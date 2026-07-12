@@ -12,7 +12,7 @@ function deferred<T>() {
   return { promise, resolve }
 }
 
-test('opens the S5 Hub only through the safe contacts endpoint', async () => {
+test('opens Home assistant context only through the safe contacts endpoint', async () => {
   vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
     const path = String(input)
     if (path === '/mini-app/bootstrap') return Promise.resolve(json({ identity: { user_id: 'owner-1', source: 'header' }, workspaces: [{ id: 'workspace-1', name: 'Acme', slug: 'acme', role: 'owner', capabilities: { can_read_bases: true, can_manage_workspace: true, can_manage_schema: true, can_review_drafts: true } }] }))
@@ -27,7 +27,7 @@ test('opens the S5 Hub only through the safe contacts endpoint', async () => {
     '/mini-app/workspaces/workspace-1/digital-employee-contacts?limit=50',
     expect.objectContaining({ signal: expect.any(AbortSignal) }),
   ))
-  expect(await screen.findByRole('dialog', { name: '数字员工与草稿' })).toBeVisible()
+  expect(await screen.findByRole('dialog', { name: '个人助理上下文' })).toBeVisible()
   expect(screen.getByText('运营助理')).toBeVisible()
 })
 
@@ -127,10 +127,10 @@ test('renders a fixed local contact failure and only retries on an explicit user
 
   render(<App />)
   fireEvent.click(await screen.findByRole('button', { name: '智能汇总' }))
-  expect(await screen.findByRole('alert')).toHaveTextContent('暂时无法读取数字员工与草稿，请稍后重试。')
+  expect(await screen.findByRole('alert')).toHaveTextContent('暂时无法读取个人助理上下文，请稍后重试。')
   expect(screen.queryByText('raw provider detail must not render')).not.toBeInTheDocument()
   expect(contactReads).toBe(1)
-  fireEvent.click(screen.getByRole('button', { name: '重新读取' }))
+  fireEvent.click(screen.getByRole('button', { name: '重试' }))
   expect(await screen.findByText('运营助理')).toBeVisible()
   expect(contactReads).toBe(2)
 })

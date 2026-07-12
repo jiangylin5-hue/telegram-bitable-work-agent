@@ -3,6 +3,7 @@ import { isCancelledError, QueryClientProvider, useQuery, useQueryClient } from 
 
 import { ApiError, api, type BaseSummary, type BootstrapResponse, type CreateForm, type PlatformTable, type RecordDetail, type TableSchema, type TelegramDeepLinkDestination, type ViewPresentation, type ViewRecords, type ViewSummary, type WorkspaceHome } from './api'
 import { AppShell, type AppShellRoute } from './AppShell'
+import { AssistantContextWorkbench } from './AssistantContextWorkbench'
 import { BaseCanvas } from './BaseCanvas'
 import { BaseDirectory, type BaseDirectoryState } from './BaseDirectory'
 import { BuilderCreatePanel } from './BuilderCreatePanel'
@@ -18,11 +19,11 @@ import { SaveTemplatePanel } from './SaveTemplatePanel'
 import { TemplateImportHub } from './TemplateImportHub'
 import { ViewBuilderPanel } from './ViewBuilderPanel'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
-import { clearAllProtectedQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTelegramDeepLinkQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, draftEmployeeKeys, governanceKeys, governanceWriteKeys, navigationKeys, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
+import { clearAllProtectedQueries, clearAssistantContextQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTelegramDeepLinkQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, draftEmployeeKeys, governanceKeys, governanceWriteKeys, navigationKeys, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
 import { readTelegramMiniAppLaunch, type TelegramMiniAppLaunch } from './telegram-mini-app'
 import type { GovernanceAuditPage, GovernanceMemberPage } from './governance-types'
 import type { GovernanceEditableMemberPage, GovernanceFieldPermissionPage, GovernanceFieldPermissionPolicy } from './governance-write-types'
-import type { CurrentCanvasInvocationContext, S5Contact, S5DraftDetail, S5InvocationRequest, S5InvocationResult } from './draft-employee-types'
+import type { AssistantContextPage, AssistantSelectedView, CurrentCanvasInvocationContext, S5Contact, S5DraftDetail, S5InvocationRequest, S5InvocationResult } from './draft-employee-types'
 import type { CommitImportValues, CreateImportValues, ImportCommitReceipt, ImportPreview, TemplateSummary } from './template-import-types'
 import type { ViewBuilderContext, ViewBuilderResponse, ViewInitializationRequest, ViewMemberReplaceRequest, ViewPresentationPatchRequest } from './view-builder-types'
 
@@ -99,6 +100,16 @@ type DraftEmployeePanel = {
   failed: boolean
 }
 
+type AssistantContextPanel = {
+  contacts: S5Contact[]
+  selectedEmployeeId: string | null
+  context: AssistantContextPage | null
+  selectedView: AssistantSelectedView | null
+  summary: Extract<S5InvocationResult, { kind: 'summary' }> | null
+  loading: boolean
+  failed: boolean
+}
+
 function isAbortError(error: unknown): boolean {
   return isCancelledError(error) || (error instanceof DOMException && error.name === 'AbortError')
 }
@@ -149,6 +160,7 @@ function AppContent() {
   const governanceRequestVersion = useRef(0)
   const governanceWriteRequestVersion = useRef(0)
   const draftEmployeeRequestVersion = useRef(0)
+  const assistantContextRequestVersion = useRef(0)
   const telegramLaunchRequestVersion = useRef(0)
   const telegramLaunchHandled = useRef(false)
   const pendingTelegramDestination = useRef<TelegramDeepLinkDestination | null>(null)
@@ -158,6 +170,7 @@ function AppContent() {
   const governanceReturnFocus = useRef<HTMLElement | null>(null)
   const governanceWriteReturnFocus = useRef<HTMLElement | null>(null)
   const draftEmployeeReturnFocus = useRef<HTMLElement | null>(null)
+  const assistantContextReturnFocus = useRef<HTMLElement | null>(null)
   const sessionInvalidated = useRef(false)
   const [telegramRecovery, setTelegramRecovery] = useState(false)
   const [navigationRoute, setNavigationRoute] = useState<AppShellRoute>('home')
@@ -167,6 +180,7 @@ function AppContent() {
   const [governancePanel, setGovernancePanel] = useState<GovernancePanel>()
   const [governanceWritePanel, setGovernanceWritePanel] = useState<GovernanceWritePanel>()
   const [draftEmployeePanel, setDraftEmployeePanel] = useState<DraftEmployeePanel>()
+  const [assistantContextPanel, setAssistantContextPanel] = useState<AssistantContextPanel>()
 
   function invalidateInFlightRequests() {
     homeRequestVersion.current += 1
@@ -179,6 +193,7 @@ function AppContent() {
     governanceRequestVersion.current += 1
     governanceWriteRequestVersion.current += 1
     draftEmployeeRequestVersion.current += 1
+    assistantContextRequestVersion.current += 1
     telegramLaunchRequestVersion.current += 1
     pendingTelegramDestination.current = null
   }
@@ -364,6 +379,7 @@ function AppContent() {
     governanceRequestVersion.current += 1
     governanceWriteRequestVersion.current += 1
     draftEmployeeRequestVersion.current += 1
+    assistantContextRequestVersion.current += 1
     telegramLaunchRequestVersion.current += 1
     pendingTelegramDestination.current = null
     setBuilderPanel(undefined)
@@ -371,6 +387,7 @@ function AppContent() {
     setGovernancePanel(undefined)
     setGovernanceWritePanel(undefined)
     setDraftEmployeePanel(undefined)
+    setAssistantContextPanel(undefined)
     setNavigationRoute('home')
     setBaseDirectory({ state: 'loading', bases: [] })
     activeWorkspaceId.current = workspaceId
@@ -573,6 +590,179 @@ function AppContent() {
     queueMicrotask(() => {
       if (trigger?.isConnected) trigger.focus()
     })
+  }
+
+  function closeAssistantContext() {
+    assistantContextRequestVersion.current += 1
+    setAssistantContextPanel(undefined)
+    const trigger = assistantContextReturnFocus.current
+    assistantContextReturnFocus.current = null
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
+    void clearAssistantContextQueries(queryClient, scope)
+    queueMicrotask(() => {
+      if (trigger?.isConnected) trigger.focus()
+    })
+  }
+
+  async function openAssistantContext(trigger?: HTMLElement): Promise<boolean> {
+    if (trigger) assistantContextReturnFocus.current = trigger
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++assistantContextRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && assistantContextRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setAssistantContextPanel({ contacts: [], selectedEmployeeId: null, context: null, selectedView: null, summary: null, loading: true, failed: false })
+    try {
+      const contacts = await queryClient.fetchQuery({
+        queryKey: draftEmployeeKeys.contacts(scope, null),
+        queryFn: ({ signal }) => api.listS5Contacts(workspaceId, null, { signal }),
+      })
+      if (isCurrent()) {
+        setAssistantContextPanel({ contacts: contacts.contacts, selectedEmployeeId: null, context: null, selectedView: null, summary: null, loading: false, failed: false })
+        return true
+      }
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return false
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else if (isCurrent()) setAssistantContextPanel({ contacts: [], selectedEmployeeId: null, context: null, selectedView: null, summary: null, loading: false, failed: true })
+    }
+    return false
+  }
+
+  async function selectAssistantContextEmployee(employeeId: string): Promise<void> {
+    const panel = assistantContextPanel
+    const contact = panel?.contacts.find((item) => item.id === employeeId)
+    if (!panel || !contact) return
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++assistantContextRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && assistantContextRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setAssistantContextPanel({ ...panel, selectedEmployeeId: employeeId, context: null, selectedView: null, summary: null, loading: true, failed: false })
+    try {
+      const context = await queryClient.fetchQuery({
+        queryKey: draftEmployeeKeys.assistantContext(scope, employeeId, null),
+        queryFn: ({ signal }) => api.getAssistantContext(employeeId, null, { signal }),
+      })
+      if (!isCurrent()) return
+      if (context.employee.id !== contact.id || context.employee.baseId !== contact.baseId) throw new Error('Assistant context does not match selected contact')
+      setAssistantContextPanel({ contacts: panel.contacts, selectedEmployeeId: employeeId, context, selectedView: null, summary: null, loading: false, failed: false })
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else {
+        if (error instanceof ApiError && error.status === 404) await clearAssistantContextQueries(queryClient, scope, employeeId)
+        if (isCurrent()) setAssistantContextPanel({ contacts: panel.contacts, selectedEmployeeId: employeeId, context: null, selectedView: null, summary: null, loading: false, failed: true })
+      }
+    }
+  }
+
+  async function selectAssistantContextView(viewId: string): Promise<void> {
+    const panel = assistantContextPanel
+    const context = panel?.context
+    if (!panel || !context || !context.views.some((view) => view.id === viewId)) return
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++assistantContextRequestVersion.current
+    const employeeId = context.employee.id
+    const isCurrent = () => !sessionInvalidated.current
+      && assistantContextRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setAssistantContextPanel({ ...panel, selectedView: null, summary: null, loading: true, failed: false })
+    try {
+      const selectedView = await queryClient.fetchQuery({
+        queryKey: draftEmployeeKeys.assistantView(scope, employeeId, viewId),
+        queryFn: ({ signal }) => api.getAssistantSelectedView(employeeId, viewId, { signal }),
+      })
+      if (!isCurrent()) return
+      if (selectedView.id !== viewId || selectedView.baseId !== context.employee.baseId) throw new Error('Assistant view no longer matches context')
+      setAssistantContextPanel({ ...panel, selectedView, summary: null, loading: false, failed: false })
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else {
+        if (error instanceof ApiError && error.status === 404) await clearAssistantContextQueries(queryClient, scope, employeeId)
+        if (isCurrent()) setAssistantContextPanel({ contacts: panel.contacts, selectedEmployeeId: panel.selectedEmployeeId, context: null, selectedView: null, summary: null, loading: false, failed: true })
+      }
+    }
+  }
+
+  async function summarizeAssistantContext(instruction?: string): Promise<void> {
+    const panel = assistantContextPanel
+    const context = panel?.context
+    const selectedView = panel?.selectedView
+    if (!panel || !context || !selectedView || selectedView.baseId !== context.employee.baseId) return
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++assistantContextRequestVersion.current
+    const employeeId = context.employee.id
+    const isCurrent = () => !sessionInvalidated.current
+      && assistantContextRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setAssistantContextPanel({ ...panel, loading: true, failed: false })
+    try {
+      const viewKey = draftEmployeeKeys.assistantView(scope, employeeId, selectedView.id)
+      await queryClient.cancelQueries({ queryKey: viewKey })
+      queryClient.removeQueries({ queryKey: viewKey })
+      const reread = await queryClient.fetchQuery({
+        queryKey: viewKey,
+        queryFn: ({ signal }) => api.getAssistantSelectedView(employeeId, selectedView.id, { signal }),
+      })
+      if (!isCurrent()) return
+      if (reread.id !== selectedView.id || reread.baseId !== context.employee.baseId) throw new Error('Assistant view reread does not match context')
+      const result = await api.invokeS5Employee(employeeId, {
+        intent: 'summarize',
+        baseId: reread.baseId,
+        viewId: reread.id,
+        ...(instruction ? { instruction } : {}),
+      })
+      if (!isCurrent()) return
+      if (result.kind !== 'summary') throw new Error('Assistant context summary returned an unsupported result')
+      setAssistantContextPanel({ ...panel, selectedView: reread, summary: result, loading: false, failed: false })
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else {
+        if (error instanceof ApiError && error.status === 404) await clearAssistantContextQueries(queryClient, scope, employeeId)
+        if (isCurrent()) setAssistantContextPanel({ contacts: [], selectedEmployeeId: null, context: null, selectedView: null, summary: null, loading: false, failed: true })
+      }
+    }
+  }
+
+  async function openAssistantContextBase(): Promise<void> {
+    const panel = assistantContextPanel
+    const baseId = panel?.selectedView?.baseId
+    if (!panel || !baseId || panel.context?.employee.baseId !== baseId) return
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = assistantContextRequestVersion.current
+    try {
+      let base = readyState.home.recent_bases.find((item) => item.id === baseId)
+      if (!base) {
+        const directory = await queryClient.fetchQuery({
+          queryKey: navigationKeys.bases(scope),
+          queryFn: ({ signal }) => api.workspaceBases(workspaceId, { signal }),
+        })
+        if (assistantContextRequestVersion.current !== requestVersion || activeWorkspaceId.current !== workspaceId) return
+        base = directory.bases.find((item) => item.id === baseId)
+      }
+      if (!base) throw new Error('Assistant Base is unavailable')
+      assistantContextRequestVersion.current += 1
+      setAssistantContextPanel(undefined)
+      await clearAssistantContextQueries(queryClient, scope)
+      await openBase(base)
+    } catch (error) {
+      if (assistantContextRequestVersion.current !== requestVersion || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else setAssistantContextPanel({ contacts: [], selectedEmployeeId: null, context: null, selectedView: null, summary: null, loading: false, failed: true })
+    }
   }
 
   function currentS5InvocationContext(): CurrentCanvasInvocationContext | null {
@@ -2146,7 +2336,7 @@ function AppContent() {
     ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} canCreateRecords={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role)} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (!canvas?.table) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id, canvas.view.id) }} onSaveTemplate={() => setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base })} onImportIntoBase={() => openBaseImport(readyState.canvas!.base)} onOpenDraftHub={(trigger) => { void openDraftEmployeeHub(trigger) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
       : navigationRoute === 'bases'
         ? <BaseDirectory state={baseDirectory.state} bases={baseDirectory.bases} onOpenBase={(base) => { void openBase(base) }} onHome={() => selectNavigation('home')} onRetry={() => { void loadBaseDirectory() }} />
-        : <>{telegramRecoveryNotice}<WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={() => { void openTemplateImportHub() }} onOpenDraftHub={(trigger, draftId) => { void openDraftEmployeeHub(trigger, draftId) }} /></>
+        : <>{telegramRecoveryNotice}<WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={() => { void openTemplateImportHub() }} onOpenDraftHub={(trigger, draftId) => { void openDraftEmployeeHub(trigger, draftId) }} onOpenAssistantContext={(trigger) => { void openAssistantContext(trigger) }} /></>
   const builderOverlay = builderPanel?.mode === 'base'
     ? <BuilderCreatePanel mode="base" onSubmit={(values, idempotencyKey) => createBase(values as { baseName: string; tableName: string }, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
     : builderPanel?.mode === 'table'
@@ -2186,6 +2376,22 @@ function AppContent() {
       onReject={(draftId, expectedVersion) => terminalS5Draft('reject', draftId, expectedVersion)}
       onInvoke={invokeS5Employee}
       onClose={closeDraftEmployeeHub}
+    />
+    : null
+  const assistantContextOverlay = assistantContextPanel
+    ? <AssistantContextWorkbench
+      contacts={assistantContextPanel.contacts}
+      context={assistantContextPanel.context}
+      selectedView={assistantContextPanel.selectedView}
+      summary={assistantContextPanel.summary}
+      loading={assistantContextPanel.loading}
+      failed={assistantContextPanel.failed}
+      onSelectContact={(employeeId) => { void selectAssistantContextEmployee(employeeId) }}
+      onSelectView={(viewId) => { void selectAssistantContextView(viewId) }}
+      onSummarize={summarizeAssistantContext}
+      onOpenBase={() => { void openAssistantContextBase() }}
+      onRetry={() => { void openAssistantContext() }}
+      onClose={closeAssistantContext}
     />
     : null
   const governanceOverlay = governancePanel
@@ -2234,5 +2440,5 @@ function AppContent() {
       onClose={closeGovernanceWrite}
     />
     : null
-  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} activeRoute={navigationRoute} onNavigate={selectNavigation} onOpenGovernance={(trigger) => { void openGovernance(trigger) }}>{content}{builderOverlay}{templateImportOverlay}{draftEmployeeOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
+  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} activeRoute={navigationRoute} onNavigate={selectNavigation} onOpenGovernance={(trigger) => { void openGovernance(trigger) }}>{content}{builderOverlay}{templateImportOverlay}{draftEmployeeOverlay}{assistantContextOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
 }

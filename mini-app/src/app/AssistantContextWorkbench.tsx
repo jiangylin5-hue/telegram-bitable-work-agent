@@ -57,7 +57,7 @@ export function AssistantContextWorkbench({
         </header>
 
         {failed ? (
-          <section className="assistant-context-state" aria-live="polite">
+          <section className="assistant-context-state" role="alert">
             <p>暂时无法读取个人助理上下文，请稍后重试。</p>
             <button type="button" onClick={onRetry}>重试</button>
           </section>
