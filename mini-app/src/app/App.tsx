@@ -453,21 +453,23 @@ function AppContent() {
   }
 
   telegramDestinationHandoff.current = async (destination) => {
+    const handoffLaunchVersion = telegramLaunchRequestVersion.current
+    const canRecover = () => !sessionInvalidated.current && telegramLaunchRequestVersion.current === handoffLaunchVersion
     const workspaceId = readyState.home.workspace_id
     if (destination.workspaceId !== workspaceId) {
-      await recoverTelegramDeepLink(destination)
+      if (canRecover()) await recoverTelegramDeepLink(destination)
       return
     }
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
     try {
       if (destination.kind === 'record_change_draft') {
         if (!destination.draftId || !await openDraftEmployeeHub(undefined, destination.draftId)) {
-          await recoverTelegramDeepLink(destination)
+          if (canRecover()) await recoverTelegramDeepLink(destination)
         }
         return
       }
       if (!destination.baseId) {
-        await recoverTelegramDeepLink(destination)
+        if (canRecover()) await recoverTelegramDeepLink(destination)
         return
       }
       const bases = await queryClient.fetchQuery({
@@ -476,7 +478,7 @@ function AppContent() {
       })
       const base = bases.bases.find((item) => item.id === destination.baseId)
       if (!base) {
-        await recoverTelegramDeepLink(destination)
+        if (canRecover()) await recoverTelegramDeepLink(destination)
         return
       }
       const target: CanvasTarget | undefined = destination.kind === 'base'
@@ -486,11 +488,11 @@ function AppContent() {
             ...(destination.viewId ? { viewId: destination.viewId } : {}),
             ...(destination.recordId ? { recordId: destination.recordId } : {}),
           }
-      if (!await openBase(base, target)) await recoverTelegramDeepLink(destination)
+      if (!await openBase(base, target) && canRecover()) await recoverTelegramDeepLink(destination)
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
       else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
-      else await recoverTelegramDeepLink(destination)
+      else if (canRecover()) await recoverTelegramDeepLink(destination)
     }
   }
 

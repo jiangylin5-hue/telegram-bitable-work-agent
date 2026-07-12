@@ -93,7 +93,7 @@ TD007 is `partial-local`, not a delivery or production approval. The checked row
 - [x] An opaque, subject-bound, expiring pointer is hash-only at rest; resolver success returns a closed pointer and the App rereads Base/View/Record/Draft before display.
 - [x] Unknown, expired, revoked and subject-mismatched pointer paths return the same local safe recovery response; no raw token/launch data is exposed by the closed parser/fixture DOM.
 - [x] Desktop/no-Telegram fallback and synthetic recovery/Record handoff were inspected at 1440/1280/430/390; recovery action is 44px and S6.1 has no public mint/send route.
-- [ ] Exhaustive client failure/supersession cases remain the local S6.1 acceptance gap. Cross-workspace recovery, field-policy projection, Resolver locking/concurrent-revoke, mismatch zero-lookup, persisted closed-audit and no-send inventory regressions have local evidence.
+- [ ] Remaining local S6.1 gap: target-reread `404`/`409`/`422`/network and launch/workspace supersession. Target `401`/`403` denied-generation, cross-workspace recovery, field-policy projection, Resolver locking/concurrent-revoke, mismatch zero-lookup, persisted closed-audit and no-send inventory regressions have local evidence.
 - [ ] A real Telegram deep-link smoke is recorded only after separately authorized non-production Bot/private-test-chat setup.
 
 ### S6.2 Controlled Delivery and Manual Smoke
