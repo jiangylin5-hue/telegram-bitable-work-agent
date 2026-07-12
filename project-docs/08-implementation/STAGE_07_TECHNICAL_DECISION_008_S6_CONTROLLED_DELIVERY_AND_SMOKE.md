@@ -2,9 +2,10 @@
 
 ## Status
 
-- Decision status: proposed; no source, migration, configuration, message send, BotFather action or webhook action is authorized by this document.
+- Decision status: **approved for local implementation** by the user on 2026-07-13. It authorizes only the documented source, migration and local verification package. BotFather/webhook configuration, secret entry, external message delivery and the manual smoke remain separately subject to explicit per-environment authority.
 - Scope: one non-production, explicitly confirmed Telegram Mini App deep-link delivery and end-to-end smoke path after S6.1.
 - Authority: current user instruction, `AGENTS.md`, Stage07 Source Of Truth, TD007 Option A, existing `restricted_test` send policy and Stage06 authorization/audit boundaries.
+- Current implementation: `partial-local`. The closed extension, server-only create/confirm service, one-attempt Worker reservation, fixed URL-button client and configuration guard are implemented. Focused local PostgreSQL proves success, definite rejection, transport uncertainty, sequential reserved replay, rollback/replay migration and pointer revocation. Concurrent dual-Worker proof, logger-integration scan and any real Telegram operation remain open.
 
 ## Decision Required
 
@@ -87,7 +88,7 @@ No retry, group test, alternative target, production Bot or broader notification
 
 ## Approval Boundary
 
-Approval of Option A would authorize a separate S6.2 implementation-plan package only. It would not itself authorize secret disclosure, BotFather configuration, webhook registration, delivery, external send or manual smoke execution. Those actions require a subsequent explicit per-environment authorization identifying the non-production Bot and the single private test target.
+The user approved Option A and its implementation-plan package on 2026-07-13. It does not authorize secret disclosure, BotFather configuration, webhook registration, delivery, external send or manual smoke execution. Those actions still require a subsequent explicit per-environment authorization identifying the non-production Bot and the single private test target.
 
 ## Official Protocol References
 

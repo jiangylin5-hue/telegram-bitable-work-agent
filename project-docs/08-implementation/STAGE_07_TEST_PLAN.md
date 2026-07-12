@@ -17,6 +17,12 @@
 | manual | Telegram entry/deep link and approved real identity path | sanitized run note only |
 | F1 PostgreSQL | field-init rollback, same-key replay, distinct-key order and view visibility | disposable local PostgreSQL only; 2026-07-11 real-local run passed and does not constitute staging/production evidence |
 
+### S6.2 Local Matrix
+
+- Closed delivery extension/model, exact one-target configuration, server-only create/confirmation and generic-confirmation exclusion use unit tests only; no browser delivery route is permitted.
+- Fake Bot client cases exercise the only permitted fixed button payload. Disposable local PostgreSQL exercises successful terminalization, definite rejection, transport uncertainty, sequential reservation replay and pointer revocation.
+- The remaining local S6.2 matrix is deliberately limited to simultaneous two-Worker reservation and any future logger sink. Real Bot delivery and Mini App opening are manual, explicitly authorized work only.
+
 ## 2. Required Matrices
 
 - desktop widths: 1280px and 1440px; mobile widths: 390px and 430px;

@@ -4,6 +4,10 @@ from typing import Any, Protocol
 import httpx
 
 
+STAGE07_MAIN_MINI_APP_TEXT = "已生成一个受控工作区入口。"
+STAGE07_MAIN_MINI_APP_BUTTON_TEXT = "打开工作区"
+
+
 class TelegramHttpClient(Protocol):
     def post(self, url: str, *, json: dict[str, Any], timeout: float):
         ...
@@ -33,6 +37,34 @@ class TelegramBotClient:
         response = self.http_client.post(
             f"{self.base_url}/bot{self.bot_token}/sendMessage",
             json={"chat_id": chat_id, "text": text},
+            timeout=self.timeout_seconds,
+        )
+        payload = response.json()
+        return TelegramBotSendResult(
+            ok=payload.get("ok") is True,
+            response_summary=_response_summary(payload),
+        )
+
+    def send_main_mini_app_link(
+        self,
+        *,
+        chat_id: str,
+        url: str,
+    ) -> TelegramBotSendResult:
+        response = self.http_client.post(
+            f"{self.base_url}/bot{self.bot_token}/sendMessage",
+            json={
+                "chat_id": chat_id,
+                "text": STAGE07_MAIN_MINI_APP_TEXT,
+                "reply_markup": {
+                    "inline_keyboard": [[
+                        {
+                            "text": STAGE07_MAIN_MINI_APP_BUTTON_TEXT,
+                            "url": url,
+                        }
+                    ]]
+                },
+            },
             timeout=self.timeout_seconds,
         )
         payload = response.json()

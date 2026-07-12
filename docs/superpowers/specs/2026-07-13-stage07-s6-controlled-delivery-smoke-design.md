@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed technical design for TD008 Option A; no implementation or external configuration is approved.
+- Status: TD008 Option A is `partial-local` on 2026-07-13. The approved closed-request/Worker/client/migration path is implemented and locally verified; external configuration and all external delivery remain unapproved pending per-environment authority.
 - Goal: deliver one server-authorized, opaque S6.1 deep link to one allowlisted non-production private test chat, then prove a real Telegram Mini App handoff without persisting the raw link.
 - Scope: fixed server-side request, explicit confirmation, Outbox/Worker dispatch, real Mini App open and sanitized evidence only.
 

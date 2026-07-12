@@ -4,7 +4,11 @@ from sqlalchemy.orm import Session
 
 from app.adapters.llm_openrouter import OpenRouterStructuredLLMClient
 from app.clients.telegram_bot import TelegramBotClient
-from app.core.config import Settings, validate_runtime_settings
+from app.core.config import (
+    Settings,
+    validate_runtime_settings,
+    validate_stage07_telegram_controlled_delivery_settings,
+)
 from app.core.database import get_session_factory
 from app.queues.redis_streams import RedisStreams, RedisStreamsClient
 from app.services.agent_workflows import (
@@ -16,6 +20,7 @@ from app.workers.stage03_handlers import (
     SqlAlchemyStage03WorkerUnitOfWork,
     Stage03WorkerUnitOfWork,
     Stage05WorkflowTrigger,
+    handle_stage07_telegram_deep_link_delivery_requested,
     handle_telegram_message_received,
     handle_telegram_test_send_requested,
 )
@@ -34,6 +39,7 @@ def create_stage03_worker(
     group_name: str = DEFAULT_STAGE03_GROUP_NAME,
     telegram_bot_client: TelegramBotClient | None = None,
     telegram_test_send_allowed_chat_ids: tuple[str, ...] = (),
+    stage07_telegram_bot_username: str | None = None,
     stage05_workflow: Stage05WorkflowTrigger | None = None,
 ) -> RedisStreamsWorker:
     handlers = {
@@ -54,6 +60,16 @@ def create_stage03_worker(
                 allowed_chat_ids=telegram_test_send_allowed_chat_ids,
             )
         )
+        if stage07_telegram_bot_username is not None:
+            handlers["stage07.telegram_deep_link_delivery_requested"] = (
+                lambda fields: handle_stage07_telegram_deep_link_delivery_requested(
+                    fields,
+                    uow,
+                    bot_client=telegram_bot_client,
+                    allowed_chat_ids=telegram_test_send_allowed_chat_ids,
+                    bot_username=stage07_telegram_bot_username,
+                )
+            )
     return RedisStreamsWorker(
         streams=streams,
         stream_name=stream_name,
@@ -73,6 +89,7 @@ def create_stage03_worker_for_session(
     group_name: str = DEFAULT_STAGE03_GROUP_NAME,
     telegram_bot_client: TelegramBotClient | None = None,
     telegram_test_send_allowed_chat_ids: tuple[str, ...] = (),
+    stage07_telegram_bot_username: str | None = None,
     stage05_workflow: Stage05WorkflowTrigger | None = None,
 ) -> RedisStreamsWorker:
     return create_stage03_worker(
@@ -83,6 +100,7 @@ def create_stage03_worker_for_session(
         consumer_name=consumer_name,
         telegram_bot_client=telegram_bot_client,
         telegram_test_send_allowed_chat_ids=telegram_test_send_allowed_chat_ids,
+        stage07_telegram_bot_username=stage07_telegram_bot_username,
         stage05_workflow=stage05_workflow,
     )
 
@@ -94,6 +112,11 @@ def main() -> None:
         TelegramBotClient(bot_token=settings.telegram_bot_token)
         if settings.telegram_send_mode == "restricted_test"
         and settings.telegram_bot_token is not None
+        else None
+    )
+    stage07_telegram_bot_username = (
+        validate_stage07_telegram_controlled_delivery_settings(settings)
+        if settings.stage07_telegram_bot_username is not None
         else None
     )
     session_factory = get_session_factory()
@@ -121,6 +144,7 @@ def main() -> None:
             telegram_test_send_allowed_chat_ids=(
                 settings.telegram_test_send_allowed_chat_ids
             ),
+            stage07_telegram_bot_username=stage07_telegram_bot_username,
             stage05_workflow=stage05_workflow,
         )
         worker.run_continuously(

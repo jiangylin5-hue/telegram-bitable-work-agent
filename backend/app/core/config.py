@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import os
+import re
 
 
 PRODUCTION_LIKE_ENVIRONMENTS = {"staging", "production"}
@@ -29,6 +30,7 @@ class Settings:
     telegram_allowed_user_ids: tuple[str, ...] = ()
     telegram_send_mode: str = "dry_run"
     telegram_test_send_allowed_chat_ids: tuple[str, ...] = ()
+    stage07_telegram_bot_username: str | None = None
     provider_mode: str = "disabled"
     stage06_notification_mode: str = "disabled"
     stage06_notification_allowed_chat_ids: tuple[str, ...] = ()
@@ -66,6 +68,7 @@ def get_settings() -> Settings:
         telegram_test_send_allowed_chat_ids=_env_csv_tuple(
             "TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS"
         ),
+        stage07_telegram_bot_username=os.getenv("STAGE07_TELEGRAM_BOT_USERNAME"),
         provider_mode=os.getenv("PROVIDER_MODE", Settings.provider_mode),
         stage06_notification_mode=os.getenv(
             "STAGE06_NOTIFICATION_MODE",
@@ -149,6 +152,32 @@ def validate_runtime_settings(settings: Settings | None = None) -> Settings:
                     f"{joined_names}"
                 )
     return settings
+
+
+def validate_stage07_telegram_controlled_delivery_settings(
+    settings: Settings,
+) -> str:
+    if settings.telegram_send_mode != "restricted_test":
+        raise RuntimeError(
+            "Invalid telegram_send_mode: controlled delivery requires restricted_test"
+        )
+    if len(settings.telegram_test_send_allowed_chat_ids) != 1:
+        raise RuntimeError(
+            "Invalid telegram_test_send_allowed_chat_ids: expected exactly one value"
+        )
+    username = settings.stage07_telegram_bot_username
+    if username is None or not re.fullmatch(
+        r"[A-Za-z][A-Za-z0-9_]{1,28}[Bb][Oo][Tt]",
+        username,
+    ):
+        raise RuntimeError(
+            "Invalid stage07_telegram_bot_username: expected Telegram Bot username"
+        )
+    if not settings.telegram_bot_token:
+        raise RuntimeError(
+            "Missing required controlled delivery setting: TELEGRAM_BOT_TOKEN"
+        )
+    return username
 
 
 def _env_bool(name: str, default: bool) -> bool:

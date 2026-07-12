@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed TD008 Option A work surface; implementation, Bot configuration and sending remain prohibited pending approval and per-environment authority.
+- Status: TD008 Option A work surface is `partial-local` as of 2026-07-13. The server-only request/confirm, Worker state machine and fixed-client seams are implemented; Bot configuration and sending remain prohibited pending separate per-environment authority.
 - Ownership: one opaque deep-link handoff from a trusted server workflow to one private restricted-test chat, followed by S6.1's existing Mini App entry.
 
 ## Functional Modules

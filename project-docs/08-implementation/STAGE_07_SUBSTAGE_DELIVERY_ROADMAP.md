@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 delivery roadmap
 - Purpose: organize Stage07 as coherent substages rather than individual UI/API fragments
-- Current active substage: Stage07 evidence reconciliation and remaining acceptance work. S6.1 implementation and synthetic four-width Browser evidence are reconciled locally; its exhaustive negative-state matrix and separately authorized S6.2 external evidence remain open. S5 remains partial-local with separate provider/Browser evidence gaps; S4 retains its negative-lifecycle evidence gap.
+- Current active substage: S6 evidence reconciliation. TD008 Option A S6.2 is `partial-local` with the code/migration/terminal-state package complete; its dual-Worker/logger-depth and real evidence remain open. S6.1's exhaustive negative-state matrix and all real Telegram evidence remain open. S5 remains partial-local with separate provider/Browser evidence gaps; S4 retains its negative-lifecycle evidence gap.
 
 ## Delivery Rule
 
@@ -28,7 +28,7 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 | S3 | Governance Readback | safe paged member directory and Base audit timeline | implemented-local; Browser external evidence pending | Technical Decision 003 |
 | S4 | Governance Write | bounded member-role, field-policy and existing V1 view-grant operations | implemented-local; negative lifecycle evidence partial | Technical Decision 004 |
 | S5 | Draft and Digital Employee Hub | field-filtered draft review, contacts and assistant surface | partial-local; provider/Browser/acceptance evidence pending | approved Technical Decision 005 Option A and TD006 Option A |
-| S6 | Telegram identity, deep link and final acceptance | verified identity/deep link, bounded external smoke and final safety/visual matrix | S6.1 `partial-local`: implementation, focused backend/Mini App tests, PostgreSQL and synthetic 1440/1280/430/390 Browser recovery/Record evidence exist. TD008 Option A S6.2 documentation is proposed only; exhaustive negative-state and external evidence pending | TD007 Option A; TD008 requires user approval plus later per-environment authority |
+| S6 | Telegram identity, deep link and final acceptance | verified identity/deep link, bounded external smoke and final safety/visual matrix | S6.1 `partial-local`: implementation, focused backend/Mini App tests, PostgreSQL and synthetic 1440/1280/430/390 Browser recovery/Record evidence exist. TD008 Option A S6.2 is `partial-local`: closed extension, fixed client, reserve-before-send Worker, migration replay and terminal-state PostgreSQL evidence exist; concurrency/logger depth and real external evidence pending | TD007 Option A; TD008 local code is implemented, external operation later requires per-environment authority |
 
 ## S3 Governance Readback
 
@@ -165,9 +165,9 @@ TD005 Option A is approved for S5 implementation. It authorizes only the two dra
 
 ### S6.2 External Evidence Gate
 
-- [TD008](STAGE_07_TECHNICAL_DECISION_008_S6_CONTROLLED_DELIVERY_AND_SMOKE.md) and its design/BDD/SDD/work-surface/index package now propose one `restricted_test` worker-side opaque mint/send path. The package is documentation only and has no implementation, Bot setup or external evidence.
+- [TD008](STAGE_07_TECHNICAL_DECISION_008_S6_CONTROLLED_DELIVERY_AND_SMOKE.md), its design/BDD/SDD/work-surface/index and the approved [implementation plan](../../docs/superpowers/plans/2026-07-13-stage07-s6-controlled-delivery-smoke-implementation.md) now deliver one `restricted_test` Worker-side opaque mint/send path locally. No Bot setup or external evidence exists.
 - A human with appropriate authority configures a non-production Bot, Main Mini App URL, webhook secret and one allowlisted private test chat/user.
-- Only after TD008 Option A and an implementation plan are approved may the controlled workflow reuse existing `restricted_test` policy; it cannot broaden to group/broadcast send.
+- TD008 Option A and its implementation plan are approved for local code. The controlled workflow reuses existing `restricted_test` policy and cannot broaden to group/broadcast send.
 - Real Telegram proof and deep-link smoke are recorded with sanitized evidence only. Failure to obtain that authority leaves S6.2 and final Stage07 acceptance unproven; it does not block S6.1 local implementation.
 
 ## Sequencing Guard

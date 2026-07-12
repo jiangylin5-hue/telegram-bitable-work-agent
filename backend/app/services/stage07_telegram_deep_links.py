@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import hashlib
 import secrets
 from typing import Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from app.models.stage07_telegram import Stage07TelegramDeepLink
 from app.services.audit import record_audit_event
@@ -36,6 +36,7 @@ class TelegramDeepLinkDestinationInput:
 
 @dataclass(frozen=True)
 class MintedTelegramDeepLink:
+    link_id: UUID
     raw_token: str
     expires_at: datetime
 
@@ -61,21 +62,17 @@ def mint_telegram_deep_link(
     now: datetime,
 ) -> MintedTelegramDeepLink:
     identity = _identity_for_user_actor(actor)
-    safe_destination = _resolve_destination_or_raise(uow, destination, identity)
-    if not _has_current_source_binding(
+    safe_destination = authorize_telegram_deep_link_mint_context(
         uow,
-        workspace_id=safe_destination.workspace_id,
-        telegram_user_id=subject_telegram_user_id,
+        identity=identity,
+        subject_telegram_user_id=subject_telegram_user_id,
         source_telegram_chat_id=source_telegram_chat_id,
-        user_id=identity.user_id,
-    ):
-        raise PlatformValidationError(
-            "telegram_deep_link_source_binding_invalid",
-            "telegram_deep_link_source_binding_invalid",
-        )
+        destination=destination,
+    )
     raw_token = secrets.token_urlsafe(32)
     expires_at = now + timedelta(minutes=10)
     link = Stage07TelegramDeepLink(
+        id=uuid4(),
         token_hash=_hash_token(raw_token),
         workspace_id=safe_destination.workspace_id,
         subject_telegram_user_id=subject_telegram_user_id,
@@ -95,7 +92,35 @@ def mint_telegram_deep_link(
         link=link,
         outcome="minted",
     )
-    return MintedTelegramDeepLink(raw_token=raw_token, expires_at=expires_at)
+    uow.flush()
+    return MintedTelegramDeepLink(
+        link_id=link.id,
+        raw_token=raw_token,
+        expires_at=expires_at,
+    )
+
+
+def authorize_telegram_deep_link_mint_context(
+    uow: Stage06PlatformUnitOfWork,
+    *,
+    identity: Stage06RequestIdentity,
+    subject_telegram_user_id: str,
+    source_telegram_chat_id: str,
+    destination: TelegramDeepLinkDestinationInput,
+) -> ResolvedTelegramDeepLinkDestination:
+    safe_destination = _resolve_destination_or_raise(uow, destination, identity)
+    if not _has_current_source_binding(
+        uow,
+        workspace_id=safe_destination.workspace_id,
+        telegram_user_id=subject_telegram_user_id,
+        source_telegram_chat_id=source_telegram_chat_id,
+        user_id=identity.user_id,
+    ):
+        raise PlatformValidationError(
+            "telegram_deep_link_source_binding_invalid",
+            "telegram_deep_link_source_binding_invalid",
+        )
+    return safe_destination
 
 
 def resolve_telegram_deep_link(

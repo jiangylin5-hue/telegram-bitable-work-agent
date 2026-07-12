@@ -87,6 +87,19 @@ def test_stage03_worker_factory_wires_injected_stage05_workflow() -> None:
     assert message.intent_status == "routed"
 
 
+def test_stage03_worker_factory_wires_stage07_controlled_delivery_only_with_username() -> None:
+    worker = create_stage03_worker(
+        streams=InMemoryRedisStreams(),
+        uow=InMemoryStage03WorkerUnitOfWork(),
+        consumer_name="stage07-delivery-factory-test-worker",
+        telegram_bot_client=object(),
+        telegram_test_send_allowed_chat_ids=("synthetic-chat",),
+        stage07_telegram_bot_username="Stage07TestBot",
+    )
+
+    assert "stage07.telegram_deep_link_delivery_requested" in worker.handlers
+
+
 def test_stage05_workflow_builder_uses_real_openrouter_settings() -> None:
     from app.core.config import Settings
     from app.services.agent_workflows import Stage05AgentWorkflowService

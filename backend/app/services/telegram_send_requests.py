@@ -15,6 +15,7 @@ from app.services.permissions import Actor, assert_action_allowed
 NOT_ALLOWLISTED_ERROR = "telegram_test_send_target_not_allowlisted"
 TEST_SEND_PURPOSE = "test_send"
 CUSTOMER_REPLY_SEND_PURPOSE = "customer_reply_rehearsal"
+STAGE07_DEEP_LINK_DELIVERY_PURPOSE = "stage07_deep_link_delivery"
 
 
 class TelegramSendRequestNotFound(LookupError):
@@ -184,6 +185,10 @@ def confirm_test_send_request(
     send_request = uow.get_send_request(request_id)
     if send_request is None:
         raise TelegramSendRequestNotFound(f"Telegram send request {request_id} not found")
+    if send_request.send_purpose == STAGE07_DEEP_LINK_DELIVERY_PURPOSE:
+        raise TelegramSendRequestStateError(
+            "stage07_telegram_deep_link_delivery_requires_controlled_confirmation"
+        )
     if send_request.status != "pending_confirmation":
         raise TelegramSendRequestStateError(
             f"Telegram send request {request_id} is {send_request.status}"

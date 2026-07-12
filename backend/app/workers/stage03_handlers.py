@@ -14,6 +14,10 @@ from app.services.telegram_send_requests import (
     CUSTOMER_REPLY_SEND_PURPOSE,
     NOT_ALLOWLISTED_ERROR,
 )
+from app.services.stage07_telegram_deep_link_delivery import (
+    Stage07TelegramMainMiniAppLinkClient,
+    dispatch_stage07_telegram_deep_link_delivery,
+)
 
 
 class RetryableStage03WorkerError(RuntimeError):
@@ -191,6 +195,44 @@ def handle_telegram_message_received(
 class TelegramSendClient(Protocol):
     def send_message(self, *, chat_id: str, text: str):
         pass
+
+
+def handle_stage07_telegram_deep_link_delivery_requested(
+    fields: dict[str, str],
+    uow: Stage03WorkerUnitOfWork,
+    *,
+    bot_client: Stage07TelegramMainMiniAppLinkClient,
+    allowed_chat_ids: tuple[str, ...],
+    bot_username: str,
+) -> None:
+    event = _load_outbox_event(fields, uow)
+    request_id = fields.get("request_id") or event.payload.get("request_id")
+    session = getattr(uow, "session", None)
+    if request_id is None or not isinstance(session, Session):
+        raise NonRetryableStage03WorkerError(
+            "stage07_telegram_deep_link_delivery_invalid_worker_context"
+        )
+    try:
+        dispatch_stage07_telegram_deep_link_delivery(
+            session,
+            request_id=UUID(str(request_id)),
+            bot_client=bot_client,
+            allowed_chat_ids=allowed_chat_ids,
+            bot_username=bot_username,
+            now=datetime.now(timezone.utc),
+        )
+    except Exception:
+        session.rollback()
+        current_event = session.get(OutboxEvent, event.id)
+        if current_event is not None and current_event.status != "processed":
+            now = datetime.now(timezone.utc)
+            current_event.status = "dead_letter"
+            current_event.processed_at = now
+            current_event.last_error = "stage07_telegram_deep_link_delivery_worker_failed"
+            current_event.last_error_redacted = (
+                "stage07_telegram_deep_link_delivery_worker_failed"
+            )
+            session.commit()
 
 
 def handle_telegram_test_send_requested(

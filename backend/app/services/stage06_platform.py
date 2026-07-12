@@ -31,7 +31,10 @@ from app.models.stage06_templates import (
     TemplateInstallation,
 )
 from app.models.stage06_hardening import Stage06IdempotencyRecord
-from app.models.stage07_telegram import Stage07TelegramDeepLink
+from app.models.stage07_telegram import (
+    Stage07TelegramDeepLink,
+    Stage07TelegramDeepLinkDelivery,
+)
 from app.schemas.stage06_platform import (
     ViewInitializationRequest,
     ViewMemberCommand,
@@ -392,6 +395,30 @@ class Stage06PlatformUnitOfWork(Protocol):
     ) -> Stage07TelegramDeepLink | None:
         pass
 
+    def add_stage07_telegram_deep_link_delivery(
+        self,
+        delivery: Stage07TelegramDeepLinkDelivery,
+    ) -> None:
+        pass
+
+    def get_stage07_telegram_deep_link_delivery_by_send_request_id(
+        self,
+        send_request_id: UUID,
+    ) -> Stage07TelegramDeepLinkDelivery | None:
+        pass
+
+    def get_stage07_telegram_deep_link_delivery_by_send_request_id_for_update(
+        self,
+        send_request_id: UUID,
+    ) -> Stage07TelegramDeepLinkDelivery | None:
+        pass
+
+    def get_stage07_telegram_deep_link_delivery_for_update(
+        self,
+        delivery_id: UUID,
+    ) -> Stage07TelegramDeepLinkDelivery | None:
+        pass
+
     def get_idempotency_record(
         self,
         workspace_id: UUID,
@@ -427,6 +454,9 @@ class InMemoryStage06PlatformUnitOfWork:
     agent_runs: list[AgentRun] = field(default_factory=list)
     telegram_bindings: list[Stage06TelegramBinding] = field(default_factory=list)
     telegram_deep_links: list[Stage07TelegramDeepLink] = field(default_factory=list)
+    telegram_deep_link_deliveries: list[Stage07TelegramDeepLinkDelivery] = field(
+        default_factory=list
+    )
     audit_events: list[OpsAuditEvent] = field(default_factory=list)
     idempotency_records: list[Stage06IdempotencyRecord] = field(default_factory=list)
 
@@ -685,6 +715,46 @@ class InMemoryStage06PlatformUnitOfWork:
                 if link.token_hash == token_hash
                 and link.status == "active"
                 and link.expires_at > now
+            ),
+            None,
+        )
+
+    def add_stage07_telegram_deep_link_delivery(
+        self,
+        delivery: Stage07TelegramDeepLinkDelivery,
+    ) -> None:
+        self.telegram_deep_link_deliveries.append(delivery)
+
+    def get_stage07_telegram_deep_link_delivery_by_send_request_id(
+        self,
+        send_request_id: UUID,
+    ) -> Stage07TelegramDeepLinkDelivery | None:
+        return next(
+            (
+                delivery
+                for delivery in self.telegram_deep_link_deliveries
+                if delivery.send_request_id == send_request_id
+            ),
+            None,
+        )
+
+    def get_stage07_telegram_deep_link_delivery_by_send_request_id_for_update(
+        self,
+        send_request_id: UUID,
+    ) -> Stage07TelegramDeepLinkDelivery | None:
+        return self.get_stage07_telegram_deep_link_delivery_by_send_request_id(
+            send_request_id
+        )
+
+    def get_stage07_telegram_deep_link_delivery_for_update(
+        self,
+        delivery_id: UUID,
+    ) -> Stage07TelegramDeepLinkDelivery | None:
+        return next(
+            (
+                delivery
+                for delivery in self.telegram_deep_link_deliveries
+                if delivery.id == delivery_id
             ),
             None,
         )
@@ -1043,6 +1113,44 @@ class SqlAlchemyStage06PlatformUnitOfWork:
             query = query.with_for_update()
         return self.session.scalar(
             query
+        )
+
+    def add_stage07_telegram_deep_link_delivery(
+        self,
+        delivery: Stage07TelegramDeepLinkDelivery,
+    ) -> None:
+        self.session.add(delivery)
+
+    def get_stage07_telegram_deep_link_delivery_by_send_request_id(
+        self,
+        send_request_id: UUID,
+    ) -> Stage07TelegramDeepLinkDelivery | None:
+        return self.session.scalar(
+            select(Stage07TelegramDeepLinkDelivery).where(
+                Stage07TelegramDeepLinkDelivery.send_request_id == send_request_id
+            )
+        )
+
+    def get_stage07_telegram_deep_link_delivery_by_send_request_id_for_update(
+        self,
+        send_request_id: UUID,
+    ) -> Stage07TelegramDeepLinkDelivery | None:
+        return self.session.scalar(
+            select(Stage07TelegramDeepLinkDelivery)
+            .where(
+                Stage07TelegramDeepLinkDelivery.send_request_id == send_request_id
+            )
+            .with_for_update()
+        )
+
+    def get_stage07_telegram_deep_link_delivery_for_update(
+        self,
+        delivery_id: UUID,
+    ) -> Stage07TelegramDeepLinkDelivery | None:
+        return self.session.scalar(
+            select(Stage07TelegramDeepLinkDelivery)
+            .where(Stage07TelegramDeepLinkDelivery.id == delivery_id)
+            .with_for_update()
         )
 
     def get_idempotency_record(

@@ -96,12 +96,15 @@ TD007 is `partial-local`, not a delivery or production approval. The checked row
 - [ ] Exhaustive client failure/supersession cases remain the local S6.1 acceptance gap. Cross-workspace recovery, field-policy projection, Resolver locking/concurrent-revoke, mismatch zero-lookup, persisted closed-audit and no-send inventory regressions have local evidence.
 - [ ] A real Telegram deep-link smoke is recorded only after separately authorized non-production Bot/private-test-chat setup.
 
-### S6.2 Controlled Delivery and Manual Smoke Proposal
+### S6.2 Controlled Delivery and Manual Smoke
 
-TD008 is document-only. It reuses the existing confirmation/Outbox/Worker/`restricted_test` path through a typed one-to-one delivery extension and permits no current external operation.
+TD008 Option A is `partial-local`. It reuses the existing confirmation/Outbox/Worker/`restricted_test` path through a typed one-to-one delivery extension; no configuration, external operation or real Telegram claim is made.
 
-- [ ] Closed server-only request/confirmation, Worker reservation, in-memory-only URL mint and no-raw-persistence tests pass.
-- [ ] Exactly-one private allowlist target, current binding/member/resource rechecks and no generic Mini App delivery route pass negative tests.
+- [x] Closed server-only request/confirmation, fixed URL-button client, Worker reservation and terminal no-retry paths pass focused local tests.
+- [x] Exactly-one private allowlist target, binding/member/destination confirm rechecks, generic-confirm rejection and no Mini App delivery/mint route pass negative tests.
+- [x] Disposable local PostgreSQL upgrade/downgrade/upgrade and success/definite-rejection/transport-uncertainty/sequential-reserved-replay cases pass.
+- [ ] PostgreSQL simultaneous dual-Worker reservation and integrated logger-sink scan remain local acceptance gaps.
+- [ ] Real private-chat delivery and real Telegram `initData` -> resolver -> reread require per-environment authority.
 - [ ] Definite rejection and uncertain-send paths revoke the pointer and never retry automatically.
 - [ ] Disposable PostgreSQL migration/lock/rollback and typed Bot URL-button tests pass.
 - [ ] One user-authorized non-production delivery and actual Telegram Mini App smoke produce sanitized evidence only.

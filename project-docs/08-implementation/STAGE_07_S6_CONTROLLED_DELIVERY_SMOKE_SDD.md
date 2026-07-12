@@ -2,10 +2,18 @@
 
 ## Status and Invariants
 
-- Status: proposed TD008 Option A; no code, migration or external operation exists.
+- Status: TD008 Option A is `partial-local` as of 2026-07-13; the code/migration path exists and no external operation is authorized or performed.
 - Scope: fixed closed-reference delivery request, explicit confirmation, one-attempt Worker dispatch and real Mini App smoke.
 - Invariant: raw token/full URL exists only between `mint_telegram_deep_link` return and the single Bot client call in one Worker execution frame.
 - Invariant: only one explicitly allowlisted private test chat is configured for the running non-production smoke environment.
+
+## Current Local Evidence
+
+- `Stage07TelegramDeepLinkDelivery` is a unique `send_request_id` extension with closed binding/workspace/destination references, fixed template, dispatch state and optional closed receipt IDs only.
+- The trusted Python command derives subject/chat from the active binding, rechecks target authority at create/confirm/dispatch and prevents the historical generic confirmation service from routing this purpose as a text send.
+- The Worker commits `dispatch_reserved` before it mints or calls the typed Bot client; fake-client PostgreSQL cases prove one normal send, definite rejection and transport uncertainty/replay all avoid automatic retry and revoke a minted pointer when appropriate.
+- There is no Mini App delivery/mint endpoint or UI. The local configuration helper requires `restricted_test`, one allowlist value, a valid server-owned Bot username and a runtime Bot token before the Worker registers the event handler.
+- Open gaps: simultaneous two-Worker reservation evidence and an integrated logger scan. Real configuration/send/smoke is not attempted.
 
 ## Architecture
 
