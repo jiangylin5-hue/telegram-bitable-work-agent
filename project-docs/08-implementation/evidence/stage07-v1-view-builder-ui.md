@@ -2,7 +2,7 @@
 
 ## Status
 
-- Evidence status: partial local Browser acceptance; it does not accept V1 or Stage07 as a whole
+- Evidence status: expanded partial local Browser acceptance; it does not accept V1 or Stage07 as a whole
 - Date: 2026-07-12
 - Scope: approved V1 saved-view UI only
 - Environment: disposable local fixture serving the built Mini App at `127.0.0.1:4174`; fixed safe fixture responses only
@@ -30,20 +30,34 @@ The fixture was modified once to return a deliberately unsafe-detail-bearing `40
 - The 1440px Grid and 430px access-sheet renders were visually inspected in the in-app Browser. No persistent screenshot artifact was retained: the Browser output was inspected in-session and the temporary fixture was deleted.
 - The in-app Browser session was finalized after evidence capture. No further Browser actions were issued in that session.
 
+## V1-13: Role And Negative Browser Follow-up
+
+A second disposable fixture ran on `127.0.0.1:4175`. It served the already built Mini App, used a server-set fixture role cookie only to select **owner**, **editor** or **viewer** responses, and returned the same safe typed shapes used by the client. It did not inspect browser cookies, call a real backend, connect to PostgreSQL or expose a real member identity.
+
+| Actor / flow | Actual Browser observation | Boundary proved locally |
+| --- | --- | --- |
+| owner | `配置视图` and `新建视图` were visible. In the Builder, `添加筛选条件` was disabled at 12 conditions, `添加排序` was disabled at 3 rules, the group selector contained only `不分组` and `Status`, and only the owner saw `管理访问权限`. | The rendered UI enforces the approved bounded controls and does not offer relation/lookup grouping. |
+| owner / F2 relation filter | Changing filter 1 to `Linked record` rendered the existing F2 `Relation picker`; it displayed `Permitted linked record` and no opaque target ID `r2` appeared in the DOM. | The Builder reuses the safe candidate label projection rather than exposing raw target state. |
+| editor | The editor could open Builder and save `Editor saved view`; `管理访问权限` had count 0 while `保存视图` was enabled. | Editor presentation mutation is usable, but owner-only member administration is absent from actual UI. |
+| viewer | The viewer saw the restricted saved-view tab and visible safe record, but `配置视图` and `新建视图` both had count 0. | A read-only grant does not surface configuration or creation controls. |
+| editor / stale save | Saving `Trigger stale conflict` received fixture `409`; the visible alert was exactly `视图已被更新，请重新加载后再试。`, Builder name reread as `Editor saved view`, and `fixture-only raw detail` was absent from the DOM. | Conflict feedback is fixed-text and canonical-reread; raw server detail is not rendered. |
+
+- Page-level console query for `error`, `warn` and `warning` returned `[]` after the follow-up. A browser-bridge telemetry timeout appeared outside the page console and is not recorded as an application warning/error.
+- DOM snapshots and actual click/fill/select interactions were used for the visual/interaction review. `Page.captureScreenshot` timed out in the Browser bridge, so no screenshot is retained and no screenshot claim is made.
+
 ## Deliberately Unaccepted Browser Cases
 
 The following required V1 checks were **not** re-run as Browser actions in this evidence session and therefore remain automated/contract evidence only:
 
-1. switching the rendered client between owner, editor and viewer identities, including Base/Table/Field intersection and denial screens;
-2. thirteenth-filter, unsupported-operator, relation/lookup-group and stale-version interactions in the rendered Browser;
-3. F2 relation candidate, numeric lookup and Record Detail relation-edit regressions inside the V1 fixture;
-4. direct Browser network payload inspection against a real backend service;
-5. Escape-key/live-region coverage beyond the observed focus return.
+1. a real backend Browser request/response trace, or a real underlying Base/Table/Field denial screen after a valid grant;
+2. a server-produced unsupported-operator payload, numeric lookup filter mutation and Record Detail relation-edit regression in this V1 fixture;
+3. every Kanban/Calendar/Form invalid configuration state at Browser level;
+4. Escape-key/live-region coverage beyond the observed focus return.
 
-Those gaps keep V1-A02, V1-A03, V1-A05, V1-A07, V1-A08 and V1-A10 at `partial-local`. They do not invalidate the focused API, PostgreSQL or client automated results recorded in the companion verification evidence.
+Those gaps keep V1-A02, V1-A05, V1-A07, V1-A08 and V1-A10 at `partial-local`. V1-A03 now has local service/API, component and actual role-UI evidence. They do not invalidate the focused API, PostgreSQL or client automated results recorded in the companion verification evidence.
 
 ## Cleanup
 
-- Stopped the local fixture process; port `4174` had no listening socket in the post-run check.
-- Deleted the fixture script and temporary `.out.log` / `.err.log` files.
+- Stopped both local fixture processes; ports `4174` and `4175` had no listening socket in their post-run checks.
+- Deleted both fixture scripts and all temporary `.out.log` / `.err.log` files.
 - No screenshots, test records, secrets, external writes or running Browser session were retained.

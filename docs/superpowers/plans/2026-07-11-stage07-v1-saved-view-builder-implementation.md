@@ -4,7 +4,7 @@
 
 - Plan status: user-approved detailed TDD plan; execution in progress.
 - Scope gate: the user approved the V1 design package and this implementation plan.
-- Current Progress: Tasks 1--12 are complete as implementation/reconciliation work, with V1 truthfully `partial-local`: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations, server-owned Grid filter/group/stable-sort execution before cursor pagination, five approved safe HTTP endpoints, real PostgreSQL default/rollback/hidden-field/index-plan/safe-field/list-ACL evidence, typed transport, panels, Canvas rereads and narrow-viewport recovery all exist. Task 12 records a disposable Browser core matrix at 1440/1280/430/390, owner grant, safe `409` canonical reread and console `[]`, then deletes the fixture. It deliberately does not accept multi-role, invalid/F2 or real-backend Browser behavior. Optional non-unique indexes remain explicitly deferred by measured evidence.
+- Current Progress: Tasks 1--13 are complete as implementation/reconciliation work, with V1 truthfully `partial-local`: durable model/migration/UoW, strict command/read schemas, canonical safe projection, versioned ACL mutations, server-owned Grid filter/group/stable-sort execution before cursor pagination, five approved safe HTTP endpoints, real PostgreSQL default/rollback/hidden-field/index-plan/safe-field/list-ACL evidence, typed transport, panels, Canvas rereads and narrow-viewport recovery all exist. Task 12 records the four-width core matrix; Task 13 adds actual owner/editor/viewer UI separation, bounded query controls, safe relation label, editor save and safe `409` reread, then deletes the fixture. It deliberately does not accept real-backend authorization intersection or every type-invalid/F2 Browser state. Optional non-unique indexes remain explicitly deferred by measured evidence.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -799,3 +799,17 @@ Do not merge, deploy, push or claim Stage07/production completion from this task
 - [ ] PostgreSQL evidence proves migration/index/atomicity/non-disclosure; UI evidence proves the 1440/1280/430/390 matrix, keyboard behavior and clean console.
 - [ ] Full backend and Mini App verification output is recorded truthfully with historical skips and any remaining risks.
 - [ ] No unapproved scope has entered the diff: public link, member group, delegation/inheritance, view delete/default reassignment, import/template, Telegram/Bot, production or Stage08 work.
+
+---
+
+### Task 13: Follow up the real Browser role and negative matrix
+
+**Scope:** existing approved V1 Browser acceptance only. No business-code, schema, API, permission-model, dependency or architecture change is authorized.
+
+- [x] Start a disposable fixture against the built Mini App with safe typed owner/editor/viewer response shapes; do not use real identities, credentials, backend or PostgreSQL.
+- [x] Observe owner/editor/viewer actual UI surfaces: owner-only member controls, editor presentation save without member controls, and viewer safe read without configuration/create controls.
+- [x] Observe UI-bounded negative paths: no 13th filter, no fourth sort, relation/lookup absent from group options, F2 relation candidate label without opaque ID, and stale `409` fixed-detail/canonical-reread behavior.
+- [x] Inspect the page console and record only page logs; distinguish Browser-bridge telemetry from application console evidence.
+- [x] Stop fixture/server, finalize Browser session, delete temporary script/logs and verify the port is closed.
+
+**Acceptance result:** `partial-local`. The executed matrix strengthens V1-A03 and documents UI behavior, but real-backend Base/Table/Field authorization intersection, numeric lookup mutation, Record Detail relation edit and all type-invalid Browser cases remain outside Task 13.
