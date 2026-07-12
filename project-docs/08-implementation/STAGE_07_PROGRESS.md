@@ -15,11 +15,11 @@
 
 ## Progress Log
 
-### 2026-07-13: TD009 Personal Assistant Context Discovery — Proposal Only
+### 2026-07-13: TD009 Personal Assistant Context Discovery — Approved Design and Pending Plan Review
 
 - The next coherent product candidate is documented, not implemented: one Home flow that reuses safe S5 contacts, server-composes the employee/caller permitted saved-view intersection, re-reads the selected view, and invokes only the existing fixed `summarize` intent. An explicit Base handoff returns the user to the normal Canvas for record-bound draft work.
-- TD009 compares Canvas-only context, the recommended safe contact-to-view catalog, and an intentionally rejected full Package4 lifecycle/memory/knowledge/Telegram bundle. The recommendation adds no schema migration, permission action, memory store, record picker or Bot lifecycle; it does require explicit approval because it adds safe API contracts and a Home behavior.
-- Written artifacts: TD009, detailed design, BDD/acceptance, SDD, work surface and complex index. No source, test, migration, dependency, provider call, Telegram operation, browser control or deployment changed.
+- TD009 compares Canvas-only context, the selected safe contact-to-view catalog, and an intentionally rejected full Package4 lifecycle/memory/knowledge/Telegram bundle. The recommendation adds no schema migration, permission action, memory store, record picker or Bot lifecycle; it adds safe API contracts and a Home behavior only after the detailed plan is reviewed.
+- Written artifacts: TD009, detailed design, BDD/acceptance, SDD, work surface, complex index and implementation plan. No source, test, migration, dependency, provider call, Telegram operation, browser control or deployment changed.
 
 ### 2026-07-13: Existing-Contract Home/Bases Navigation Closure
 

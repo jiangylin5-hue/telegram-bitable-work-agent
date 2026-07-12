@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 delivery roadmap
 - Purpose: organize Stage07 as coherent substages rather than individual UI/API fragments
-- Current active substage: TD009 Option B documentation review for the next Home personal-assistant context-discovery package. TD008 Option A S6.2 has a complete local code/migration/terminal-state/denial/collision/redaction inventory; only real evidence remains open. S6.1's complete local App matrix is now implemented; only real Telegram evidence remains open. S5 remains partial-local with separate provider/Browser evidence gaps; S4 has a complete local command/lifecycle matrix and retains only Browser terminal-lifecycle evidence.
+- Current active substage: TD009 Option B implementation-plan review for the next Home personal-assistant context-discovery package. TD008 Option A S6.2 has a complete local code/migration/terminal-state/denial/collision/redaction inventory; only real evidence remains open. S6.1's complete local App matrix is now implemented; only real Telegram evidence remains open. S5 remains partial-local with separate provider/Browser evidence gaps; S4 has a complete local command/lifecycle matrix and retains only Browser terminal-lifecycle evidence.
 
 ## Delivery Rule
 
@@ -29,7 +29,7 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 | S4 | Governance Write | bounded member-role, field-policy and existing V1 view-grant operations | implemented-local; command/lifecycle matrix is covered, Browser negative evidence partial | Technical Decision 004 |
 | S5 | Draft and Digital Employee Hub | field-filtered draft review, contacts and assistant surface | partial-local; provider/Browser/acceptance evidence pending | approved Technical Decision 005 Option A and TD006 Option A |
 | S6 | Telegram identity, deep link and final acceptance | verified identity/deep link, bounded external smoke and final safety/visual matrix | S6.1 `partial-local`: implementation, focused backend/Mini App tests, PostgreSQL and synthetic 1440/1280/430/390 Browser recovery/Record evidence exist. TD008 Option A S6.2 is `partial-local`: closed extension, fixed client, reserve-before-send Worker, migration replay, terminal-state, confirmation-denial, two-session collision and logger-inventory evidence exist; only real external evidence is pending | TD007 Option A; TD008 local code is implemented, external operation later requires per-environment authority |
-| S5.1 | Home personal-assistant context discovery | contact-to-permitted-view selection and fixed summary reuse from Home | proposed, awaiting TD009 Option B approval | TD009 Option B; no code, schema or API exists yet |
+| S5.1 | Home personal-assistant context discovery | contact-to-permitted-view selection and fixed summary reuse from Home | approved design/plan awaiting implementation | TD009 Option B; no code, schema or API exists yet |
 
 ## S3 Governance Readback
 

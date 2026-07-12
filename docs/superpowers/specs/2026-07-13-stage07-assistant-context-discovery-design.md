@@ -2,9 +2,9 @@
 
 ## Status
 
-- Status: proposed design awaiting user review of TD009.
+- Status: TD009 Option B design approved on 2026-07-13; implementation plan review remains required before code.
 - Recommended decision: TD009 Option B — server-composed contact-to-view catalog.
-- Implementation precondition: explicit approval of TD009 Option B and this design. No code, migration or endpoint exists because of this document.
+- Implementation precondition: explicit approval of the detailed implementation plan. No code, migration or endpoint exists because of this document.
 
 ## User Outcome
 

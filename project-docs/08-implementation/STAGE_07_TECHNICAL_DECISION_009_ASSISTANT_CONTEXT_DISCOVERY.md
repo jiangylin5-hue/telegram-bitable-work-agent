@@ -2,7 +2,7 @@
 
 ## Status
 
-- Decision status: proposed; explicit user confirmation is required before implementation.
+- Decision status: approved Option B on 2026-07-13; implementation plan review remains required before code.
 - Scope: one coherent Home-to-assistant context-discovery slice over existing Stage06 digital employees and the approved S5 safe adapter.
 - Does not authorize: employee publication lifecycle, knowledge sources, durable memory, generic chat history, record search, Telegram group/contact routing, external send or deployment.
 
