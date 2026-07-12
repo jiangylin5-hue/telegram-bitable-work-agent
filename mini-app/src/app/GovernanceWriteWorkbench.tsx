@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import type { BaseSummary, PlatformTable } from './api'
+import type { BaseSummary, PlatformTable, ViewSummary } from './api'
 import type {
   GovernanceAssignableRole,
   GovernanceEditableMemberPage,
@@ -11,6 +11,7 @@ import type {
 type GovernanceWriteWorkbenchProps = {
   bases: BaseSummary[]
   tables: PlatformTable[]
+  views: ViewSummary[]
   members: GovernanceEditableMemberPage | null
   fields: GovernanceFieldPermissionPage | null
   selectedBaseId: string | null
@@ -22,6 +23,7 @@ type GovernanceWriteWorkbenchProps = {
   onSelectTable: (tableId: string) => void
   onChangeRole: (memberId: string, role: GovernanceAssignableRole, expectedVersion: number) => Promise<void>
   onReplacePolicy: (fieldId: string, policy: GovernanceFieldPermissionPolicy, expectedVersion: number) => Promise<void>
+  onOpenViewAccess: (viewId: string) => void
   onClose: () => void
 }
 
@@ -43,6 +45,7 @@ function fixedError(error: unknown): string {
 export function GovernanceWriteWorkbench({
   bases,
   tables,
+  views,
   members,
   fields,
   selectedBaseId,
@@ -54,12 +57,14 @@ export function GovernanceWriteWorkbench({
   onSelectTable,
   onChangeRole,
   onReplacePolicy,
+  onOpenViewAccess,
   onClose,
 }: GovernanceWriteWorkbenchProps) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const [roleDrafts, setRoleDrafts] = useState<Record<string, GovernanceAssignableRole>>({})
   const [policyDrafts, setPolicyDrafts] = useState<Record<string, GovernanceFieldPermissionPolicy>>({})
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null)
+  const [selectedViewId, setSelectedViewId] = useState('')
   const [pendingKey, setPendingKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -72,6 +77,10 @@ export function GovernanceWriteWorkbench({
     setPolicyDrafts(next)
     setSelectedFieldId((current) => current && next[current] ? current : fields?.fields[0]?.id ?? null)
   }, [fields])
+  const ownedRestrictedViews = views.filter((view) => view.scope === 'restricted' && view.caller_access_level === 'owner' && Boolean(view.table_id))
+  useEffect(() => {
+    setSelectedViewId((current) => ownedRestrictedViews.some((view) => view.id === current) ? current : ownedRestrictedViews[0]?.id ?? '')
+  }, [views])
 
   const selectedField = fields?.fields.find((field) => field.id === selectedFieldId) ?? null
   const selectedPolicy = selectedField ? policyDrafts[selectedField.id] ?? selectedField.policy : null
@@ -149,6 +158,18 @@ export function GovernanceWriteWorkbench({
               {tables.map((table) => <option key={table.id} value={table.id}>{table.name}</option>)}
             </select>
           </label>}
+          <div className="governance-write-view-access">
+            <header><p>REUSE V1</p><h4>视图访问</h4></header>
+            {ownedRestrictedViews.length
+              ? <><label className="governance-write-select">选择本人拥有的受限视图
+                <select value={selectedViewId} onChange={(event) => setSelectedViewId(event.target.value)}>
+                  {ownedRestrictedViews.map((view) => <option key={view.id} value={view.id}>{view.name}</option>)}
+                </select>
+              </label>
+              <button type="button" onClick={() => onOpenViewAccess(selectedViewId)} aria-label="打开已有视图访问设置">打开已有视图访问设置</button>
+              <p className="governance-write-empty">使用既有 V1 版本化成员授权；此处不创建新的视图权限策略。</p></>
+              : <p className="governance-write-empty">当前没有可由你管理的受限视图访问权限。</p>}
+          </div>
           {fieldsLoading
             ? <p className="governance-write-empty" role="status">正在读取字段权限…</p>
             : selectedField && selectedPolicy

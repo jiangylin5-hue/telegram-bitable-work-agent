@@ -23,6 +23,9 @@ export function ViewAccessPanel({ builder, candidates, onSave, onClose }: ViewAc
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const canReplace = builder.view.caller_access_level === 'owner' && builder.can_replace_members
+  const scopeNotice = builder.view.scope === 'restricted'
+    ? '此视图是受限视图。成员授权不会扩大其原有工作区、Base、数据表、记录或字段权限。'
+    : '此视图是私有视图。成员授权不会扩大其原有工作区、Base、数据表、记录或字段权限。'
 
   useEffect(() => {
     setGrants(initialGrants(builder))
@@ -61,7 +64,7 @@ export function ViewAccessPanel({ builder, candidates, onSave, onClose }: ViewAc
         <div className="view-builder-heading"><span className="view-builder-icon"><ShieldCheck size={17} /></span><div><p>视图设置</p><h2 id="view-access-title">访问权限</h2></div></div>
         <button className="field-builder-close" type="button" aria-label="关闭访问权限" onClick={onClose} disabled={saving}><X size={18} /></button>
       </header>
-      <p className="field-builder-intro">此视图默认是私有的。成员授权不会扩大其原有工作区、Base、数据表、记录或字段权限。</p>
+      <p className="field-builder-intro">{scopeNotice}</p>
       {!canReplace ? <section className="view-access-readonly" aria-live="polite"><p>仅视图所有者可以管理成员权限</p><small>你的当前访问权限不允许查看或修改成员授权。</small></section> : <form className="view-access-form" onSubmit={submit} noValidate>
         <p className="view-query-hint">保存会原子替换完整成员列表；未选择的成员将失去该视图的额外访问。</p>
         <div className="view-access-list">{candidates.map((candidate, index) => <label key={candidate.id} className="view-access-row"><span>{candidate.label}</span><select ref={index === 0 ? firstControlRef : undefined} aria-label={`${candidate.label} 权限`} value={grants[candidate.id] ?? ''} disabled={saving} onChange={(event) => setGrants((current) => ({ ...current, [candidate.id]: event.target.value as GrantDraft[string] }))}>

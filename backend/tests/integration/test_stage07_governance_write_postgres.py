@@ -11,11 +11,14 @@ from app.core.database import get_session
 from app.main import create_app
 from app.models.audit import OpsAuditEvent
 from app.models.stage06_platform import PlatformField, WorkspaceMember
+from app.schemas.stage06_platform import ViewInitializationRequest, ViewMemberCommand
 from app.services.permissions import Actor
 from app.services.stage06_platform import (
     PlatformValidationError,
     SqlAlchemyStage06PlatformUnitOfWork,
     change_workspace_member_role,
+    initialize_v1_view,
+    replace_v1_view_members,
 )
 from tests.integration.test_stage07_governance_postgres import (
     Stage06Postgres,
@@ -55,6 +58,7 @@ def test_governance_write_postgres_replays_once_and_enforces_field_hiding(
         ).json()["id"]
 
     with stage06_postgres.session_factory() as session:
+        uow = SqlAlchemyStage06PlatformUnitOfWork(session)
         operator = WorkspaceMember(
             id=uuid4(),
             workspace_id=UUID(workspace_id),
@@ -81,8 +85,39 @@ def test_governance_write_postgres_replays_once_and_enforces_field_hiding(
                 ),
             ]
         )
+        session.flush()
+        view = initialize_v1_view(
+            uow,
+            UUID(table_id),
+            request=ViewInitializationRequest.model_validate(
+                {
+                    "name": "Governance projection",
+                    "view_type": "grid",
+                    "presentation": {
+                        "view_type": "grid",
+                        "visible_field_keys": ["internal"],
+                        "filters": [],
+                        "sort_rules": [],
+                        "group_by_field_key": None,
+                    },
+                }
+            ),
+            idempotency_key="governance-write-projection",
+            actor=Actor(actor_type="user", actor_id="governance-owner", role="owner"),
+        ).view
         session.commit()
         operator_id = str(operator.id)
+        view_id = str(view.id)
+
+    with stage06_postgres.session_factory() as session:
+        replace_v1_view_members(
+            SqlAlchemyStage06PlatformUnitOfWork(session),
+            UUID(view_id),
+            expected_version=1,
+            members=[ViewMemberCommand(user_id="governance-viewer", access_level="viewer")],
+            actor=Actor(actor_type="user", actor_id="governance-owner", role="owner"),
+        )
+        session.commit()
 
     policy = {
         "owner": "write",
@@ -117,6 +152,7 @@ def test_governance_write_postgres_replays_once_and_enforces_field_hiding(
     with TestClient(app) as viewer:
         viewer.headers["X-Stage06-User-Id"] = "governance-viewer"
         schema = viewer.get(f"/tables/{table_id}/schema")
+        presentation = viewer.get(f"/views/{view_id}/presentation")
         detail = viewer.get(f"/records/{record_id}")
         update = viewer.patch(
             f"/records/{record_id}",
@@ -127,8 +163,9 @@ def test_governance_write_postgres_replays_once_and_enforces_field_hiding(
     assert stale.status_code == 409
     assert first.json()["version"] == replay.json()["version"] == 2
     assert policy_response.json()["permission_version"] == 2
-    assert schema.status_code == detail.status_code == 200
+    assert schema.status_code == presentation.status_code == detail.status_code == 200
     assert "internal" not in {field["key"] for field in schema.json()["fields"]}
+    assert "internal" not in presentation.json()["visible_field_keys"]
     assert "internal" not in detail.json()["values"]
     assert update.status_code == 403
 

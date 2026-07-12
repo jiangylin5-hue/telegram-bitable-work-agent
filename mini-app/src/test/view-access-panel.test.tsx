@@ -37,3 +37,10 @@ test.each(['editor', 'viewer'] as const)('does not render grant controls for %s 
   expect(screen.queryByLabelText('Member One 权限')).not.toBeInTheDocument()
   expect(screen.getByText('仅视图所有者可以管理成员权限')).toBeVisible()
 })
+
+test('describes a restricted view accurately without changing its existing grant flow', () => {
+  render(<ViewAccessPanel builder={{ ...baseBuilder, view: { ...baseBuilder.view, scope: 'restricted' } }} candidates={[]} onSave={vi.fn()} onClose={() => undefined} />)
+
+  expect(screen.getByText('此视图是受限视图。成员授权不会扩大其原有工作区、Base、数据表、记录或字段权限。')).toBeVisible()
+  expect(screen.queryByText('此视图默认是私有的。成员授权不会扩大其原有工作区、Base、数据表、记录或字段权限。')).not.toBeInTheDocument()
+})

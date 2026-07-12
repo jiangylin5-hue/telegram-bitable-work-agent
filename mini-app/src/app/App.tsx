@@ -44,7 +44,7 @@ type AppState =
   | { status: 'error' }
   | { status: 'ready'; bootstrap: BootstrapResponse; home: WorkspaceHome; canvas?: BaseCanvasState; canvasLoading?: boolean }
 
-type CanvasTarget = { tableId: string; viewId: string }
+type CanvasTarget = { tableId: string; viewId: string; openViewBuilder?: boolean }
 type BuilderPanel =
   | { mode: 'base' }
   | { mode: 'table'; base: BaseSummary }
@@ -75,6 +75,7 @@ type GovernancePanel = {
 type GovernanceWritePanel = {
   members: GovernanceEditableMemberPage | null
   tables: PlatformTable[]
+  views: ViewSummary[]
   fields: GovernanceFieldPermissionPage | null
   selectedBaseId: string | null
   selectedTableId: string | null
@@ -309,20 +310,28 @@ function AppContent() {
         ? views.find((item) => item.id === target.viewId && item.table_id === table?.id) ?? null
         : table ? views.find((item) => item.table_id === table.id) ?? null : null
       if (!table || !view) {
+        if (target?.openViewBuilder) setBuilderPanel(undefined)
         setState({ ...canvasState, canvas: { base, tables, views, table, view, schema: null, records: null, presentation: null } })
         return true
       }
-      const [schema, presentation, records, builder] = await Promise.all([
+      const [schema, presentation, records, builder, builderContext] = await Promise.all([
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'table', table.id, 'schema'), queryFn: ({ signal }) => api.tableSchema(table.id, { signal }) }),
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'presentation'), queryFn: ({ signal }) => api.viewPresentation(view.id, { signal }) }),
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'records', null), queryFn: ({ signal }) => api.viewRecords(view.id, undefined, { signal }) }),
         readV1BuilderForCanvas(scope, view),
+        target?.openViewBuilder
+          ? queryClient.fetchQuery({ queryKey: viewBuilderKeys.context(scope, table.id), queryFn: ({ signal }) => api.viewBuilderContext(table.id, { signal }) })
+          : Promise.resolve(undefined),
       ])
       if (!isCurrent()) return false
       setState({ ...canvasState, canvas: { base, tables, views, table, view, schema, presentation: builder ? canvasPresentationFromV1Builder(builder) : presentation, serverQuerySummary: builder ? v1ServerQuerySummary(builder) : undefined, records } })
+      if (target?.openViewBuilder) setBuilderPanel(builder && builderContext
+        ? { mode: 'view', tableId: table.id, context: builderContext, builder }
+        : undefined)
       return true
     } catch (error) {
       if (!isCurrent() || isAbortError(error)) return false
+      if (target?.openViewBuilder) setBuilderPanel(undefined)
       if (error instanceof ApiError && error.status === 401) {
         await denyInvalidSession()
       } else if (error instanceof ApiError && error.status === 403) {
@@ -425,6 +434,7 @@ function AppContent() {
     setGovernanceWritePanel({
       members: null,
       tables: [],
+      views: [],
       fields: null,
       selectedBaseId: null,
       selectedTableId: null,
@@ -456,15 +466,21 @@ function AppContent() {
       && governanceWriteRequestVersion.current === requestVersion
       && activeWorkspaceId.current === workspaceId
     setGovernanceWritePanel((current) => current ? {
-      ...current, selectedBaseId: baseId, selectedTableId: null, tables: [], fields: null, tablesLoading: true, fieldsLoading: false,
+      ...current, selectedBaseId: baseId, selectedTableId: null, tables: [], views: [], fields: null, tablesLoading: true, fieldsLoading: false,
     } : current)
     try {
-      const response = await queryClient.fetchQuery({
-        queryKey: protectedQueryKey(scope, 'governance-write', 'tables', baseId),
-        queryFn: ({ signal }) => api.baseTables(baseId, { signal }),
-      })
+      const [{ tables }, { views }] = await Promise.all([
+        queryClient.fetchQuery({
+          queryKey: protectedQueryKey(scope, 'governance-write', 'tables', baseId),
+          queryFn: ({ signal }) => api.baseTables(baseId, { signal }),
+        }),
+        queryClient.fetchQuery({
+          queryKey: protectedQueryKey(scope, 'governance-write', 'views', baseId),
+          queryFn: ({ signal }) => api.baseViews(baseId, { signal }),
+        }),
+      ])
       if (isCurrent()) setGovernanceWritePanel((current) => current?.selectedBaseId === baseId
-        ? { ...current, tables: response.tables, tablesLoading: false }
+        ? { ...current, tables, views, tablesLoading: false }
         : current)
     } catch (error) {
       if (!isCurrent() || isAbortError(error)) return
@@ -503,6 +519,18 @@ function AppContent() {
         setGovernanceWritePanel((current) => current?.selectedTableId === tableId ? { ...current, fieldsLoading: false } : current)
       }
     }
+  }
+
+  async function openGovernanceV1ViewAccess(viewId: string) {
+    const panel = governanceWritePanel
+    const view = panel?.views.find((item) => item.id === viewId && item.scope === 'restricted' && item.caller_access_level === 'owner' && item.table_id)
+    const base = readyState.home.recent_bases.find((item) => item.id === panel?.selectedBaseId)
+    if (!view?.table_id || !base) return
+    const builderVersion = ++builderRequestVersion.current
+    setBuilderPanel({ mode: 'view-loading', tableId: view.table_id, viewId: view.id })
+    closeGovernanceWrite()
+    closeGovernance()
+    await openBase(base, { tableId: view.table_id, viewId: view.id, openViewBuilder: true }, readyState.home, builderVersion)
   }
 
   async function refreshGovernanceWriteMemberContext(scope: { userId: string; workspaceId: string }) {
@@ -1719,6 +1747,7 @@ function AppContent() {
     ? <GovernanceWriteWorkbench
       bases={readyState.home.recent_bases}
       tables={governanceWritePanel.tables}
+      views={governanceWritePanel.views}
       members={governanceWritePanel.members}
       fields={governanceWritePanel.fields}
       selectedBaseId={governanceWritePanel.selectedBaseId}
@@ -1730,6 +1759,7 @@ function AppContent() {
       onSelectTable={(tableId) => { void selectGovernanceWriteTable(tableId) }}
       onChangeRole={changeGovernanceWriteRole}
       onReplacePolicy={replaceGovernanceWriteFieldPolicy}
+      onOpenViewAccess={(viewId) => { void openGovernanceV1ViewAccess(viewId) }}
       onClose={closeGovernanceWrite}
     />
     : null
