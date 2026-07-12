@@ -21,6 +21,8 @@
 3. Wire Home queue to safe draft detail; do not treat generic queue payload as a diff.
 4. Run focused tests and production build.
 
+Current implementation note: safe contact opening, Home queue-to-draft detail, confirm/reject reread, scoped cache cleanup and fixed client failures are in code with focused test/build evidence. Context-selection and employee invocation UI are deferred within G2: TD005 has no approved safe context-discovery route, and the plan prohibits using generic Stage06 routes as a hidden browser source. This remains a documented API-contract decision rather than an implementation shortcut.
+
 ### G3 — Evidence and Cleanup
 
 1. Use synthetic disposable PostgreSQL/browser fixture only; observe one permitted summary, draft creation, confirm, reject, stale/denied paths and four target widths.

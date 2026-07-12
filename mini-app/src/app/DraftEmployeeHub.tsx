@@ -6,12 +6,14 @@ type DraftEmployeeHubProps = {
   contacts: S5Contact[]
   draft: S5DraftDetail | null
   loading: boolean
+  failed?: boolean
   onConfirm: (draftId: string, expectedVersion: number) => Promise<void>
   onReject: (draftId: string, expectedVersion: number) => Promise<void>
+  onRetry?: () => void
   onClose: () => void
 }
 
-export function DraftEmployeeHub({ contacts, draft, loading, onConfirm, onReject, onClose }: DraftEmployeeHubProps) {
+export function DraftEmployeeHub({ contacts, draft, loading, failed = false, onConfirm, onReject, onRetry, onClose }: DraftEmployeeHubProps) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const [pending, setPending] = useState<'confirm' | 'reject' | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -37,7 +39,7 @@ export function DraftEmployeeHub({ contacts, draft, loading, onConfirm, onReject
         <div><p>DRAFT REVIEW</p><h2 ref={headingRef} tabIndex={-1}>数字员工与草稿</h2><span>仅显示当前有权限查看和确认的服务器安全数据。</span></div>
         <button type="button" aria-label="关闭数字员工与草稿" onClick={onClose}>×</button>
       </header>
-      {error && <p className="draft-hub-error" role="alert">{error}</p>}
+      {(failed || error) && <div className="draft-hub-error" role="alert"><p>{failed ? '暂时无法读取数字员工与草稿，请稍后重试。' : error}</p>{onRetry && <button type="button" onClick={onRetry}>重新读取</button>}</div>}
       <div className="draft-hub-columns">
         <section aria-label="可用数字员工" className="draft-hub-section"><header><p>CONTACTS</p><h3>可用数字员工</h3></header>
           {loading ? <p role="status">正在读取联系人…</p> : contacts.length ? <ul className="draft-hub-contacts">{contacts.map((contact) => <li key={contact.id}><strong>{contact.name}</strong><span>{contact.description}</span><small>{contact.availableIntents.map((intent) => intent === 'summarize' ? '智能汇总' : '创建草稿').join(' · ')}</small></li>)}</ul> : <p>当前上下文没有可用数字员工。</p>}
@@ -46,6 +48,7 @@ export function DraftEmployeeHub({ contacts, draft, loading, onConfirm, onReject
           {!draft ? <p>选择上下文或打开待确认草稿后，在此查看服务器过滤后的差异。</p> : <>
             <p className="draft-hub-status">状态：{draft.status === 'pending_confirmation' ? '等待确认' : draft.status}</p>
             <dl className="draft-hub-diff">{draft.fields.map((field) => <div key={field.key}><dt>{field.label}</dt><dd><span>之前：{String(field.beforeValue ?? '')}</span><strong>之后：{String(field.proposedValue ?? '')}</strong></dd></div>)}</dl>
+            {draft.terminalAuditEventId && <p className="draft-hub-audit">审计回执：<code>{draft.terminalAuditEventId}</code></p>}
             {draft.status === 'pending_confirmation' && <div className="draft-hub-actions">
               <button type="button" disabled={pending !== null || !draft.actions.canConfirm} onClick={() => { void terminal('confirm') }}>确认变更</button>
               <button type="button" disabled={pending !== null || !draft.actions.canReject} onClick={() => { void terminal('reject') }}>拒绝草稿</button>

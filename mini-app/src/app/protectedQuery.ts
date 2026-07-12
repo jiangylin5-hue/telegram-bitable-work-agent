@@ -51,6 +51,29 @@ export const governanceWriteKeys = {
   ),
 }
 
+export const draftEmployeeKeys = {
+  contacts: (scope: ProtectedScope, cursor: string | null): QueryKey => (
+    protectedQueryKey(scope, 's5', 'contacts', cursor)
+  ),
+  draft: (scope: ProtectedScope, draftId: string): QueryKey => (
+    protectedQueryKey(scope, 's5', 'draft', draftId)
+  ),
+}
+
+export async function clearDraftEmployeeTerminalQueries(
+  queryClient: QueryClient,
+  scope: ProtectedScope,
+  target: { id: string; recordId: string | null },
+): Promise<void> {
+  const queryKeys: QueryKey[] = [
+    protectedQueryKey(scope, 's5'),
+    protectedQueryKey(scope, 'home'),
+    ...(target.recordId ? [protectedQueryKey(scope, 'record', target.recordId)] : []),
+  ]
+  await Promise.all(queryKeys.map((queryKey) => queryClient.cancelQueries({ queryKey })))
+  for (const queryKey of queryKeys) queryClient.removeQueries({ queryKey })
+}
+
 export async function clearGovernanceWriteQueries(
   queryClient: QueryClient,
   scope: ProtectedScope,

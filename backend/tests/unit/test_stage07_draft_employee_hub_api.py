@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
+from app.api.routes import stage07_draft_employee_hub as draft_employee_hub_routes
 from app.api.routes.stage06_platform import get_stage06_platform_uow
 from app.api.routes.stage06_runtime import get_stage06_runtime_uow
 from app.main import create_app
@@ -108,7 +109,7 @@ def test_s5_draft_read_models_filter_hidden_values_and_metadata() -> None:
         record_id=None,
         draft_type="update_record",
         proposed_values={"title": "After", "internal": "secret-after"},
-        before_values={"title": "Before", "internal": "secret-before"},
+        before_values={"title": {"unsupported": "Before"}, "internal": "secret-before"},
         created_by_type="digital_employee",
         created_by_id="private-employee",
         status="pending_confirmation",
@@ -135,7 +136,7 @@ def test_s5_draft_read_models_filter_hidden_values_and_metadata() -> None:
     assert detail.json() == {
         "id": str(draft.id), "base_id": str(base.id), "table_id": str(table.id), "record_id": None,
         "draft_type": "update_record", "status": "pending_confirmation", "version": 1,
-        "fields": [{"key": "title", "label": "Title", "field_type": "text", "before_value": "Before", "proposed_value": "After"}],
+        "fields": [{"key": "title", "label": "Title", "field_type": "text", "before_value": None, "proposed_value": "After"}],
         "actions": {"can_confirm": False, "can_reject": False}, "terminal_audit_event_id": None,
     }
     assert "secret" not in (listed.text + detail.text)
@@ -238,3 +239,114 @@ def test_s5_invocation_rejects_generic_action_and_runtime_payloads() -> None:
         )
 
     assert response.status_code == 422
+
+
+def test_s5_summary_invocation_uses_live_runtime_and_drops_generic_runtime_output(
+    monkeypatch,
+) -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="S5 live invoke", owner_user_id=owner.actor_id, actor=owner)
+    base = create_base(uow, workspace.id, name="Operations", actor=owner)
+    table = create_table(uow, base.id, name="Tasks", key="tasks", actor=owner)
+    employee = create_digital_employee(
+        uow, base.id, name="Assistant", description="Safe", telegram_alias=None,
+        accessible_tables=[str(table.id)], accessible_views=[], allowed_actions=["summarize"], actor=owner,
+    )
+    captured: dict[str, object] = {}
+
+    def fake_invoke(*args, **kwargs):
+        captured.update(kwargs)
+        return {
+            "answer": "Only this summary is safe.",
+            "records": [{"private": "do-not-forward"}],
+            "runtime": {"model_name": "do-not-forward"},
+            "trace_id": "do-not-forward",
+        }
+
+    monkeypatch.setattr(draft_employee_hub_routes, "invoke_digital_employee", fake_invoke)
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_runtime_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = owner.actor_id
+        response = client.post(
+            f"/mini-app/digital-employees/{employee.id}/invocations",
+            json={"intent": "summarize", "base_id": str(base.id), "view_id": str(uuid4())},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["kind"] == "summary"
+    assert response.json()["answer"] == "Only this summary is safe."
+    assert "do-not-forward" not in response.text
+    assert captured["runtime_mode"] == "live_openrouter"
+
+
+def test_s5_draft_invocation_requires_an_idempotency_key_before_runtime(
+    monkeypatch,
+) -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="S5 draft key", owner_user_id=owner.actor_id, actor=owner)
+    base = create_base(uow, workspace.id, name="Operations", actor=owner)
+    table = create_table(uow, base.id, name="Tasks", key="tasks", actor=owner)
+    employee = create_digital_employee(
+        uow, base.id, name="Assistant", description="Safe", telegram_alias=None,
+        accessible_tables=[str(table.id)], accessible_views=[], allowed_actions=["draft_update"], actor=owner,
+    )
+
+    def fail_if_invoked(*args, **kwargs):
+        raise AssertionError("draft runtime must not run without an idempotency key")
+
+    monkeypatch.setattr(draft_employee_hub_routes, "invoke_digital_employee", fail_if_invoked)
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_runtime_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = owner.actor_id
+        response = client.post(
+            f"/mini-app/digital-employees/{employee.id}/invocations",
+            json={"intent": "draft_update", "base_id": str(base.id), "view_id": str(uuid4()), "record_id": str(uuid4())},
+        )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "idempotency_key_required"
+
+
+def test_s5_draft_invocation_replays_the_same_safe_draft_pointer_once(
+    monkeypatch,
+) -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="S5 draft replay", owner_user_id=owner.actor_id, actor=owner)
+    base = create_base(uow, workspace.id, name="Operations", actor=owner)
+    table = create_table(uow, base.id, name="Tasks", key="tasks", actor=owner)
+    employee = create_digital_employee(
+        uow, base.id, name="Assistant", description="Safe", telegram_alias=None,
+        accessible_tables=[str(table.id)], accessible_views=[], allowed_actions=["draft_update"], actor=owner,
+    )
+    draft_id = uuid4()
+    calls = 0
+
+    def fake_invoke(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return {"draft_id": str(draft_id), "status": "pending_confirmation", "trace_id": "do-not-forward"}
+
+    monkeypatch.setattr(draft_employee_hub_routes, "invoke_digital_employee", fake_invoke)
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_runtime_uow] = lambda: uow
+    payload = {"intent": "draft_update", "base_id": str(base.id), "view_id": str(uuid4()), "record_id": str(uuid4())}
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = owner.actor_id
+        first = client.post(f"/mini-app/digital-employees/{employee.id}/invocations", headers={"Idempotency-Key": "draft-invoke-1"}, json=payload)
+        replay = client.post(f"/mini-app/digital-employees/{employee.id}/invocations", headers={"Idempotency-Key": "draft-invoke-1"}, json=payload)
+
+    assert first.status_code == replay.status_code == 200
+    assert first.json() == replay.json() == {"kind": "draft", "answer": None, "draft_id": str(draft_id), "status": "pending_confirmation"}
+    assert calls == 1
+    assert "do-not-forward" not in first.text

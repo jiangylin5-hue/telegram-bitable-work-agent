@@ -4,6 +4,7 @@
 
 - Status: approved TD005 Option A technical specification; S5 implementation in progress.
 - Scope: server-composed contact/draft models and controlled terminal commands over existing Stage06 runtime services.
+- Current Progress: the approved contact/draft adapter, terminal draft revision/audit migration, locked confirm/reject path, safe Mini App parsers and Hub entry are implemented. The Home assistant entry loads only the safe contact directory; queue links load only the safe draft detail; terminal UI clears protected S5/home/record state and rereads the authoritative detail. The current code also rejects unsafe before-values instead of crashing, calls the actual `live_openrouter` runtime mode and reserves/replays `draft_update` invocations through the existing Stage06 idempotency ledger. This is implementation evidence only: PostgreSQL race/rollback coverage, live provider evidence, index measurement, Browser width matrix and DE-A01--DE-A10 reconciliation remain pending.
 
 ## Architecture
 
@@ -95,6 +96,10 @@ Pydantic models use `extra='forbid'`; TypeScript parsing allowlists all enum val
 ## Cache and Error Rules
 
 All keys nest below `['stage07', userId, workspaceId, 's5', ...]`. A terminal mutation cancels/removes exact draft, Base queue, contact/context and active record/view paths, then rereads. `401` clears the complete protected workspace; `403` removes its S5 subtree; `404` removes exact resource keys; `409`/`422` retain typed local intent only; unknown failures map to a fixed generic failure.
+
+### Implemented UI Boundary and Remaining Context Gap
+
+The implemented Hub intentionally exposes only the already-approved safe contact directory and safe queue-draft review path. It does not render a fake Base/view/record selector and does not invoke an employee from the browser yet. TD005 authorizes the six listed routes but does not define a server-safe context-discovery projection for selectable Bases, views and records. Reusing generic Base/view/record endpoints as a hidden Hub data source would contradict this SDD's “S5 adapter is the only browser entry” rule. A later S5 addendum must explicitly choose one of these paths before that UI is implemented: a narrow server-composed S5 context projection, or a documented exception for an already-authorized non-S5 projection. That is an API-contract decision and is not silently implemented in this substage.
 
 ## Migration and Index
 

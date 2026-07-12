@@ -8,6 +8,7 @@ import { BuilderCreatePanel } from './BuilderCreatePanel'
 import { FieldBuilderPanel, type FieldBuilderValues } from './FieldBuilderPanel'
 import { ImportWizard, type ImportTarget } from './ImportWizard'
 import { CreateRecordPanel } from './CreateRecordPanel'
+import { DraftEmployeeHub } from './DraftEmployeeHub'
 import { GovernanceWorkbench } from './GovernanceWorkbench'
 import { GovernanceWriteWorkbench } from './GovernanceWriteWorkbench'
 import { RecordDetailPanel } from './RecordDetail'
@@ -16,9 +17,10 @@ import { SaveTemplatePanel } from './SaveTemplatePanel'
 import { TemplateImportHub } from './TemplateImportHub'
 import { ViewBuilderPanel } from './ViewBuilderPanel'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
-import { clearAllProtectedQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, governanceKeys, governanceWriteKeys, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
+import { clearAllProtectedQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, draftEmployeeKeys, governanceKeys, governanceWriteKeys, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
 import type { GovernanceAuditPage, GovernanceMemberPage } from './governance-types'
 import type { GovernanceEditableMemberPage, GovernanceFieldPermissionPage, GovernanceFieldPermissionPolicy } from './governance-write-types'
+import type { S5Contact, S5DraftDetail } from './draft-employee-types'
 import type { CommitImportValues, CreateImportValues, ImportCommitReceipt, ImportPreview, TemplateSummary } from './template-import-types'
 import type { ViewBuilderContext, ViewBuilderResponse, ViewInitializationRequest, ViewMemberReplaceRequest, ViewPresentationPatchRequest } from './view-builder-types'
 
@@ -85,6 +87,14 @@ type GovernanceWritePanel = {
   contextError?: 'base_not_available' | 'table_not_available'
 }
 
+type DraftEmployeePanel = {
+  contacts: S5Contact[]
+  draft: S5DraftDetail | null
+  loading: boolean
+  targetDraftId: string | null
+  failed: boolean
+}
+
 function isAbortError(error: unknown): boolean {
   return isCancelledError(error) || (error instanceof DOMException && error.name === 'AbortError')
 }
@@ -128,14 +138,17 @@ function AppContent() {
   const templateImportRequestVersion = useRef(0)
   const governanceRequestVersion = useRef(0)
   const governanceWriteRequestVersion = useRef(0)
+  const draftEmployeeRequestVersion = useRef(0)
   const viewBuilderReturnFocus = useRef<HTMLElement | null>(null)
   const governanceReturnFocus = useRef<HTMLElement | null>(null)
   const governanceWriteReturnFocus = useRef<HTMLElement | null>(null)
+  const draftEmployeeReturnFocus = useRef<HTMLElement | null>(null)
   const sessionInvalidated = useRef(false)
   const [builderPanel, setBuilderPanel] = useState<BuilderPanel>()
   const [templateImportPanel, setTemplateImportPanel] = useState<TemplateImportPanel>()
   const [governancePanel, setGovernancePanel] = useState<GovernancePanel>()
   const [governanceWritePanel, setGovernanceWritePanel] = useState<GovernanceWritePanel>()
+  const [draftEmployeePanel, setDraftEmployeePanel] = useState<DraftEmployeePanel>()
 
   function invalidateInFlightRequests() {
     homeRequestVersion.current += 1
@@ -146,6 +159,7 @@ function AppContent() {
     templateImportRequestVersion.current += 1
     governanceRequestVersion.current += 1
     governanceWriteRequestVersion.current += 1
+    draftEmployeeRequestVersion.current += 1
   }
 
   async function denyInvalidSession() {
@@ -267,10 +281,12 @@ function AppContent() {
     builderRequestVersion.current += 1
     templateImportRequestVersion.current += 1
     governanceRequestVersion.current += 1
+    draftEmployeeRequestVersion.current += 1
     setBuilderPanel(undefined)
     setTemplateImportPanel(undefined)
     setGovernancePanel(undefined)
     setGovernanceWritePanel(undefined)
+    setDraftEmployeePanel(undefined)
     activeWorkspaceId.current = workspaceId
     setState({ status: 'loading' })
     await clearProtectedWorkspace(queryClient, { userId: readyState.bootstrap.identity.user_id, workspaceId: activeWorkspace.id })
@@ -353,6 +369,85 @@ function AppContent() {
   function closeTemplateImport() {
     templateImportRequestVersion.current += 1
     setTemplateImportPanel(undefined)
+  }
+
+  function closeDraftEmployeeHub() {
+    draftEmployeeRequestVersion.current += 1
+    setDraftEmployeePanel(undefined)
+    const trigger = draftEmployeeReturnFocus.current
+    draftEmployeeReturnFocus.current = null
+    queueMicrotask(() => {
+      if (trigger?.isConnected) trigger.focus()
+    })
+  }
+
+  async function openDraftEmployeeHub(trigger: HTMLElement, draftId?: string) {
+    draftEmployeeReturnFocus.current = trigger
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++draftEmployeeRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && draftEmployeeRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setDraftEmployeePanel({ contacts: [], draft: null, loading: true, targetDraftId: draftId ?? null, failed: false })
+    try {
+      const [contacts, draft] = await Promise.all([
+        queryClient.fetchQuery({
+          queryKey: draftEmployeeKeys.contacts(scope, null),
+          queryFn: ({ signal }) => api.listS5Contacts(workspaceId, null, { signal }),
+        }),
+        draftId
+          ? queryClient.fetchQuery({
+            queryKey: draftEmployeeKeys.draft(scope, draftId),
+            queryFn: ({ signal }) => api.getS5Draft(draftId, { signal }),
+          })
+          : Promise.resolve(null),
+      ])
+      if (isCurrent()) setDraftEmployeePanel({ contacts: contacts.contacts, draft, loading: false, targetDraftId: draftId ?? null, failed: false })
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else if (isCurrent()) setDraftEmployeePanel({ contacts: [], draft: null, loading: false, targetDraftId: draftId ?? null, failed: true })
+    }
+  }
+
+  async function terminalS5Draft(action: 'confirm' | 'reject', draftId: string, expectedVersion: number): Promise<void> {
+    const panel = draftEmployeePanel
+    const draft = panel?.draft
+    if (!draft || draft.id !== draftId || draft.version !== expectedVersion) throw new Error('Draft is unavailable')
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = draftEmployeeRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && draftEmployeeRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    try {
+      if (action === 'confirm') await api.confirmS5Draft(draftId, expectedVersion, crypto.randomUUID())
+      else await api.rejectS5Draft(draftId, expectedVersion, crypto.randomUUID())
+      await clearDraftEmployeeTerminalQueries(queryClient, scope, draft)
+      const [contacts, rereadDraft] = await Promise.all([
+        queryClient.fetchQuery({
+          queryKey: draftEmployeeKeys.contacts(scope, null),
+          queryFn: ({ signal }) => api.listS5Contacts(workspaceId, null, { signal }),
+        }),
+        queryClient.fetchQuery({
+          queryKey: draftEmployeeKeys.draft(scope, draftId),
+          queryFn: ({ signal }) => api.getS5Draft(draftId, { signal }),
+        }),
+      ])
+      if (isCurrent()) setDraftEmployeePanel({ contacts: contacts.contacts, draft: rereadDraft, loading: false, targetDraftId: draftId, failed: false })
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else if (error instanceof ApiError && error.status === 404) {
+        await clearDraftEmployeeTerminalQueries(queryClient, scope, draft)
+        if (isCurrent()) setDraftEmployeePanel((current) => current ? { ...current, draft: null, loading: false, failed: true } : current)
+      } else if (isCurrent()) {
+        setDraftEmployeePanel((current) => current ? { ...current, failed: true } : current)
+      }
+      throw error
+    }
   }
 
   function closeGovernance() {
@@ -1746,7 +1841,7 @@ function AppContent() {
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
     ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} canCreateRecords={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role)} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (!canvas?.table) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id, canvas.view.id) }} onSaveTemplate={() => setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base })} onImportIntoBase={() => openBaseImport(readyState.canvas!.base)} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
-      : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={() => { void openTemplateImportHub() }} />
+      : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={() => { void openTemplateImportHub() }} onOpenDraftHub={(trigger, draftId) => { void openDraftEmployeeHub(trigger, draftId) }} />
   const builderOverlay = builderPanel?.mode === 'base'
     ? <BuilderCreatePanel mode="base" onSubmit={(values, idempotencyKey) => createBase(values as { baseName: string; tableName: string }, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
     : builderPanel?.mode === 'table'
@@ -1771,6 +1866,21 @@ function AppContent() {
         : templateImportPanel?.mode === 'base-import'
           ? <ImportWizard target={{ kind: 'base', workspaceId: readyState.home.workspace_id, baseId: templateImportPanel.base.id, baseName: templateImportPanel.base.name }} onCreatePreview={(values) => createImportPreview({ kind: 'base', workspaceId: readyState.home.workspace_id, baseId: templateImportPanel.base.id, baseName: templateImportPanel.base.name }, values)} onCommit={(jobId, values) => commitImport({ kind: 'base', workspaceId: readyState.home.workspace_id, baseId: templateImportPanel.base.id, baseName: templateImportPanel.base.name }, jobId, values)} onClose={closeTemplateImport} />
       : null
+  const draftEmployeeOverlay = draftEmployeePanel
+    ? <DraftEmployeeHub
+      contacts={draftEmployeePanel.contacts}
+      draft={draftEmployeePanel.draft}
+      loading={draftEmployeePanel.loading}
+      failed={draftEmployeePanel.failed}
+      onRetry={() => {
+        const trigger = draftEmployeeReturnFocus.current ?? document.body
+        void openDraftEmployeeHub(trigger, draftEmployeePanel.targetDraftId ?? undefined)
+      }}
+      onConfirm={(draftId, expectedVersion) => terminalS5Draft('confirm', draftId, expectedVersion)}
+      onReject={(draftId, expectedVersion) => terminalS5Draft('reject', draftId, expectedVersion)}
+      onClose={closeDraftEmployeeHub}
+    />
+    : null
   const governanceOverlay = governancePanel
     ? <GovernanceWorkbench
       bases={readyState.home.recent_bases}
@@ -1817,5 +1927,5 @@ function AppContent() {
       onClose={closeGovernanceWrite}
     />
     : null
-  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} onOpenGovernance={(trigger) => { void openGovernance(trigger) }}>{content}{builderOverlay}{templateImportOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
+  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} onOpenGovernance={(trigger) => { void openGovernance(trigger) }}>{content}{builderOverlay}{templateImportOverlay}{draftEmployeeOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
 }

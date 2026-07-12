@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import get_stage06_request_identity
 from app.api.routes.stage06_platform import get_stage06_platform_uow
@@ -116,6 +117,7 @@ def list_digital_employee_contacts(
 def invoke_safe_digital_employee(
     employee_id: UUID,
     request: SafeEmployeeInvocationRequest,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key", min_length=1, max_length=160),
     identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
     uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
 ) -> SafeEmployeeInvocationResponse:
@@ -138,14 +140,45 @@ def invoke_safe_digital_employee(
         raise HTTPException(status_code=422, detail=error_detail("view_required", "view_required"))
     if request.intent == "draft_update" and (view_id is None or record_id is None):
         raise HTTPException(status_code=422, detail=error_detail("draft_context_required", "draft_context_required"))
+    if request.intent == "draft_update" and idempotency_key is None:
+        raise HTTPException(status_code=422, detail=error_detail("idempotency_key_required", "idempotency_key_required"))
     try:
+        invocation_decision = None
+        if request.intent == "draft_update":
+            assert idempotency_key is not None
+            fingerprint = fingerprint_request({
+                "employee_id": str(employee_id),
+                "intent": request.intent,
+                "base_id": request.base_id,
+                "view_id": request.view_id,
+                "record_id": request.record_id,
+                "instruction": request.instruction,
+                "user_id": identity.user_id,
+            })
+            invocation_decision = _begin_s5_idempotent_operation(
+                uow,
+                workspace_id=employee.workspace_id,
+                operation="stage07.s5.digital_employee.draft_update",
+                idempotency_key=idempotency_key,
+                request_fingerprint=fingerprint,
+            )
+            if invocation_decision.status == "replay":
+                replay_ref = invocation_decision.response_ref or {}
+                replay_draft_id = replay_ref.get("draft_id")
+                if not isinstance(replay_draft_id, str):
+                    raise PlatformValidationError("safe_draft_result_unavailable", str(employee_id))
+                return SafeEmployeeInvocationResponse(
+                    kind="draft",
+                    draft_id=replay_draft_id,
+                    status="pending_confirmation",
+                )
         result = invoke_digital_employee(
             uow,
             employee_id,
             action=request.intent,
             view_id=view_id,
             record_id=record_id,
-            runtime_mode="live",
+            runtime_mode="live_openrouter",
             prompt=request.instruction,
             actor=actor,
         )
@@ -155,10 +188,14 @@ def invoke_safe_digital_employee(
         draft_id = result.get("draft_id")
         if not isinstance(draft_id, str) or result.get("status") != "pending_confirmation":
             raise HTTPException(status_code=422, detail=error_detail("safe_draft_result_unavailable", "safe_draft_result_unavailable"))
+        assert invocation_decision is not None
+        complete_idempotent_operation(invocation_decision.record, response_ref={"draft_id": draft_id})
+        _commit_if_sqlalchemy(uow)
         return SafeEmployeeInvocationResponse(kind="draft", draft_id=draft_id, status="pending_confirmation")
     answer = result.get("answer")
     if not isinstance(answer, str):
         raise HTTPException(status_code=422, detail=error_detail("safe_summary_result_unavailable", "safe_summary_result_unavailable"))
+    _commit_if_sqlalchemy(uow)
     return SafeEmployeeInvocationResponse(kind="summary", answer=answer)
 
 
@@ -201,17 +238,23 @@ def get_safe_draft(
         raise _authorization_error(exc) from exc
     schema = get_table_schema(uow, draft.table_id, actor=actor)
     fields_by_key = {field["key"]: field for field in schema["fields"]}
-    fields = [
-        SafeDraftFieldResponse(
-            key=key,
-            label=field["name"],
-            field_type=field["field_type"],
-            before_value=_safe_value((draft.before_values or {}).get(key)),
-            proposed_value=_safe_value(draft.proposed_values.get(key)),
+    fields: list[SafeDraftFieldResponse] = []
+    for key, field in fields_by_key.items():
+        if key not in draft.proposed_values:
+            continue
+        proposed_value = _safe_value(draft.proposed_values.get(key))
+        if proposed_value is _UNSAFE:
+            continue
+        before_value = _safe_value((draft.before_values or {}).get(key))
+        fields.append(
+            SafeDraftFieldResponse(
+                key=key,
+                label=field["name"],
+                field_type=field["field_type"],
+                before_value=None if before_value is _UNSAFE else before_value,
+                proposed_value=proposed_value,
+            )
         )
-        for key, field in fields_by_key.items()
-        if key in draft.proposed_values and _safe_value(draft.proposed_values.get(key)) is not _UNSAFE
-    ]
     pending = draft.status == "pending_confirmation"
     return SafeDraftDetailResponse(
         **_safe_draft_summary(draft).model_dump(),
@@ -314,6 +357,42 @@ def _terminal_receipt(draft) -> SafeDraftTerminalReceipt:
         id=str(draft.id), status=draft.status, version=draft.version,
         terminal_audit_event_id=str(draft.terminal_audit_event_id),
     )
+
+
+def _begin_s5_idempotent_operation(
+    uow: Stage06PlatformUnitOfWork,
+    *,
+    workspace_id: UUID,
+    operation: str,
+    idempotency_key: str,
+    request_fingerprint: str,
+):
+    trace_id = idempotency_trace_id(operation, request_fingerprint, idempotency_key)
+    try:
+        decision = begin_idempotent_operation(
+            uow,
+            workspace_id=workspace_id,
+            operation=operation,
+            idempotency_key=idempotency_key,
+            request_fingerprint=request_fingerprint,
+            trace_id=trace_id,
+        )
+        if decision.status == "started":
+            _commit_if_sqlalchemy(uow)
+        return decision
+    except IntegrityError:
+        session = getattr(uow, "session", None)
+        if session is None:
+            raise
+        session.rollback()
+        return begin_idempotent_operation(
+            uow,
+            workspace_id=workspace_id,
+            operation=operation,
+            idempotency_key=idempotency_key,
+            request_fingerprint=request_fingerprint,
+            trace_id=trace_id,
+        )
 
 
 def _authorization_error(exc: Stage06AuthorizationError) -> HTTPException:
