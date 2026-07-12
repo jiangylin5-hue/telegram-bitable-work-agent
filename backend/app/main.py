@@ -13,6 +13,9 @@ from app.api.routes.stage07_governance import router as stage07_governance_route
 from app.api.routes.stage07_governance_write import (
     router as stage07_governance_write_router,
 )
+from app.api.routes.stage07_draft_employee_hub import (
+    router as stage07_draft_employee_hub_router,
+)
 from app.api.routes.telegram_bindings import router as telegram_bindings_router
 from app.api.routes.telegram_send_requests import (
     router as telegram_send_requests_router,
@@ -37,6 +40,7 @@ def create_app() -> FastAPI:
     app.include_router(stage06_templates_router)
     app.include_router(stage07_governance_router)
     app.include_router(stage07_governance_write_router)
+    app.include_router(stage07_draft_employee_hub_router)
     app.include_router(telegram_bindings_router)
     app.include_router(telegram_send_requests_router)
     app.include_router(telegram_webhook_router)

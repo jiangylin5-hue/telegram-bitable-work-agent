@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Uuid
@@ -65,6 +65,12 @@ class RecordChangeDraft(UuidPrimaryKeyMixin, TimestampMixin, Base):
     confirmation_policy: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     trace_id: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     expected_version: Mapped[int] = mapped_column(default=1, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    terminal_audit_event_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("ops_audit_events.id"),
+        nullable=True,
+    )
 
 
 class NotificationRequest(UuidPrimaryKeyMixin, TimestampMixin, Base):
