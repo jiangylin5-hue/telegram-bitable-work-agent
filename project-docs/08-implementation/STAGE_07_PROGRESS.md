@@ -15,6 +15,12 @@
 
 ## Progress Log
 
+### 2026-07-13: TD009 Personal Assistant Context Discovery — Proposal Only
+
+- The next coherent product candidate is documented, not implemented: one Home flow that reuses safe S5 contacts, server-composes the employee/caller permitted saved-view intersection, re-reads the selected view, and invokes only the existing fixed `summarize` intent. An explicit Base handoff returns the user to the normal Canvas for record-bound draft work.
+- TD009 compares Canvas-only context, the recommended safe contact-to-view catalog, and an intentionally rejected full Package4 lifecycle/memory/knowledge/Telegram bundle. The recommendation adds no schema migration, permission action, memory store, record picker or Bot lifecycle; it does require explicit approval because it adds safe API contracts and a Home behavior.
+- Written artifacts: TD009, detailed design, BDD/acceptance, SDD, work surface and complex index. No source, test, migration, dependency, provider call, Telegram operation, browser control or deployment changed.
+
 ### 2026-07-13: Existing-Contract Home/Bases Navigation Closure
 
 - Implemented only the approved existing-contract closure: `AppShell` Home/Base controls now share one memory route; `BaseDirectory` renders safe `BaseSummary` rows and fixed loading/empty/retryable states; `App.tsx` reads the existing `/workspaces/{workspace_id}/bases` contract through `navigationKeys.bases(scope)` and delegates selection unchanged to existing `openBase`.

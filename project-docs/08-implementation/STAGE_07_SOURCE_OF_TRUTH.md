@@ -10,6 +10,7 @@
 - Template/Import Package Update: the approved existing-contract package is `implemented-local`. Typed template/import transport, shelf/install, draft-template save, server preview, scalar mapping and explicit commit have fresh component/API, build, real disposable PostgreSQL and focused Browser evidence. Browser CSV/XLSX upload is explicitly unaccepted because the available automation API cannot choose a file. No schema/API/permission/dependency expansion was made; Telegram, staging and production remain unaccepted. See [local evidence](evidence/stage07-template-import-ui.md).
 - Governance Package Update: S3 has delivered the approved read-only projections locally. S4 implemented TD004's narrowly versioned member-role and field-policy commands plus existing V1 view-grant reuse; its remaining negative-lifecycle acceptance gaps are recorded in `evidence/stage07-governance-write.md`.
 - Substage Delivery Update: Stage07 now uses the S0--S6 coherent-substage roadmap. S5 has approved TD005 and TD006 decision/design/BDD/SDD/module/index/plan packages plus local implementation evidence. TD007 Option A now has its decision/design/BDD/SDD/module/index/implementation package plus its complete local App failure matrix. TD008 Option A has its approved local implementation, migration, confirmation-denial, two-session Worker-collision and no-logger evidence package; only real Bot delivery/manual smoke remains independently gated. See [Substage Delivery Roadmap](STAGE_07_SUBSTAGE_DELIVERY_ROADMAP.md).
+- Next proposed substage: TD009 Option B documents one Home personal-assistant context-discovery slice over existing safe contacts and fixed summaries. It is awaiting user review; no API, schema, permission, dependency, runtime or UI implementation is authorized by the proposal.
 
 ## 1. Stage Goal
 
@@ -107,6 +108,12 @@ verified identity -> workspace member -> permission-filtered UI
 74. [Stage07 S6.2 Controlled Delivery and Smoke Work Surface](modules/STAGE_07_S6_CONTROLLED_DELIVERY_SMOKE_WORK_SURFACE.md)
 75. [Stage07 S6.2 Controlled Delivery and Smoke Complex Feature Index](STAGE_07_S6_CONTROLLED_DELIVERY_SMOKE_COMPLEX_FEATURE_INDEX.md)
 76. [Stage07 S6.2 Controlled Delivery and Smoke Implementation Plan](../../docs/superpowers/plans/2026-07-13-stage07-s6-controlled-delivery-smoke-implementation.md)
+77. [Stage07 Personal Assistant Context Discovery Decision](STAGE_07_TECHNICAL_DECISION_009_ASSISTANT_CONTEXT_DISCOVERY.md)
+78. [Stage07 Personal Assistant Context Discovery Design](../../docs/superpowers/specs/2026-07-13-stage07-assistant-context-discovery-design.md)
+79. [Stage07 Personal Assistant Context Discovery BDD and Acceptance](STAGE_07_ASSISTANT_CONTEXT_DISCOVERY_BDD_AND_ACCEPTANCE.md)
+80. [Stage07 Personal Assistant Context Discovery SDD](STAGE_07_ASSISTANT_CONTEXT_DISCOVERY_SDD.md)
+81. [Stage07 Personal Assistant Context Discovery Work Surface](../03-modules/STAGE_07_ASSISTANT_CONTEXT_DISCOVERY_WORK_SURFACE.md)
+82. [Stage07 Personal Assistant Context Discovery Complex Feature Index](STAGE_07_ASSISTANT_CONTEXT_DISCOVERY_COMPLEX_FEATURE_INDEX.md)
 
 Stage06 is the backend contract baseline. Stage02-05 documents are historical capability evidence only.
 
