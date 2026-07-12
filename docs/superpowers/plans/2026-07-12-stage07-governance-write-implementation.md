@@ -26,7 +26,7 @@
 | G3 Step 1 — focused verification | completed locally | focused backend `19 passed`, frontend `5 files / 12 tests`, production build, migration downgrade/upgrade and smoke passed. |
 | G3 Step 2 — Browser matrix | partial-local | built synthetic client observed role/policy success, V1 reuse and `1440/1280/430/390` paths with console `[]`; stale/denied/retry/focus-return permutations remain open. |
 | G3 Step 3 — cleanup/reconciliation | completed locally | temporary seed/proxy removed, services stopped and evidence matrix reconciled. |
-| G3 Step 4 — evidence commit | pending | commit only after final diff/check and port-clean verification. |
+| G3 Step 4 — evidence commit | completed locally | `56171d4` records the evidence after final diff/check and port-clean verification. |
 
 ---
 
