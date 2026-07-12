@@ -9,9 +9,12 @@ import { FieldBuilderPanel, type FieldBuilderValues } from './FieldBuilderPanel'
 import { CreateRecordPanel } from './CreateRecordPanel'
 import { RecordDetailPanel } from './RecordDetail'
 import { RelationLookupFieldBuilderPanel, type F2FieldBuilderValues } from './RelationLookupFieldBuilderPanel'
+import { SaveTemplatePanel } from './SaveTemplatePanel'
+import { TemplateImportHub } from './TemplateImportHub'
 import { ViewBuilderPanel } from './ViewBuilderPanel'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
-import { clearAllProtectedQueries, clearFieldMutationQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearViewBuilderQueries, createProtectedQueryClient, protectedQueryKey, relationCandidateQueryKey, viewBuilderKeys } from './protectedQuery'
+import { clearAllProtectedQueries, clearFieldMutationQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
+import type { TemplateSummary } from './template-import-types'
 import type { ViewBuilderContext, ViewBuilderResponse, ViewInitializationRequest, ViewMemberReplaceRequest, ViewPresentationPatchRequest } from './view-builder-types'
 
 type BaseCanvasState = {
@@ -45,6 +48,10 @@ type BuilderPanel =
   | { mode: 'relation-lookup'; tableId: string; viewId: string; tables: PlatformTable[]; schemas: TableSchema[] }
   | { mode: 'view-loading'; tableId: string; viewId?: string }
   | { mode: 'view'; tableId: string; context: ViewBuilderContext; builder?: ViewBuilderResponse }
+
+type TemplateImportPanel =
+  | { mode: 'hub'; templates: TemplateSummary[]; loading: boolean; error: string | null }
+  | { mode: 'save-template'; base: BaseSummary }
 
 function isAbortError(error: unknown): boolean {
   return isCancelledError(error) || (error instanceof DOMException && error.name === 'AbortError')
@@ -86,9 +93,11 @@ function AppContent() {
   const recordRequestVersion = useRef(0)
   const createFormRequestVersion = useRef(0)
   const builderRequestVersion = useRef(0)
+  const templateImportRequestVersion = useRef(0)
   const viewBuilderReturnFocus = useRef<HTMLElement | null>(null)
   const sessionInvalidated = useRef(false)
   const [builderPanel, setBuilderPanel] = useState<BuilderPanel>()
+  const [templateImportPanel, setTemplateImportPanel] = useState<TemplateImportPanel>()
 
   function invalidateInFlightRequests() {
     homeRequestVersion.current += 1
@@ -96,6 +105,7 @@ function AppContent() {
     recordRequestVersion.current += 1
     createFormRequestVersion.current += 1
     builderRequestVersion.current += 1
+    templateImportRequestVersion.current += 1
   }
 
   async function denyInvalidSession() {
@@ -215,7 +225,9 @@ function AppContent() {
     recordRequestVersion.current += 1
     createFormRequestVersion.current += 1
     builderRequestVersion.current += 1
+    templateImportRequestVersion.current += 1
     setBuilderPanel(undefined)
+    setTemplateImportPanel(undefined)
     activeWorkspaceId.current = workspaceId
     setState({ status: 'loading' })
     await clearProtectedWorkspace(queryClient, { userId: readyState.bootstrap.identity.user_id, workspaceId: activeWorkspace.id })
@@ -285,6 +297,77 @@ function AppContent() {
     await queryClient.cancelQueries({ queryKey: homeKey })
     queryClient.removeQueries({ queryKey: homeKey })
     return queryClient.fetchQuery({ queryKey: homeKey, queryFn: ({ signal }) => api.workspaceHome(scope.workspaceId, { signal }) })
+  }
+
+  function closeTemplateImport() {
+    templateImportRequestVersion.current += 1
+    setTemplateImportPanel(undefined)
+  }
+
+  async function openTemplateImportHub() {
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++templateImportRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && templateImportRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setTemplateImportPanel({ mode: 'hub', templates: [], loading: true, error: null })
+    try {
+      const templates = await queryClient.fetchQuery({
+        queryKey: templateImportKeys.templates(scope),
+        queryFn: ({ signal }) => api.listTemplates({ signal }),
+      })
+      if (isCurrent()) setTemplateImportPanel({ mode: 'hub', templates, loading: false, error: null })
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else setTemplateImportPanel({ mode: 'hub', templates: [], loading: false, error: '模板暂时无法加载，请稍后重试。' })
+    }
+  }
+
+  async function installTemplate(template: TemplateSummary) {
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = templateImportRequestVersion.current
+    const canvasVersion = canvasRequestVersion.current
+    const builderVersion = builderRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && templateImportRequestVersion.current === requestVersion
+      && canvasRequestVersion.current === canvasVersion
+      && activeWorkspaceId.current === workspaceId
+    try {
+      const receipt = await api.installTemplate(workspaceId, template.id, readyState.bootstrap.identity.user_id, crypto.randomUUID())
+      if (!isCurrent()) return
+      await clearTemplateImportQueries(queryClient, scope)
+      const [refreshedHome, { bases }] = await Promise.all([
+        refreshBuilderHome(scope),
+        queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'bases'), queryFn: ({ signal }) => api.workspaceBases(workspaceId, { signal }) }),
+      ])
+      if (!isCurrent()) return
+      const base = bases.find((item) => item.id === receipt.baseId)
+      if (!base) throw new Error('Installed Base is unavailable')
+      const opened = await openBase(base, undefined, refreshedHome, builderVersion)
+      if (opened && isCurrent()) setTemplateImportPanel(undefined)
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else if (error instanceof ApiError && error.status === 404) setTemplateImportPanel({ mode: 'hub', templates: [], loading: false, error: '模板当前不可用，请刷新后重试。' })
+      else setTemplateImportPanel((current) => current?.mode === 'hub' ? { ...current, loading: false, error: '安装模板失败，请稍后重试。' } : current)
+    }
+  }
+
+  async function saveBaseAsTemplate(base: BaseSummary, values: { name: string; category: string; description: string }) {
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    try {
+      return await api.saveBaseAsTemplate(base.id, { ...values, createdByUserId: readyState.bootstrap.identity.user_id })
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      throw error
+    }
   }
 
   async function createBase(values: { baseName: string; tableName: string }, idempotencyKey: string) {
@@ -1150,8 +1233,8 @@ function AppContent() {
   const content = readyState.canvasLoading
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
-    ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} canCreateRecords={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role)} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (!canvas?.table) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id, canvas.view.id) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
-      : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} />
+    ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} canCreateRecords={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role)} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (!canvas?.table) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id, canvas.view.id) }} onSaveTemplate={() => setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base })} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
+      : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={() => { void openTemplateImportHub() }} />
   const builderOverlay = builderPanel?.mode === 'base'
     ? <BuilderCreatePanel mode="base" onSubmit={(values, idempotencyKey) => createBase(values as { baseName: string; tableName: string }, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
     : builderPanel?.mode === 'table'
@@ -1167,5 +1250,10 @@ function AppContent() {
               : builderPanel?.mode === 'view'
                 ? <ViewBuilderPanel context={builderPanel.context} builder={builderPanel.builder} onCreate={(request, idempotencyKey) => createV1View(builderPanel.tableId, request, idempotencyKey)} onSave={(request) => saveV1ViewPresentation(builderPanel.tableId, request)} onReplaceMembers={(request) => replaceV1ViewMembers(builderPanel.tableId, request)} onClose={closeViewBuilder} loadRelationCandidates={loadRelationCandidates} />
                 : null
-  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace}>{content}{builderOverlay}</AppShell>
+  const templateImportOverlay = templateImportPanel?.mode === 'hub'
+    ? <TemplateImportHub templates={templateImportPanel.templates} loading={templateImportPanel.loading} error={templateImportPanel.error} onRetry={() => { void openTemplateImportHub() }} onInstall={installTemplate} onInstallError={() => setTemplateImportPanel((current) => current?.mode === 'hub' ? { ...current, loading: false, error: '安装模板失败，请稍后重试。' } : current)} onClose={closeTemplateImport} />
+    : templateImportPanel?.mode === 'save-template'
+      ? <SaveTemplatePanel base={templateImportPanel.base} onSave={(values) => saveBaseAsTemplate(templateImportPanel.base, values)} onClose={closeTemplateImport} />
+      : null
+  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace}>{content}{builderOverlay}{templateImportOverlay}</AppShell>
 }

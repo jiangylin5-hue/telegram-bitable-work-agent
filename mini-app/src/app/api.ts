@@ -524,6 +524,14 @@ export function toSafeViewError(error: unknown): string {
 export const api = {
   bootstrap: (init?: RequestInit) => getJson<BootstrapResponse>('/mini-app/bootstrap', init),
   workspaceHome: (workspaceId: string, init?: RequestInit) => getJson<WorkspaceHome>(`/workspaces/${workspaceId}/home`, init),
+  workspaceBases: async (workspaceId: string, init?: RequestInit): Promise<{ bases: BaseSummary[] }> => {
+    const response = jsonRecord(await getJson<unknown>(`/workspaces/${encodeURIComponent(workspaceId)}/bases`, init))
+    if (!Array.isArray(response.bases)) throw new Error('Invalid import response')
+    return { bases: response.bases.map((item) => {
+      const base = jsonRecord(item)
+      return { id: stringValue(base.id), name: stringValue(base.name), source_type: stringValue(base.source_type), ...(typeof base.status === 'string' ? { status: base.status } : {}) }
+    }) }
+  },
   listTemplates: async (init?: RequestInit): Promise<TemplateSummary[]> => {
     const response = jsonRecord(await getJson<unknown>('/templates', init))
     if (!Array.isArray(response.templates)) throw new Error('Invalid import response')

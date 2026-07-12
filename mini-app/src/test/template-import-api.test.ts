@@ -52,3 +52,15 @@ test('rejects an import preview that includes a non-scalar mapping field', async
 
   await expect(api.importJob('import-1')).rejects.toThrow('Invalid import response')
 })
+
+test('uses the existing safe Base list before opening an installation receipt', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(json({
+    bases: [{ id: 'base-installed', name: 'CRM', source_type: 'template', status: 'active', settings: { hidden: true } }],
+  }))
+  vi.stubGlobal('fetch', fetchMock)
+
+  await expect(api.workspaceBases('workspace-1')).resolves.toEqual({
+    bases: [{ id: 'base-installed', name: 'CRM', source_type: 'template', status: 'active' }],
+  })
+  expect(fetchMock).toHaveBeenCalledWith('/workspaces/workspace-1/bases', expect.any(Object))
+})
