@@ -49,6 +49,7 @@ from app.models.stage06_templates import (
     PlatformTemplate,
     TemplateInstallation,
 )
+from app.models.stage07_telegram import Stage07TelegramDeepLink
 from app.models.telegram import (
     Message,
     TelegramCustomerBinding,
@@ -99,6 +100,7 @@ __all__ = [
     "RecordLink",
     "Stage06TelegramBinding",
     "Stage06IdempotencyRecord",
+    "Stage07TelegramDeepLink",
     "TableView",
     "TelegramCustomerBinding",
     "TelegramIdentity",

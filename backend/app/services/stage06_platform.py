@@ -31,6 +31,7 @@ from app.models.stage06_templates import (
     TemplateInstallation,
 )
 from app.models.stage06_hardening import Stage06IdempotencyRecord
+from app.models.stage07_telegram import Stage07TelegramDeepLink
 from app.schemas.stage06_platform import (
     ViewInitializationRequest,
     ViewMemberCommand,
@@ -379,6 +380,16 @@ class Stage06PlatformUnitOfWork(Protocol):
     def list_telegram_bindings(self) -> list[Stage06TelegramBinding]:
         pass
 
+    def add_telegram_deep_link(self, link: Stage07TelegramDeepLink) -> None:
+        pass
+
+    def get_active_telegram_deep_link_by_token_hash(
+        self,
+        token_hash: str,
+        now,
+    ) -> Stage07TelegramDeepLink | None:
+        pass
+
     def get_idempotency_record(
         self,
         workspace_id: UUID,
@@ -413,6 +424,7 @@ class InMemoryStage06PlatformUnitOfWork:
     notification_requests: list[NotificationRequest] = field(default_factory=list)
     agent_runs: list[AgentRun] = field(default_factory=list)
     telegram_bindings: list[Stage06TelegramBinding] = field(default_factory=list)
+    telegram_deep_links: list[Stage07TelegramDeepLink] = field(default_factory=list)
     audit_events: list[OpsAuditEvent] = field(default_factory=list)
     idempotency_records: list[Stage06IdempotencyRecord] = field(default_factory=list)
 
@@ -653,6 +665,25 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def list_telegram_bindings(self) -> list[Stage06TelegramBinding]:
         return list(self.telegram_bindings)
+
+    def add_telegram_deep_link(self, link: Stage07TelegramDeepLink) -> None:
+        self.telegram_deep_links.append(link)
+
+    def get_active_telegram_deep_link_by_token_hash(
+        self,
+        token_hash: str,
+        now,
+    ) -> Stage07TelegramDeepLink | None:
+        return next(
+            (
+                link
+                for link in self.telegram_deep_links
+                if link.token_hash == token_hash
+                and link.status == "active"
+                and link.expires_at > now
+            ),
+            None,
+        )
 
     def get_idempotency_record(
         self,
@@ -988,6 +1019,22 @@ class SqlAlchemyStage06PlatformUnitOfWork:
 
     def list_telegram_bindings(self) -> list[Stage06TelegramBinding]:
         return list(self.session.scalars(select(Stage06TelegramBinding)))
+
+    def add_telegram_deep_link(self, link: Stage07TelegramDeepLink) -> None:
+        self.session.add(link)
+
+    def get_active_telegram_deep_link_by_token_hash(
+        self,
+        token_hash: str,
+        now,
+    ) -> Stage07TelegramDeepLink | None:
+        return self.session.scalar(
+            select(Stage07TelegramDeepLink).where(
+                Stage07TelegramDeepLink.token_hash == token_hash,
+                Stage07TelegramDeepLink.status == "active",
+                Stage07TelegramDeepLink.expires_at > now,
+            )
+        )
 
     def get_idempotency_record(
         self,
