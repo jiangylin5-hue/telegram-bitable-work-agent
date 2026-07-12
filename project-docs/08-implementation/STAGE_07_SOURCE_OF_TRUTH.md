@@ -6,6 +6,8 @@
 - Scope: Telegram Mini App and desktop browser UI for the generic workspace, Bitable and digital-employee platform
 - Current Progress: 2026-07-12 Package 1 and bounded Package 2 paths through F2 are `implemented-local`. V1-1 through V1-15 are `partial-local`: real FastAPI + disposable PostgreSQL Browser evidence proves owner/editor/viewer Canvas separation, allowed Base/Table/Field intersection, hidden-field omission, numeric lookup projection and one owner Record Detail relation edit through the existing versioned PATCH with authoritative reread. It found and repaired a viewer create-entry visibility defect by reusing the existing server-derived workspace role with an unknown-role fail-closed UI path; no API/schema/capability/permission-table change was made. The user selected a complete existing-contract template/import package; its design, BDD, SDD, module and complex-index documents are now `specified-awaiting-review`, with no code or contract expansion. Real stale/type-invalid states, numeric-filter mutation, Telegram, staging and production remain unaccepted. Measured `EXPLAIN` retains both optional non-unique access/list indexes as deferred; no index migration exists. Package 3 and Package 4 remain incomplete or contract-gated.
 
+- Template/Import Package Update: the approved existing-contract package is `implemented-local`. Typed template/import transport, shelf/install, draft-template save, server preview, scalar mapping and explicit commit have fresh component/API, build, real disposable PostgreSQL and focused Browser evidence. Browser CSV/XLSX upload is explicitly unaccepted because the available automation API cannot choose a file. No schema/API/permission/dependency expansion was made; Telegram, staging and production remain unaccepted. See [local evidence](evidence/stage07-template-import-ui.md).
+
 ## 1. Stage Goal
 
 Stage07 makes the Stage06 backend-ready platform usable through one responsive React/Vite application. It must make the table system, permission system, record-change drafts and audits visible and operable without changing their authority boundaries.
@@ -50,14 +52,15 @@ verified identity -> workspace member -> permission-filtered UI
 22. [Stage07 Template And Import Work Surface](modules/STAGE_07_TEMPLATE_IMPORT_WORK_SURFACE.md)
 23. [Stage07 Template And Import Complex Feature Index](STAGE_07_TEMPLATE_IMPORT_COMPLEX_FEATURE_INDEX.md)
 24. [Stage07 Template And Import Implementation Plan](../../docs/superpowers/plans/2026-07-12-stage07-template-import-implementation.md)
-25. [Stage 07 SDD](STAGE_07_SDD.md)
-26. [Stage 07 API Data Security Contract](STAGE_07_API_DATA_SECURITY_CONTRACT.md)
-27. [Stage 07 BDD And Acceptance](STAGE_07_BDD_AND_ACCEPTANCE.md)
-28. [Stage 07 Module Index](STAGE_07_MODULE_INDEX.md)
-29. [Stage 07 Test Plan](STAGE_07_TEST_PLAN.md)
-30. [Stage 07 Risk Register](STAGE_07_RISK_REGISTER.md)
-31. [Stage 07 Implementation Plan](STAGE_07_IMPLEMENTATION_PLAN.md)
-32. [Stage 07 Acceptance Checklist](STAGE_07_ACCEPTANCE_CHECKLIST.md)
+25. [Stage07 Template And Import Local Evidence](evidence/stage07-template-import-ui.md)
+26. [Stage 07 SDD](STAGE_07_SDD.md)
+27. [Stage 07 API Data Security Contract](STAGE_07_API_DATA_SECURITY_CONTRACT.md)
+28. [Stage 07 BDD And Acceptance](STAGE_07_BDD_AND_ACCEPTANCE.md)
+29. [Stage 07 Module Index](STAGE_07_MODULE_INDEX.md)
+30. [Stage 07 Test Plan](STAGE_07_TEST_PLAN.md)
+31. [Stage 07 Risk Register](STAGE_07_RISK_REGISTER.md)
+32. [Stage 07 Implementation Plan](STAGE_07_IMPLEMENTATION_PLAN.md)
+33. [Stage 07 Acceptance Checklist](STAGE_07_ACCEPTANCE_CHECKLIST.md)
 33. [Stage 07 Progress](STAGE_07_PROGRESS.md)
 34. [Stage 07 Requirement Traceability Audit](STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md)
 35. [Technical Decision 001: Protected Query State](STAGE_07_TECHNICAL_DECISION_001_PROTECTED_QUERY_STATE.md)

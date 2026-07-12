@@ -159,14 +159,18 @@ Both invoke the same typed existing endpoints and retain loading, empty, denied,
 
 | ID | Requirement | Minimum evidence | Current status |
 | --- | --- | --- | --- |
-| TI-A01 | safe template metadata and capability-gated entry | API transport/component tests | specified-awaiting-review |
-| TI-A02 | install idempotency and Base reread | API/client lifecycle + PostgreSQL replay | specified-awaiting-review |
-| TI-A03 | safe custom template save | API/component tests | specified-awaiting-review |
-| TI-A04 | CSV/XLSX intake and bounded safe preview | API/client tests + Browser main path | specified-awaiting-review |
-| TI-A05 | scalar mapping and validation/allowlist | unit/component tests | specified-awaiting-review |
-| TI-A06 | explicit commit, rollback/replay and navigation reread | PostgreSQL/client lifecycle + Browser main path | specified-awaiting-review |
-| TI-A07 | denial/scope cancellation/no content retention | application/transport negative tests | specified-awaiting-review |
-| TI-A08 | desktop/mobile reachability | four-width Browser evidence | specified-awaiting-review |
+| TI-A01 | safe template metadata and capability-gated entry | API transport/component tests | implemented-local |
+| TI-A02 | install idempotency and Base reread | API/client lifecycle + PostgreSQL replay | implemented-local |
+| TI-A03 | safe custom template save | API/component tests | implemented-local |
+| TI-A04 | CSV/XLSX intake and bounded safe preview | API/client tests + Browser main path | implemented-local; Browser file path unaccepted |
+| TI-A05 | scalar mapping and validation/allowlist | unit/component tests | implemented-local |
+| TI-A06 | explicit commit, rollback/replay and navigation reread | PostgreSQL/client lifecycle + Browser main path | implemented-local; Browser file path unaccepted |
+| TI-A07 | denial/scope cancellation/no content retention | application/transport negative tests | implemented-local |
+| TI-A08 | desktop/mobile reachability | four-width Browser evidence | partial-local; in-Base dialog checked, four widths not rerun |
+
+### 2026-07-12 Local Acceptance Record
+
+Focused Mini App tests passed `7 files / 14 tests`; selected backend unit tests passed `22`; the real disposable PostgreSQL integration suite passed `6`; and the production build passed. The real local Browser installed official CRM and reached the in-Base import dialog with console `error`/`warn` `[]`. It cannot choose a local file in this environment, therefore no Browser CSV/XLSX preview or commit pass is claimed. The package has no schema/API/permission expansion and is not Stage07, Telegram, staging or production completion. Exact evidence: `evidence/stage07-template-import-ui.md`.
 
 ## 5. Prohibited Claims
 

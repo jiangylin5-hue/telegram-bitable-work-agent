@@ -91,3 +91,16 @@
 ## 3. Completion Rule
 
 No visual pass substitutes for authorization/contract tests. No mocked UI pass substitutes for the approved Telegram deep-link smoke. Test artifacts must not contain raw hidden fields, prompts, memory or Telegram text.
+
+## 4. Template/Import Package Actual Run (2026-07-12)
+
+| Layer | Command / method | Result |
+| --- | --- | --- |
+| Mini App focused | `npm.cmd test -- --run` with 7 template/import files | `7 files / 14 tests passed` |
+| Mini App build | `npm.cmd run build` | passed |
+| Backend focused | five template/import/idempotency/authorization unit files | `22 passed` |
+| Disposable PostgreSQL | `DATABASE_URL=$env:STAGE06_LOCAL_DATABASE_URL; python -m pytest -q tests/integration/test_stage06_postgres_security.py` | `6 passed` |
+| Migration smoke | `python scripts/stage06_local_postgres_migration_smoke.py` | passed at `20260711_0022` |
+| Browser | built client + temporary same-origin proxy + real local FastAPI/PostgreSQL | CRM install/reread/close and in-Base import entry observed; console error/warn `[]` |
+
+The existing integration file has no `postgres` marker, so the direct file command above is the valid PostgreSQL command; `-m postgres` would deselect it. The Browser cannot choose a local file in this environment. Do not record a Browser upload/preview/commit pass; component/API tests are the actual coverage for that flow.

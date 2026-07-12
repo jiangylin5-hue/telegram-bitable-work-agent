@@ -137,3 +137,14 @@ This table closes only F2-A01 through F2-A10. Each item remains subject to the g
 Stage07 acceptance is **not proven**. The following required exit items currently lack evidence: complete Package 2, all Package 3, all Package 4, protected-state revocation/expiry handling, four-width visual QA, approved Telegram smoke and requirement-by-requirement automated/negative tests.
 
 No Stage07 document, commit or test result may be used to claim stage completion until this audit's incomplete and contract-gated rows have explicit implementation/evidence or a revised, user-approved scope decision.
+
+## 11. Template/Import Package Reconciliation (2026-07-12)
+
+| Requirement | Status | Fresh evidence | Remaining acceptance limit |
+| --- | --- | --- | --- |
+| Safe template list/install/save with authoritative reread | `implemented-local` | Mini App lifecycle tests; real Browser CRM install against local FastAPI/PostgreSQL; shelf closes after receipt Base opens | No staging/production/Telegram proof. |
+| CSV/XLSX server preview, scalar mapping and explicit idempotent commit | `implemented-local` | Focused adapter/flow/API tests; selected backend `22 passed`; PostgreSQL `6 passed` | Browser upload/preview/commit is not claimed because this Browser API cannot choose a file. |
+| No manifest/raw error/file leak into client visible state | `implemented-local` | Safe parser/query/flow tests and component assertions | No telemetry SDK is present; preserve the boundary if one is introduced. |
+| Existing-contract persistence and idempotency correctness | `implemented-local` | PostgreSQL regressions prove example-record template install and two distinct keys for identical CRM payloads | This does not prove remote deployment. |
+
+This package changes no schema, API route, permission model, dependency, template publication/share/version/delete semantics, multi-file import, non-scalar mapping, or Stage07 exit gate. See `evidence/stage07-template-import-ui.md`.
