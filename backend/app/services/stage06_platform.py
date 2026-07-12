@@ -91,6 +91,10 @@ RELATION_LABEL_FIELD_TYPES = frozenset(
 STAGE06_DEFAULT_WRITE_ROLES = frozenset(
     {"admin", "owner", "manager", "operator", "builder"}
 )
+GOVERNANCE_FIXED_ROLES = frozenset(
+    {"owner", "admin", "builder", "operator", "viewer"}
+)
+GOVERNANCE_FIELD_PERMISSION_MODES = frozenset({"hidden", "read", "write"})
 CREATE_FORM_SCALAR_FIELD_TYPES = frozenset(
     {
         "text",
@@ -180,6 +184,16 @@ class V1ViewAccess:
     can_replace_members: bool
 
 
+@dataclass(frozen=True)
+class GovernanceEditableMember:
+    id: UUID
+    user_id: str
+    role: str
+    status: str
+    version: int
+    assignable_roles: list[str]
+
+
 class Stage06PlatformUnitOfWork(Protocol):
     def flush(self) -> None:
         pass
@@ -200,6 +214,12 @@ class Stage06PlatformUnitOfWork(Protocol):
         pass
 
     def get_workspace_member(self, member_id: UUID) -> WorkspaceMember | None:
+        pass
+
+    def lock_workspace_member_for_mutation(
+        self,
+        member_id: UUID,
+    ) -> WorkspaceMember | None:
         pass
 
     def add_base(self, base: BitableBase) -> None:
@@ -227,6 +247,9 @@ class Stage06PlatformUnitOfWork(Protocol):
         pass
 
     def get_field(self, field_id: UUID) -> PlatformField | None:
+        pass
+
+    def lock_field_for_mutation(self, field_id: UUID) -> PlatformField | None:
         pass
 
     def list_fields(self, table_id: UUID) -> list[PlatformField]:
@@ -405,6 +428,12 @@ class InMemoryStage06PlatformUnitOfWork:
     def get_workspace_member(self, member_id: UUID) -> WorkspaceMember | None:
         return _find_by_id(self.workspace_members, member_id)
 
+    def lock_workspace_member_for_mutation(
+        self,
+        member_id: UUID,
+    ) -> WorkspaceMember | None:
+        return self.get_workspace_member(member_id)
+
     def add_base(self, base: BitableBase) -> None:
         self.bases.append(base)
 
@@ -431,6 +460,9 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def get_field(self, field_id: UUID) -> PlatformField | None:
         return _find_by_id(self.fields, field_id)
+
+    def lock_field_for_mutation(self, field_id: UUID) -> PlatformField | None:
+        return self.get_field(field_id)
 
     def list_fields(self, table_id: UUID) -> list[PlatformField]:
         return sorted(
@@ -630,6 +662,16 @@ class SqlAlchemyStage06PlatformUnitOfWork:
     def get_workspace_member(self, member_id: UUID) -> WorkspaceMember | None:
         return self.session.get(WorkspaceMember, member_id)
 
+    def lock_workspace_member_for_mutation(
+        self,
+        member_id: UUID,
+    ) -> WorkspaceMember | None:
+        return self.session.scalar(
+            select(WorkspaceMember)
+            .where(WorkspaceMember.id == member_id)
+            .with_for_update()
+        )
+
     def add_base(self, base: BitableBase) -> None:
         self.session.add(base)
         self.session.flush()
@@ -670,6 +712,13 @@ class SqlAlchemyStage06PlatformUnitOfWork:
 
     def get_field(self, field_id: UUID) -> PlatformField | None:
         return self.session.get(PlatformField, field_id)
+
+    def lock_field_for_mutation(self, field_id: UUID) -> PlatformField | None:
+        return self.session.scalar(
+            select(PlatformField)
+            .where(PlatformField.id == field_id)
+            .with_for_update()
+        )
 
     def list_fields(self, table_id: UUID) -> list[PlatformField]:
         return list(
@@ -1654,6 +1703,127 @@ def list_workspace_members(
 ) -> list[WorkspaceMember]:
     _require_exists(uow.get_workspace(workspace_id), "workspace_not_found")
     return uow.list_workspace_members(workspace_id)
+
+
+def list_governance_editable_members(
+    uow: Stage06PlatformUnitOfWork,
+    workspace_id: UUID,
+    *,
+    actor: Actor,
+) -> list[GovernanceEditableMember]:
+    _require_exists(uow.get_workspace(workspace_id), "workspace_not_found")
+    return [
+        GovernanceEditableMember(
+            id=member.id,
+            user_id=member.user_id,
+            role=member.role,
+            status=member.status,
+            version=_workspace_member_version(member),
+            assignable_roles=_assignable_member_roles(actor, member),
+        )
+        for member in uow.list_workspace_members(workspace_id)
+        if member.status == "active" and _assignable_member_roles(actor, member)
+    ]
+
+
+def change_workspace_member_role(
+    uow: Stage06PlatformUnitOfWork,
+    workspace_id: UUID,
+    member_id: UUID,
+    *,
+    role: str,
+    expected_version: int,
+    actor: Actor,
+) -> WorkspaceMember:
+    member = _require_exists(
+        uow.lock_workspace_member_for_mutation(member_id),
+        "workspace_member_not_found",
+    )
+    if member.workspace_id != workspace_id:
+        raise PlatformValidationError("resource_scope_mismatch", "workspace_member")
+    if member.status != "active":
+        raise PlatformValidationError("governance_member_inactive", "workspace_member")
+    allowed_roles = _assignable_member_roles(actor, member)
+    if role not in allowed_roles:
+        raise PlatformValidationError("governance_role_change_forbidden", "role")
+    current_version = _workspace_member_version(member)
+    if expected_version != current_version:
+        raise PlatformValidationError("governance_revision_conflict", "workspace_member")
+    before_role = member.role
+    member.role = role
+    member.version = current_version + 1
+    _record_stage06_audit(
+        uow,
+        actor=actor,
+        event_type="stage07.workspace_member_role_changed",
+        entity_type="workspace_member",
+        entity_id=member.id,
+        before_state={"role": before_role, "version": current_version},
+        after_state={"role": member.role, "version": member.version},
+    )
+    return member
+
+
+def list_governance_field_permissions(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID,
+) -> list[dict[str, object]]:
+    _require_exists(uow.get_table(table_id), "table_not_found")
+    return [
+        {
+            "id": str(field.id),
+            "key": field.key,
+            "label": field.name,
+            "field_type": field.field_type,
+            "policy": governance_field_permission_policy(field),
+            "permission_version": _field_permission_version(field),
+        }
+        for field in uow.list_fields(table_id)
+        if field.status == "active"
+    ]
+
+
+def replace_field_permission_policy(
+    uow: Stage06PlatformUnitOfWork,
+    table_id: UUID,
+    field_id: UUID,
+    *,
+    policy: dict[str, str],
+    expected_permission_version: int,
+    actor: Actor,
+) -> PlatformField:
+    field = _require_exists(
+        uow.lock_field_for_mutation(field_id),
+        "field_not_found",
+    )
+    if field.table_id != table_id:
+        raise PlatformValidationError("resource_scope_mismatch", "field")
+    if field.status != "active":
+        raise PlatformValidationError("field_not_found", "field")
+    _require_governance_field_permission_actor(actor)
+    normalized = normalize_governance_field_permission_policy(policy)
+    current_version = _field_permission_version(field)
+    if expected_permission_version != current_version:
+        raise PlatformValidationError("governance_revision_conflict", "field")
+    before_policy = governance_field_permission_policy(field)
+    field.permission_policy = normalized
+    field.permission_version = current_version + 1
+    _record_stage06_audit(
+        uow,
+        actor=actor,
+        event_type="stage07.field_permission_policy_replaced",
+        entity_type="field",
+        entity_id=field.id,
+        before_state={
+            "policy": before_policy,
+            "permission_version": current_version,
+        },
+        after_state={
+            "policy": normalized,
+            "permission_version": field.permission_version,
+        },
+    )
+    return field
 
 
 def read_base(
@@ -3390,6 +3560,73 @@ def safe_table_schema_field(field: PlatformField) -> dict[str, Any]:
         "options": _safe_field_options(field),
         "order_index": field.order_index,
     }
+
+
+def normalize_governance_field_permission_policy(
+    policy: dict[str, str],
+) -> dict[str, str]:
+    if set(policy) != GOVERNANCE_FIXED_ROLES:
+        raise PlatformValidationError("governance_field_policy_invalid", "role_keys")
+    normalized: dict[str, str] = {}
+    for role in sorted(GOVERNANCE_FIXED_ROLES):
+        mode = policy[role]
+        if mode not in GOVERNANCE_FIELD_PERMISSION_MODES:
+            raise PlatformValidationError("governance_field_policy_invalid", "mode")
+        normalized[role] = mode
+    if normalized["owner"] != "write":
+        raise PlatformValidationError("governance_field_owner_write_required", "owner")
+    return normalized
+
+
+def governance_field_permission_policy(field: PlatformField) -> dict[str, str]:
+    existing = field.permission_policy or {}
+    normalized: dict[str, str] = {}
+    for role in sorted(GOVERNANCE_FIXED_ROLES):
+        raw_mode = existing.get(role, existing.get("default"))
+        if raw_mode in {"hidden", "none"}:
+            normalized[role] = "hidden"
+        elif raw_mode in {"write", "admin", "owner", "*"} or raw_mode is True:
+            normalized[role] = "write"
+        elif raw_mode == "read":
+            normalized[role] = "read"
+        elif role in STAGE06_DEFAULT_WRITE_ROLES:
+            normalized[role] = "write"
+        else:
+            normalized[role] = "read"
+    normalized["owner"] = "write"
+    return normalized
+
+
+def _assignable_member_roles(
+    actor: Actor,
+    member: WorkspaceMember,
+) -> list[str]:
+    if actor.actor_type != "user" or member.user_id == actor.actor_id:
+        return []
+    if member.role == "owner":
+        return []
+    if actor.role == "owner":
+        return ["admin", "builder", "operator", "viewer"]
+    if actor.role == "admin" and member.role in {"builder", "operator", "viewer"}:
+        return ["builder", "operator", "viewer"]
+    return []
+
+
+def _workspace_member_version(member: WorkspaceMember) -> int:
+    return member.version if isinstance(member.version, int) and member.version >= 1 else 1
+
+
+def _field_permission_version(field: PlatformField) -> int:
+    return (
+        field.permission_version
+        if isinstance(field.permission_version, int) and field.permission_version >= 1
+        else 1
+    )
+
+
+def _require_governance_field_permission_actor(actor: Actor) -> None:
+    if actor.actor_type != "user" or actor.role not in {"owner", "admin"}:
+        raise PlatformValidationError("governance_field_policy_forbidden", "actor")
 
 
 def _can_actor_read_field(actor: Actor, field: PlatformField | None) -> bool:
