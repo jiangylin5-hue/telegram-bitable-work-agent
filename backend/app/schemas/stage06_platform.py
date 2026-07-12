@@ -37,6 +37,7 @@ class MiniAppWorkspaceCapabilitiesResponse(BaseModel):
     can_read_bases: bool
     can_manage_workspace: bool
     can_manage_schema: bool
+    can_manage_digital_employees: bool
     can_review_drafts: bool
 
 

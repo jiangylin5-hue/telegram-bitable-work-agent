@@ -51,6 +51,7 @@ def test_mini_app_bootstrap_only_returns_active_memberships_for_identity() -> No
                     "can_read_bases": True,
                     "can_manage_workspace": True,
                     "can_manage_schema": True,
+                    "can_manage_digital_employees": True,
                     "can_review_drafts": True,
                 },
             }

@@ -92,6 +92,11 @@ def _workspace_capabilities(role: str) -> dict[str, bool]:
         "can_read_bases": action_allowed_for_role(role, "base.read"),
         "can_manage_workspace": action_allowed_for_role(role, "member.read"),
         "can_manage_schema": action_allowed_for_role(role, "field.manage"),
+        "can_manage_digital_employees": action_allowed_for_role(
+            role,
+            "digital_employee.create",
+        )
+        or action_allowed_for_role(role, "digital_employee.update"),
         "can_review_drafts": action_allowed_for_role(
             role,
             "record_change_draft.confirm",
