@@ -20,7 +20,9 @@ _DROP_KEYS = {
 }
 _SAFE_KEYS = {
     "action",
+    "access_mode",
     "actor_type",
+    "allowed_actions",
     "base_id",
     "channel",
     "count",
@@ -30,6 +32,7 @@ _SAFE_KEYS = {
     "field_key",
     "field_keys",
     "import_job_id",
+    "member_count",
     "name",
     "order_index",
     "record_count",
@@ -39,10 +42,12 @@ _SAFE_KEYS = {
     "required",
     "status",
     "table_id",
+    "table_count",
     "template_id",
     "trace_id",
     "version",
     "view_id",
+    "view_count",
     "view_type",
     "workspace_id",
 }

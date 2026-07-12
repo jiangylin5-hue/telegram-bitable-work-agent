@@ -334,6 +334,12 @@ class Stage06PlatformUnitOfWork(Protocol):
     def get_digital_employee(self, employee_id: UUID) -> DigitalEmployee | None:
         pass
 
+    def lock_digital_employee_for_management(
+        self,
+        employee_id: UUID,
+    ) -> DigitalEmployee | None:
+        pass
+
     def list_digital_employees(self, base_id: UUID) -> list[DigitalEmployee]:
         pass
 
@@ -648,6 +654,12 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def get_digital_employee(self, employee_id: UUID) -> DigitalEmployee | None:
         return _find_by_id(self.digital_employees, employee_id)
+
+    def lock_digital_employee_for_management(
+        self,
+        employee_id: UUID,
+    ) -> DigitalEmployee | None:
+        return self.get_digital_employee(employee_id)
 
     def list_digital_employees(self, base_id: UUID) -> list[DigitalEmployee]:
         return [employee for employee in self.digital_employees if employee.base_id == base_id]
@@ -1056,6 +1068,16 @@ class SqlAlchemyStage06PlatformUnitOfWork:
 
     def get_digital_employee(self, employee_id: UUID) -> DigitalEmployee | None:
         return self.session.get(DigitalEmployee, employee_id)
+
+    def lock_digital_employee_for_management(
+        self,
+        employee_id: UUID,
+    ) -> DigitalEmployee | None:
+        return self.session.scalar(
+            select(DigitalEmployee)
+            .where(DigitalEmployee.id == employee_id)
+            .with_for_update()
+        )
 
     def list_digital_employees(self, base_id: UUID) -> list[DigitalEmployee]:
         return list(
