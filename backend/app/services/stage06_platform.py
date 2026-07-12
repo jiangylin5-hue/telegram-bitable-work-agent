@@ -387,6 +387,8 @@ class Stage06PlatformUnitOfWork(Protocol):
         self,
         token_hash: str,
         now,
+        *,
+        for_update: bool = False,
     ) -> Stage07TelegramDeepLink | None:
         pass
 
@@ -673,6 +675,8 @@ class InMemoryStage06PlatformUnitOfWork:
         self,
         token_hash: str,
         now,
+        *,
+        for_update: bool = False,
     ) -> Stage07TelegramDeepLink | None:
         return next(
             (
@@ -1027,13 +1031,18 @@ class SqlAlchemyStage06PlatformUnitOfWork:
         self,
         token_hash: str,
         now,
+        *,
+        for_update: bool = False,
     ) -> Stage07TelegramDeepLink | None:
+        query = select(Stage07TelegramDeepLink).where(
+            Stage07TelegramDeepLink.token_hash == token_hash,
+            Stage07TelegramDeepLink.status == "active",
+            Stage07TelegramDeepLink.expires_at > now,
+        )
+        if for_update:
+            query = query.with_for_update()
         return self.session.scalar(
-            select(Stage07TelegramDeepLink).where(
-                Stage07TelegramDeepLink.token_hash == token_hash,
-                Stage07TelegramDeepLink.status == "active",
-                Stage07TelegramDeepLink.expires_at > now,
-            )
+            query
         )
 
     def get_idempotency_record(

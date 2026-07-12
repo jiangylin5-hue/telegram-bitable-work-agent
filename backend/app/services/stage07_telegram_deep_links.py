@@ -111,6 +111,7 @@ def resolve_telegram_deep_link(
     link = uow.get_active_telegram_deep_link_by_token_hash(
         _hash_token(start_param),
         now,
+        for_update=True,
     )
     if link is None or link.subject_telegram_user_id != launch.telegram_user_id:
         return None
@@ -318,11 +319,11 @@ def _record_link_audit(
         event_type=event_type,
         entity_type="telegram_deep_link",
         entity_id=link.id,
-        after_state=sanitize_stage06_audit_state(
-            {
-                "outcome": outcome,
-                "destination_kind": link.destination_kind,
-                "destination_id": str(link.destination_id),
-            }
-        ),
+        after_state={
+            "outcome": outcome,
+            "destination_kind": link.destination_kind,
+            **sanitize_stage06_audit_state(
+                {"destination_id": str(link.destination_id)}
+            ),
+        },
     )

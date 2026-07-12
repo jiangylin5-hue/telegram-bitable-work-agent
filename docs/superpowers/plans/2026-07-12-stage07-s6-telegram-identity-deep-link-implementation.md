@@ -26,8 +26,8 @@
 ## Execution Status (2026-07-13)
 
 - Tasks 1–5 are implemented locally in commits `6826df8`, `a13e39d` and `ff7b89e`: launch validation, binding identity, migration/hash lookup, safe resolver and Mini App handoff are present.
-- Task 6 local evidence is partly complete: focused backend `44 passed`, disposable PostgreSQL `1 passed`, synthetic 4,096-row unique-index plan (`0.045 ms`, `shared hit=3`), focused Mini App `6 files / 38 tests`, production build and a synthetic safe-DTO Browser recovery/Record matrix at 1440/1280/430/390. The fixture was deleted and its port closed.
-- The remaining plan items are acceptance gaps, not unimplemented scope: exhaustive App failure/supersession permutations, concurrent revoke proof and S6.2 external authority. No delivery/configuration code is permitted until separately authorized.
+- Task 6 local evidence is partly complete: focused backend `49 passed`, disposable PostgreSQL `2 passed`, synthetic 4,096-row unique-index plan (`0.045 ms`, `shared hit=3`), focused Mini App `6 files / 38 tests`, production build and a synthetic safe-DTO Browser recovery/Record matrix at 1440/1280/430/390. The fixture was deleted and its port closed. A second local PostgreSQL session cannot revoke an active pointer while the Resolver has acquired its `FOR UPDATE` lock; the audit/zero-lookup/no-send inventory regressions are also covered.
+- The remaining plan items are acceptance gaps, not unimplemented scope: cross-workspace/field-policy reauthorization, independent persisted-audit-store inspection, exhaustive App failure/supersession permutations and S6.2 external authority. No delivery/configuration code is permitted until separately authorized.
 
 ## File Structure
 

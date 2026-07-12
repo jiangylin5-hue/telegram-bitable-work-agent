@@ -39,6 +39,14 @@ MIGRATION = (
     / "versions"
     / "20260712_0025_stage07_telegram_mini_app_deep_links.py"
 )
+S6_ROUTE = (
+    Path(__file__).resolve().parents[2]
+    / "app"
+    / "api"
+    / "routes"
+    / "stage07_telegram.py"
+)
+MINI_APP_ROOT = Path(__file__).resolve().parents[3] / "mini-app" / "src" / "app"
 
 
 def _deep_link(
@@ -324,3 +332,108 @@ def test_resolver_recovers_when_link_is_revoked_or_source_member_loses_access() 
     link.status = "active"
     uow.list_workspace_members(link.workspace_id)[0].status = "inactive"
     assert resolve_telegram_deep_link(uow, identity=identity, launch=launch, start_param=start_param, now=NOW) is None
+
+
+def test_resolver_locks_active_link_before_rechecking_authorization() -> None:
+    start_param = "opaqueToken_123456"
+    uow, _link = _resolver_fixture(hashlib.sha256(start_param.encode()).hexdigest())
+    now = datetime.now(UTC)
+    original_lookup = uow.get_active_telegram_deep_link_by_token_hash
+    lookup_options: list[bool] = []
+
+    def tracked_lookup(token_hash: str, now: datetime, *, for_update: bool = False):
+        lookup_options.append(for_update)
+        return original_lookup(token_hash, now)
+
+    uow.get_active_telegram_deep_link_by_token_hash = tracked_lookup  # type: ignore[method-assign]
+
+    destination = resolve_telegram_deep_link(
+        uow,
+        identity=Stage06RequestIdentity("member-1", "telegram_binding", "123"),
+        launch=ValidatedTelegramMiniAppLaunch("123", now, start_param, None, None),
+        start_param=start_param,
+        now=now,
+    )
+
+    assert destination is not None
+    assert lookup_options == [True]
+
+
+def test_resolver_mismatch_never_looks_up_a_token_or_writes_resolution_audit() -> None:
+    start_param = "opaqueToken_123456"
+    uow, _link = _resolver_fixture(hashlib.sha256(start_param.encode()).hexdigest())
+    lookup_calls = 0
+
+    def forbidden_lookup(*_args, **_kwargs):
+        nonlocal lookup_calls
+        lookup_calls += 1
+        raise AssertionError("mismatched start parameter must not query a token")
+
+    uow.get_active_telegram_deep_link_by_token_hash = forbidden_lookup  # type: ignore[method-assign]
+
+    destination = resolve_telegram_deep_link(
+        uow,
+        identity=Stage06RequestIdentity("member-1", "telegram_binding", "123"),
+        launch=ValidatedTelegramMiniAppLaunch("123", NOW, "otherOpaque_123456", None, None),
+        start_param=start_param,
+        now=NOW,
+    )
+
+    assert destination is None
+    assert lookup_calls == 0
+    assert not [
+        event
+        for event in uow.audit_events
+        if event.event_type == "stage07.telegram_deep_link_resolved"
+    ]
+
+
+def test_resolver_audit_retains_only_closed_destination_metadata() -> None:
+    start_param = "opaqueToken_123456"
+    uow, link = _resolver_fixture(hashlib.sha256(start_param.encode()).hexdigest())
+    now = datetime.now(UTC)
+    raw_init_data = "auth_date=secret&user=%7B%22first_name%22%3A%22Ada%22%7D"
+
+    destination = resolve_telegram_deep_link(
+        uow,
+        identity=Stage06RequestIdentity("member-1", "telegram_binding", "123"),
+        launch=ValidatedTelegramMiniAppLaunch("123", now, start_param, "private", "opaque-chat"),
+        start_param=start_param,
+        now=now,
+    )
+
+    assert destination is not None
+    event = next(
+        item
+        for item in uow.audit_events
+        if item.event_type == "stage07.telegram_deep_link_resolved"
+    )
+    assert event.after_state == {
+        "outcome": "resolved",
+        "destination_kind": "base",
+        "destination_id": str(link.destination_id),
+    }
+    serialized = repr(event)
+    for forbidden in (start_param, raw_init_data, "Ada", "opaque-chat", "private"):
+        assert forbidden not in serialized
+
+
+def test_s6_public_surface_has_no_mint_send_or_browser_persistence_entry() -> None:
+    route_source = S6_ROUTE.read_text(encoding="utf-8")
+    assert route_source.count("@router.post(") == 1
+    assert '"/mini-app/telegram/deep-links/resolve"' in route_source
+    for forbidden in ("mint_telegram_deep_link", "TelegramBotClient", "send_message", "sendMessage"):
+        assert forbidden not in route_source
+
+    frontend_sources = "\n".join(
+        (MINI_APP_ROOT / name).read_text(encoding="utf-8")
+        for name in ("App.tsx", "api.ts", "telegram-mini-app.ts", "protectedQuery.ts")
+    )
+    for forbidden in (
+        "sendData",
+        "answerWebAppQuery",
+        "localStorage",
+        "sessionStorage",
+        "persistQueryClient",
+    ):
+        assert forbidden not in frontend_sources

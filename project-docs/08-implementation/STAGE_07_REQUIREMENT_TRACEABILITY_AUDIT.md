@@ -8,7 +8,7 @@
 
 - S5 update: TD005 Option A is approved for one bounded contact/context/draft adapter over existing Stage06 runtime. It is `implementation-in-progress`; broader Package 4/S6 remains contract-gated.
 
-- S6 update: TD007 Option A S6.1 is `partial-local`. It now has HMAC/freshness validation, unique active binding/member identity, hash-only expiring pointer storage, resolver-only API, client memory/header/handoff, local/disposable PostgreSQL and synthetic 1440/1280/430/390 Browser recovery/Record evidence. The independent exhaustive failure matrix and real Telegram delivery/smoke remain pending.
+- S6 update: TD007 Option A S6.1 is `partial-local`. It now has HMAC/freshness validation, unique active binding/member identity, hash-only expiring pointer storage, resolver-only API, client memory/header/handoff, local/disposable PostgreSQL and synthetic 1440/1280/430/390 Browser recovery/Record evidence. The Resolver holds a `FOR UPDATE` pointer lock through its route transaction; a local PostgreSQL concurrent revoke is blocked, and zero-lookup/audit/no-send source regressions are covered. Cross-workspace/field-policy, persisted-audit-store and exhaustive client failure/supersession matrices plus real Telegram delivery/smoke remain pending.
 
 ## 1. Purpose
 
@@ -57,7 +57,7 @@ For every requirement the audit records the source, current evidence, status and
 | Workspace switch removes old protected model | SDD §3; App Shell module | `partial-local` | `protectedQuery.ts` has user/workspace-prefixed keys and cancellation/removal; `App.tsx` clears the old scope before target Home, invalidates request generations on session expiry and observes that latch in direct record mutations; Base/view/record/cursor queries consume cancellation signals. Application tests and a disposable browser run prove old reads or a delayed PATCH cannot restore previous workspace state. | Full real revocation/expiry integration coverage remains incomplete. |
 | Desktop/mobile navigation derives from server capability | Source §5; BDD 1/2 | `partial-local` | management entries conditionally render from `capabilities` | Primary links are presentation anchors; Bases/Bots/More routes and management route behavior are incomplete. |
 | Loading, denied and network states | Source §5; SDD §8 | `partial-local` | `App.tsx` loading/denied/error branches | No density-matched skeleton, retry, expired-session recovery or 401 cache purge. |
-| Safe deep-link resolver | TD007; S6 SDD/BDD | `partial-local` | `stage07_telegram_mini_app_identity`, `stage07_telegram_deep_links`, migration `20260712_0025`, resolver route, focused backend `44 passed`, PostgreSQL `1 passed`, Mini App resolver/recovery tests/build and synthetic Browser recovery/Record matrix at 1440/1280/430/390 | Exhaustive App failure/supersession cases and real Telegram evidence remain open. |
+| Safe deep-link resolver | TD007; S6 SDD/BDD | `partial-local` | `stage07_telegram_mini_app_identity`, `stage07_telegram_deep_links`, migration `20260712_0025`, Resolver `FOR UPDATE` lock, focused backend `49 passed`, PostgreSQL `2 passed`, closed audit/zero-lookup/no-send regressions, Mini App resolver/recovery tests/build and synthetic Browser recovery/Record matrix at 1440/1280/430/390 | Cross-workspace/field-policy, independent persisted-audit-store, exhaustive App failure/supersession cases and real Telegram evidence remain open. |
 
 ## 5. Package 2: Workspace And Bitable Work Surface
 
