@@ -12,6 +12,19 @@
 - [ ] Workspace switch/session expiry/revocation clear protected client state.
 - [ ] Navigation is derived from server capability data and has desktop/mobile equivalents.
 
+### Existing-Contract Home/Bases Navigation Closure
+
+These checks cover only the existing-contract Home/Bases closure. They do not accept Bot/queue/management navigation, browser visual QA, Telegram, staging, production or Stage07 as a whole.
+
+- [x] Desktop and mobile Home/Base controls invoke one memory-only route callback and expose `aria-current="page"` only for the active route.
+- [x] The directory consumes only the existing strict `api.workspaceBases` `BaseSummary[]` projection and does not render Base IDs, statuses, tables, views, records or a raw error body.
+- [x] Selecting a visible row reuses existing `openBase`; later Canvas authorization remains server-owned.
+- [x] Empty scope has only a fixed Home action; `503` is fixed/retryable; `401`/`403` fail closed; `404` returns Home without a fabricated directory.
+- [x] The directory key is user/workspace-scoped as `navigation/bases`; a delayed old-workspace result is discarded after a switch.
+- [x] No API, schema, migration, permission, dependency, URL/storage, Bot, queue, assistant, knowledge or management expansion was made.
+- [x] Local evidence: `4` focused Mini App files / `18` tests and one TypeScript/Vite production build pass.
+- [ ] User-controlled visual review of this route. Browser control is intentionally not performed.
+
 ## Workspace And Bitable
 
 - [ ] Home queue rows resolve to authorized durable destinations.

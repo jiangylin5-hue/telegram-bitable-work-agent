@@ -2,9 +2,9 @@
 
 ## Status
 
-- Status: approved design, detailed implementation specification pending execution.
+- Status: implemented-local; user-controlled visual review remains pending.
 - Scope: Home/Bases navigation and safe Base directory over existing contracts only.
-- Current Progress: `AppShell`, `api.workspaceBases`, protected query keys and `openBase` already exist. This package makes their connection explicit; no runtime change is claimed in this document.
+- Current Progress: `AppShell` Home/Base controls, the memory-only App route, the scoped `navigation/bases` query, `BaseDirectory` and existing `openBase` are connected. Local proof is `4` focused Mini App files / `18` tests and `npm.cmd run build`; no browser-control, Telegram, provider, staging or production proof is claimed.
 
 ## BDD Scenarios
 
@@ -73,13 +73,13 @@ Then this package adds no team Bot directory, personal assistant, knowledge, mem
 
 | ID | Requirement | Required evidence | Status |
 | --- | --- | --- | --- |
-| NC-A01 | desktop/mobile Home and Bases controls are real accessible route actions | component and App flow tests | planned |
-| NC-A02 | directory uses only `api.workspaceBases` safe projection | parser/API and component negative tests | planned |
-| NC-A03 | selection delegates to existing `openBase` and no local table/view is invented | App flow request-order test | planned |
-| NC-A04 | empty/retryable/401/403/404 state matrix fails closed | App flow delayed/error tests | planned |
-| NC-A05 | workspace replacement/unmount discards old result | delayed promise and cancellation regression | planned |
-| NC-A06 | no Bot/queue/management/contract expansion | source/API inventory and review | planned |
-| NC-A07 | Mini App build includes the route without type or bundle failure | `npm.cmd run build` | planned |
+| NC-A01 | desktop/mobile Home and Bases controls are real accessible route actions | `app-shell-navigation.test.tsx`, `workspace-navigation.test.tsx`; active control has `aria-current="page"` | implemented-local |
+| NC-A02 | directory uses only `api.workspaceBases` safe projection | existing strict `api.workspaceBases` parser; `base-directory.test.tsx` asserts no Base ID rendering | implemented-local |
+| NC-A03 | selection delegates to existing `openBase` and no local table/view is invented | App flow activates exact `BaseSummary` row then observes only existing `/bases/{id}/tables` handoff | implemented-local |
+| NC-A04 | empty/retryable/401/403/404 state matrix fails closed | focused flow covers empty, `503` retry/no raw detail, `401`, `403`, `404` Home recovery and fixed component states | implemented-local |
+| NC-A05 | workspace replacement/unmount discards old result | delayed Workspace A response after Workspace B switch cannot render its Base; unmount remains a normal React lifecycle boundary and has no separate manual UI proof | partial-local |
+| NC-A06 | no Bot/queue/management/contract expansion | changed-file/API inventory: no backend, schema, permission, URL, storage or Bot/queue change | implemented-local |
+| NC-A07 | Mini App build includes the route without type or bundle failure | `npm.cmd run build` passed | implemented-local |
 
 ## Non-Goals
 
@@ -88,3 +88,9 @@ Then this package adds no team Bot directory, personal assistant, knowledge, mem
 - URL routing, browser persistence, generic search and telemetry.
 - New backend API/schema/permission/dependency work.
 - Browser-controlled visual acceptance, external provider, Telegram, staging or production evidence.
+
+## Local Evidence Record
+
+- Focused command: `npm.cmd test -- --run src/test/protected-query-state.test.ts src/test/base-directory.test.tsx src/test/app-shell-navigation.test.tsx src/test/workspace-navigation.test.tsx` — `4` files / `18` tests passed.
+- Build command: `npm.cmd run build` — TypeScript and Vite production build passed.
+- Not performed: browser control, user browser observation, external API invocation, database migration, Telegram configuration/send, provider call or deployment.

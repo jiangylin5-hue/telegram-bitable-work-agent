@@ -2,12 +2,12 @@
 
 ## Status
 
-- Status: approved implementation index.
+- Status: implemented-local index; manual visual acceptance remains pending.
 - Scope: the stateful boundaries that make a simple Base directory security-sensitive.
 
 | Feature | Complexity source | Invariant | Failure evidence |
 | --- | --- | --- | --- |
-| user/workspace-scoped directory cache | delayed async reads can cross a workspace boundary | key includes verified `userId` + `workspaceId`; old scope is removed | delayed Workspace A response never renders in Workspace B |
+| user/workspace-scoped directory cache | delayed async reads can cross a workspace boundary | `navigationKeys.bases` includes verified `userId` + `workspaceId`; old scope is removed | delayed Workspace A response never renders in Workspace B |
 | route and Canvas interaction | navigation change can race an existing canvas/open request | Bases has no local table/view selection; `openBase` remains authoritative | selection request order starts only after exact Base row action |
 | fixed error presentation | raw response can disclose resource existence/details | only known state copy is rendered | 401/403/404/5xx body text absent from DOM |
 | empty Base scope | UI may invent a create or sample resource | permitted empty response has no action beyond Home | no Base row/create/queue/Bot control appears |
@@ -25,3 +25,7 @@ No persistence structure, database index, migration or browser storage is introd
 - Existing `clearProtectedWorkspace`, `denyInvalidSession` and `denyWorkspace` behavior.
 - Focused Mini App tests and production build.
 - User-controlled manual UI verification remains separate and pending.
+
+## Local Verification Record
+
+`src/test/protected-query-state.test.ts`, `src/test/base-directory.test.tsx`, `src/test/app-shell-navigation.test.tsx` and `src/test/workspace-navigation.test.tsx` passed with `18` tests. `npm.cmd run build` passed. This records code-level local evidence only; it does not establish an observed Telegram Mini App, browser visual result, deployment or whole-Stage07 acceptance.

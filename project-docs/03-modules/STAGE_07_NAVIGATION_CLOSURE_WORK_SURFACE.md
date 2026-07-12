@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: approved implementation work surface.
+- Status: implemented-local work surface; manual visual review pending.
 - Scope: Home/Bases route closure using existing safe Base summaries only.
 
 ## Runtime Surface
@@ -13,7 +13,7 @@
 | Mobile navigation | `mini-app/src/app/AppShell.tsx` | same Home/Bases callbacks | no hidden desktop-only path |
 | Base directory | new `mini-app/src/app/BaseDirectory.tsx` | safe list, loading, empty, retryable state | no API client/cache/resource inference |
 | Route orchestration | `mini-app/src/app/App.tsx` | memory route, protected request and `openBase` handoff | no backend modification |
-| Query key | `mini-app/src/app/protectedQuery.ts` | stable `navigation/bases` key helper | no persistence |
+| Query key | `mini-app/src/app/protectedQuery.ts` | stable `navigation/bases` key helper | no persistence or generic `bases` cache reuse |
 | Styling | `mini-app/src/styles.css` | directory density/breakpoint rules | no visual-system redesign |
 
 ## Read Contract Inventory
@@ -33,6 +33,14 @@
 | retry directory | `loadBaseDirectory()` | same exact protected key rereads | fixed retry state remains |
 | select Base | existing `openBase(base)` | authorized Canvas | existing Canvas failure/denied handling |
 | switch workspace | existing `selectWorkspace` | target scope route is current | old directory result discarded |
+
+## Current Evidence
+
+- `BaseDirectory` has a pure safe summary renderer; it receives no HTTP object, raw error, table/view/record payload or authorization data.
+- `AppShell` desktop/mobile Home and Base controls call the same `selectNavigation` callback and mark only the active memory route with `aria-current="page"`.
+- `App.tsx` uses `navigationKeys.bases(scope)` and preserves existing `openBase` as the only Base-to-Canvas handoff.
+- `workspace-navigation.test.tsx` covers exact row handoff, empty state, retryable `503`, `401`/`403` denial, `404` recovery and a delayed workspace replacement.
+- No manual UI observation is recorded because the user directed that their browser must not be controlled.
 
 ## Explicit Non-Surfaces
 

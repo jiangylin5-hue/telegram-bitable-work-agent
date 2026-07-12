@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: approved design specification; implementation pending.
+- Status: implemented-local; manual visual acceptance remains pending.
 - Scope: use existing Base summaries to close the shell's Home/Bases navigation loop.
 
 ## Architecture
@@ -33,15 +33,15 @@ The new directory component is presentational. It accepts one typed `BaseSummary
 
 ```ts
 type NavigationRoute = 'home' | 'bases'
-type BaseDirectoryState = 'idle' | 'loading' | 'ready' | 'empty' | 'retryable'
+type BaseDirectoryState = 'loading' | 'ready' | 'empty' | 'retryable'
 ```
 
 The only directory response is the existing `Promise<{ bases: BaseSummary[] }>` from `api.workspaceBases`. `BaseSummary` remains `{ id, name, source_type, status? }`. `App.tsx` keeps the current `BaseSummary[]` separate from the string state and clears it before a loading/retryable transition. A component must never receive a raw endpoint object, HTTP response, error body, table/view/record payload or policy.
 
 ## Protected Query and Lifetime Rules
 
-1. The query key is `['stage07', userId, workspaceId, 'navigation', 'bases']`.
-2. `openBases` captures a route request generation before starting the query.
+1. The query key is `['stage07', userId, workspaceId, 'navigation', 'bases']` through `navigationKeys.bases(scope)`.
+2. `loadBaseDirectory` captures a route request generation before starting the query.
 3. A result may set route state only if its generation, active workspace and session latch are still current.
 4. Workspace replacement increments the generation and existing `clearProtectedWorkspace` cancels/removes the old directory query with every other old-scope key.
 5. `401` delegates to existing `denyInvalidSession`; `403` delegates to `denyWorkspace`; `404` removes the exact directory query and returns a fixed Home recovery; retryable failures retain no row data.
@@ -63,4 +63,4 @@ The only directory response is the existing `Promise<{ bases: BaseSummary[] }>` 
 
 ## Verification Scope
 
-The package requires client tests and a production build. It does not require a backend change, database migration or external operation. Manual UI review remains pending under the user-directed no-browser-control boundary.
+The package has focused client evidence (`4` files / `18` tests) and a production build pass. It does not require a backend change, database migration or external operation. Manual UI review remains pending under the user-directed no-browser-control boundary.

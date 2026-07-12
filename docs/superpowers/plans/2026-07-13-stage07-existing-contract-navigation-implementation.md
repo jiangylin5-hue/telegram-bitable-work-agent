@@ -8,6 +8,14 @@
 
 **Tech Stack:** Existing React, TypeScript, TanStack Query, Vite, Testing Library, Vitest and CSS.
 
+## Execution Record
+
+- Status: implemented-local on 2026-07-13. The original task checkboxes below retain the approved TDD execution order; the evidence record supersedes their pre-execution wording.
+- Actual test surfaces: `base-directory.test.tsx`, `app-shell-navigation.test.tsx`, `workspace-navigation.test.tsx` and `protected-query-state.test.ts`.
+- Final local evidence: focused `4` files / `18` tests, full Mini App `49` files / `199` tests, and `npm.cmd run build` passed.
+- Actual scoped query key: `navigationKeys.bases(scope)` returns `['stage07', userId, workspaceId, 'navigation', 'bases']`.
+- No browser control, backend/API/schema/permission/dependency/URL/storage/Bot/queue change, external provider call, Telegram operation or deployment occurred.
+
 ## Global Constraints
 
 - Route state is exactly `'home' | 'bases'` in React memory.
