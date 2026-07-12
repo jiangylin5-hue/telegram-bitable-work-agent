@@ -109,6 +109,7 @@ from app.services.stage06_idempotency import (
     begin_idempotent_operation,
     complete_idempotent_operation,
     fingerprint_request,
+    idempotency_trace_id,
 )
 from app.services.stage07_mini_app import get_mini_app_bootstrap, get_workspace_home
 
@@ -1125,7 +1126,7 @@ def _run_atomic_builder_initialization(
     response_model: type[ResponseModel],
     build: Callable[[], ResponseModel],
 ) -> tuple[ResponseModel, bool]:
-    trace_id = f"idempotency:{operation}:{request_fingerprint[:24]}"
+    trace_id = idempotency_trace_id(operation, request_fingerprint, idempotency_key)
     for attempt in range(2):
         try:
             decision = begin_idempotent_operation(

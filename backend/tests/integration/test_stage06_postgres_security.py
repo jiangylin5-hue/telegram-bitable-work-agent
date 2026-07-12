@@ -22,7 +22,7 @@ from app.core.database import get_session
 from app.main import create_app
 from app.models.audit import OpsAuditEvent
 from app.models.stage06_hardening import Stage06IdempotencyRecord
-from app.models.stage06_platform import BitableBase, PlatformTable, PlatformView
+from app.models.stage06_platform import BitableBase, PlatformField, PlatformRecord, PlatformTable, PlatformView
 from app.models.stage06_templates import ImportJob
 from app.api.routes import stage06_platform as platform_routes
 from app.services.stage06_platform import PlatformValidationError
@@ -180,6 +180,51 @@ def test_stage06_postgres_idempotency_has_one_winner_under_concurrency(
             )
             == 1
         )
+
+
+def test_stage06_postgres_installs_official_template_with_example_record(
+    stage06_postgres: Stage06Postgres,
+) -> None:
+    app = create_app()
+    app.dependency_overrides[get_session] = _session_override(
+        stage06_postgres.session_factory
+    )
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "template-owner"
+        workspace_id = client.post(
+            "/workspaces",
+            json={"name": "Template Workspace", "owner_user_id": "template-owner"},
+        ).json()["id"]
+        template_id = next(
+            template["id"]
+            for template in client.get("/templates").json()["templates"]
+            if template["category"] == "crm"
+        )
+        response = client.post(
+            f"/workspaces/{workspace_id}/template-installations",
+            headers={"Idempotency-Key": "official-template-install-1"},
+            json={
+                "template_id": template_id,
+                "installed_by_user_id": "template-owner",
+            },
+        )
+        repeated = client.post(
+            f"/workspaces/{workspace_id}/template-installations",
+            headers={"Idempotency-Key": "official-template-install-2"},
+            json={
+                "template_id": template_id,
+                "installed_by_user_id": "template-owner",
+            },
+        )
+
+    assert response.status_code == 200, response.text
+    assert repeated.status_code == 200, repeated.text
+    with stage06_postgres.session_factory() as session:
+        table = session.scalar(select(PlatformTable).where(PlatformTable.key == "customers"))
+        assert table is not None
+        fields = session.scalars(select(PlatformField).where(PlatformField.table_id == table.id)).all()
+        assert {field.key for field in fields} >= {"name", "status", "owner"}
+        assert session.scalar(select(func.count()).select_from(PlatformRecord)) == 2
 
 
 def test_stage07_postgres_builder_initialization_rolls_back_every_resource_on_failure(

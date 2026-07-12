@@ -361,7 +361,7 @@ function AppContent() {
       const base = bases.find((item) => item.id === receipt.baseId)
       if (!base) throw new Error('Installed Base is unavailable')
       const opened = await openBase(base, undefined, refreshedHome, builderVersion)
-      if (opened && isCurrent()) setTemplateImportPanel(undefined)
+      if (opened && !sessionInvalidated.current && activeWorkspaceId.current === workspaceId) setTemplateImportPanel(undefined)
     } catch (error) {
       if (!isCurrent() || isAbortError(error)) return
       if (error instanceof ApiError && error.status === 401) await denyInvalidSession()

@@ -390,6 +390,7 @@ def install_template(
                 actor=actor,
             )
             resource_map["views"][table.key].append(str(view.id))
+        uow.flush()
         resource_map["records"][table.key] = []
         for record_values in table_spec.get("records", []):
             record = create_record(uow, table.id, values=record_values, actor=actor)

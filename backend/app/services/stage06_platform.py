@@ -181,6 +181,9 @@ class V1ViewAccess:
 
 
 class Stage06PlatformUnitOfWork(Protocol):
+    def flush(self) -> None:
+        pass
+
     def add_workspace(self, workspace: Workspace) -> None:
         pass
 
@@ -353,6 +356,9 @@ class Stage06PlatformUnitOfWork(Protocol):
 
 @dataclass
 class InMemoryStage06PlatformUnitOfWork:
+    def flush(self) -> None:
+        pass
+
     workspaces: list[Workspace] = field(default_factory=list)
     workspace_members: list[WorkspaceMember] = field(default_factory=list)
     bases: list[BitableBase] = field(default_factory=list)
@@ -592,6 +598,9 @@ class InMemoryStage06PlatformUnitOfWork:
 class SqlAlchemyStage06PlatformUnitOfWork:
     def __init__(self, session: Session) -> None:
         self.session = session
+
+    def flush(self) -> None:
+        self.session.flush()
 
     def add_workspace(self, workspace: Workspace) -> None:
         self.session.add(workspace)
@@ -2059,6 +2068,7 @@ def initialize_v1_view(
         begin_idempotent_operation,
         complete_idempotent_operation,
         fingerprint_request,
+        idempotency_trace_id,
     )
 
     operation = "stage07.v1_view.initialize"
@@ -2078,7 +2088,7 @@ def initialize_v1_view(
         operation=operation,
         idempotency_key=idempotency_key,
         request_fingerprint=fingerprint,
-        trace_id=f"idempotency:{operation}:{fingerprint[:24]}",
+        trace_id=idempotency_trace_id(operation, fingerprint, idempotency_key),
     )
     if decision.status == "replay":
         view_id = _optional_uuid((decision.response_ref or {}).get("view_id"))

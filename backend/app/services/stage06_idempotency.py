@@ -40,6 +40,15 @@ def fingerprint_request(payload: Mapping[str, object]) -> str:
     return hashlib.sha256(canonical).hexdigest()
 
 
+def idempotency_trace_id(
+    operation: str,
+    request_fingerprint: str,
+    idempotency_key: str,
+) -> str:
+    key_fingerprint = hashlib.sha256(idempotency_key.strip().encode("utf-8")).hexdigest()
+    return f"idempotency:{operation}:{request_fingerprint[:12]}:{key_fingerprint[:12]}"
+
+
 def begin_idempotent_operation(
     uow: Stage06IdempotencyUnitOfWork,
     *,

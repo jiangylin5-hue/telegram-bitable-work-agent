@@ -30,6 +30,7 @@ from app.services.stage06_idempotency import (
     begin_idempotent_operation,
     complete_idempotent_operation,
     fingerprint_request,
+    idempotency_trace_id,
 )
 from app.services.stage06_platform import PlatformValidationError
 from app.services.stage06_templates import (
@@ -315,7 +316,7 @@ def _begin_and_reserve(
     idempotency_key: str,
     request_fingerprint: str,
 ):
-    trace_id = f"idempotency:{operation}:{request_fingerprint[:24]}"
+    trace_id = idempotency_trace_id(operation, request_fingerprint, idempotency_key)
     try:
         decision = begin_idempotent_operation(
             uow,
