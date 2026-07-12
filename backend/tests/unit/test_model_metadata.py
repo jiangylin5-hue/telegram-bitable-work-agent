@@ -49,6 +49,7 @@ STAGE06_TABLES = {
     "template_installations",
     "import_jobs",
     "digital_employees",
+    "digital_employee_member_grants",
     "record_change_drafts",
     "notification_requests",
     "stage06_idempotency_records",

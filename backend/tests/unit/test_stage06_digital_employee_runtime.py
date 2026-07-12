@@ -42,6 +42,8 @@ def test_stage06_digital_employee_summarizes_permission_filtered_view_and_writes
     )
 
     assert response["action"] == "summarize"
+    assert employee.version == 1
+    assert employee.access_mode == "workspace"
     assert response["record_count"] == 1
     assert response["records"] == [{"name": "Ada Co", "status": "new"}]
     assert "private" not in str(response)

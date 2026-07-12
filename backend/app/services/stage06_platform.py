@@ -22,6 +22,7 @@ from app.models.stage06_platform import (
 )
 from app.models.stage06_runtime import (
     DigitalEmployee,
+    DigitalEmployeeMemberGrant,
     NotificationRequest,
     RecordChangeDraft,
 )
@@ -336,6 +337,25 @@ class Stage06PlatformUnitOfWork(Protocol):
     def list_digital_employees(self, base_id: UUID) -> list[DigitalEmployee]:
         pass
 
+    def add_digital_employee_member_grant(
+        self,
+        grant: DigitalEmployeeMemberGrant,
+    ) -> None:
+        pass
+
+    def list_digital_employee_member_grants(
+        self,
+        employee_id: UUID,
+    ) -> list[DigitalEmployeeMemberGrant]:
+        pass
+
+    def replace_digital_employee_member_grants(
+        self,
+        employee_id: UUID,
+        grants: list[DigitalEmployeeMemberGrant],
+    ) -> None:
+        pass
+
     def add_record_change_draft(self, draft: RecordChangeDraft) -> None:
         pass
 
@@ -449,6 +469,9 @@ class InMemoryStage06PlatformUnitOfWork:
     template_installations: list[TemplateInstallation] = field(default_factory=list)
     import_jobs: list[ImportJob] = field(default_factory=list)
     digital_employees: list[DigitalEmployee] = field(default_factory=list)
+    digital_employee_member_grants: list[DigitalEmployeeMemberGrant] = field(
+        default_factory=list
+    )
     record_change_drafts: list[RecordChangeDraft] = field(default_factory=list)
     notification_requests: list[NotificationRequest] = field(default_factory=list)
     agent_runs: list[AgentRun] = field(default_factory=list)
@@ -628,6 +651,34 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def list_digital_employees(self, base_id: UUID) -> list[DigitalEmployee]:
         return [employee for employee in self.digital_employees if employee.base_id == base_id]
+
+    def add_digital_employee_member_grant(
+        self,
+        grant: DigitalEmployeeMemberGrant,
+    ) -> None:
+        self.digital_employee_member_grants.append(grant)
+
+    def list_digital_employee_member_grants(
+        self,
+        employee_id: UUID,
+    ) -> list[DigitalEmployeeMemberGrant]:
+        return [
+            grant
+            for grant in self.digital_employee_member_grants
+            if grant.employee_id == employee_id
+        ]
+
+    def replace_digital_employee_member_grants(
+        self,
+        employee_id: UUID,
+        grants: list[DigitalEmployeeMemberGrant],
+    ) -> None:
+        self.digital_employee_member_grants = [
+            grant
+            for grant in self.digital_employee_member_grants
+            if grant.employee_id != employee_id
+        ]
+        self.digital_employee_member_grants.extend(grants)
 
     def add_record_change_draft(self, draft: RecordChangeDraft) -> None:
         self.record_change_drafts.append(draft)
@@ -1012,6 +1063,36 @@ class SqlAlchemyStage06PlatformUnitOfWork:
                 select(DigitalEmployee).where(DigitalEmployee.base_id == base_id)
             )
         )
+
+    def add_digital_employee_member_grant(
+        self,
+        grant: DigitalEmployeeMemberGrant,
+    ) -> None:
+        self.session.add(grant)
+
+    def list_digital_employee_member_grants(
+        self,
+        employee_id: UUID,
+    ) -> list[DigitalEmployeeMemberGrant]:
+        return list(
+            self.session.scalars(
+                select(DigitalEmployeeMemberGrant).where(
+                    DigitalEmployeeMemberGrant.employee_id == employee_id
+                )
+            )
+        )
+
+    def replace_digital_employee_member_grants(
+        self,
+        employee_id: UUID,
+        grants: list[DigitalEmployeeMemberGrant],
+    ) -> None:
+        self.session.execute(
+            delete(DigitalEmployeeMemberGrant).where(
+                DigitalEmployeeMemberGrant.employee_id == employee_id
+            )
+        )
+        self.session.add_all(grants)
 
     def add_record_change_draft(self, draft: RecordChangeDraft) -> None:
         self.session.add(draft)

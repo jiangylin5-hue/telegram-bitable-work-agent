@@ -71,6 +71,8 @@ def create_digital_employee(
         or {"draft_create": "required", "draft_update": "required"},
         response_style=response_style or {},
         status="active",
+        version=1,
+        access_mode="workspace",
     )
     uow.add_digital_employee(employee)
     _record_runtime_audit(

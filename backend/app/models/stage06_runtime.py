@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, String, UniqueConstraint, desc
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Uuid
@@ -10,6 +10,22 @@ from app.models.base import Base, TimestampMixin, UuidPrimaryKeyMixin
 
 class DigitalEmployee(UuidPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "digital_employees"
+    __table_args__ = (
+        CheckConstraint(
+            "version > 0",
+            name="ck_stage07_digital_employee_positive_version",
+        ),
+        CheckConstraint(
+            "access_mode IN ('workspace', 'assigned')",
+            name="ck_stage07_digital_employee_access_mode",
+        ),
+        Index(
+            "ix_stage07_digital_employee_management_base_updated",
+            "base_id",
+            desc("updated_at"),
+            desc("id"),
+        ),
+    )
 
     workspace_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True),
@@ -31,6 +47,34 @@ class DigitalEmployee(UuidPrimaryKeyMixin, TimestampMixin, Base):
     confirmation_policy: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     response_style: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="active")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    access_mode: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="workspace",
+    )
+
+
+class DigitalEmployeeMemberGrant(UuidPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "digital_employee_member_grants"
+    __table_args__ = (
+        UniqueConstraint(
+            "employee_id",
+            "workspace_member_id",
+            name="uq_stage07_digital_employee_member_grant",
+        ),
+    )
+
+    employee_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("digital_employees.id"),
+        nullable=False,
+    )
+    workspace_member_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("workspace_members.id"),
+        nullable=False,
+    )
 
 
 class RecordChangeDraft(UuidPrimaryKeyMixin, TimestampMixin, Base):

@@ -41,6 +41,7 @@ from app.models.stage06_platform import (
 )
 from app.models.stage06_runtime import (
     DigitalEmployee,
+    DigitalEmployeeMemberGrant,
     NotificationRequest,
     RecordChangeDraft,
 )
@@ -78,6 +79,7 @@ __all__ = [
     "CustomerGroup",
     "CustomerDailyReport",
     "DigitalEmployee",
+    "DigitalEmployeeMemberGrant",
     "FieldPermission",
     "ImportJob",
     "Message",
