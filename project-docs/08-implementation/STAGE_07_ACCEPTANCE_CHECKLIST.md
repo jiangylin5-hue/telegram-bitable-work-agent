@@ -84,16 +84,27 @@ The design and implementation plan are user-approved. The items remain unchecked
 - [ ] Every Bot write remains `record_change_draft` until explicit confirmation.
 - [ ] Confirm/reject/replay/conflict/expired states produce one authoritative outcome and audit reference.
 
-### S6.1 Telegram Identity and Deep-Link Design Boundary
+### S6.1 Telegram Identity and Deep-Link Local Evidence
 
-These items are unchecked until TD007's reviewed implementation plan and code provide their own evidence. They do not authorize Bot delivery or a production test.
+TD007 is `partial-local`, not a delivery or production approval. The checked rows below reflect bounded local evidence only; S6-A03--S6-A07/S6-A09 retain the exact gaps in the S6 BDD matrix.
 
-- [ ] Telegram Mini App `initData` is verified server-side using official HMAC/freshness rules; `initDataUnsafe`, URL user data and development headers cannot bypass production identity.
-- [ ] A validated Telegram user resolves through active bindings to exactly one active internal member user or fails closed.
-- [ ] An opaque, subject-bound, expiring pointer resolves only an authorized durable Base/view/record/draft after a server reread; no raw token/launch data leaks.
-- [ ] Invalid, expired, revoked, mismatched, deleted and unauthorized pointers share safe recovery without target enumeration.
-- [ ] Four-width recovery UI and desktop/no-Telegram fallback have evidence; S6.1 sends no message or external action.
-- [ ] A real Telegram deep-link smoke is recorded only after separately authorized non-production Bot/test-chat setup.
+- [x] Telegram Mini App `initData` is validated server-side with official HMAC/freshness, duplicate-input and malformed/forged rejection coverage; an invalid present Telegram proof cannot fall back to the development header.
+- [x] A validated Telegram user resolves through active bindings to exactly one active internal member user or fails closed.
+- [x] An opaque, subject-bound, expiring pointer is hash-only at rest; resolver success returns a closed pointer and the App rereads Base/View/Record/Draft before display.
+- [x] Unknown, expired, revoked and subject-mismatched pointer paths return the same local safe recovery response; no raw token/launch data is exposed by the closed parser/fixture DOM.
+- [x] Desktop/no-Telegram fallback and synthetic recovery/Record handoff were inspected at 1440/1280/430/390; recovery action is 44px and S6.1 has no public mint/send route.
+- [ ] Cross-workspace/field-policy, independent audit-store, concurrent-revoke, resolver-query-count and exhaustive client failure/supersession cases have remaining S6.1 acceptance gaps.
+- [ ] A real Telegram deep-link smoke is recorded only after separately authorized non-production Bot/private-test-chat setup.
+
+### S6.2 Controlled Delivery and Manual Smoke Proposal
+
+TD008 is document-only. It reuses the existing confirmation/Outbox/Worker/`restricted_test` path through a typed one-to-one delivery extension and permits no current external operation.
+
+- [ ] Closed server-only request/confirmation, Worker reservation, in-memory-only URL mint and no-raw-persistence tests pass.
+- [ ] Exactly-one private allowlist target, current binding/member/resource rechecks and no generic Mini App delivery route pass negative tests.
+- [ ] Definite rejection and uncertain-send paths revoke the pointer and never retry automatically.
+- [ ] Disposable PostgreSQL migration/lock/rollback and typed Bot URL-button tests pass.
+- [ ] One user-authorized non-production delivery and actual Telegram Mini App smoke produce sanitized evidence only.
 
 ## Evidence
 

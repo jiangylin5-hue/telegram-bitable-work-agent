@@ -100,6 +100,12 @@ verified identity -> workspace member -> permission-filtered UI
 67. [Stage07 S6 Telegram Mini App Identity and Deep-Link Work Surface](modules/STAGE_07_S6_TELEGRAM_IDENTITY_DEEP_LINK_WORK_SURFACE.md)
 68. [Stage07 S6 Telegram Mini App Identity and Deep-Link Complex Feature Index](STAGE_07_S6_TELEGRAM_IDENTITY_DEEP_LINK_COMPLEX_FEATURE_INDEX.md)
 69. [Stage07 S6 Telegram Mini App Identity and Deep-Link Implementation Plan](../../docs/superpowers/plans/2026-07-12-stage07-s6-telegram-identity-deep-link-implementation.md)
+70. [Stage07 S6.2 Controlled Delivery and Smoke Decision](STAGE_07_TECHNICAL_DECISION_008_S6_CONTROLLED_DELIVERY_AND_SMOKE.md)
+71. [Stage07 S6.2 Controlled Delivery and Smoke Design](../../docs/superpowers/specs/2026-07-13-stage07-s6-controlled-delivery-smoke-design.md)
+72. [Stage07 S6.2 Controlled Delivery and Smoke BDD and Acceptance](STAGE_07_S6_CONTROLLED_DELIVERY_SMOKE_BDD_AND_ACCEPTANCE.md)
+73. [Stage07 S6.2 Controlled Delivery and Smoke SDD](STAGE_07_S6_CONTROLLED_DELIVERY_SMOKE_SDD.md)
+74. [Stage07 S6.2 Controlled Delivery and Smoke Work Surface](modules/STAGE_07_S6_CONTROLLED_DELIVERY_SMOKE_WORK_SURFACE.md)
+75. [Stage07 S6.2 Controlled Delivery and Smoke Complex Feature Index](STAGE_07_S6_CONTROLLED_DELIVERY_SMOKE_COMPLEX_FEATURE_INDEX.md)
 
 Stage06 is the backend contract baseline. Stage02-05 documents are historical capability evidence only.
 
@@ -132,7 +138,7 @@ Approved Package 1/2 read-model boundary:
 - `GET /views/{view_id}/presentation` and `GET /records/{record_id}` may expose only the normalized, field-read-filtered models defined in the API Data Security Contract. Schema, presentation, list and detail must make the same hidden-field decision.
 - Both endpoints are read-only and must reuse Stage06 membership and action authorization. The client does not receive raw record values, draft before/proposed values, trace data, policies, or a role it can submit back to the server.
 
-The following remain a separate Package 4 contract gate. TD005 Option A is the implemented bounded contact/context/draft-review exception over existing Stage06 resources. TD007 Option A is the approved S6.1 identity/deep-link design exception, but it may not enter code until its implementation plan is reviewed. Neither decision expands into employee lifecycle, memory, knowledge, group delivery or external action.
+The following remain a separate Package 4 contract gate. TD005 Option A is the implemented bounded contact/context/draft-review exception over existing Stage06 resources. TD007 Option A is the implemented S6.1 identity/deep-link exception. TD008 Option A is a proposed S6.2 controlled-delivery and real-smoke boundary; it remains document-only until separately approved and given per-environment external authority. None of these decisions expands into employee lifecycle, memory, knowledge, group delivery or external action.
 
 Stage06 currently provides base-bound `DigitalEmployee` resources. The following are Stage07 proposals, not approved implementation work:
 
@@ -143,7 +149,7 @@ Stage06 currently provides base-bound `DigitalEmployee` resources. The following
 - per-user Bot memory partitions and retention/clear controls;
 - production Telegram Mini App proof verification.
 
-No schema migration, API endpoint, authorization rule or permission model for this remaining list may be implemented without a dedicated technical decision and explicit user confirmation. TD007's reviewed S6.1 implementation plan is the sole identity/deep-link exception; it does not authorize production proof.
+No schema migration, API endpoint, authorization rule or permission model for this remaining list may be implemented without a dedicated technical decision and explicit user confirmation. TD007's reviewed S6.1 implementation plan is the sole implemented identity/deep-link exception. TD008 is only a proposal for one controlled non-production delivery and smoke path; it does not authorize configuration, a send, production proof or broader external behavior.
 
 ## 7. Non-Goals
 
