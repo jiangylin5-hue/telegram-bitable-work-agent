@@ -20,6 +20,12 @@
 - The user approved TD005 Option A as one coherent S5 vertical slice. Implementation may add only the approved draft revision/audit-reference persistence, a measured conditional pending-queue index, six safe Mini App adapter routes, fixed `summarize|draft_update` intents, field-filtered draft review and locked/idempotent confirm/reject.
 - The approval does not include employee publication/configuration, personal memory, knowledge, Telegram handoff/deep link, notification/external action, generic chat/runtime selection, browser persistence, S6 deployment or Stage07 acceptance. S5 now proceeds as backend contract/transition, protected Hub UI, then proportional evidence/cleanup.
 
+### 2026-07-12: S5 Safe Invocation Projection Checkpoint
+
+- Implemented within TD005 only: the server re-filters a summary's citations against the current authorized view, removes duplicate/unknown IDs and emits only `{record_id}`. The typed Mini App transport converts that narrow wire shape to `{recordId}` and rejects all other invocation shapes; it neither forwards runtime metadata nor creates a UI control.
+- Fresh evidence: `pytest tests/unit/test_stage07_draft_employee_hub_api.py -q` reported `11 passed`; `pytest tests/integration/test_stage07_draft_employee_hub_postgres.py -q` reported `1 passed`; `npm.cmd test -- --run src/test/draft-employee-api.test.ts src/test/draft-employee-hub.test.tsx src/test/draft-employee-query.test.ts src/test/draft-employee-app-flow.test.tsx` reported `4 files / 11 tests`; `npm.cmd run build` completed.
+- This checkpoint does not accept S5: TD006 context binding remains proposed, so invocation controls and Browser observation are deliberately absent. PostgreSQL race/rollback/reject cases, conditional-index measurement, real provider evidence, four-width Hub QA and DE-A01--DE-A10 reconciliation remain open.
+
 ### 2026-07-12: Stage07 Substage Delivery Rhythm
 
 - Stage07 now follows a one-stage/multiple-substages rhythm instead of user-facing micro-fragments. S0 Foundation, S1 Bitable authoring and S2 views/template/import retain their documented local states; S3 Governance Readback is active and approved; S4 Governance Write, S5 Draft/Digital Employee and S6 Telegram/final acceptance remain separately gated.

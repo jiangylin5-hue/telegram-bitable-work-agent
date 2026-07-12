@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 delivery roadmap
 - Purpose: organize Stage07 as coherent substages rather than individual UI/API fragments
-- Current active substage: S4 Governance Write acceptance reconciliation; S5 is specified and awaits one TD005 approval.
+- Current active substage: S5 Draft and Digital Employee Hub implementation/evidence. S4 Governance Write retains its separate negative-lifecycle evidence gap.
 
 ## Delivery Rule
 
@@ -99,7 +99,7 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 
 ## S5 Draft and Digital Employee Hub
 
-### Proposed Scope
+### Approved Scope
 
 - Server-safe active digital-employee contacts scoped by existing workspace/Base membership.
 - Explicit selected Base/view/record context for fixed `summarize` and `draft_update` intents only.
@@ -122,7 +122,7 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 | work surface / complex index | modules/STAGE_07_DRAFT_EMPLOYEE_HUB_WORK_SURFACE.md / STAGE_07_DRAFT_EMPLOYEE_HUB_COMPLEX_FEATURE_INDEX.md |
 | implementation plan | docs/superpowers/plans/2026-07-12-stage07-s5-draft-employee-hub-implementation.md |
 
-TD005 Option A is approved for S5 implementation. It authorizes only the two draft columns, a measured conditional queue index, safe Mini App routes and the bounded S5 UI described here. It does not authorize S6 scope.
+TD005 Option A is approved for S5 implementation. It authorizes only the two draft columns, a measured conditional queue index, safe Mini App routes and the bounded S5 UI described here. It does not authorize S6 scope. TD006 context binding is a distinct proposed decision: before the remaining invocation UI can be built, it must choose either opaque current-Canvas IDs without a new route or a separately designed server context projection.
 
 ### Exit Criteria After Approval
 
@@ -133,7 +133,7 @@ TD005 Option A is approved for S5 implementation. It authorizes only the two dra
 
 ## Sequencing Guard
 
-S4 is implemented only within TD004 and remains partially accepted until its documented negative lifecycle matrix is complete. S5 cannot consume generic runtime payloads; TD005 now specifies the required field-filtered draft and employee/context authority design but must receive explicit approval before implementation. S6 cannot treat local header identity or disposable PostgreSQL as Telegram proof.
+S4 is implemented only within TD004 and remains partially accepted until its documented negative lifecycle matrix is complete. S5 cannot consume generic runtime payloads; TD005 is approved, while TD006 must receive explicit approval before browser invocation controls or a context data source are added. S6 cannot treat local header identity or disposable PostgreSQL as Telegram proof.
 
 ## Checkpoint Report
 

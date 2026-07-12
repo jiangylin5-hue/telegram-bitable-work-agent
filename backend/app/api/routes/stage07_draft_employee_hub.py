@@ -16,6 +16,7 @@ from app.schemas.stage07_draft_employee_hub import (
     SafeDraftSummaryResponse,
     SafeDraftTerminalReceipt,
     SafeDraftTerminalRequest,
+    SafeCitationResponse,
     SafeEmployeeInvocationRequest,
     SafeEmployeeInvocationResponse,
 )
@@ -26,6 +27,7 @@ from app.services.stage06_authorization import (
     workspace_id_for_base,
 )
 from app.services.stage06_identity import Stage06RequestIdentity
+from app.services.permissions import Actor
 from app.services.stage06_pagination import Stage06PaginationError, paginate_items
 from app.services.stage06_idempotency import (
     begin_idempotent_operation,
@@ -38,6 +40,7 @@ from app.services.stage06_platform import (
     Stage06PlatformUnitOfWork,
     get_table_schema,
     list_bases_for_workspace,
+    list_view_records,
 )
 from app.services.stage07_draft_employee_hub import confirm_s5_draft, reject_s5_draft
 from app.services.stage06_digital_employees import invoke_digital_employee
@@ -196,7 +199,12 @@ def invoke_safe_digital_employee(
     if not isinstance(answer, str):
         raise HTTPException(status_code=422, detail=error_detail("safe_summary_result_unavailable", "safe_summary_result_unavailable"))
     _commit_if_sqlalchemy(uow)
-    return SafeEmployeeInvocationResponse(kind="summary", answer=answer)
+    assert view_id is not None
+    return SafeEmployeeInvocationResponse(
+        kind="summary",
+        answer=answer,
+        citations=_safe_summary_citations(uow, view_id=view_id, actor=actor, citations=result.get("citations")),
+    )
 
 
 @router.get("/mini-app/bases/{base_id}/drafts", response_model=SafeDraftPageResponse)
@@ -357,6 +365,33 @@ def _terminal_receipt(draft) -> SafeDraftTerminalReceipt:
         id=str(draft.id), status=draft.status, version=draft.version,
         terminal_audit_event_id=str(draft.terminal_audit_event_id),
     )
+
+
+def _safe_summary_citations(
+    uow: Stage06PlatformUnitOfWork,
+    *,
+    view_id: UUID,
+    actor: Actor,
+    citations: object,
+) -> list[SafeCitationResponse]:
+    if not isinstance(citations, list):
+        return []
+    visible_record_ids = {
+        record["id"]
+        for record in list_view_records(uow, view_id, actor=actor).get("records", [])
+        if isinstance(record, dict) and isinstance(record.get("id"), str)
+    }
+    safe_citations: list[SafeCitationResponse] = []
+    seen_record_ids: set[str] = set()
+    for citation in citations:
+        if not isinstance(citation, dict):
+            continue
+        record_id = citation.get("record_id")
+        if not isinstance(record_id, str) or record_id not in visible_record_ids or record_id in seen_record_ids:
+            continue
+        safe_citations.append(SafeCitationResponse(record_id=record_id))
+        seen_record_ids.add(record_id)
+    return safe_citations
 
 
 def _begin_s5_idempotent_operation(

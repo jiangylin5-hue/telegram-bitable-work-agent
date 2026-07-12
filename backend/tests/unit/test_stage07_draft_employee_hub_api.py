@@ -14,6 +14,7 @@ from app.services.stage06_platform import (
     InMemoryStage06PlatformUnitOfWork,
     create_base,
     create_field,
+    create_form_view,
     create_record,
     create_table,
     create_workspace,
@@ -347,6 +348,87 @@ def test_s5_draft_invocation_replays_the_same_safe_draft_pointer_once(
         replay = client.post(f"/mini-app/digital-employees/{employee.id}/invocations", headers={"Idempotency-Key": "draft-invoke-1"}, json=payload)
 
     assert first.status_code == replay.status_code == 200
-    assert first.json() == replay.json() == {"kind": "draft", "answer": None, "draft_id": str(draft_id), "status": "pending_confirmation"}
+    assert first.json() == replay.json() == {"kind": "draft", "answer": None, "citations": [], "draft_id": str(draft_id), "status": "pending_confirmation"}
     assert calls == 1
     assert "do-not-forward" not in first.text
+
+
+def test_s5_summary_citations_keep_only_currently_visible_record_ids(
+    monkeypatch,
+) -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="S5 citation", owner_user_id=owner.actor_id, actor=owner)
+    base = create_base(uow, workspace.id, name="Operations", actor=owner)
+    table = create_table(uow, base.id, name="Tasks", key="tasks", actor=owner)
+    create_field(uow, table.id, name="Title", key="title", field_type="text", actor=owner)
+    record = create_record(uow, table.id, values={"title": "Visible title"}, actor=owner)
+    view = create_form_view(
+        uow, base.id, table.id, name="Task grid", view_type="grid", config={"fields": ["title"]}, actor=owner,
+    )
+    employee = create_digital_employee(
+        uow, base.id, name="Assistant", description="Safe", telegram_alias=None,
+        accessible_tables=[str(table.id)], accessible_views=[str(view.id)], allowed_actions=["summarize"], actor=owner,
+    )
+
+    def fake_invoke(*args, **kwargs):
+        return {
+            "answer": "Safe answer.",
+            "citations": [
+                {"record_id": str(record.id), "field_keys": ["title", "private"]},
+                {"record_id": str(uuid4()), "field_keys": ["private"]},
+                {"unexpected": "do-not-forward"},
+            ],
+        }
+
+    monkeypatch.setattr(draft_employee_hub_routes, "invoke_digital_employee", fake_invoke)
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_runtime_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = owner.actor_id
+        response = client.post(
+            f"/mini-app/digital-employees/{employee.id}/invocations",
+            json={"intent": "summarize", "base_id": str(base.id), "view_id": str(view.id)},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["citations"] == [{"record_id": str(record.id)}]
+    assert "field_keys" not in response.text
+    assert "do-not-forward" not in response.text
+
+
+def test_s5_cross_base_summary_context_fails_before_live_runtime() -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="S5 cross Base", owner_user_id=owner.actor_id, actor=owner)
+    allowed_base = create_base(uow, workspace.id, name="Allowed", actor=owner)
+    allowed_table = create_table(uow, allowed_base.id, name="Allowed tasks", key="allowed_tasks", actor=owner)
+    allowed_view = create_form_view(
+        uow, allowed_base.id, allowed_table.id, name="Allowed grid", view_type="grid", config={"fields": []}, actor=owner,
+    )
+    other_base = create_base(uow, workspace.id, name="Other", actor=owner)
+    other_table = create_table(uow, other_base.id, name="Other tasks", key="other_tasks", actor=owner)
+    other_view = create_form_view(
+        uow, other_base.id, other_table.id, name="Other grid", view_type="grid", config={"fields": []}, actor=owner,
+    )
+    employee = create_digital_employee(
+        uow, allowed_base.id, name="Assistant", description="Safe", telegram_alias=None,
+        accessible_tables=[str(allowed_table.id)], accessible_views=[str(allowed_view.id)], allowed_actions=["summarize"], actor=owner,
+    )
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_runtime_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = owner.actor_id
+        response = client.post(
+            f"/mini-app/digital-employees/{employee.id}/invocations",
+            json={"intent": "summarize", "base_id": str(allowed_base.id), "view_id": str(other_view.id)},
+        )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "digital_employee_scope_denied"
+    assert uow.record_change_drafts == []
+    assert uow.agent_runs == []

@@ -114,6 +114,17 @@ Then it cannot create/publish a contact, persist memory, access knowledge, claim
 | DE-A09 | four-width accessible Hub/draft path | synthetic built-client Browser matrix and console scan | unevaluated |
 | DE-A10 | no S6 capability leaks | route inventory, DTO/parser/DOM negative tests | unevaluated |
 
+### 2026-07-12 Interim Implementation Evidence (not acceptance closure)
+
+| Covered behavior | Fresh evidence | Acceptance gap retained |
+| --- | --- | --- |
+| safe summary projection | focused backend unit run: `11 passed`; malicious citation fields and unknown record IDs are dropped, and a cross-Base view is denied before runtime | real provider and stale/hidden context matrix remain absent |
+| safe client transport | focused Mini App run: `4 files / 11 tests`; strict parser retains only `answer` and `{recordId}` citations | no invocation control is rendered before TD006 chooses a context source |
+| terminal draft baseline | local PostgreSQL integration run: `1 passed`; existing confirm replay path remains executable | race/rollback/reject matrices and conditional-index measurement remain pending |
+| production compilation | `npm.cmd run build` completed after the safe invocation transport change | no four-width S5 Browser matrix has been run |
+
+These checkpoints move implementation forward but do not change any `unevaluated` acceptance row to accepted. DE-A01 through DE-A10 require the complete specified evidence, including the TD006-approved invocation path where applicable.
+
 ## Prohibited Claims
 
 S5 may not claim personal memory, knowledge retrieval, team/contact publication lifecycle, Telegram deep-link identity, group mention execution, external notification/send, production readiness, Stage07 completion or a general agent/chat platform.

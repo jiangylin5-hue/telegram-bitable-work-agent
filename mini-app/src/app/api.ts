@@ -48,7 +48,7 @@ import type {
   GovernanceMemberRoleReceipt,
   GovernanceRole,
 } from './governance-write-types'
-import type { S5Contact, S5ContactPage, S5DraftDetail, S5DraftField, S5Intent, S5TerminalReceipt } from './draft-employee-types'
+import type { S5Citation, S5Contact, S5ContactPage, S5DraftDetail, S5DraftField, S5Intent, S5InvocationRequest, S5InvocationResult, S5TerminalReceipt } from './draft-employee-types'
 
 export type {
   SafeViewErrorCode,
@@ -525,6 +525,23 @@ function safeS5TerminalReceipt(value: unknown): S5TerminalReceipt {
   return { id: stringValue(record.id), status, version: record.version as number, terminalAuditEventId: stringValue(record.terminal_audit_event_id) }
 }
 
+function safeS5Citation(value: unknown): S5Citation {
+  const record = jsonRecord(value)
+  return { recordId: stringValue(record.record_id) }
+}
+
+function safeS5InvocationResult(value: unknown): S5InvocationResult {
+  const record = jsonRecord(value)
+  if (record.kind === 'summary') {
+    if (!Array.isArray(record.citations)) throw new Error('Invalid S5 response')
+    return { kind: 'summary', answer: stringValue(record.answer), citations: record.citations.map(safeS5Citation) }
+  }
+  if (record.kind === 'draft' && record.status === 'pending_confirmation') {
+    return { kind: 'draft', draftId: stringValue(record.draft_id), status: 'pending_confirmation' }
+  }
+  throw new Error('Invalid S5 response')
+}
+
 function safeTemplateSummary(value: unknown): TemplateSummary {
   const record = jsonRecord(value)
   return {
@@ -843,6 +860,20 @@ export const api = {
     const parameters = new URLSearchParams({ limit: '50' })
     if (cursor) parameters.set('cursor', cursor)
     return safeS5ContactPage(await getJson<unknown>(`/mini-app/workspaces/${encodeURIComponent(workspaceId)}/digital-employee-contacts?${parameters.toString()}`, init))
+  },
+  invokeS5Employee: async (employeeId: string, request: S5InvocationRequest, idempotencyKey?: string): Promise<S5InvocationResult> => {
+    if (request.intent === 'draft_update' && !idempotencyKey) throw new Error('Idempotency key is required')
+    return safeS5InvocationResult(await postJson<unknown>(
+      `/mini-app/digital-employees/${encodeURIComponent(employeeId)}/invocations`,
+      {
+        intent: request.intent,
+        base_id: request.baseId,
+        view_id: request.viewId,
+        ...(request.intent === 'draft_update' ? { record_id: request.recordId } : {}),
+        ...(request.instruction ? { instruction: request.instruction } : {}),
+      },
+      idempotencyKey ?? crypto.randomUUID(),
+    ))
   },
   getS5Draft: async (draftId: string, init?: RequestInit): Promise<S5DraftDetail> => safeS5DraftDetail(
     await getJson<unknown>(`/mini-app/drafts/${encodeURIComponent(draftId)}`, init),

@@ -87,8 +87,15 @@ class SafeEmployeeInvocationRequest(BaseModel):
     instruction: str | None = None
 
 
+class SafeCitationResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    record_id: str
+
+
 class SafeEmployeeInvocationResponse(BaseModel):
     kind: Literal["summary", "draft"]
     answer: str | None = None
+    citations: list[SafeCitationResponse] = []
     draft_id: str | None = None
     status: Literal["pending_confirmation"] | None = None

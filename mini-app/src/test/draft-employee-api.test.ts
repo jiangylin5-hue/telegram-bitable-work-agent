@@ -39,3 +39,17 @@ test('submits only a versioned terminal command and keeps the opaque audit recei
   await expect(api.confirmS5Draft('draft-1', 1, 'confirm-key')).resolves.toEqual({ id: 'draft-1', status: 'confirmed', version: 2, terminalAuditEventId: 'audit-1' })
   expect(fetchMock).toHaveBeenCalledWith('/mini-app/drafts/draft-1/confirm', expect.objectContaining({ method: 'POST', body: JSON.stringify({ expected_version: 1 }), headers: expect.objectContaining({ 'idempotency-key': 'confirm-key' }) }))
 })
+
+test('projects safe summary citations and never forwards runtime citation fields', async () => {
+  const fetchMock = vi.fn((input: RequestInfo | URL) => Promise.resolve(json({
+    kind: 'summary', answer: 'Two records need review.', citations: [{ record_id: 'record-1', field_keys: ['private'] }], runtime: { model_name: 'never-reach-client' },
+  })))
+  vi.stubGlobal('fetch', fetchMock)
+
+  await expect(api.invokeS5Employee('employee-1', {
+    intent: 'summarize', baseId: 'base-1', viewId: 'view-1', instruction: '请汇总',
+  })).resolves.toEqual({ kind: 'summary', answer: 'Two records need review.', citations: [{ recordId: 'record-1' }] })
+  expect(fetchMock).toHaveBeenCalledWith('/mini-app/digital-employees/employee-1/invocations', expect.objectContaining({
+    method: 'POST', body: JSON.stringify({ intent: 'summarize', base_id: 'base-1', view_id: 'view-1', instruction: '请汇总' }),
+  }))
+})

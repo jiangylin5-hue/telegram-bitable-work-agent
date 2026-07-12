@@ -12,7 +12,7 @@
 | DE-I01 | contact visibility | active contact ∩ Base ∩ caller scope only | API/workspace/Base omission tests |
 | DE-I02 | context confusion | all IDs belong to one authorized Base and employee scope | cross-Base/stale/hidden denial tests |
 | DE-I03 | action escalation | browser sends only fixed intent; backend maps intent to allowed runtime action | strict schema and malicious payload tests |
-| DE-I04 | raw runtime disclosure | safe invocation response drops records/config/runtime/skill/trace fields | parser/DOM/response-redaction tests |
+| DE-I04 | raw runtime disclosure | summary citations are re-filtered through the current authorized view, reduced to unique `record_id` values, and client parsing allowlists only those values | backend response-redaction/cross-Base tests and client transport parser test; browser rendering remains pending TD006 |
 | DE-I05 | hidden draft disclosure | draft fields filter on current field read authority | hidden-before/proposed/detail/DOM tests |
 | DE-I06 | partial confirmation | every proposed field must be currently writable or whole command fails | permission-change/mixed-field tests |
 | DE-I07 | lost terminal transition | lock + draft revision + idempotency permits one terminal outcome | PostgreSQL confirm/reject race/replay tests |

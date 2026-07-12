@@ -4,7 +4,7 @@
 
 - Status: approved TD005 Option A work surface; S5 implementation in progress.
 - Functional ownership: consume only S5 server-safe contacts/invocation/drafts; never evaluate employee scope, build a raw diff or directly write a record.
-- Current Progress: contact directory, queue-to-safe-draft detail, confirm/reject terminal reread, protected cache invalidation, fixed local failure feedback and explicit retry are implemented. Contact/context-driven invocation controls remain intentionally absent because the approved six-route contract has no safe context-discovery model; the UI does not substitute a generic API or browser-persisted context.
+- Current Progress: contact directory, queue-to-safe-draft detail, confirm/reject terminal reread, protected cache invalidation, fixed local failure feedback and explicit retry are implemented. The typed invocation transport now allowlists a summary answer and server-projected citation record IDs only, but contact/context-driven invocation controls remain intentionally absent because the approved six-route contract has no safe context-discovery model; the UI does not substitute a generic API or browser-persisted context.
 
 ## Functional Modules
 
