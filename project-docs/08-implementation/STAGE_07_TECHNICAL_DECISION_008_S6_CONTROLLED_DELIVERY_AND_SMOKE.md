@@ -5,7 +5,7 @@
 - Decision status: **approved for local implementation** by the user on 2026-07-13. It authorizes only the documented source, migration and local verification package. BotFather/webhook configuration, secret entry, external message delivery and the manual smoke remain separately subject to explicit per-environment authority.
 - Scope: one non-production, explicitly confirmed Telegram Mini App deep-link delivery and end-to-end smoke path after S6.1.
 - Authority: current user instruction, `AGENTS.md`, Stage07 Source Of Truth, TD007 Option A, existing `restricted_test` send policy and Stage06 authorization/audit boundaries.
-- Current implementation: `partial-local`. The closed extension, server-only create/confirm service, one-attempt Worker reservation, fixed URL-button client and configuration guard are implemented. Focused local PostgreSQL proves success, definite rejection, transport uncertainty, sequential reserved replay, rollback/replay migration and pointer revocation. Concurrent dual-Worker proof, logger-integration scan and any real Telegram operation remain open.
+- Current implementation: `partial-local`. The closed extension, server-only create/confirm service, one-attempt Worker reservation, fixed URL-button client and configuration guard are implemented. Focused local PostgreSQL proves success, definite rejection, transport uncertainty, sequential reserved replay, rollback/replay migration, pointer revocation and a two-session claimed-worker collision with at most one Bot call. The logger-integration scan, confirmation-denial rollback matrix and any real Telegram operation remain open.
 
 ## Decision Required
 

@@ -20,8 +20,8 @@
 ### S6.2 Local Matrix
 
 - Closed delivery extension/model, exact one-target configuration, server-only create/confirmation and generic-confirmation exclusion use unit tests only; no browser delivery route is permitted.
-- Fake Bot client cases exercise the only permitted fixed button payload. Disposable local PostgreSQL exercises successful terminalization, definite rejection, transport uncertainty, sequential reservation replay and pointer revocation.
-- The remaining local S6.2 matrix is deliberately limited to simultaneous two-Worker reservation and any future logger sink. Real Bot delivery and Mini App opening are manual, explicitly authorized work only.
+- Fake Bot client cases exercise the only permitted fixed button payload. Disposable local PostgreSQL exercises successful terminalization, definite rejection, transport uncertainty, sequential reservation replay, a two-session claimed-Worker collision and pointer revocation.
+- The remaining local S6.2 matrix is deliberately limited to confirmation-denial rollback and any future logger sink. Real Bot delivery and Mini App opening are manual, explicitly authorized work only.
 
 ## 2. Required Matrices
 
@@ -35,7 +35,7 @@
 - F1 failure states: blank/duplicate name with the allowlisted local feedback only, invalid/missing choices, raw request extras, schema-policy leak, 401/403/404/409/5xx and failed view update rollback.
 - F2 relation/lookup: use the separate F2 BDD, SDD and complex-feature index as the exhaustive state source. Required cases include same-Base/permission denial, replay/conflict/rollback, candidate search/cursor/label omission, relation required/self/unreadable-target writes, all fixed aggregates, two-level/cycle failure, whole-lookup fail-closed omission, future delete guards, protected-cache cancellation and four-width UI QA.
 - S3 Governance Readback: API tests prove independent `member.read` / Base-scoped `audit.read`, closed DTO shapes, denial and opaque cursor behavior; disposable PostgreSQL proves isolation/redaction/paging; frontend tests prove strict parser/key/workbench paths. A Browser run is required for desktop/mobile entry, safe rows/timeline, retry/denial and console scan, but remains external-environment-pending until the in-app Browser can reach the local built client.
-- S4 Governance Write: focused route/authorization/redaction and disposable PostgreSQL tests prove fixed role/policy commands, revision/idempotency/row-lock behavior, hidden field omission from schema/presentation/detail and record-update non-escalation. Typed Mini App parser/query/workbench tests and the built-client local pass prove no optimistic role/policy result, restricted-owner V1 grant reuse and `1440/1280/430/390` labelled entry paths. The exhaustive delayed governance-write `401/403/404/409` App-flow matrix and Browser stale/denied/retry/focus-return permutations remain required before full S4 acceptance; see `evidence/stage07-governance-write.md`.
+- S4 Governance Write: focused route/authorization/redaction and disposable PostgreSQL tests prove fixed role/policy commands, revision/idempotency/row-lock behavior, hidden field omission from schema/presentation/detail and record-update non-escalation. Typed Mini App parser/query/workbench tests and the built-client local pass prove no optimistic role/policy result, restricted-owner V1 grant reuse and `1440/1280/430/390` labelled entry paths. The delayed old-workspace role `401/403/404/409` App-flow matrix now passes; delayed field-policy and Browser stale/denied/retry/focus-return permutations remain required before full S4 acceptance; see `evidence/stage07-governance-write.md`.
 
 ## 2.1 F1 Required Evidence
 

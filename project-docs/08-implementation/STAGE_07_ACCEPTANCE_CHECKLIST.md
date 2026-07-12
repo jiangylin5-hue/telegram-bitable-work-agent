@@ -103,7 +103,8 @@ TD008 Option A is `partial-local`. It reuses the existing confirmation/Outbox/Wo
 - [x] Closed server-only request/confirmation, fixed URL-button client, Worker reservation and terminal no-retry paths pass focused local tests.
 - [x] Exactly-one private allowlist target, binding/member/destination confirm rechecks, generic-confirm rejection and no Mini App delivery/mint route pass negative tests.
 - [x] Disposable local PostgreSQL upgrade/downgrade/upgrade and success/definite-rejection/transport-uncertainty/sequential-reserved-replay cases pass.
-- [ ] PostgreSQL simultaneous dual-Worker reservation and integrated logger-sink scan remain local acceptance gaps.
+- [x] A two-session PostgreSQL claimed-Worker collision makes at most one Bot call, does not call the replay client and revokes the pointer into `delivery_unknown`.
+- [ ] Integrated logger-sink scan and S6D-A02 confirmation-denial rollback matrix remain local acceptance gaps.
 - [ ] Real private-chat delivery and real Telegram `initData` -> resolver -> reread require per-environment authority.
 - [ ] Definite rejection and uncertain-send paths revoke the pointer and never retry automatically.
 - [ ] Disposable PostgreSQL migration/lock/rollback and typed Bot URL-button tests pass.

@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: implemented-local work surface; exhaustive governance-write negative-lifecycle acceptance remains partial.
+- Status: implemented-local work surface; delayed role mutations are now protected across terminal outcomes, while field-policy and Browser negative-lifecycle acceptance remains partial.
 - Functional ownership: S4 owns only safe governance command forms and cache lifecycle, never authorization evaluation.
 
 ## Functional Modules
@@ -39,4 +39,4 @@ The work surface consumes only S4 safe DTOs and existing V1 safe builder data. I
 
 ## Acceptance Ownership
 
-This module owns GW-A06 and GW-A07 UI evidence, contributes negative rendering proof to GW-A01/GW-A03/GW-A04, and has no authority to mark backend authorization or production/Telegram acceptance complete. The current built-client pass proves the labelled write success paths, V1 reuse and four widths; it does not claim the remaining stale/denied/retry/focus-return Browser permutations.
+This module owns GW-A06 and GW-A07 UI evidence, contributes negative rendering proof to GW-A01/GW-A03/GW-A04, and has no authority to mark backend authorization or production/Telegram acceptance complete. The delayed old-workspace role `401/403/404/409` App matrix proves no replacement-workspace denial or stale repopulation. The current built-client pass proves the labelled write success paths, V1 reuse and four widths; it does not claim delayed field-policy or the remaining stale/denied/retry/focus-return Browser permutations.

@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: implementation reconciled against local evidence; GW-I08/GW-I10 retain the explicit negative-lifecycle evidence gap.
+- Status: implementation reconciled against local evidence; GW-I08 retains delayed field-policy and GW-I10 retains Browser negative-lifecycle evidence gaps.
 
 | ID | Concern | Required rule | Required proof |
 | --- | --- | --- | --- |
@@ -19,7 +19,7 @@
 | GW-I11 | audit integrity | audit contains stable delta/revision only and no raw sensitive state | audit redaction/PostgreSQL assertions |
 | GW-I12 | cleanup | temporary fixture/proxy/processes removed; no production/Telegram claim | evidence document and port/process check |
 
-Current reconciliation: GW-I01--GW-I07, GW-I09 and GW-I11 have bounded local implementation evidence. GW-I08 has typed protected-state and canonical-reread coverage but lacks the planned exhaustive delayed governance-write 401/403/404/409 App-flow matrix. GW-I10 has built-client observations at all four target widths, but its stale/denied/retry/focus-return Browser permutations remain pending. GW-I12 is closed only for the synthetic local material recorded in `evidence/stage07-governance-write.md`.
+Current reconciliation: GW-I01--GW-I07, GW-I09 and GW-I11 have bounded local implementation evidence. GW-I08 has typed protected-state and canonical-reread coverage; its delayed old-workspace role `401/403/404/409` App-flow matrix is complete, while delayed field-policy permutations remain. GW-I10 has built-client observations at all four target widths, but its stale/denied/retry/focus-return Browser permutations remain pending. GW-I12 is closed only for the synthetic local material recorded in `evidence/stage07-governance-write.md`.
 
 ## Scope Guards
 

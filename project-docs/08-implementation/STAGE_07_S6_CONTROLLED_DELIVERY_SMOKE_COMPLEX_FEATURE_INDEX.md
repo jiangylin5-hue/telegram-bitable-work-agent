@@ -10,7 +10,7 @@
 | S6D-I01 | raw-token persistence | no persisted request/event/audit/log/DTO field contains raw token or URL | persistence/audit/fake-client checks pass; no integrated logger scan | partial-local |
 | S6D-I02 | target fan-out | runtime allowlist has exactly one target equal to active source binding chat | configuration and changed-allowlist unit checks | implemented-local |
 | S6D-I03 | stale authority | create, confirm and dispatch each recheck binding/member/destination actions | create/confirm unit revocation cases pass; dispatch-time PostgreSQL revocation matrix remains open | partial-local |
-| S6D-I04 | duplicate external send | durable reservation precedes Bot call; duplicate claim never contacts client | local PostgreSQL sequential replay passes; simultaneous worker proof remains open | partial-local |
+| S6D-I04 | duplicate external send | durable reservation precedes Bot call; duplicate claim never contacts client | local PostgreSQL sequential replay and two-session claimed-collision pass: one client call at most, second client zero calls, terminal pointer revoked | implemented-local |
 | S6D-I05 | uncertain send result | no automatic retry after timeout/crash/finalization uncertainty; pointer revoked | transport fault injection and PostgreSQL pointer-revocation case pass | implemented-local |
 | S6D-I06 | generic message expansion | S6D accepts only fixed template and closed destination; no Mini App route | generic-confirm rejection and OpenAPI inventory pass | implemented-local |
 | S6D-I07 | destination secrecy | Bot message/button has neutral copy and opaque link only | fixed-client payload and closed-request checks pass | implemented-local |

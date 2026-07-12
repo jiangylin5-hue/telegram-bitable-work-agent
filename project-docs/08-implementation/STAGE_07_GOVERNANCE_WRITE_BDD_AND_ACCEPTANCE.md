@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: implementation evidence reconciled; GW-A06/GW-A07 retain the explicit negative-lifecycle gaps below.
+- Status: implementation evidence reconciled; GW-A06 retains delayed field-policy and GW-A07 retains built-client terminal-lifecycle gaps below.
 - Authority: Technical Decision 004 and the Governance Write Design.
 
 ## BDD Scenarios
@@ -90,7 +90,7 @@ Then selection, confirmation, pending, conflict, denied, retry and focus return 
 | GW-A03 | field policy schema is fixed, versioned and cannot alter field/record data | service/API negative tests plus PostgreSQL rollback | implemented-local |
 | GW-A04 | field read/write enforcement remains intersectional | hidden/read/write regression across schema/presentation/detail/update | implemented-local |
 | GW-A05 | V1 view grant path is reused with no broader policy endpoint | contract and UI integration tests | implemented-local |
-| GW-A06 | protected QueryClient cleanup and authoritative reread are exact | parser/query/App tests for 401/403/404/409/scope replacement | partial-local — immediate 401/403, exact Base 404, explicit 409 field-policy reread and focus return are covered; planned delayed mutation permutations remain open |
+| GW-A06 | protected QueryClient cleanup and authoritative reread are exact | parser/query/App tests for 401/403/404/409/scope replacement | partial-local — immediate 401/403, exact Base 404, explicit 409 field-policy reread and focus return are covered; delayed old-workspace role mutations across `401/403/404/409` cannot deny or repopulate the replacement workspace. Delayed field-policy permutations remain open. |
 | GW-A07 | built UI is reachable and safe at four widths | Browser synthetic fixture, console scan and retained observation | partial-local — success/four-width/console plus safe Base 404 pass; Browser stale/denied/retry terminal-mutation permutations remain open |
 | GW-A08 | audit/redaction and temporary cleanup are reconciled | BDD evidence document and cleanup proof | implemented-local |
 

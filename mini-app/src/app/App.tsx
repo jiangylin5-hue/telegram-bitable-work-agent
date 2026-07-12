@@ -354,6 +354,7 @@ function AppContent() {
     builderRequestVersion.current += 1
     templateImportRequestVersion.current += 1
     governanceRequestVersion.current += 1
+    governanceWriteRequestVersion.current += 1
     draftEmployeeRequestVersion.current += 1
     telegramLaunchRequestVersion.current += 1
     pendingTelegramDestination.current = null
@@ -833,22 +834,43 @@ function AppContent() {
     await openBase(base, { tableId: view.table_id, viewId: view.id, openViewBuilder: true }, readyState.home, builderVersion)
   }
 
-  async function refreshGovernanceWriteMemberContext(scope: { userId: string; workspaceId: string }) {
+  async function refreshGovernanceWriteMemberContext(
+    scope: { userId: string; workspaceId: string },
+    requestVersion = governanceWriteRequestVersion.current,
+  ) {
+    const isCurrent = () => !sessionInvalidated.current
+      && governanceWriteRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === scope.workspaceId
+    if (!isCurrent()) return
     await clearGovernanceWriteQueries(queryClient, scope)
+    if (!isCurrent()) return
     const members = await queryClient.fetchQuery({
       queryKey: governanceWriteKeys.members(scope, null),
       queryFn: ({ signal }) => api.listGovernanceEditableMembers(scope.workspaceId, null, { signal }),
     })
+    if (!isCurrent()) {
+      await clearGovernanceWriteQueries(queryClient, scope)
+      return
+    }
     setGovernanceWritePanel((current) => current ? { ...current, members, membersLoading: false } : current)
   }
 
   async function changeGovernanceWriteRole(memberId: string, role: 'admin' | 'builder' | 'operator' | 'viewer', expectedVersion: number): Promise<void> {
     const workspaceId = readyState.home.workspace_id
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = governanceWriteRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && governanceWriteRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
     try {
       await api.changeGovernanceMemberRole(workspaceId, memberId, role, expectedVersion, crypto.randomUUID())
-      await refreshGovernanceWriteMemberContext(scope)
+      if (!isCurrent()) return
+      await refreshGovernanceWriteMemberContext(scope, requestVersion)
     } catch (error) {
+      if (!isCurrent()) {
+        await clearGovernanceWriteQueries(queryClient, scope)
+        return
+      }
       if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
       else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
       else if (error instanceof ApiError && error.status === 404) await clearGovernanceWriteQueries(queryClient, scope)
@@ -862,8 +884,13 @@ function AppContent() {
     if (!tableId) return
     const workspaceId = readyState.home.workspace_id
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = governanceWriteRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && governanceWriteRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
     try {
       await api.replaceGovernanceFieldPermissionPolicy(tableId, fieldId, policy, expectedPermissionVersion, crypto.randomUUID())
+      if (!isCurrent()) return
       const viewIds = readyState.canvas?.table?.id === tableId
         ? readyState.canvas.views.filter((view) => view.table_id === tableId).map((view) => view.id)
         : []
@@ -871,12 +898,21 @@ function AppContent() {
         clearGovernanceWriteQueries(queryClient, scope, tableId),
         clearFieldMutationQueries(queryClient, scope, tableId, viewIds),
       ])
+      if (!isCurrent()) return
       const fields = await queryClient.fetchQuery({
         queryKey: governanceWriteKeys.fieldPermissions(scope, tableId),
         queryFn: ({ signal }) => api.listGovernanceFieldPermissions(tableId, { signal }),
       })
+      if (!isCurrent()) {
+        await clearGovernanceWriteQueries(queryClient, scope, tableId)
+        return
+      }
       setGovernanceWritePanel((current) => current?.selectedTableId === tableId ? { ...current, fields, fieldsLoading: false } : current)
     } catch (error) {
+      if (!isCurrent()) {
+        await clearGovernanceWriteQueries(queryClient, scope, tableId)
+        return
+      }
       if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
       else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
       else if (error instanceof ApiError && error.status === 404) await clearGovernanceWriteQueries(queryClient, scope, tableId)

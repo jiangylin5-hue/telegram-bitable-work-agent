@@ -1,4 +1,6 @@
 from datetime import UTC, datetime
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -53,6 +55,23 @@ class FakeTelegramBotClient:
                     else {"ok": False, "error_code": 403}
                 ),
             },
+        )()
+
+
+class BlockingFakeTelegramBotClient(FakeTelegramBotClient):
+    def __init__(self) -> None:
+        super().__init__()
+        self.entered = Event()
+        self.release = Event()
+
+    def send_main_mini_app_link(self, *, chat_id: str, url: str):
+        self.calls.append({"chat_id": chat_id, "url": url})
+        self.entered.set()
+        assert self.release.wait(timeout=10)
+        return type(
+            "Result",
+            (),
+            {"ok": True, "response_summary": {"ok": True, "telegram_message_id": 19}},
         )()
 
 
@@ -246,3 +265,45 @@ def test_worker_replay_of_a_reserved_delivery_never_calls_bot(
         session.refresh(delivery)
         assert delivery.dispatch_state == "delivery_unknown"
         assert client.calls == []
+
+
+def test_simultaneous_workers_make_at_most_one_external_call_and_revoke_after_claim_collision(
+    stage06_postgres: Stage06Postgres,
+) -> None:
+    request_id = _confirmed_delivery(stage06_postgres)
+    reserved_client = BlockingFakeTelegramBotClient()
+    replay_client = FakeTelegramBotClient()
+
+    def dispatch_with(client: FakeTelegramBotClient) -> None:
+        with stage06_postgres.session_factory() as session:
+            dispatch_stage07_telegram_deep_link_delivery(
+                session,
+                request_id=request_id,
+                bot_client=client,
+                allowed_chat_ids=("synthetic-chat",),
+                bot_username="Stage07TestBot",
+                now=NOW,
+            )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(dispatch_with, reserved_client)
+        assert reserved_client.entered.wait(timeout=10)
+        replay = executor.submit(dispatch_with, replay_client)
+        replay.result(timeout=10)
+        reserved_client.release.set()
+        first.result(timeout=10)
+
+    assert len(reserved_client.calls) == 1
+    assert replay_client.calls == []
+    with stage06_postgres.session_factory() as session:
+        delivery = session.scalar(
+            select(Stage07TelegramDeepLinkDelivery).where(
+                Stage07TelegramDeepLinkDelivery.send_request_id == request_id
+            )
+        )
+        assert delivery is not None
+        assert delivery.dispatch_state == "delivery_unknown"
+        assert delivery.stage07_telegram_deep_link_id is not None
+        link = session.get(Stage07TelegramDeepLink, delivery.stage07_telegram_deep_link_id)
+        assert link is not None
+        assert link.status == "revoked"
