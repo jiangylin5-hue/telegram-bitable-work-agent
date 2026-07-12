@@ -9,6 +9,8 @@ test('opens only the selected safe Base summary', () => {
   const onOpenBase = vi.fn()
   render(<BaseDirectory state="ready" bases={bases} onOpenBase={onOpenBase} onHome={vi.fn()} onRetry={vi.fn()} />)
 
+  expect(screen.getByRole('main', { name: 'Bases' })).toHaveClass('base-directory')
+  expect(screen.getByRole('button', { name: '打开 客户运营' })).toHaveClass('base-directory-row')
   fireEvent.click(screen.getByRole('button', { name: '打开 客户运营' }))
 
   expect(onOpenBase).toHaveBeenCalledWith(bases[0])

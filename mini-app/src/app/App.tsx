@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { isCancelledError, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ApiError, api, type BaseSummary, type BootstrapResponse, type CreateForm, type PlatformTable, type RecordDetail, type TableSchema, type TelegramDeepLinkDestination, type ViewPresentation, type ViewRecords, type ViewSummary, type WorkspaceHome } from './api'
-import { AppShell } from './AppShell'
+import { AppShell, type AppShellRoute } from './AppShell'
 import { BaseCanvas } from './BaseCanvas'
+import { BaseDirectory, type BaseDirectoryState } from './BaseDirectory'
 import { BuilderCreatePanel } from './BuilderCreatePanel'
 import { FieldBuilderPanel, type FieldBuilderValues } from './FieldBuilderPanel'
 import { ImportWizard, type ImportTarget } from './ImportWizard'
@@ -17,7 +18,7 @@ import { SaveTemplatePanel } from './SaveTemplatePanel'
 import { TemplateImportHub } from './TemplateImportHub'
 import { ViewBuilderPanel } from './ViewBuilderPanel'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
-import { clearAllProtectedQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTelegramDeepLinkQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, draftEmployeeKeys, governanceKeys, governanceWriteKeys, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
+import { clearAllProtectedQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTelegramDeepLinkQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, draftEmployeeKeys, governanceKeys, governanceWriteKeys, navigationKeys, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
 import { readTelegramMiniAppLaunch, type TelegramMiniAppLaunch } from './telegram-mini-app'
 import type { GovernanceAuditPage, GovernanceMemberPage } from './governance-types'
 import type { GovernanceEditableMemberPage, GovernanceFieldPermissionPage, GovernanceFieldPermissionPolicy } from './governance-write-types'
@@ -46,6 +47,8 @@ type AppState =
   | { status: 'denied' }
   | { status: 'error' }
   | { status: 'ready'; bootstrap: BootstrapResponse; home: WorkspaceHome; canvas?: BaseCanvasState; canvasLoading?: boolean }
+
+type BaseDirectoryData = { state: BaseDirectoryState; bases: BaseSummary[] }
 
 type CanvasTarget = { tableId?: string; viewId?: string; recordId?: string; openViewBuilder?: boolean }
 type BuilderPanel =
@@ -136,6 +139,7 @@ function AppContent() {
     api.setTelegramInitData(telegramLaunch.current?.initData ?? null)
   }
   const homeRequestVersion = useRef(0)
+  const baseDirectoryRequestVersion = useRef(0)
   const canvasRequestVersion = useRef(0)
   const activeWorkspaceId = useRef<string | undefined>(undefined)
   const recordRequestVersion = useRef(0)
@@ -156,6 +160,8 @@ function AppContent() {
   const draftEmployeeReturnFocus = useRef<HTMLElement | null>(null)
   const sessionInvalidated = useRef(false)
   const [telegramRecovery, setTelegramRecovery] = useState(false)
+  const [navigationRoute, setNavigationRoute] = useState<AppShellRoute>('home')
+  const [baseDirectory, setBaseDirectory] = useState<BaseDirectoryData>({ state: 'loading', bases: [] })
   const [builderPanel, setBuilderPanel] = useState<BuilderPanel>()
   const [templateImportPanel, setTemplateImportPanel] = useState<TemplateImportPanel>()
   const [governancePanel, setGovernancePanel] = useState<GovernancePanel>()
@@ -164,6 +170,7 @@ function AppContent() {
 
   function invalidateInFlightRequests() {
     homeRequestVersion.current += 1
+    baseDirectoryRequestVersion.current += 1
     canvasRequestVersion.current += 1
     recordRequestVersion.current += 1
     createFormRequestVersion.current += 1
@@ -348,6 +355,7 @@ function AppContent() {
   async function selectWorkspace(workspaceId: string) {
     if (workspaceId === activeWorkspace.id) return
     homeRequestVersion.current += 1
+    baseDirectoryRequestVersion.current += 1
     canvasRequestVersion.current += 1
     recordRequestVersion.current += 1
     createFormRequestVersion.current += 1
@@ -363,10 +371,58 @@ function AppContent() {
     setGovernancePanel(undefined)
     setGovernanceWritePanel(undefined)
     setDraftEmployeePanel(undefined)
+    setNavigationRoute('home')
+    setBaseDirectory({ state: 'loading', bases: [] })
     activeWorkspaceId.current = workspaceId
     setState({ status: 'loading' })
     await clearProtectedWorkspace(queryClient, { userId: readyState.bootstrap.identity.user_id, workspaceId: activeWorkspace.id })
     await loadWorkspaceHome(readyState.bootstrap, workspaceId)
+  }
+
+  async function loadBaseDirectory() {
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++baseDirectoryRequestVersion.current
+    const queryKey = navigationKeys.bases(scope)
+    const isCurrent = () => !sessionInvalidated.current
+      && baseDirectoryRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setBaseDirectory({ state: 'loading', bases: [] })
+    try {
+      const { bases } = await queryClient.fetchQuery({
+        queryKey,
+        queryFn: ({ signal }) => api.workspaceBases(workspaceId, { signal }),
+      })
+      if (!isCurrent()) return
+      setBaseDirectory({ state: bases.length ? 'ready' : 'empty', bases })
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await denyInvalidSession()
+      } else if (error instanceof ApiError && error.status === 403) {
+        await denyWorkspace(scope)
+      } else if (error instanceof ApiError && error.status === 404) {
+        await queryClient.cancelQueries({ queryKey })
+        queryClient.removeQueries({ queryKey })
+        if (isCurrent()) setNavigationRoute('home')
+      } else if (isCurrent()) {
+        setBaseDirectory({ state: 'retryable', bases: [] })
+      }
+    }
+  }
+
+  function selectNavigation(route: AppShellRoute) {
+    baseDirectoryRequestVersion.current += 1
+    if (readyState.canvasLoading || readyState.canvas) {
+      canvasRequestVersion.current += 1
+      createFormRequestVersion.current += 1
+      builderRequestVersion.current += 1
+      abandonRecordDetail(readyState.canvas, readyState.home.workspace_id)
+      setBuilderPanel(undefined)
+      setState({ ...readyState, canvas: undefined, canvasLoading: false })
+    }
+    setNavigationRoute(route)
+    if (route === 'bases') void loadBaseDirectory()
   }
 
   async function readV1BuilderForCanvas(
@@ -2088,7 +2144,9 @@ function AppContent() {
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
     ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} canCreateRecords={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role)} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (!canvas?.table) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id, canvas.view.id) }} onSaveTemplate={() => setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base })} onImportIntoBase={() => openBaseImport(readyState.canvas!.base)} onOpenDraftHub={(trigger) => { void openDraftEmployeeHub(trigger) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
-      : <>{telegramRecoveryNotice}<WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={() => { void openTemplateImportHub() }} onOpenDraftHub={(trigger, draftId) => { void openDraftEmployeeHub(trigger, draftId) }} /></>
+      : navigationRoute === 'bases'
+        ? <BaseDirectory state={baseDirectory.state} bases={baseDirectory.bases} onOpenBase={(base) => { void openBase(base) }} onHome={() => selectNavigation('home')} onRetry={() => { void loadBaseDirectory() }} />
+        : <>{telegramRecoveryNotice}<WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={() => { void openTemplateImportHub() }} onOpenDraftHub={(trigger, draftId) => { void openDraftEmployeeHub(trigger, draftId) }} /></>
   const builderOverlay = builderPanel?.mode === 'base'
     ? <BuilderCreatePanel mode="base" onSubmit={(values, idempotencyKey) => createBase(values as { baseName: string; tableName: string }, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
     : builderPanel?.mode === 'table'
@@ -2176,5 +2234,5 @@ function AppContent() {
       onClose={closeGovernanceWrite}
     />
     : null
-  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} onOpenGovernance={(trigger) => { void openGovernance(trigger) }}>{content}{builderOverlay}{templateImportOverlay}{draftEmployeeOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
+  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} activeRoute={navigationRoute} onNavigate={selectNavigation} onOpenGovernance={(trigger) => { void openGovernance(trigger) }}>{content}{builderOverlay}{templateImportOverlay}{draftEmployeeOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
 }

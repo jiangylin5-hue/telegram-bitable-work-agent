@@ -1,9 +1,13 @@
 import { expect, test, vi } from 'vitest'
 
-import { clearAllProtectedQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, createProtectedQueryClient, protectedQueryKey, relationCandidateQueryKey } from '../app/protectedQuery'
+import { clearAllProtectedQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, createProtectedQueryClient, navigationKeys, protectedQueryKey, relationCandidateQueryKey } from '../app/protectedQuery'
 
 test('keys protected data by verified user and workspace before resource segments', () => {
   expect(protectedQueryKey({ userId: 'user-1', workspaceId: 'workspace-1' }, 'record', 'record-1')).toEqual(['stage07', 'user-1', 'workspace-1', 'record', 'record-1'])
+})
+
+test('keeps navigation Base directories in their own protected namespace', () => {
+  expect(navigationKeys.bases({ userId: 'user-1', workspaceId: 'workspace-1' })).toEqual(['stage07', 'user-1', 'workspace-1', 'navigation', 'bases'])
 })
 
 test('removes and cancels only the requested protected workspace scope', async () => {

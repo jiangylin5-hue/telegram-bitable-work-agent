@@ -19,6 +19,10 @@ export function relationCandidateQueryKey(
   return protectedQueryKey(scope, 'relation-candidates', fieldId, query, cursor)
 }
 
+export const navigationKeys = {
+  bases: (scope: ProtectedScope): QueryKey => protectedQueryKey(scope, 'navigation', 'bases'),
+}
+
 export const viewBuilderKeys = {
   context: (scope: ProtectedScope, tableId: string): QueryKey => (
     protectedQueryKey(scope, 'view-builder-context', tableId)
