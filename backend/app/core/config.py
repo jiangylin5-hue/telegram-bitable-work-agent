@@ -23,6 +23,7 @@ class Settings:
         "ads_agent?connect_timeout=3"
     )
     telegram_bot_token: str | None = None
+    telegram_mini_app_init_max_age_seconds: int = 300
     telegram_webhook_secret: str | None = None
     telegram_allowed_chat_ids: tuple[str, ...] = ()
     telegram_allowed_user_ids: tuple[str, ...] = ()
@@ -51,6 +52,10 @@ def get_settings() -> Settings:
         openrouter_model=os.getenv("OPENROUTER_MODEL", Settings.openrouter_model),
         database_url=os.getenv("DATABASE_URL", Settings.database_url),
         telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN"),
+        telegram_mini_app_init_max_age_seconds=_env_int(
+            "TELEGRAM_MINI_APP_INIT_MAX_AGE_SECONDS",
+            Settings.telegram_mini_app_init_max_age_seconds,
+        ),
         telegram_webhook_secret=os.getenv("TELEGRAM_WEBHOOK_SECRET"),
         telegram_allowed_chat_ids=_env_csv_tuple("TELEGRAM_ALLOWED_CHAT_IDS"),
         telegram_allowed_user_ids=_env_csv_tuple("TELEGRAM_ALLOWED_USER_IDS"),
@@ -91,6 +96,10 @@ def get_settings() -> Settings:
 
 def validate_runtime_settings(settings: Settings | None = None) -> Settings:
     settings = settings or get_settings()
+    if not 1 <= settings.telegram_mini_app_init_max_age_seconds <= 900:
+        raise RuntimeError(
+            "Invalid TELEGRAM_MINI_APP_INIT_MAX_AGE_SECONDS: expected 1..900"
+        )
     if (
         settings.agent_workflow_mode == "real_openrouter"
         and not settings.openrouter_api_key

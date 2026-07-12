@@ -12,9 +12,10 @@ Stage06IdentitySource = Literal[
 
 
 class Stage06IdentityError(RuntimeError):
-    def __init__(self, code: str) -> None:
+    def __init__(self, code: str, *, status_code: int = 401) -> None:
         super().__init__(code)
         self.code = code
+        self.status_code = status_code
 
 
 @dataclass(frozen=True)
