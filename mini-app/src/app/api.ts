@@ -48,6 +48,7 @@ import type {
   GovernanceMemberRoleReceipt,
   GovernanceRole,
 } from './governance-write-types'
+import type { S5Contact, S5ContactPage, S5DraftDetail, S5DraftField, S5Intent } from './draft-employee-types'
 
 export type {
   SafeViewErrorCode,
@@ -478,6 +479,45 @@ function safeGovernanceFieldPermissionReceipt(value: unknown): GovernanceFieldPe
   return { id: stringValue(record.id), key: stringValue(record.key), policy: safeGovernanceFieldPermissionPolicy(record.policy), permissionVersion: governanceVersion(record.permission_version) }
 }
 
+function s5Intent(value: unknown): S5Intent {
+  if (value === 'summarize' || value === 'draft_update') return value
+  throw new Error('Invalid S5 response')
+}
+
+function s5Status(value: unknown): S5DraftDetail['status'] {
+  if (value === 'pending_confirmation' || value === 'confirmed' || value === 'rejected' || value === 'expired') return value
+  throw new Error('Invalid S5 response')
+}
+
+function s5Value(value: unknown): string | number | boolean | null {
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value
+  throw new Error('Invalid S5 response')
+}
+
+function safeS5Contact(value: unknown): S5Contact {
+  const record = jsonRecord(value)
+  if (!Array.isArray(record.available_intents) || record.status !== 'active') throw new Error('Invalid S5 response')
+  return { id: stringValue(record.id), baseId: stringValue(record.base_id), name: stringValue(record.name), description: stringValue(record.description), status: 'active', availableIntents: record.available_intents.map(s5Intent) }
+}
+
+function safeS5ContactPage(value: unknown): S5ContactPage {
+  const record = jsonRecord(value)
+  if (!Array.isArray(record.contacts)) throw new Error('Invalid S5 response')
+  return { workspaceId: stringValue(record.workspace_id), contacts: record.contacts.map(safeS5Contact), nextCursor: nullableStringValue(record.next_cursor), hasMore: booleanValue(record.has_more) }
+}
+
+function safeS5DraftField(value: unknown): S5DraftField {
+  const record = jsonRecord(value)
+  return { key: stringValue(record.key), label: stringValue(record.label), fieldType: stringValue(record.field_type), beforeValue: s5Value(record.before_value), proposedValue: s5Value(record.proposed_value) }
+}
+
+function safeS5DraftDetail(value: unknown): S5DraftDetail {
+  const record = jsonRecord(value)
+  const actions = jsonRecord(record.actions)
+  if (!Array.isArray(record.fields) || !Number.isInteger(record.version)) throw new Error('Invalid S5 response')
+  return { id: stringValue(record.id), baseId: stringValue(record.base_id), tableId: stringValue(record.table_id), recordId: nullableStringValue(record.record_id), draftType: stringValue(record.draft_type), status: s5Status(record.status), version: record.version as number, fields: record.fields.map(safeS5DraftField), actions: { canConfirm: booleanValue(actions.can_confirm), canReject: booleanValue(actions.can_reject) }, terminalAuditEventId: nullableStringValue(record.terminal_audit_event_id) }
+}
+
 function safeTemplateSummary(value: unknown): TemplateSummary {
   const record = jsonRecord(value)
   return {
@@ -791,6 +831,14 @@ export const api = {
       { expected_permission_version: expectedPermissionVersion, policy },
       idempotencyKey,
     ),
+  ),
+  listS5Contacts: async (workspaceId: string, cursor: string | null = null, init?: RequestInit): Promise<S5ContactPage> => {
+    const parameters = new URLSearchParams({ limit: '50' })
+    if (cursor) parameters.set('cursor', cursor)
+    return safeS5ContactPage(await getJson<unknown>(`/mini-app/workspaces/${encodeURIComponent(workspaceId)}/digital-employee-contacts?${parameters.toString()}`, init))
+  },
+  getS5Draft: async (draftId: string, init?: RequestInit): Promise<S5DraftDetail> => safeS5DraftDetail(
+    await getJson<unknown>(`/mini-app/drafts/${encodeURIComponent(draftId)}`, init),
   ),
   listTemplates: async (init?: RequestInit): Promise<TemplateSummary[]> => {
     const response = jsonRecord(await getJson<unknown>('/templates', init))
