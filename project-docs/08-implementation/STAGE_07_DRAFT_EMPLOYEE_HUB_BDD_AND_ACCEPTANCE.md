@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: approved TD005 Option A BDD; S5 implementation is in progress and every acceptance row remains unevaluated until evidence is recorded.
+- Status: TD005/TD006 implementation evidence is reconciled below. S5 remains `partial-local`: only rows whose stated local evidence is complete are marked `implemented-local`; Browser/provider-dependent rows remain explicitly partial.
 - Scope: safe S5 contact, explicit context, employee invocation, draft diff and terminal confirmation/rejection only.
 
 ## BDD Scenarios
@@ -103,16 +103,16 @@ Then it cannot create/publish a contact, persist memory, access knowledge, claim
 
 | ID | Requirement | Required evidence | Status |
 | --- | --- | --- | --- |
-| DE-A01 | safe contact projection and cross-workspace omission | API/unit and PostgreSQL isolation tests | unevaluated |
-| DE-A02 | explicit context intersection before runtime | service/API denial matrix | unevaluated |
-| DE-A03 | fixed invocation intents and safe result projection | strict parser/API/runtime tests | unevaluated |
-| DE-A04 | draft creation remains non-mutating | service/API/real runtime or injected-LangGraph proof | unevaluated |
-| DE-A05 | field-filtered immutable draft diff | schema/detail/hidden-field regression and Browser inspection | unevaluated |
-| DE-A06 | confirm lock/revision/idempotency/audit reference | migration, disposable PostgreSQL race/replay/rollback tests | unevaluated |
-| DE-A07 | reject has no record write and is replay-safe | service/API/PostgreSQL tests | unevaluated |
-| DE-A08 | protected client cleanup and no raw errors | transport/query/App delayed-response tests | unevaluated |
-| DE-A09 | four-width accessible Hub/draft path | synthetic built-client Browser matrix and console scan | unevaluated |
-| DE-A10 | no S6 capability leaks | route inventory, DTO/parser/DOM negative tests | unevaluated |
+| DE-A01 | safe contact projection and cross-workspace omission | API/unit and PostgreSQL isolation tests | implemented-local — focused backend/real local PostgreSQL evidence covers safe projection and cross-Base denial. |
+| DE-A02 | explicit context intersection before runtime | service/API denial matrix | partial-local — Base/view/record intersection and cross-Base denial are covered; stale/hidden-context matrix remains unaccepted. |
+| DE-A03 | fixed invocation intents and safe result projection | strict parser/API/runtime tests | partial-local — fixed intent and strict `{recordId}` citation/result transport are covered; real provider evidence is absent. |
+| DE-A04 | draft creation remains non-mutating | service/API/real runtime or injected-LangGraph proof | partial-local — bounded adapter and terminal draft loop are implemented; configured real-provider evidence is absent. |
+| DE-A05 | field-filtered immutable draft diff | schema/detail/hidden-field regression and Browser inspection | partial-local — safe detail DTO/UI exists; field-filtered Browser inspection is absent. |
+| DE-A06 | confirm lock/revision/idempotency/audit reference | migration, disposable PostgreSQL race/replay/rollback tests | implemented-local — real local PostgreSQL proves replay, concurrent winner/loser ledger behavior and terminal audit reference. |
+| DE-A07 | reject has no record write and is replay-safe | service/API/PostgreSQL tests | implemented-local — real local PostgreSQL proves replay and unchanged record values/version. |
+| DE-A08 | protected client cleanup and no raw errors | transport/query/App delayed-response tests | partial-local — strict parser, fixed error rendering and stale Canvas-result discard are covered; full draft failure matrix remains unaccepted. |
+| DE-A09 | four-width accessible Hub/draft path | synthetic built-client Browser matrix and console scan | partial-local — build passes, but both available Browser surfaces refused the local fixture. |
+| DE-A10 | no S6 capability leaks | route inventory, DTO/parser/DOM negative tests | implemented-local — no S6 delivery/mint route or generic context persistence is added; strict DTO/parser/client boundaries are covered. |
 
 ### 2026-07-12 Interim Implementation Evidence (not acceptance closure)
 
@@ -123,7 +123,7 @@ Then it cannot create/publish a contact, persist memory, access knowledge, claim
 | terminal draft baseline and queue query | real local PostgreSQL proves confirm replay, reject no-record-write, concurrent confirm rolls back the losing command's ledger, and a `512` pending / `1,536` terminal queue measurement reuses the existing Base/status index for the bounded pending-only route | full field-filtered Browser matrix remains pending; the optional partial index is intentionally not created |
 | production compilation | `npm.cmd run build` completed after the current-Canvas invocation UI change | both available browsers refused the temporary loopback fixture; no S5 visual observation is claimed |
 
-These checkpoints move implementation forward but do not change any `unevaluated` acceptance row to accepted. DE-A01 through DE-A10 require the complete specified evidence, including the TD006-approved invocation path where applicable.
+This reconciliation does not promote S5 or Stage07 to complete. DE-A02--DE-A05 and DE-A08--DE-A09 retain the exact provider/Browser/failure-matrix limits above; TD006 remains only the approved opaque transient context bridge.
 
 ## Prohibited Claims
 
