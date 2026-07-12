@@ -13,6 +13,7 @@ from app.services.stage06_platform import (
     InMemoryStage06PlatformUnitOfWork,
     create_base,
     create_field,
+    create_record,
     create_table,
     create_workspace,
 )
@@ -177,3 +178,39 @@ def test_s5_reject_is_versioned_idempotent_and_has_no_record_write() -> None:
     assert first.json()["terminal_audit_event_id"]
     assert uow.records == []
     assert "private-trace" not in first.text
+
+
+def test_s5_confirm_reuses_versioned_record_update_and_safe_receipt() -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="S5 confirm", owner_user_id=owner.actor_id, actor=owner)
+    base = create_base(uow, workspace.id, name="Operations", actor=owner)
+    table = create_table(uow, base.id, name="Tasks", key="tasks", actor=owner)
+    create_field(uow, table.id, name="Title", key="title", field_type="text", actor=owner)
+    record = create_record(uow, table.id, values={"title": "Before"}, actor=owner)
+    draft = RecordChangeDraft(
+        id=uuid4(), workspace_id=workspace.id, base_id=base.id, table_id=table.id,
+        record_id=record.id, draft_type="update_record", proposed_values={"title": "After"},
+        before_values={"title": "Before"}, created_by_type="digital_employee", created_by_id="private",
+        status="pending_confirmation", confirmation_policy={}, trace_id="private-trace",
+        expected_version=record.version, version=1,
+    )
+    uow.add_record_change_draft(draft)
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_runtime_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = owner.actor_id
+        response = client.post(
+            f"/mini-app/drafts/{draft.id}/confirm", headers={"Idempotency-Key": "s5-confirm-1"},
+            json={"expected_version": 1},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "confirmed"
+    assert response.json()["version"] == 2
+    assert response.json()["terminal_audit_event_id"]
+    assert record.values == {"title": "After"}
+    assert record.version == 2
+    assert "private-trace" not in response.text

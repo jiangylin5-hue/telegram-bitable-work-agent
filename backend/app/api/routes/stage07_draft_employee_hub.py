@@ -36,7 +36,7 @@ from app.services.stage06_platform import (
     get_table_schema,
     list_bases_for_workspace,
 )
-from app.services.stage07_draft_employee_hub import reject_s5_draft
+from app.services.stage07_draft_employee_hub import confirm_s5_draft, reject_s5_draft
 
 
 router = APIRouter(tags=["stage07-draft-employee-hub"])
@@ -198,6 +198,41 @@ def reject_safe_draft(
         raise _authorization_error(exc) from exc
     except PlatformValidationError as exc:
         raise _platform_error(exc) from exc
+    _commit_if_sqlalchemy(uow)
+    return _terminal_receipt(terminal)
+
+
+@router.post("/mini-app/drafts/{draft_id}/confirm", response_model=SafeDraftTerminalReceipt)
+def confirm_safe_draft(
+    draft_id: UUID,
+    request: SafeDraftTerminalRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=160),
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> SafeDraftTerminalReceipt:
+    draft = uow.get_record_change_draft(draft_id)
+    if draft is None:
+        raise HTTPException(status_code=404, detail=error_detail("record_change_draft_not_found", "record_change_draft_not_found"))
+    try:
+        actor = authorize_workspace_action(uow, identity, draft.workspace_id, "record_change_draft.confirm")
+        fingerprint = fingerprint_request({"draft_id": str(draft_id), "expected_version": request.expected_version, "user_id": identity.user_id})
+        decision = begin_idempotent_operation(
+            uow, workspace_id=draft.workspace_id, operation="stage07.s5.draft.confirm",
+            idempotency_key=idempotency_key, request_fingerprint=fingerprint,
+            trace_id=idempotency_trace_id("stage07.s5.draft.confirm", fingerprint, idempotency_key),
+        )
+        if decision.status == "replay":
+            replay_draft = uow.get_record_change_draft(UUID(str((decision.response_ref or {})["draft_id"])))
+            if replay_draft is None or replay_draft.terminal_audit_event_id is None:
+                raise PlatformValidationError("record_change_draft_not_found", str(draft_id))
+            return _terminal_receipt(replay_draft)
+        terminal = confirm_s5_draft(uow, draft_id, expected_version=request.expected_version, actor=actor)
+        complete_idempotent_operation(decision.record, response_ref={"draft_id": str(terminal.id)})
+    except Stage06AuthorizationError as exc:
+        raise _authorization_error(exc) from exc
+    except PlatformValidationError as exc:
+        raise _platform_error(exc) from exc
+    _commit_if_sqlalchemy(uow)
     return _terminal_receipt(terminal)
 
 
@@ -235,3 +270,9 @@ def _authorization_error(exc: Stage06AuthorizationError) -> HTTPException:
 def _platform_error(exc: PlatformValidationError) -> HTTPException:
     status_code = 404 if exc.code.endswith("_not_found") else 409 if "conflict" in exc.code or "invalid_state" in exc.code or "idempotency" in exc.code else 422
     return HTTPException(status_code=status_code, detail=error_detail(exc.code, exc.code))
+
+
+def _commit_if_sqlalchemy(uow: Stage06PlatformUnitOfWork) -> None:
+    session = getattr(uow, "session", None)
+    if session is not None:
+        session.commit()
