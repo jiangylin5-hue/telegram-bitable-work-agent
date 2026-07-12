@@ -19,7 +19,7 @@
 | --- | --- | --- |
 | `alembic downgrade 20260711_0022; alembic upgrade head` | passed on disposable local PostgreSQL | S4 migration rollback/upgrade is reversible and ends at `20260712_0023`. |
 | `python -m pytest -q tests/unit/test_stage07_governance_write_api.py tests/unit/test_stage07_governance_api.py tests/unit/test_stage06_authorization.py tests/unit/test_stage06_audit_redaction.py tests/unit/test_stage06_lookup_permissions.py tests/integration/test_stage07_governance_write_postgres.py` | `19 passed` | fixed actions, closed routes, invariant denial, replay/stale behaviour, real row-lock contention, audit counts, field hiding, presentation omission, lookup fail-closed regression and fixed-role update denial. |
-| `npm.cmd test -- --run src/test/view-access-panel.test.tsx src/test/governance-write-api.test.ts src/test/governance-write-query.test.ts src/test/governance-write-workbench.test.tsx src/test/governance-write-app-flow.test.tsx` | `5 files / 12 tests passed` | typed parser/key boundary, no raw-detail rendering, typed local conflict retention, the restricted-owner V1 selection gate and accurate restricted-view wording. |
+| `npm.cmd test -- --run src/test/view-access-panel.test.tsx src/test/governance-write-api.test.ts src/test/governance-write-query.test.ts src/test/governance-write-workbench.test.tsx src/test/governance-write-app-flow.test.tsx` | `5 files / 15 tests passed` | typed parser/key boundary, no raw-detail rendering, typed local conflict retention, restricted-owner V1 selection, 401/403 workspace boundary, exact Base 404 cleanup and close-focus return. |
 | `npm.cmd run build` | passed | TypeScript and production Vite build. |
 | `python scripts/stage06_local_postgres_migration_smoke.py` | passed at `20260712_0023` | clean disposable schema migration smoke. |
 
@@ -34,6 +34,7 @@ All data was synthetic and reset after the check.
 - A synthetic owned restricted V1 view appeared as the only selectable V1 reuse target. Selecting it opened the existing View Builder, then its existing `访问权限` editor with active candidates and only `viewer|editor` choices. The S3 readback overlay is closed before opening the builder, so it cannot intercept the V1 editor.
 - The restricted V1 editor says `此视图是受限视图…`; it no longer incorrectly says that a restricted view is private.
 - At `1440x900`, `1280x800`, `430x932` and `390x844`, the labelled role selector, field selector and close path remained present. The 430/390 presentation uses the documented mobile sheet and mobile navigation. The final local page console `error`/`warn` scan returned `[]`.
+- A later built-client `404` fixture selected an otherwise authorized Base whose table context was removed. The workspace Home and Governance panel remained visible; only the S4 Base selector reset and rendered the fixed `所选 Base 已不可用，请重新选择。` alert. The fixture-only raw detail was absent and final console `error`/`warn` was `[]`.
 
 ## Acceptance Reconciliation
 
@@ -44,8 +45,8 @@ All data was synthetic and reset after the check.
 | GW-A03 | `implemented-local` | exact fixed policy grammar, revision, no record/field-shape mutation, migration downgrade/upgrade and sanitized audit paths are covered. |
 | GW-A04 | `implemented-local` | post-policy safe schema/presentation/detail omit the hidden field and viewer record update remains denied; existing field/lookup enforcement remains unchanged. |
 | GW-A05 | `implemented-local` | no new view-policy route was added; component and Browser paths reach only existing V1 owner-restricted grant controls. |
-| GW-A06 | `partial-local` | typed parser/key, no-optimistic reread and major App paths are tested, but the planned exhaustive delayed `401/403/404/409` governance-write App-flow matrix is not yet present. |
-| GW-A07 | `partial-local` | built UI, real local role/policy success, V1 reuse, four target widths and clean console are observed; Browser-specific stale/denied/retry/focus-return permutations remain unobserved. |
+| GW-A06 | `partial-local` | typed parser/key, no-optimistic reread, immediate 401/403 boundary, exact Base 404 cleanup, component 409 retention and close-focus return are covered; the planned delayed/exhaustive 401/403/404/409 mutation matrix remains open. |
+| GW-A07 | `partial-local` | built UI, role/policy success, V1 reuse, four target widths, a real local Base 404 safety path and clean console are observed; Browser stale/denied/retry terminal-mutation permutations remain unobserved. |
 | GW-A08 | `implemented-local` | audited writes, redaction regression, temporary seed/proxy deletion, stopped local services and fresh disposable migration smoke are recorded. |
 
 ## Explicit Non-Claims
