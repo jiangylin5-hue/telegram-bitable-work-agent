@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed TD010 acceptance contract; no implementation evidence exists.
+- Status: approved TD010 Option A acceptance contract; no implementation evidence exists.
 - Scope: Option A base-bound employee management, member eligibility and `draft|active|paused` transitions.
 
 ## BDD Scenarios

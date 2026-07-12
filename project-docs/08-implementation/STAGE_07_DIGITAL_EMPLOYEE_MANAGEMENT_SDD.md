@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed TD010 software design; requires user approval before an implementation plan or code.
+- Status: approved TD010 Option A software design; requires implementation-plan approval before code.
 - Scope: safe Mini App management adapter over the current one-Base `DigitalEmployee` runtime.
 
 ## Architecture

@@ -2,8 +2,8 @@
 
 ## Status
 
-- Status: proposed TD010 Option A design for one-time review.
-- Code precondition: user approval of TD010 and then a detailed implementation plan.
+- Status: TD010 Option A approved by user on 2026-07-13; detailed implementation plan review remains required.
+- Code precondition: explicit approval of the detailed implementation plan.
 - Scope: base-bound employee management, assignment and `draft|active|paused` lifecycle only.
 
 ## User Outcome

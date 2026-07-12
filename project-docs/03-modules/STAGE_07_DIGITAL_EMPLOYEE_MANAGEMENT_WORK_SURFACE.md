@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed TD010 Option A module boundary; no implementation exists.
+- Status: approved TD010 Option A module boundary; no implementation exists.
 - Scope: one Base-bound management plane for existing DigitalEmployee runtime objects.
 
 ## Functional Modules

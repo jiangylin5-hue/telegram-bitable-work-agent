@@ -121,7 +121,7 @@ These checks cover only the approved Home contact-to-view-to-summary slice. They
 
 ### TD010 Digital Employee Management — Proposed Only
 
-- [ ] User approves the additive employee version/access-mode and member-grant schema/API/permission behavior before any implementation plan or code.
+- [x] User approved the additive employee version/access-mode and member-grant schema/API/permission behavior; the detailed implementation plan remains a separate pre-code review gate.
 - [ ] Future implementation proves manager/use-member separation, legacy `workspace` compatibility, row-lock/version/idempotency, scope intersection, active alias collision and strict safe DTO boundaries.
 - [ ] Future implementation proves active/paused contact/context/invocation eligibility behavior without creating multi-Base scope, memory, knowledge, record picker, Telegram or external-action behavior.
 

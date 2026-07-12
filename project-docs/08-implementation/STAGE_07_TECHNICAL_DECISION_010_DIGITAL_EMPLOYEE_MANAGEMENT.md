@@ -2,9 +2,9 @@
 
 ## Status
 
-- Decision status: proposed for one-time user review on 2026-07-13.
+- Decision status: Option A approved by user on 2026-07-13; detailed implementation plan review is required before code.
 - Scope: one coherent management plane for the existing base-bound `DigitalEmployee` runtime.
-- Code status: no implementation, migration, endpoint, UI, test fixture, dependency or external action is authorized by this document.
+- Code status: no implementation, migration, endpoint, UI, test fixture, dependency or external action is authorized until the detailed implementation plan is reviewed.
 
 ## Product Problem
 

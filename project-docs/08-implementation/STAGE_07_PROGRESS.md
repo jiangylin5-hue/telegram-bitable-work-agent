@@ -15,6 +15,12 @@
 
 ## Progress Log
 
+### 2026-07-13: TD010 Option A Approved And Implementation Plan Written
+
+- The user approved TD010 Option A's additive employee `version`/`access_mode`, member-grant table, Base-bound scope, fixed action set and `draft|active|paused` lifecycle. The approval does not include multi-Base scope, memory/knowledge, record picker, generic Agent Builder, Telegram routing, external action or deployment.
+- The detailed plan defines eight coherent TDD tasks: persistence/migration; closed service; safe API/capability; S5/TD009 eligibility gate; strict Mini App transport; Base workbench; App lifecycle; and proportional evidence reconciliation. No implementation code, migration, fixture, provider call, Telegram operation, browser control or deployment was made while writing this plan.
+- Code requires one separate implementation-plan review. The plan itself is the only new artifact in this update.
+
 ### 2026-07-13: TD010 Digital Employee Management And Work Scope — Documentation Package
 
 - The next coherent product package is documented only: managers would create a Base-bound digital employee as `draft`, configure only readable table/view scopes and fixed `summarize|draft_update` intents, optionally assign eligible members, then explicitly activate or pause it. Existing runtime policies, confirmation policy, provider settings and raw runtime routes remain unavailable to the Mini App.

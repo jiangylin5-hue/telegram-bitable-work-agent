@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed TD010 complexity/index decision; no physical change has been made.
+- Status: approved TD010 complexity/index decision; no physical change has been made.
 
 ## Complexity Map
 
