@@ -1,14 +1,18 @@
+from uuid import uuid4
+
 from fastapi.testclient import TestClient
 
 from app.api.routes.stage06_platform import get_stage06_platform_uow
 from app.api.routes.stage06_runtime import get_stage06_runtime_uow
 from app.main import create_app
+from app.models.stage06_platform import WorkspaceMember
 from app.models.stage06_runtime import RecordChangeDraft
 from app.services.permissions import Actor
 from app.services.stage06_digital_employees import create_digital_employee
 from app.services.stage06_platform import (
     InMemoryStage06PlatformUnitOfWork,
     create_base,
+    create_field,
     create_table,
     create_workspace,
 )
@@ -73,3 +77,66 @@ def test_s5_contact_directory_returns_only_safe_active_contact_projection() -> N
 def test_s5_draft_model_starts_with_terminal_revision_and_audit_reference() -> None:
     assert RecordChangeDraft.__table__.c.version.default.arg == 1
     assert "terminal_audit_event_id" in RecordChangeDraft.__table__.c
+
+
+def test_s5_draft_read_models_filter_hidden_values_and_metadata() -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="S5 drafts", owner_user_id="owner-1", actor=owner)
+    viewer = WorkspaceMember(
+        id=uuid4(), workspace_id=workspace.id, user_id="viewer-1", role="viewer", status="active"
+    )
+    uow.add_workspace_member(viewer)
+    base = create_base(uow, workspace.id, name="Operations", actor=owner)
+    table = create_table(uow, base.id, name="Tasks", key="tasks", actor=owner)
+    create_field(uow, table.id, name="Title", key="title", field_type="text", actor=owner)
+    create_field(
+        uow,
+        table.id,
+        name="Internal",
+        key="internal",
+        field_type="text",
+        permission_policy={"viewer": "hidden"},
+        actor=owner,
+    )
+    draft = RecordChangeDraft(
+        id=uuid4(),
+        workspace_id=workspace.id,
+        base_id=base.id,
+        table_id=table.id,
+        record_id=None,
+        draft_type="update_record",
+        proposed_values={"title": "After", "internal": "secret-after"},
+        before_values={"title": "Before", "internal": "secret-before"},
+        created_by_type="digital_employee",
+        created_by_id="private-employee",
+        status="pending_confirmation",
+        confirmation_policy={},
+        trace_id="private-trace",
+        expected_version=7,
+        version=1,
+    )
+    uow.add_record_change_draft(draft)
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_runtime_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "viewer-1"
+        listed = client.get(f"/mini-app/bases/{base.id}/drafts")
+        detail = client.get(f"/mini-app/drafts/{draft.id}")
+
+    assert listed.status_code == detail.status_code == 200
+    assert listed.json()["drafts"] == [{
+        "id": str(draft.id), "base_id": str(base.id), "table_id": str(table.id),
+        "record_id": None, "draft_type": "update_record", "status": "pending_confirmation", "version": 1,
+    }]
+    assert detail.json() == {
+        "id": str(draft.id), "base_id": str(base.id), "table_id": str(table.id), "record_id": None,
+        "draft_type": "update_record", "status": "pending_confirmation", "version": 1,
+        "fields": [{"key": "title", "label": "Title", "field_type": "text", "before_value": "Before", "proposed_value": "After"}],
+        "actions": {"can_confirm": False, "can_reject": False}, "terminal_audit_event_id": None,
+    }
+    assert "secret" not in (listed.text + detail.text)
+    assert "private-employee" not in detail.text
+    assert "private-trace" not in detail.text
