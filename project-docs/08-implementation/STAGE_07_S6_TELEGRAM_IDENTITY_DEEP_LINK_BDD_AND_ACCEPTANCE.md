@@ -142,6 +142,7 @@ And it does not create a memory entry, conversation, contact publication, notifi
 - Backend focused matrix: `pytest tests/unit/test_stage06_identity.py tests/unit/test_stage07_mini_app_api.py tests/unit/test_stage07_telegram_mini_app_identity.py tests/unit/test_stage07_telegram_deep_link_api.py tests/integration/test_stage07_telegram_deep_link_postgres.py -q` returned `44 passed`.
 - Disposable PostgreSQL migration reached `20260712_0025`. The S6 table test proved the unique token-hash constraint and excluded expired rows. A rollback-only synthetic 4,096-row `EXPLAIN (ANALYZE, BUFFERS)` used `uq_stage07_telegram_deep_links_token_hash`, reported `0.045 ms` execution and `shared hit=3`; no speculative index was created.
 - Mini App focused matrix returned `6 files / 38 tests`; `npm.cmd run build` completed. The Record handoff test proves Base/View/Record rereads after a closed resolver pointer and the recovery test proves raw token omission/focus return.
+- Final local regression after the transport/focus compatibility repair: backend `pytest -q` returned `566 passed, 17 skipped` (the skips are historical Stage02 online-smoke prerequisites); Mini App `npm.cmd test -- --run` returned `46 files / 170 tests`; production build completed.
 - Browser reached the temporary local Vite app, which displayed only the expected generic backend-unavailable state because no synthetic backend fixture was started. It does not prove deep-link target/recovery layout at four widths. The Vite process was stopped and port `4179` closed.
 
 ## Non-Goals and Prohibited Claims
