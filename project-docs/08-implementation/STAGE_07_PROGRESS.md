@@ -15,6 +15,11 @@
 - The proposed boundary deliberately excludes contact publication, employee configuration, personal memory, knowledge retrieval, Telegram handoff/deep links, notification/external action and client persistence. Existing generic runtime/draft responses remain forbidden from the browser because they contain configuration/raw values/trace data.
 - The detailed design, BDD/acceptance, SDD, functional work surface, complex/index decision and execution plan are written for one user review. No S5 source, migration, API, authorization change, seed, test fixture or external write was created.
 
+### 2026-07-12: S5 TD005 Option A Approved
+
+- The user approved TD005 Option A as one coherent S5 vertical slice. Implementation may add only the approved draft revision/audit-reference persistence, a measured conditional pending-queue index, six safe Mini App adapter routes, fixed `summarize|draft_update` intents, field-filtered draft review and locked/idempotent confirm/reject.
+- The approval does not include employee publication/configuration, personal memory, knowledge, Telegram handoff/deep link, notification/external action, generic chat/runtime selection, browser persistence, S6 deployment or Stage07 acceptance. S5 now proceeds as backend contract/transition, protected Hub UI, then proportional evidence/cleanup.
+
 ### 2026-07-12: Stage07 Substage Delivery Rhythm
 
 - Stage07 now follows a one-stage/multiple-substages rhythm instead of user-facing micro-fragments. S0 Foundation, S1 Bitable authoring and S2 views/template/import retain their documented local states; S3 Governance Readback is active and approved; S4 Governance Write, S5 Draft/Digital Employee and S6 Telegram/final acceptance remain separately gated.

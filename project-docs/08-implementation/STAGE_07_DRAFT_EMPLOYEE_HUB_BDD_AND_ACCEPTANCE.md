@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed pending TD005 approval; no S5 runtime/schema/API/UI code is authorized by this document alone.
+- Status: approved TD005 Option A BDD; S5 implementation is in progress and every acceptance row remains unevaluated until evidence is recorded.
 - Scope: safe S5 contact, explicit context, employee invocation, draft diff and terminal confirmation/rejection only.
 
 ## BDD Scenarios
@@ -103,18 +103,17 @@ Then it cannot create/publish a contact, persist memory, access knowledge, claim
 
 | ID | Requirement | Required evidence | Status |
 | --- | --- | --- | --- |
-| DE-A01 | safe contact projection and cross-workspace omission | API/unit and PostgreSQL isolation tests | proposed |
-| DE-A02 | explicit context intersection before runtime | service/API denial matrix | proposed |
-| DE-A03 | fixed invocation intents and safe result projection | strict parser/API/runtime tests | proposed |
-| DE-A04 | draft creation remains non-mutating | service/API/real runtime or injected-LangGraph proof | proposed |
-| DE-A05 | field-filtered immutable draft diff | schema/detail/hidden-field regression and Browser inspection | proposed |
-| DE-A06 | confirm lock/revision/idempotency/audit reference | migration, disposable PostgreSQL race/replay/rollback tests | proposed |
-| DE-A07 | reject has no record write and is replay-safe | service/API/PostgreSQL tests | proposed |
-| DE-A08 | protected client cleanup and no raw errors | transport/query/App delayed-response tests | proposed |
-| DE-A09 | four-width accessible Hub/draft path | synthetic built-client Browser matrix and console scan | proposed |
-| DE-A10 | no S6 capability leaks | route inventory, DTO/parser/DOM negative tests | proposed |
+| DE-A01 | safe contact projection and cross-workspace omission | API/unit and PostgreSQL isolation tests | unevaluated |
+| DE-A02 | explicit context intersection before runtime | service/API denial matrix | unevaluated |
+| DE-A03 | fixed invocation intents and safe result projection | strict parser/API/runtime tests | unevaluated |
+| DE-A04 | draft creation remains non-mutating | service/API/real runtime or injected-LangGraph proof | unevaluated |
+| DE-A05 | field-filtered immutable draft diff | schema/detail/hidden-field regression and Browser inspection | unevaluated |
+| DE-A06 | confirm lock/revision/idempotency/audit reference | migration, disposable PostgreSQL race/replay/rollback tests | unevaluated |
+| DE-A07 | reject has no record write and is replay-safe | service/API/PostgreSQL tests | unevaluated |
+| DE-A08 | protected client cleanup and no raw errors | transport/query/App delayed-response tests | unevaluated |
+| DE-A09 | four-width accessible Hub/draft path | synthetic built-client Browser matrix and console scan | unevaluated |
+| DE-A10 | no S6 capability leaks | route inventory, DTO/parser/DOM negative tests | unevaluated |
 
 ## Prohibited Claims
 
 S5 may not claim personal memory, knowledge retrieval, team/contact publication lifecycle, Telegram deep-link identity, group mention execution, external notification/send, production readiness, Stage07 completion or a general agent/chat platform.
-

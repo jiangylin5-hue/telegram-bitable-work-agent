@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed pending TD005 approval.
+- Status: approved TD005 Option A work surface; S5 implementation in progress.
 - Functional ownership: consume only S5 server-safe contacts/invocation/drafts; never evaluate employee scope, build a raw diff or directly write a record.
 
 ## Functional Modules
@@ -45,4 +45,3 @@ No component may receive or persist `accessible_tables`, `accessible_views`, `al
 ## Acceptance Ownership
 
 This work surface owns DE-A08/DE-A09 and contributes no authority proof to DE-A01--DE-A07. Contact publication, memory, knowledge, Telegram and external notification are outside its ownership.
-

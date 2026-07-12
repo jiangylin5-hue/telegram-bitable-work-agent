@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed plan. Do not execute until TD005 Option A receives explicit user approval.
+- Status: approved execution plan. TD005 Option A was approved on 2026-07-12; implementation is in progress.
 - Goal: deliver the bounded S5 Hub without extending into S6 Telegram/memory/lifecycle work.
 
 ## Work Groups
@@ -33,4 +33,3 @@
 - No personal memory, knowledge, employee administration/publish, Telegram handoff or external send.
 - All commands are server-authorized, locked/versioned/idempotent where terminal, audited and reread.
 - Implementation stops if TD005 approval differs from Option A; revise documents before code.
-

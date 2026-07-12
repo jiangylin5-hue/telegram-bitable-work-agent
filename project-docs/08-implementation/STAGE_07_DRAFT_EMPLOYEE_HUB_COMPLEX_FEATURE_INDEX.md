@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed pending TD005 approval.
+- Status: approved TD005 Option A index decision. I-A starts as the measured baseline; I-B remains conditional on the documented `EXPLAIN (ANALYZE, BUFFERS)` gate.
 - Scope: S5 transition, scope, safe-diff and pending-queue complexity; not a general database tuning or agent-memory proposal.
 
 ## Logical Feature Index
@@ -47,4 +47,3 @@ No index is created merely because an S5 document names it. The implementation p
 ## Scope Guard
 
 This index document authorizes no full-text search, vector memory, knowledge retrieval, chat history, Telegram event table, action queue, general audit index, group policy or formula/index work.
-

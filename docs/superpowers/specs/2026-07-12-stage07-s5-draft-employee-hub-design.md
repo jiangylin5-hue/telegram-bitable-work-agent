@@ -2,7 +2,7 @@
 
 ## Status and Scope
 
-- Status: proposed design pending TD005 approval.
+- Status: approved TD005 Option A design; S5 implementation in progress.
 - Product outcome: a table-bound assistant can safely summarize a selected view or propose a record update; a human sees a field-filtered immutable diff and confirms or rejects it through one audited server command.
 - Product grammar: `workspace -> base -> employee -> explicit context -> invocation -> record_change_draft -> terminal audit`.
 
@@ -54,4 +54,3 @@ Draft values are filtered twice: field visibility controls whether a row exists;
 ## Out of Scope
 
 No Telegram handoff, memory, knowledge retrieval, employee administration, raw conversation persistence, notifications or external action occurs in S5. They remain S6 or later separately approved work.
-

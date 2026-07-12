@@ -27,7 +27,7 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 | S2 | Views, template and import | saved views, template/install/save, CSV/XLSX server preview/import | implemented-local / partial-local | existing contracts; Browser file upload unproven |
 | S3 | Governance Readback | safe paged member directory and Base audit timeline | implemented-local; Browser external evidence pending | Technical Decision 003 |
 | S4 | Governance Write | bounded member-role, field-policy and existing V1 view-grant operations | implemented-local; negative lifecycle evidence partial | Technical Decision 004 |
-| S5 | Draft and Digital Employee Hub | field-filtered draft review, contacts and assistant surface | specified-awaiting-review | Technical Decision 005 |
+| S5 | Draft and Digital Employee Hub | field-filtered draft review, contacts and assistant surface | implementation-in-progress | approved Technical Decision 005 Option A |
 | S6 | Telegram and final acceptance | verified identity/deep link, full safety/visual matrix and release evidence | external-evidence-pending | approved test environment and user authority |
 
 ## S3 Governance Readback
@@ -122,7 +122,7 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 | work surface / complex index | modules/STAGE_07_DRAFT_EMPLOYEE_HUB_WORK_SURFACE.md / STAGE_07_DRAFT_EMPLOYEE_HUB_COMPLEX_FEATURE_INDEX.md |
 | implementation plan | docs/superpowers/plans/2026-07-12-stage07-s5-draft-employee-hub-implementation.md |
 
-TD005 Option A requires explicit approval before two draft columns, a measured conditional queue index, safe Mini App routes or any S5 UI code. Approval does not authorize S6 scope.
+TD005 Option A is approved for S5 implementation. It authorizes only the two draft columns, a measured conditional queue index, safe Mini App routes and the bounded S5 UI described here. It does not authorize S6 scope.
 
 ### Exit Criteria After Approval
 

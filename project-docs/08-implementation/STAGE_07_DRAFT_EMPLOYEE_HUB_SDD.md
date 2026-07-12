@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed technical specification pending TD005 approval.
+- Status: approved TD005 Option A technical specification; S5 implementation in progress.
 - Scope: server-composed contact/draft models and controlled terminal commands over existing Stage06 runtime services.
 
 ## Architecture
@@ -99,4 +99,3 @@ All keys nest below `['stage07', userId, workspaceId, 's5', ...]`. A terminal mu
 ## Migration and Index
 
 Migration adds only TD005's two columns. The pending queue index is created only after the accompanying PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)` proves the existing Base/status scan is insufficient at the documented fixture size; otherwise it remains deferred. No broad policy/index migration is permitted.
-

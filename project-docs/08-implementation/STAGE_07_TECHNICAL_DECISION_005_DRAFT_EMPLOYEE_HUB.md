@@ -2,7 +2,7 @@
 
 ## Status
 
-- Decision status: proposed — requires one explicit user approval before S5 schema, API, permission or UI implementation.
+- Decision status: approved Option A for S5 implementation on 2026-07-12. Approval authorizes only the boundary stated below.
 - Scope: a coherent S5 Mini App vertical slice for safe digital-employee contacts, explicit context, field-filtered record-change draft review and controlled confirm/reject.
 - Authority: Stage07 source of truth, Stage06 runtime baseline, TD001 protected state, TD004 governance boundary and the product constitution.
 
@@ -92,4 +92,3 @@ The client has no optimistic draft/result transition. It clears only the current
 ## Approval Boundary
 
 Approving Option A authorizes only the two draft columns, the measured pending-queue index if justified, six narrow Mini App endpoints, fixed `summarize|draft_update` intents, safe draft/contact projections, versioned/idempotent confirm/reject and their UI. It does not authorize any S5 non-goal above.
-
