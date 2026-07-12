@@ -184,7 +184,7 @@ function AppContent() {
 
   useEffect(() => {
     if (!telegramRecovery || state.status !== 'ready') return
-    queueMicrotask(() => telegramRecoveryButton.current?.focus())
+    telegramRecoveryButton.current?.focus()
   }, [state.status, telegramRecovery])
 
   useEffect(() => {

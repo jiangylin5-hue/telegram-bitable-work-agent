@@ -325,10 +325,13 @@ function protectedHeaders(input?: HeadersInit): Headers {
 }
 
 async function getJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = telegramInitData
+    ? Object.fromEntries(protectedHeaders(init.headers).entries())
+    : init.headers ?? { Accept: 'application/json' }
   const response = await fetch(path, {
     credentials: 'same-origin',
     ...init,
-    headers: Object.fromEntries(protectedHeaders(init.headers).entries()),
+    headers,
   })
   if (!response.ok) throw new ApiError(response.status, await safeErrorCode(response))
   return response.json() as Promise<T>
