@@ -2,7 +2,7 @@
 
 ## Status
 
-- Decision status: proposed; not approved and not implemented.
+- Decision status: approved on 2026-07-12; Option A current-Canvas binding is authorized for implementation. No new route, schema, permission model or persistence is authorized.
 - Scope: resolve the approved TD005 gap between a safe contact directory and the explicit `base_id` / `view_id` / `record_id` required by S5 employee invocation.
 - Authority: `AGENTS.md`, Stage07 source of truth, TD005, the approved S5 SDD/BDD and the product constitution.
 
@@ -26,8 +26,8 @@ The already-implemented S5 Hub therefore correctly supports contact reading and 
 
 | Option | Boundary | What the user can do | Cost and risk | Decision state |
 | --- | --- | --- | --- | --- |
-| A — bind only the current authorized Base canvas **(recommended)** | Add no endpoint. The App root passes only `{baseId, viewId, recordId?}` from the already-open, current Canvas; the Hub neither fetches nor stores generic context. | From an open Base/view, choose a visible contact and run `summarize`; from an open record, run `draft_update`. From Home, the Hub states that no context is selected and still permits draft review. | Lowest scope and no new API/schema. It needs an explicit, narrow S5 exception documenting that the App root may pass opaque current-canvas IDs, because the S5 SDD currently says the adapter is the only Hub browser entry. It does not offer a standalone Home record picker. | Proposed recommendation. |
-| B — add a server-composed S5 context projection | Add one or more new Mini App read routes that return only currently permitted Base/view/record display summaries for the selected employee. | Select context from Home or the Hub, then invoke. | API-contract expansion, pagination/search design, display-label redaction and more authorization/cleanup proofs. It cannot be merged into TD005 without explicit approval. | Proposed alternative. |
+| A — bind only the current authorized Base canvas **(selected)** | Add no endpoint. The App root passes only `{baseId, viewId, recordId?}` from the already-open, current Canvas; the Hub neither fetches nor stores generic context. | From an open Base/view, choose a visible contact and run `summarize`; from an open record, run `draft_update`. From Home, the Hub states that no context is selected and still permits draft review. | Lowest scope and no new API/schema. It uses the narrow S5 exception below: App root may pass opaque current-canvas IDs, while the adapter remains the only Hub network source. It does not offer a standalone Home record picker. | Approved; implementation in progress. |
+| B — add a server-composed S5 context projection | Add one or more new Mini App read routes that return only currently permitted Base/view/record display summaries for the selected employee. | Select context from Home or the Hub, then invoke. | API-contract expansion, pagination/search design, display-label redaction and more authorization/cleanup proofs. It cannot be merged into TD005 without explicit approval. | Not selected; remains out of scope. |
 | C — consume generic Stage06 context endpoints directly | No new contract; query generic Base/view/record data from the Hub. | Apparent fastest path. | Rejected. It bypasses the TD005 safe-adapter boundary and makes raw/generic projections a new hidden source for the Hub. | Rejected. |
 
 ## Recommended Option A: Exact SDD Boundary
@@ -55,7 +55,7 @@ The App must not render an invocation submit control for an empty or incomplete 
 
 ### Explicit S5 exception
 
-After approval, TD005 SDD's “S5 adapter is the only browser entry” sentence will be amended only as follows: the S5 adapter remains the only **network data source** for the Hub; the App root may pass the opaque current-canvas IDs above as transient invocation input. The Hub itself does not call generic endpoints or retain generic response data.
+TD005 SDD's former “S5 adapter is the only browser entry” sentence is amended only as follows: the S5 adapter remains the only **network data source** for the Hub; the App root may pass the opaque current-canvas IDs above as transient invocation input. The Hub itself does not call generic endpoints or retain generic response data.
 
 ## Option B Boundary if Chosen Instead
 
@@ -70,11 +70,6 @@ Option B requires a separate API/data contract before code. At minimum it must s
 
 No endpoint, schema or index is authorized by this proposal.
 
-## Approval Request
+## Decision Record
 
-Choose one option for the remaining S5 invocation surface:
-
-- **A — current Canvas binding (recommended):** no new endpoint; bounded initial-product path.
-- **B — server S5 context projection:** wider API design before implementation.
-
-Approval changes only the context-binding boundary. It does not approve memory, knowledge, contact lifecycle, Telegram handoff, external action, generic chat or S6 work.
+The user approved Option A on 2026-07-12. The decision changes only the context-binding boundary. It does not approve memory, knowledge, contact lifecycle, Telegram handoff, external action, generic chat or S6 work.

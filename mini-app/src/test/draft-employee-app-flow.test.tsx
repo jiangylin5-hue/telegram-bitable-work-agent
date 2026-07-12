@@ -25,6 +25,35 @@ test('opens the S5 Hub only through the safe contacts endpoint', async () => {
   expect(screen.getByText('运营助理')).toBeVisible()
 })
 
+test('binds a Canvas summary invocation to only the current Base and view IDs', async () => {
+  const fetchMock = vi.fn((input: RequestInfo | URL) => {
+    const path = String(input)
+    if (path === '/mini-app/bootstrap') return Promise.resolve(json({ identity: { user_id: 'owner-1', source: 'header' }, workspaces: [{ id: 'workspace-1', name: 'Acme', slug: 'acme', role: 'owner', capabilities: { can_read_bases: true, can_manage_workspace: true, can_manage_schema: true, can_review_drafts: true } }] }))
+    if (path === '/workspaces/workspace-1/home') return Promise.resolve(json({ workspace_id: 'workspace-1', recent_bases: [{ id: 'base-1', name: 'Operations', source_type: 'blank' }], queue: [] }))
+    if (path === '/bases/base-1/tables') return Promise.resolve(json({ tables: [{ id: 'table-1', base_id: 'base-1', name: 'Tasks', key: 'tasks', status: 'active' }] }))
+    if (path === '/bases/base-1/views') return Promise.resolve(json({ views: [{ id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: 'All tasks', view_type: 'grid', status: 'active' }] }))
+    if (path === '/tables/table-1/schema') return Promise.resolve(json({ table: { id: 'table-1', name: 'Tasks', key: 'tasks' }, fields: [{ id: 'field-title', table_id: 'table-1', name: 'Title', key: 'title', field_type: 'text', required: false, options: {}, order_index: 0 }] }))
+    if (path === '/views/view-1/presentation') return Promise.resolve(json({ view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: ['title'], group_by_field_key: null, date_field_key: null, form_field_keys: ['title'] }))
+    if (path === '/views/view-1/records') return Promise.resolve(json({ view_id: 'view-1', records: [], next_cursor: null, has_more: false }))
+    if (path === '/mini-app/workspaces/workspace-1/digital-employee-contacts?limit=50') return Promise.resolve(json({ workspace_id: 'workspace-1', contacts: [{ id: 'employee-1', base_id: 'base-1', name: '运营助手', description: '安全摘要', status: 'active', available_intents: ['summarize'] }], next_cursor: null, has_more: false }))
+    if (path === '/mini-app/digital-employees/employee-1/invocations') return Promise.resolve(json({ kind: 'summary', answer: '需要复核 2 条记录。', citations: [{ record_id: 'record-1' }] }))
+    return Promise.resolve(json({ detail: `unexpected ${path}` }, 404))
+  })
+  vi.stubGlobal('fetch', fetchMock)
+
+  render(<App />)
+  fireEvent.click(await screen.findByRole('link', { name: 'Operations' }))
+  fireEvent.click(await screen.findByRole('button', { name: '数字员工' }))
+  fireEvent.click(await screen.findByRole('button', { name: '选择数字员工 运营助手' }))
+  fireEvent.click(screen.getByRole('button', { name: '执行摘要' }))
+
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+    '/mini-app/digital-employees/employee-1/invocations',
+    expect.objectContaining({ method: 'POST', body: JSON.stringify({ intent: 'summarize', base_id: 'base-1', view_id: 'view-1' }) }),
+  ))
+  expect(screen.getByText('需要复核 2 条记录。')).toBeVisible()
+})
+
 test('opens a queue draft only through the safe S5 detail endpoint', async () => {
   vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
     const path = String(input)

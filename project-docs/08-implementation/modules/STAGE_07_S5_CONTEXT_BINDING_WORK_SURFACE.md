@@ -2,8 +2,9 @@
 
 ## Status
 
-- Status: proposed TD006 Option A module; implementation blocked on explicit decision approval.
+- Status: approved TD006 Option A module; implementation is in progress with no new route, storage or permission model.
 - Ownership: bridge an already-open authorized Canvas to fixed TD005 invocation intents without exposing Canvas data to the Hub.
+- Current Progress: implemented locally. The Canvas toolbar opens the same Hub used by Home; selected contacts receive only fixed intent requests built from transient IDs. `summarize` requires current Base/view; `draft_update` remains disabled without an open record and receives a fresh idempotency key when enabled. The Browser loopback refusal prevents visual acceptance, not the component/App-flow evidence.
 
 ## Functional Modules
 
@@ -39,4 +40,4 @@ The module must never receive: `record.values`, schema fields, view filters, acc
 
 ## Acceptance Ownership
 
-This module owns proposed CB-A01--CB-A06. It contributes no proof for employee lifecycle, memory, knowledge, Telegram or external-action features.
+This module owns CB-A01--CB-A06. It contributes no proof for employee lifecycle, memory, knowledge, Telegram or external-action features.

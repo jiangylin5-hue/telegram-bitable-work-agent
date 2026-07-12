@@ -20,7 +20,7 @@ import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
 import { clearAllProtectedQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, draftEmployeeKeys, governanceKeys, governanceWriteKeys, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
 import type { GovernanceAuditPage, GovernanceMemberPage } from './governance-types'
 import type { GovernanceEditableMemberPage, GovernanceFieldPermissionPage, GovernanceFieldPermissionPolicy } from './governance-write-types'
-import type { S5Contact, S5DraftDetail } from './draft-employee-types'
+import type { CurrentCanvasInvocationContext, S5Contact, S5DraftDetail, S5InvocationRequest, S5InvocationResult } from './draft-employee-types'
 import type { CommitImportValues, CreateImportValues, ImportCommitReceipt, ImportPreview, TemplateSummary } from './template-import-types'
 import type { ViewBuilderContext, ViewBuilderResponse, ViewInitializationRequest, ViewMemberReplaceRequest, ViewPresentationPatchRequest } from './view-builder-types'
 
@@ -381,6 +381,12 @@ function AppContent() {
     })
   }
 
+  function currentS5InvocationContext(): CurrentCanvasInvocationContext | null {
+    const canvas = readyState.canvas
+    if (!canvas?.view) return null
+    return { baseId: canvas.base.id, viewId: canvas.view.id, recordId: canvas.detail?.id ?? null }
+  }
+
   async function openDraftEmployeeHub(trigger: HTMLElement, draftId?: string) {
     draftEmployeeReturnFocus.current = trigger
     const workspaceId = readyState.home.workspace_id
@@ -445,6 +451,53 @@ function AppContent() {
         if (isCurrent()) setDraftEmployeePanel((current) => current ? { ...current, draft: null, loading: false, failed: true } : current)
       } else if (isCurrent()) {
         setDraftEmployeePanel((current) => current ? { ...current, failed: true } : current)
+      }
+      throw error
+    }
+  }
+
+  async function invokeS5Employee(
+    employeeId: string,
+    request: S5InvocationRequest,
+    idempotencyKey?: string,
+  ): Promise<S5InvocationResult> {
+    const context = currentS5InvocationContext()
+    const matchesCurrentContext = () => {
+      const current = currentS5InvocationContext()
+      return current?.baseId === request.baseId
+        && current.viewId === request.viewId
+        && (request.intent === 'summarize' || current.recordId === request.recordId)
+    }
+    if (!context || !matchesCurrentContext()) throw new DOMException('Canvas context is unavailable', 'AbortError')
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = draftEmployeeRequestVersion.current
+    const canvasVersion = canvasRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && draftEmployeeRequestVersion.current === requestVersion
+      && canvasRequestVersion.current === canvasVersion
+      && activeWorkspaceId.current === workspaceId
+      && matchesCurrentContext()
+    try {
+      const result = await api.invokeS5Employee(employeeId, request, idempotencyKey)
+      if (!isCurrent()) throw new DOMException('Obsolete Canvas invocation', 'AbortError')
+      if (result.kind === 'draft') {
+        const draft = await queryClient.fetchQuery({
+          queryKey: draftEmployeeKeys.draft(scope, result.draftId),
+          queryFn: ({ signal }) => api.getS5Draft(result.draftId, { signal }),
+        })
+        if (!isCurrent()) throw new DOMException('Obsolete Canvas invocation', 'AbortError')
+        setDraftEmployeePanel((current) => current
+          ? { ...current, draft, targetDraftId: draft.id, loading: false, failed: false }
+          : current)
+      }
+      return result
+    } catch (error) {
+      if (isAbortError(error)) throw error
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else if (error instanceof ApiError && error.status === 404) {
+        await clearDraftEmployeeTerminalQueries(queryClient, scope, { id: 's5-invocation', recordId: request.intent === 'draft_update' ? request.recordId : null })
       }
       throw error
     }
@@ -1840,7 +1893,7 @@ function AppContent() {
   const content = readyState.canvasLoading
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
-    ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} canCreateRecords={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role)} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (!canvas?.table) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id, canvas.view.id) }} onSaveTemplate={() => setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base })} onImportIntoBase={() => openBaseImport(readyState.canvas!.base)} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
+    ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} canCreateRecords={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role)} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (!canvas?.table) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id, canvas.view.id) }} onSaveTemplate={() => setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base })} onImportIntoBase={() => openBaseImport(readyState.canvas!.base)} onOpenDraftHub={(trigger) => { void openDraftEmployeeHub(trigger) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
       : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={() => { void openTemplateImportHub() }} onOpenDraftHub={(trigger, draftId) => { void openDraftEmployeeHub(trigger, draftId) }} />
   const builderOverlay = builderPanel?.mode === 'base'
     ? <BuilderCreatePanel mode="base" onSubmit={(values, idempotencyKey) => createBase(values as { baseName: string; tableName: string }, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
@@ -1869,6 +1922,7 @@ function AppContent() {
   const draftEmployeeOverlay = draftEmployeePanel
     ? <DraftEmployeeHub
       contacts={draftEmployeePanel.contacts}
+      context={currentS5InvocationContext()}
       draft={draftEmployeePanel.draft}
       loading={draftEmployeePanel.loading}
       failed={draftEmployeePanel.failed}
@@ -1878,6 +1932,7 @@ function AppContent() {
       }}
       onConfirm={(draftId, expectedVersion) => terminalS5Draft('confirm', draftId, expectedVersion)}
       onReject={(draftId, expectedVersion) => terminalS5Draft('reject', draftId, expectedVersion)}
+      onInvoke={invokeS5Employee}
       onClose={closeDraftEmployeeHub}
     />
     : null

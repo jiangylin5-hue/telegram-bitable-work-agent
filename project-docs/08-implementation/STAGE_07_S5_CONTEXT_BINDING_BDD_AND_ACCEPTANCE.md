@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed companion to TD006 Option A; no behavior is implemented from this document until TD006 is approved.
+- Status: approved companion to TD006 Option A; implementation is in progress within this document's no-new-route/no-persistence boundary.
 - Scope: bind one already-authorized current Base Canvas to fixed S5 invocation intents.
 
 ## BDD Scenarios
@@ -67,12 +67,18 @@ Then stale output is discarded and focus returns predictably without persisting 
 
 | ID | Requirement | Required evidence | Status |
 | --- | --- | --- | --- |
-| CB-A01 | no generic object or client persistence enters Hub | type/DOM/query negative tests | proposed |
-| CB-A02 | summary sends only current Canvas Base/view | App flow and malformed-context tests | proposed |
-| CB-A03 | draft update requires current open record plus idempotency key | App/API replay tests | proposed |
-| CB-A04 | server rejects cross-Base/stale/hidden scope | API/unit and PostgreSQL denial matrix | proposed |
-| CB-A05 | safe result only and no raw runtime disclosure | parser/DOM regression tests | proposed |
-| CB-A06 | responsive/focus/failure lifecycle | Browser width and delayed-response checks | proposed |
+| CB-A01 | no generic object or client persistence enters Hub | type/DOM/query negative tests | partial-local |
+| CB-A02 | summary sends only current Canvas Base/view | App flow and malformed-context tests | partial-local |
+| CB-A03 | draft update requires current open record plus idempotency key | App/API replay tests | partial-local |
+| CB-A04 | server rejects cross-Base/stale/hidden scope | API/unit and PostgreSQL denial matrix | partial-local |
+| CB-A05 | safe result only and no raw runtime disclosure | parser/DOM regression tests | partial-local |
+| CB-A06 | responsive/focus/failure lifecycle | Browser width and delayed-response checks | implementation-in-progress |
+
+### 2026-07-12 Interim Evidence (not acceptance closure)
+
+- Focused Mini App S5 suite reports `4 files / 16 tests`: component checks cover current-Canvas summary IDs, disabled draft creation without an open record, draft idempotency and discarding a result after Canvas replacement; App flow checks the Canvas toolbar summary request uses only the current Base/view pair.
+- The focused backend suite reports `14 passed`, including real PostgreSQL confirm replay, reject-without-record-write and concurrent confirm where the losing command rolls back its idempotency ledger.
+- The production build completes. A disposable loopback fixture was started solely to inspect the built client, then removed. Both available browser surfaces refused `127.0.0.1:4179`; no interaction, screenshot, console scan or responsive-width result is claimed.
 
 ## Deliberate Non-Goals
 

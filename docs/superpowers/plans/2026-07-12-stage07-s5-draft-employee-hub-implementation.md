@@ -21,7 +21,7 @@
 3. Wire Home queue to safe draft detail; do not treat generic queue payload as a diff.
 4. Run focused tests and production build.
 
-Current implementation note: safe contact opening, Home queue-to-draft detail, confirm/reject reread, scoped cache cleanup and fixed client failures are in code with focused test/build evidence. Context-selection and employee invocation UI are deferred within G2: TD005 has no approved safe context-discovery route, and the plan prohibits using generic Stage06 routes as a hidden browser source. This remains a documented API-contract decision rather than an implementation shortcut.
+Current implementation note: safe contact opening, Home queue-to-draft detail, confirm/reject reread, scoped cache cleanup and fixed client failures are in code with focused test/build evidence. TD006 Option A is approved and implemented within G2: App root passes only opaque current-Canvas IDs, while the Hub makes no generic context request or persistent selection. The Canvas toolbar now opens the same safe Hub, summary binds to current Base/view and draft creation requires the open current record plus a new idempotency key. Browser loopback access was refused, so built-client visual evidence remains pending rather than inferred from the automated suite.
 
 ### G3 — Evidence and Cleanup
 

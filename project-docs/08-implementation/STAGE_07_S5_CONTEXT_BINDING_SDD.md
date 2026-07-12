@@ -2,8 +2,9 @@
 
 ## Status
 
-- Status: proposed TD006 Option A implementation specification; no code authority before explicit approval.
+- Status: approved TD006 Option A implementation specification; code authority is limited to the transient current-Canvas bridge described here.
 - Scope: a transient App-root-to-Hub context bridge, not a new storage, permission or API subsystem.
+- Current Progress: implemented locally. `App.tsx` derives the bridge from ready `canvas.base`, `canvas.view` and optional `canvas.detail`; `DraftEmployeeHub` receives only the three opaque IDs, invalidates local invocation state on a changed context and has no generic context request. The Canvas toolbar exposes the Hub trigger. Focused component/App tests, production build and real local PostgreSQL S5 regression pass; Browser access to the temporary local fixture was refused by both available browser surfaces, so there is no Browser-width or console claim.
 
 ## Components and Data Flow
 
@@ -17,7 +18,7 @@ authorized current Base Canvas
 -> existing S5 draft review path
 ```
 
-The Canvas continues to own its own generic data queries. The Hub does not receive those query results and makes no generic network request. The bridge is one-way: the Hub cannot navigate the Canvas, change selected view/record or create a context.
+The Canvas continues to own its own generic data queries. The S5 adapter remains the only Hub network data source; the Hub does not receive Canvas query results and makes no generic network request. The bridge is one-way: the Hub cannot navigate the Canvas, change selected view/record or create a context.
 
 ## Type Boundary
 

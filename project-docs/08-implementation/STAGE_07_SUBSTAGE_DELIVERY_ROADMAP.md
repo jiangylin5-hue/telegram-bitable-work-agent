@@ -122,7 +122,7 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 | work surface / complex index | modules/STAGE_07_DRAFT_EMPLOYEE_HUB_WORK_SURFACE.md / STAGE_07_DRAFT_EMPLOYEE_HUB_COMPLEX_FEATURE_INDEX.md |
 | implementation plan | docs/superpowers/plans/2026-07-12-stage07-s5-draft-employee-hub-implementation.md |
 
-TD005 Option A is approved for S5 implementation. It authorizes only the two draft columns, a measured conditional queue index, safe Mini App routes and the bounded S5 UI described here. It does not authorize S6 scope. TD006 context binding is a distinct proposed decision: before the remaining invocation UI can be built, it must choose either opaque current-Canvas IDs without a new route or a separately designed server context projection.
+TD005 Option A is approved for S5 implementation. It authorizes only the two draft columns, a measured conditional queue index, safe Mini App routes and the bounded S5 UI described here. It does not authorize S6 scope. TD006 Option A is also approved and implemented locally: App root may pass opaque current-Canvas IDs without a new route. It does not authorize a standalone picker, generic context projection, storage or S6 scope.
 
 ### Exit Criteria After Approval
 
@@ -130,6 +130,8 @@ TD005 Option A is approved for S5 implementation. It authorizes only the two dra
 - Generic Stage06 runtime/draft APIs remain unchanged and never reach the browser.
 - Draft field filtering, current-write recheck, terminal revision/idempotency/audit reference and no-record-write reject have real PostgreSQL evidence.
 - No memory/knowledge/Telegram/publication/external-send route or persistent client state is added.
+- TD006 current-Canvas bridge passes only opaque IDs; it does not query generic context or retain it after Canvas/workspace replacement.
+- Built-client Browser observation is still required. The local loopback fixture was unreachable from both available browser surfaces, so no visual/four-width claim is made.
 
 ## Sequencing Guard
 

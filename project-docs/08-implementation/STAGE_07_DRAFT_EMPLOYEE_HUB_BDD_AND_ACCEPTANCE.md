@@ -118,10 +118,10 @@ Then it cannot create/publish a contact, persist memory, access knowledge, claim
 
 | Covered behavior | Fresh evidence | Acceptance gap retained |
 | --- | --- | --- |
-| safe summary projection | focused backend unit run: `11 passed`; malicious citation fields and unknown record IDs are dropped, and a cross-Base view is denied before runtime | real provider and stale/hidden context matrix remain absent |
-| safe client transport | focused Mini App run: `4 files / 11 tests`; strict parser retains only `answer` and `{recordId}` citations | no invocation control is rendered before TD006 chooses a context source |
-| terminal draft baseline | local PostgreSQL integration run: `1 passed`; existing confirm replay path remains executable | race/rollback/reject matrices and conditional-index measurement remain pending |
-| production compilation | `npm.cmd run build` completed after the safe invocation transport change | no four-width S5 Browser matrix has been run |
+| safe summary projection and context intersection | backend unit plus local PostgreSQL run: `14 passed`; malicious citation fields and unknown record IDs are dropped, cross-Base view is denied before runtime, and terminal concurrency is locked | real provider and stale/hidden context matrix remain absent |
+| safe client transport and TD006 Option A bridge | focused Mini App run: `4 files / 15 tests`; strict parser retains only `answer` and `{recordId}` citations; Canvas UI sends only current Base/view and disables draft creation without an open record | no generic context source/persistence is allowed; Browser matrix remains unavailable |
+| terminal draft baseline | real local PostgreSQL proves confirm replay, reject no-record-write, and concurrent confirm rolls back the losing command's ledger | conditional-index measurement and full field-filtered Browser matrix remain pending |
+| production compilation | `npm.cmd run build` completed after the current-Canvas invocation UI change | both available browsers refused the temporary loopback fixture; no S5 visual observation is claimed |
 
 These checkpoints move implementation forward but do not change any `unevaluated` acceptance row to accepted. DE-A01 through DE-A10 require the complete specified evidence, including the TD006-approved invocation path where applicable.
 
