@@ -55,6 +55,32 @@ export const governanceWriteKeys = {
   ),
 }
 
+export const digitalEmployeeManagementKeys = {
+  context: (scope: ProtectedScope, baseId: string): QueryKey => (
+    protectedQueryKey(scope, 'digital-employee-management', 'base', baseId, 'context')
+  ),
+  directory: (scope: ProtectedScope, baseId: string, cursor: string | null): QueryKey => (
+    protectedQueryKey(scope, 'digital-employee-management', 'base', baseId, 'directory', cursor)
+  ),
+  detail: (scope: ProtectedScope, employeeId: string): QueryKey => (
+    protectedQueryKey(scope, 'digital-employee-management', 'employee', employeeId)
+  ),
+}
+
+export async function clearDigitalEmployeeManagementQueries(
+  queryClient: QueryClient,
+  scope: ProtectedScope,
+  target?: { baseId?: string; employeeId?: string },
+): Promise<void> {
+  const queryKeys: QueryKey[] = [
+    ...(target?.baseId ? [protectedQueryKey(scope, 'digital-employee-management', 'base', target.baseId)] : []),
+    ...(target?.employeeId ? [protectedQueryKey(scope, 'digital-employee-management', 'employee', target.employeeId)] : []),
+  ]
+  if (queryKeys.length === 0) queryKeys.push(protectedQueryKey(scope, 'digital-employee-management'))
+  await Promise.all(queryKeys.map((queryKey) => queryClient.cancelQueries({ queryKey })))
+  for (const queryKey of queryKeys) queryClient.removeQueries({ queryKey })
+}
+
 export const draftEmployeeKeys = {
   contacts: (scope: ProtectedScope, cursor: string | null): QueryKey => (
     protectedQueryKey(scope, 's5', 'contacts', cursor)

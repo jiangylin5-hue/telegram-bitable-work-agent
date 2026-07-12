@@ -49,6 +49,20 @@ import type {
   GovernanceRole,
 } from './governance-write-types'
 import type { AssistantContextPage, AssistantContextView, AssistantSelectedView, S5Citation, S5Contact, S5ContactPage, S5DraftDetail, S5DraftField, S5Intent, S5InvocationRequest, S5InvocationResult, S5TerminalReceipt } from './draft-employee-types'
+import type {
+  ManagedEmployeeAccessMode,
+  ManagedEmployeeAction,
+  ManagedEmployeeCreateValues,
+  ManagedEmployeeDetail,
+  ManagedEmployeeDirectory,
+  ManagedEmployeeLifecycleReceipt,
+  ManagedEmployeeManagementContext,
+  ManagedEmployeeMemberRole,
+  ManagedEmployeeStatus,
+  ManagedEmployeeSummary,
+  ManagedEmployeeUpdateValues,
+  ManagedEmployeeViewType,
+} from './digital-employee-management-types'
 
 export type {
   SafeViewErrorCode,
@@ -97,11 +111,26 @@ export type {
   GovernanceMemberRoleReceipt,
   GovernanceRole,
 } from './governance-write-types'
+export type {
+  ManagedEmployeeAccessMode,
+  ManagedEmployeeAction,
+  ManagedEmployeeCreateValues,
+  ManagedEmployeeDetail,
+  ManagedEmployeeDirectory,
+  ManagedEmployeeLifecycleReceipt,
+  ManagedEmployeeManagementContext,
+  ManagedEmployeeMemberRole,
+  ManagedEmployeeStatus,
+  ManagedEmployeeSummary,
+  ManagedEmployeeUpdateValues,
+  ManagedEmployeeViewType,
+} from './digital-employee-management-types'
 
 export type WorkspaceCapabilities = {
   can_read_bases: boolean
   can_manage_workspace: boolean
   can_manage_schema: boolean
+  can_manage_digital_employees?: boolean
   can_review_drafts: boolean
 }
 
@@ -216,6 +245,15 @@ export type SafeApiErrorCode =
   | 'governance_field_policy_invalid'
   | 'governance_field_owner_write_required'
   | 'governance_field_policy_forbidden'
+  | 'digital_employee_revision_conflict'
+  | 'digital_employee_alias_conflict'
+  | 'digital_employee_active_requires_pause'
+  | 'digital_employee_action_unsupported'
+  | 'digital_employee_access_mode_unsupported'
+  | 'digital_employee_scope_denied'
+  | 'digital_employee_member_scope_denied'
+  | 'digital_employee_member_inactive'
+  | 'digital_employee_member_grant_required'
   | SafeViewErrorCode
 
 export class ApiError extends Error {
@@ -260,6 +298,15 @@ const safeApiErrorCodes = new Set<SafeApiErrorCode>([
   'governance_field_policy_invalid',
   'governance_field_owner_write_required',
   'governance_field_policy_forbidden',
+  'digital_employee_revision_conflict',
+  'digital_employee_alias_conflict',
+  'digital_employee_active_requires_pause',
+  'digital_employee_action_unsupported',
+  'digital_employee_access_mode_unsupported',
+  'digital_employee_scope_denied',
+  'digital_employee_member_scope_denied',
+  'digital_employee_member_inactive',
+  'digital_employee_member_grant_required',
   'view_name_invalid',
   'view_type_unsupported',
   'view_version_conflict',
@@ -609,6 +656,158 @@ function safeAssistantSelectedView(value: unknown): AssistantSelectedView {
   return { id: stringValue(record.id), name: stringValue(record.name), viewType: assistantContextViewType(record.view_type), baseId: stringValue(record.base_id) }
 }
 
+const managedEmployeeStatuses = new Set<ManagedEmployeeStatus>(['draft', 'active', 'paused'])
+const managedEmployeeAccessModes = new Set<ManagedEmployeeAccessMode>(['workspace', 'assigned'])
+const managedEmployeeActions = new Set<ManagedEmployeeAction>(['summarize', 'draft_update'])
+const managedEmployeeViewTypes = new Set<ManagedEmployeeViewType>(['grid', 'kanban', 'calendar', 'form'])
+const managedEmployeeMemberRoles = new Set<ManagedEmployeeMemberRole>(['owner', 'admin', 'builder', 'operator', 'viewer'])
+
+function assertManagedEmployeeKeys(record: Record<string, unknown>, keys: string[]): void {
+  if (Object.keys(record).length !== keys.length || keys.some((key) => !(key in record))) {
+    throw new Error('Invalid digital employee management response')
+  }
+}
+
+function managedEmployeeId(value: unknown): string {
+  const id = stringValue(value).trim()
+  if (!id) throw new Error('Invalid digital employee management response')
+  return id
+}
+
+function managedEmployeeCount(value: unknown): number {
+  const count = numberValue(value)
+  if (!Number.isInteger(count) || count < 0) throw new Error('Invalid digital employee management response')
+  return count
+}
+
+function managedEmployeeVersion(value: unknown): number {
+  const version = numberValue(value)
+  if (!Number.isInteger(version) || version < 1) throw new Error('Invalid digital employee management response')
+  return version
+}
+
+function managedEmployeeStatus(value: unknown): ManagedEmployeeStatus {
+  const status = stringValue(value)
+  if (!managedEmployeeStatuses.has(status as ManagedEmployeeStatus)) throw new Error('Invalid digital employee management response')
+  return status as ManagedEmployeeStatus
+}
+
+function managedEmployeeAccessMode(value: unknown): ManagedEmployeeAccessMode {
+  const accessMode = stringValue(value)
+  if (!managedEmployeeAccessModes.has(accessMode as ManagedEmployeeAccessMode)) throw new Error('Invalid digital employee management response')
+  return accessMode as ManagedEmployeeAccessMode
+}
+
+function managedEmployeeActionList(value: unknown): ManagedEmployeeAction[] {
+  if (!Array.isArray(value)) throw new Error('Invalid digital employee management response')
+  const actions = value.map((item) => stringValue(item))
+  if (actions.some((action) => !managedEmployeeActions.has(action as ManagedEmployeeAction)) || new Set(actions).size !== actions.length) {
+    throw new Error('Invalid digital employee management response')
+  }
+  return actions as ManagedEmployeeAction[]
+}
+
+function managedEmployeeIdList(value: unknown): string[] {
+  if (!Array.isArray(value)) throw new Error('Invalid digital employee management response')
+  const ids = value.map(managedEmployeeId)
+  if (new Set(ids).size !== ids.length) throw new Error('Invalid digital employee management response')
+  return ids
+}
+
+function managedEmployeeSummaryFromRecord(record: Record<string, unknown>): ManagedEmployeeSummary {
+  return {
+    id: managedEmployeeId(record.id),
+    name: stringValue(record.name),
+    description: stringValue(record.description),
+    status: managedEmployeeStatus(record.status),
+    accessMode: managedEmployeeAccessMode(record.access_mode),
+    tableCount: managedEmployeeCount(record.table_count),
+    viewCount: managedEmployeeCount(record.view_count),
+    memberCount: managedEmployeeCount(record.member_count),
+    version: managedEmployeeVersion(record.version),
+  }
+}
+
+function safeManagedEmployeeSummary(value: unknown): ManagedEmployeeSummary {
+  const record = jsonRecord(value)
+  assertManagedEmployeeKeys(record, ['id', 'name', 'description', 'status', 'access_mode', 'table_count', 'view_count', 'member_count', 'version'])
+  return managedEmployeeSummaryFromRecord(record)
+}
+
+function safeManagedEmployeeDetail(value: unknown): ManagedEmployeeDetail {
+  const record = jsonRecord(value)
+  assertManagedEmployeeKeys(record, [
+    'id', 'name', 'description', 'status', 'access_mode', 'table_count', 'view_count', 'member_count', 'version',
+    'base_id', 'telegram_alias', 'accessible_table_ids', 'accessible_view_ids', 'allowed_actions', 'member_ids',
+  ])
+  return {
+    ...managedEmployeeSummaryFromRecord(record),
+    baseId: managedEmployeeId(record.base_id),
+    telegramAlias: nullableStringValue(record.telegram_alias),
+    accessibleTableIds: managedEmployeeIdList(record.accessible_table_ids),
+    accessibleViewIds: managedEmployeeIdList(record.accessible_view_ids),
+    allowedActions: managedEmployeeActionList(record.allowed_actions),
+    memberIds: managedEmployeeIdList(record.member_ids),
+  }
+}
+
+function safeManagedEmployeeDirectory(value: unknown): ManagedEmployeeDirectory {
+  const record = jsonRecord(value)
+  assertManagedEmployeeKeys(record, ['base_id', 'employees', 'next_cursor', 'has_more'])
+  if (!Array.isArray(record.employees)) throw new Error('Invalid digital employee management response')
+  return {
+    baseId: managedEmployeeId(record.base_id),
+    employees: record.employees.map(safeManagedEmployeeSummary),
+    nextCursor: nullableStringValue(record.next_cursor),
+    hasMore: booleanValue(record.has_more),
+  }
+}
+
+function safeManagedEmployeeManagementContext(value: unknown): ManagedEmployeeManagementContext {
+  const record = jsonRecord(value)
+  assertManagedEmployeeKeys(record, ['base', 'tables', 'views', 'members'])
+  const base = jsonRecord(record.base)
+  assertManagedEmployeeKeys(base, ['id', 'name'])
+  if (!Array.isArray(record.tables) || !Array.isArray(record.views) || !Array.isArray(record.members)) {
+    throw new Error('Invalid digital employee management response')
+  }
+  return {
+    base: { id: managedEmployeeId(base.id), name: stringValue(base.name) },
+    tables: record.tables.map((item) => {
+      const table = jsonRecord(item)
+      assertManagedEmployeeKeys(table, ['id', 'name'])
+      return { id: managedEmployeeId(table.id), name: stringValue(table.name) }
+    }),
+    views: record.views.map((item) => {
+      const view = jsonRecord(item)
+      assertManagedEmployeeKeys(view, ['id', 'table_id', 'name', 'view_type'])
+      const viewType = stringValue(view.view_type)
+      if (!managedEmployeeViewTypes.has(viewType as ManagedEmployeeViewType)) throw new Error('Invalid digital employee management response')
+      return { id: managedEmployeeId(view.id), tableId: managedEmployeeId(view.table_id), name: stringValue(view.name), viewType: viewType as ManagedEmployeeViewType }
+    }),
+    members: record.members.map((item) => {
+      const member = jsonRecord(item)
+      assertManagedEmployeeKeys(member, ['id', 'label', 'role'])
+      const role = stringValue(member.role)
+      if (!managedEmployeeMemberRoles.has(role as ManagedEmployeeMemberRole)) throw new Error('Invalid digital employee management response')
+      return { id: managedEmployeeId(member.id), label: stringValue(member.label), role: role as ManagedEmployeeMemberRole }
+    }),
+  }
+}
+
+function safeManagedEmployeeLifecycleReceipt(value: unknown): ManagedEmployeeLifecycleReceipt {
+  const record = jsonRecord(value)
+  assertManagedEmployeeKeys(record, ['id', 'status', 'version', 'audit_event_id'])
+  const status = record.status
+  if (status !== 'active' && status !== 'paused') throw new Error('Invalid digital employee management response')
+  return {
+    id: managedEmployeeId(record.id),
+    status,
+    version: managedEmployeeVersion(record.version),
+    auditEventId: managedEmployeeId(record.audit_event_id),
+  }
+}
+
 function safeTelegramDeepLinkResolution(value: unknown): TelegramDeepLinkResolution {
   const record = jsonRecord(value)
   if (record.outcome === 'recovery') {
@@ -956,6 +1155,95 @@ export const api = {
       `/mini-app/tables/${encodeURIComponent(tableId)}/governance/fields/${encodeURIComponent(fieldId)}/permission-policy`,
       'PUT',
       { expected_permission_version: expectedPermissionVersion, policy },
+      idempotencyKey,
+    ),
+  ),
+  getDigitalEmployeeManagementContext: async (
+    baseId: string,
+    init?: RequestInit,
+  ): Promise<ManagedEmployeeManagementContext> => safeManagedEmployeeManagementContext(
+    await getJson<unknown>(`/mini-app/bases/${encodeURIComponent(baseId)}/digital-employee-management-context`, init),
+  ),
+  listManagedDigitalEmployees: async (
+    baseId: string,
+    cursor: string | null = null,
+    init?: RequestInit,
+  ): Promise<ManagedEmployeeDirectory> => {
+    const parameters = new URLSearchParams({ limit: '50' })
+    if (cursor) parameters.set('cursor', cursor)
+    return safeManagedEmployeeDirectory(await getJson<unknown>(
+      `/mini-app/bases/${encodeURIComponent(baseId)}/digital-employees/management?${parameters.toString()}`,
+      init,
+    ))
+  },
+  createManagedDigitalEmployee: async (
+    baseId: string,
+    values: ManagedEmployeeCreateValues,
+    idempotencyKey: string,
+  ): Promise<ManagedEmployeeDetail> => safeManagedEmployeeDetail(
+    await postJson<unknown>(
+      `/mini-app/bases/${encodeURIComponent(baseId)}/digital-employees/management`,
+      { name: values.name, description: values.description, telegram_alias: values.telegramAlias },
+      idempotencyKey,
+    ),
+  ),
+  getManagedDigitalEmployee: async (
+    employeeId: string,
+    init?: RequestInit,
+  ): Promise<ManagedEmployeeDetail> => safeManagedEmployeeDetail(
+    await getJson<unknown>(`/mini-app/digital-employees/${encodeURIComponent(employeeId)}/management`, init),
+  ),
+  updateManagedDigitalEmployee: async (
+    employeeId: string,
+    values: ManagedEmployeeUpdateValues,
+    expectedVersion: number,
+  ): Promise<ManagedEmployeeDetail> => {
+    const payload: Record<string, unknown> = { expected_version: expectedVersion }
+    if (values.name !== undefined) payload.name = values.name
+    if (values.description !== undefined) payload.description = values.description
+    if (Object.prototype.hasOwnProperty.call(values, 'telegramAlias')) payload.telegram_alias = values.telegramAlias
+    if (values.accessibleTableIds !== undefined) payload.accessible_table_ids = values.accessibleTableIds
+    if (values.accessibleViewIds !== undefined) payload.accessible_view_ids = values.accessibleViewIds
+    if (values.allowedActions !== undefined) payload.allowed_actions = values.allowedActions
+    if (values.accessMode !== undefined) payload.access_mode = values.accessMode
+    return safeManagedEmployeeDetail(await writeJson<unknown>(
+      `/mini-app/digital-employees/${encodeURIComponent(employeeId)}/management`,
+      'PATCH',
+      payload,
+    ))
+  },
+  replaceManagedDigitalEmployeeGrants: async (
+    employeeId: string,
+    memberIds: string[],
+    expectedVersion: number,
+    idempotencyKey: string,
+  ): Promise<ManagedEmployeeDetail> => safeManagedEmployeeDetail(
+    await writeIdempotentJson<unknown>(
+      `/mini-app/digital-employees/${encodeURIComponent(employeeId)}/member-grants`,
+      'PUT',
+      { expected_version: expectedVersion, member_ids: memberIds },
+      idempotencyKey,
+    ),
+  ),
+  activateManagedDigitalEmployee: async (
+    employeeId: string,
+    expectedVersion: number,
+    idempotencyKey: string,
+  ): Promise<ManagedEmployeeLifecycleReceipt> => safeManagedEmployeeLifecycleReceipt(
+    await postJson<unknown>(
+      `/mini-app/digital-employees/${encodeURIComponent(employeeId)}/activate`,
+      { expected_version: expectedVersion },
+      idempotencyKey,
+    ),
+  ),
+  pauseManagedDigitalEmployee: async (
+    employeeId: string,
+    expectedVersion: number,
+    idempotencyKey: string,
+  ): Promise<ManagedEmployeeLifecycleReceipt> => safeManagedEmployeeLifecycleReceipt(
+    await postJson<unknown>(
+      `/mini-app/digital-employees/${encodeURIComponent(employeeId)}/pause`,
+      { expected_version: expectedVersion },
       idempotencyKey,
     ),
   ),
