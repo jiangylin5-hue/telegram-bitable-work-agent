@@ -48,6 +48,7 @@ from app.services.stage06_platform import (
     get_table_schema,
     list_bases_for_workspace,
     list_view_records,
+    read_record_for_actor,
 )
 from app.services.stage07_draft_employee_hub import confirm_s5_draft, reject_s5_draft
 from app.services.stage06_digital_employees import invoke_digital_employee
@@ -154,7 +155,22 @@ def invoke_safe_digital_employee(
         raise HTTPException(status_code=422, detail=error_detail("idempotency_key_required", "idempotency_key_required"))
     try:
         if view_id is not None:
-            list_view_records(uow, view_id, actor=actor, limit=1)
+            view_payload = list_view_records(
+                uow,
+                view_id,
+                actor=actor,
+                limit=None if request.intent == "draft_update" else 1,
+            )
+            _validate_safe_invocation_context(
+                uow,
+                employee=employee,
+                selected_base_id=base_id,
+                view_id=view_id,
+                record_id=record_id,
+                intent=request.intent,
+                actor=actor,
+                view_payload=view_payload,
+            )
         invocation_decision = None
         if request.intent == "draft_update":
             assert idempotency_key is not None
@@ -482,6 +498,45 @@ def _authorization_error(exc: Stage06AuthorizationError) -> HTTPException:
 def _platform_error(exc: PlatformValidationError) -> HTTPException:
     status_code = 404 if exc.code.endswith("_not_found") else 409 if "conflict" in exc.code or "invalid_state" in exc.code or "idempotency" in exc.code else 422
     return HTTPException(status_code=status_code, detail=error_detail(exc.code, exc.code))
+
+
+def _validate_safe_invocation_context(
+    uow: Stage06PlatformUnitOfWork,
+    *,
+    employee,
+    selected_base_id: UUID,
+    view_id: UUID,
+    record_id: UUID | None,
+    intent: str,
+    actor: Actor,
+    view_payload: dict,
+) -> None:
+    """Fail closed before reserving a draft invocation or reaching the runtime."""
+    view = uow.get_view(view_id)
+    if view is None:
+        raise PlatformValidationError("view_not_found", str(view_id))
+    if str(view_id) not in set(employee.accessible_views):
+        raise PlatformValidationError("digital_employee_scope_denied", str(view_id))
+    if view.base_id != selected_base_id or view.base_id != employee.base_id or view.table_id is None:
+        raise PlatformValidationError("resource_scope_mismatch", "view")
+    if intent not in set(employee.allowed_actions):
+        raise PlatformValidationError("digital_employee_action_denied", intent)
+    if intent != "draft_update":
+        return
+
+    assert record_id is not None
+    record_payload = read_record_for_actor(uow, record_id, actor=actor)
+    if record_payload["table_id"] != str(view.table_id):
+        raise PlatformValidationError("resource_scope_mismatch", "record")
+    if record_payload["table_id"] not in set(employee.accessible_tables):
+        raise PlatformValidationError("digital_employee_scope_denied", record_payload["table_id"])
+    visible_record_ids = {
+        record["id"]
+        for record in view_payload.get("records", [])
+        if isinstance(record, dict) and isinstance(record.get("id"), str)
+    }
+    if str(record_id) not in visible_record_ids:
+        raise PlatformValidationError("digital_employee_record_not_visible", str(record_id))
 
 
 def _commit_if_sqlalchemy(uow: Stage06PlatformUnitOfWork) -> None:

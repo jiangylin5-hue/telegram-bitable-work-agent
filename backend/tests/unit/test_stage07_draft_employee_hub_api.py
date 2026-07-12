@@ -9,6 +9,7 @@ from app.api.routes.stage06_runtime import get_stage06_runtime_uow
 from app.main import create_app
 from app.models.stage06_platform import WorkspaceMember
 from app.models.stage06_runtime import RecordChangeDraft
+from app.schemas.stage06_platform import ViewInitializationRequest
 from app.services.permissions import Actor
 from app.services.stage06_digital_employees import create_digital_employee
 from app.services.stage06_platform import (
@@ -19,6 +20,7 @@ from app.services.stage06_platform import (
     create_record,
     create_table,
     create_workspace,
+    initialize_v1_view,
 )
 
 
@@ -585,3 +587,69 @@ def test_s5_revoked_view_context_fails_before_live_runtime(monkeypatch) -> None:
     assert response.json()["detail"]["code"] == "permission_denied"
     assert uow.record_change_drafts == []
     assert uow.agent_runs == []
+
+
+def test_s5_hidden_record_context_fails_before_runtime_or_idempotency_reservation(monkeypatch) -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="S5 hidden record", owner_user_id=owner.actor_id, actor=owner)
+    base = create_base(uow, workspace.id, name="Operations", actor=owner)
+    table = create_table(uow, base.id, name="Tasks", key="tasks", actor=owner)
+    create_field(
+        uow, table.id, name="State", key="state", field_type="status",
+        options={"choices": ["open", "closed"]}, actor=owner,
+    )
+    visible_record = create_record(uow, table.id, values={"state": "open"}, actor=owner)
+    hidden_record = create_record(uow, table.id, values={"state": "closed"}, actor=owner)
+    view = initialize_v1_view(
+        uow,
+        table.id,
+        request=ViewInitializationRequest.model_validate({
+            "name": "Open tasks",
+            "view_type": "grid",
+            "presentation": {
+                "view_type": "grid",
+                "visible_field_keys": ["state"],
+                "filters": [{"field_key": "state", "operator": "is", "value": "open"}],
+                "sort_rules": [],
+                "group_by_field_key": None,
+            },
+        }),
+        idempotency_key="s5-hidden-record-view",
+        actor=owner,
+    ).view
+    employee = create_digital_employee(
+        uow, base.id, name="Assistant", description="Safe", telegram_alias=None,
+        accessible_tables=[str(table.id)], accessible_views=[str(view.id)], allowed_actions=["draft_update"], actor=owner,
+    )
+
+    def fail_if_invoked(*args, **kwargs):
+        raise AssertionError("runtime must not run for a record outside the current visible view")
+
+    monkeypatch.setattr(draft_employee_hub_routes, "invoke_digital_employee", fail_if_invoked)
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_runtime_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = owner.actor_id
+        response = client.post(
+            f"/mini-app/digital-employees/{employee.id}/invocations",
+            headers={"Idempotency-Key": "s5-hidden-record-context"},
+            json={
+                "intent": "draft_update",
+                "base_id": str(base.id),
+                "view_id": str(view.id),
+                "record_id": str(hidden_record.id),
+            },
+        )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "digital_employee_record_not_visible"
+    assert str(visible_record.id) != str(hidden_record.id)
+    assert uow.record_change_drafts == []
+    assert uow.agent_runs == []
+    assert all(
+        record.operation != "stage07.s5.digital_employee.draft_update"
+        for record in uow.idempotency_records
+    )

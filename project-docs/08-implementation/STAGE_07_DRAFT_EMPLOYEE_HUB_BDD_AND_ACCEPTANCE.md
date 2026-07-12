@@ -104,7 +104,7 @@ Then it cannot create/publish a contact, persist memory, access knowledge, claim
 | ID | Requirement | Required evidence | Status |
 | --- | --- | --- | --- |
 | DE-A01 | safe contact projection and cross-workspace omission | API/unit and PostgreSQL isolation tests | implemented-local — focused backend/real local PostgreSQL evidence covers safe projection and cross-Base denial. |
-| DE-A02 | explicit context intersection before runtime | service/API denial matrix | partial-local — Base/view/record intersection, cross-Base denial and post-selection hidden-view denial before runtime are covered; stale record-context matrix remains unaccepted. |
+| DE-A02 | explicit context intersection before runtime | service/API denial matrix | implemented-local — Base/view/record intersection, cross-Base and post-selection hidden-view denial, plus a record filtered out of the current View, fail before runtime and before a draft-invocation idempotency reservation. |
 | DE-A03 | fixed invocation intents and safe result projection | strict parser/API/runtime tests | partial-local — fixed intent and strict `{recordId}` citation/result transport are covered; real provider evidence is absent. |
 | DE-A04 | draft creation remains non-mutating | service/API/real runtime or injected-LangGraph proof | partial-local — bounded adapter and terminal draft loop are implemented; configured real-provider evidence is absent. |
 | DE-A05 | field-filtered immutable draft diff | schema/detail/hidden-field regression and Browser inspection | partial-local — safe detail DTO/UI exists; a fresh server reread hides a post-creation revoked field and recomputes `can_confirm=false`. Field-filtered Browser inspection is absent. |
@@ -118,12 +118,12 @@ Then it cannot create/publish a contact, persist memory, access knowledge, claim
 
 | Covered behavior | Fresh evidence | Acceptance gap retained |
 | --- | --- | --- |
-| safe summary projection and context intersection | backend unit plus local PostgreSQL run: `17 passed`; malicious citation fields and unknown record IDs are dropped, cross-Base and post-selection hidden views are denied before runtime, terminal concurrency is locked, and a post-creation field revoke hides the diff/value then disables confirmation | real provider and stale record-context matrix remain absent |
+| safe summary projection and context intersection | backend unit plus local PostgreSQL run: `18 passed`; malicious citation fields and unknown record IDs are dropped; cross-Base, post-selection hidden View and record-filtered-out-of-current-View contexts fail before runtime, draft creation or invocation-ledger reservation; terminal concurrency is locked; and a post-creation field revoke hides the diff/value then disables confirmation | real provider remains absent |
 | safe client transport and TD006 Option A bridge | focused Mini App run: `4 files / 18 tests`; strict parser retains only `answer` and `{recordId}` citations; Canvas UI sends only current Base/view and disables draft creation without an open record; an old-workspace delayed terminal `401/403` cannot deny or repopulate the replacement workspace | no generic context source/persistence is allowed; Browser matrix remains unavailable |
 | terminal draft baseline and queue query | real local PostgreSQL proves confirm replay, reject no-record-write, concurrent confirm rolls back the losing command's ledger, and a `512` pending / `1,536` terminal queue measurement reuses the existing Base/status index for the bounded pending-only route | full field-filtered Browser matrix remains pending; the optional partial index is intentionally not created |
 | production compilation | `npm.cmd run build` completed after the current-Canvas invocation UI change | both available browsers refused the temporary loopback fixture; no S5 visual observation is claimed |
 
-This reconciliation does not promote S5 or Stage07 to complete. DE-A02--DE-A05 and DE-A08--DE-A09 retain the exact provider/Browser/failure-matrix limits above; TD006 remains only the approved opaque transient context bridge.
+This reconciliation does not promote S5 or Stage07 to complete. DE-A03--DE-A05 and DE-A08--DE-A09 retain the exact provider/Browser/failure-matrix limits above; TD006 remains only the approved opaque transient context bridge.
 
 ## Prohibited Claims
 
