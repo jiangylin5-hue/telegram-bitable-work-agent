@@ -50,7 +50,11 @@ test('forwards only the server-provided next cursor when loading another record 
 test('exposes a create-record entry only when the canvas supplies an authorized handler', () => {
   const onCreateRecord = vi.fn()
   const view = { id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: '当前视图', view_type: 'grid', status: 'active' }
-  render(<BaseCanvas base={base} tables={[table]} views={[view]} table={table} view={view} schema={schema} records={records} presentation={{ view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: ['name'], group_by_field_key: null, date_field_key: null, form_field_keys: ['name'] }} onBack={() => undefined} onOpenRecord={() => undefined} onSelectView={() => undefined} canCreateRecords onCreateRecord={onCreateRecord} />)
+  const props = { base, tables: [table], views: [view], table, view, schema, records, presentation: { view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: ['name'], group_by_field_key: null, date_field_key: null, form_field_keys: ['name'] }, onBack: () => undefined, onOpenRecord: () => undefined, onSelectView: () => undefined, onCreateRecord }
+  const { rerender } = render(<BaseCanvas {...props} />)
+  expect(screen.queryByRole('button', { name: '新建记录' })).not.toBeInTheDocument()
+
+  rerender(<BaseCanvas {...props} canCreateRecords />)
 
   fireEvent.click(screen.getByRole('button', { name: '新建记录' }))
   expect(onCreateRecord).toHaveBeenCalledOnce()
