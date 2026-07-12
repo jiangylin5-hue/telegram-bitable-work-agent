@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed technical specification; implementation is gated on user approval of TD004.
+- Status: accepted technical specification; implementation is bounded by TD004.
 - Scope: server-owned member-role and field-policy commands plus UI reuse of existing V1 view grants.
 
 ## Backend Design

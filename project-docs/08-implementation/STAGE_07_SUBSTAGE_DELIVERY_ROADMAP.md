@@ -26,7 +26,7 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 | S1 | Bitable authoring and records | Base/Table, F1 field, F2 relation/lookup and Record Detail work | implemented-local / partial-local | existing builder contracts |
 | S2 | Views, template and import | saved views, template/install/save, CSV/XLSX server preview/import | implemented-local / partial-local | existing contracts; Browser file upload unproven |
 | S3 | Governance Readback | safe paged member directory and Base audit timeline | implemented-local; Browser external evidence pending | Technical Decision 003 |
-| S4 | Governance Write | bounded member-role, field-policy and existing V1 view-grant operations | proposed, awaiting review | Technical Decision 004 |
+| S4 | Governance Write | bounded member-role, field-policy and existing V1 view-grant operations | approved, implementation active | Technical Decision 004 |
 | S5 | Draft and Digital Employee Hub | field-filtered draft review, contacts and assistant surface | contract-gated | separate draft/employee/context decision |
 | S6 | Telegram and final acceptance | verified identity/deep link, full safety/visual matrix and release evidence | external-evidence-pending | approved test environment and user authority |
 
@@ -86,7 +86,7 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 | design | docs/superpowers/specs/2026-07-12-stage07-governance-write-design.md |
 | BDD / SDD | STAGE_07_GOVERNANCE_WRITE_BDD_AND_ACCEPTANCE.md / STAGE_07_GOVERNANCE_WRITE_SDD.md |
 | work surface / complex index | modules/STAGE_07_GOVERNANCE_WRITE_WORK_SURFACE.md / STAGE_07_GOVERNANCE_WRITE_COMPLEX_FEATURE_INDEX.md |
-| implementation plan | created only after explicit approval of TD004/specification |
+| implementation plan | docs/superpowers/plans/2026-07-12-stage07-governance-write-implementation.md |
 | final evidence | created only after implementation and reconciliation |
 
 ### Exit Criteria

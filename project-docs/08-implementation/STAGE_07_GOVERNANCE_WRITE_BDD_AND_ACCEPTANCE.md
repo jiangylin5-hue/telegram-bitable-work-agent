@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed; no S4 implementation evidence exists.
+- Status: accepted for implementation; no S4 implementation evidence exists yet.
 - Authority: Technical Decision 004 and the Governance Write Design.
 
 ## BDD Scenarios

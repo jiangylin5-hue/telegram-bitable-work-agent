@@ -2,7 +2,7 @@
 
 ## Status
 
-- Decision status: proposed — requires explicit user approval before any S4 code, migration or API-contract change.
+- Decision status: accepted — user approved 2026-07-12; implementation remains bounded by this document.
 - Scope: coherent S4 governance write package: existing active member role changes, role-based field read/write policy replacement, and reuse of the existing V1 restricted-view member grants.
 - Does not authorize: invitation, deactivation, owner transfer, custom roles, group policy, raw policy exposure, Bot administration, draft confirmation, Telegram or deployment.
 

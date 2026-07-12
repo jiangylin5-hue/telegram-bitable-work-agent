@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: proposed; awaiting user review of Technical Decision 004.
+- Status: accepted for implementation; user approved Technical Decision 004 on 2026-07-12.
 - Substage: S4 Governance Write.
 - Goal: make the current fixed workspace roles and field visibility/write policy safely operable in Mini App without creating a general authorization product.
 
