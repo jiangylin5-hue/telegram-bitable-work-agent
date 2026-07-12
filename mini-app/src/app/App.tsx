@@ -8,13 +8,15 @@ import { BuilderCreatePanel } from './BuilderCreatePanel'
 import { FieldBuilderPanel, type FieldBuilderValues } from './FieldBuilderPanel'
 import { ImportWizard, type ImportTarget } from './ImportWizard'
 import { CreateRecordPanel } from './CreateRecordPanel'
+import { GovernanceWorkbench } from './GovernanceWorkbench'
 import { RecordDetailPanel } from './RecordDetail'
 import { RelationLookupFieldBuilderPanel, type F2FieldBuilderValues } from './RelationLookupFieldBuilderPanel'
 import { SaveTemplatePanel } from './SaveTemplatePanel'
 import { TemplateImportHub } from './TemplateImportHub'
 import { ViewBuilderPanel } from './ViewBuilderPanel'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
-import { clearAllProtectedQueries, clearFieldMutationQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
+import { clearAllProtectedQueries, clearFieldMutationQueries, clearGovernanceQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, governanceKeys, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
+import type { GovernanceAuditPage, GovernanceMemberPage } from './governance-types'
 import type { CommitImportValues, CreateImportValues, ImportCommitReceipt, ImportPreview, TemplateSummary } from './template-import-types'
 import type { ViewBuilderContext, ViewBuilderResponse, ViewInitializationRequest, ViewMemberReplaceRequest, ViewPresentationPatchRequest } from './view-builder-types'
 
@@ -55,6 +57,18 @@ type TemplateImportPanel =
   | { mode: 'save-template'; base: BaseSummary }
   | { mode: 'workspace-import' }
   | { mode: 'base-import'; base: BaseSummary }
+
+type GovernancePanel = {
+  members: GovernanceMemberPage | null
+  audit: GovernanceAuditPage | null
+  selectedBaseId: string | null
+  membersLoading: boolean
+  auditLoading: boolean
+  membersError: boolean
+  auditError: boolean
+  membersLoadMoreError: boolean
+  auditLoadMoreError: boolean
+}
 
 function isAbortError(error: unknown): boolean {
   return isCancelledError(error) || (error instanceof DOMException && error.name === 'AbortError')
@@ -97,10 +111,13 @@ function AppContent() {
   const createFormRequestVersion = useRef(0)
   const builderRequestVersion = useRef(0)
   const templateImportRequestVersion = useRef(0)
+  const governanceRequestVersion = useRef(0)
   const viewBuilderReturnFocus = useRef<HTMLElement | null>(null)
+  const governanceReturnFocus = useRef<HTMLElement | null>(null)
   const sessionInvalidated = useRef(false)
   const [builderPanel, setBuilderPanel] = useState<BuilderPanel>()
   const [templateImportPanel, setTemplateImportPanel] = useState<TemplateImportPanel>()
+  const [governancePanel, setGovernancePanel] = useState<GovernancePanel>()
 
   function invalidateInFlightRequests() {
     homeRequestVersion.current += 1
@@ -109,6 +126,7 @@ function AppContent() {
     createFormRequestVersion.current += 1
     builderRequestVersion.current += 1
     templateImportRequestVersion.current += 1
+    governanceRequestVersion.current += 1
   }
 
   async function denyInvalidSession() {
@@ -229,8 +247,10 @@ function AppContent() {
     createFormRequestVersion.current += 1
     builderRequestVersion.current += 1
     templateImportRequestVersion.current += 1
+    governanceRequestVersion.current += 1
     setBuilderPanel(undefined)
     setTemplateImportPanel(undefined)
+    setGovernancePanel(undefined)
     activeWorkspaceId.current = workspaceId
     setState({ status: 'loading' })
     await clearProtectedWorkspace(queryClient, { userId: readyState.bootstrap.identity.user_id, workspaceId: activeWorkspace.id })
@@ -305,6 +325,187 @@ function AppContent() {
   function closeTemplateImport() {
     templateImportRequestVersion.current += 1
     setTemplateImportPanel(undefined)
+  }
+
+  function closeGovernance() {
+    const workspaceId = readyState.home.workspace_id
+    governanceRequestVersion.current += 1
+    setGovernancePanel(undefined)
+    governanceReturnFocus.current?.focus()
+    governanceReturnFocus.current = null
+    void clearGovernanceQueries(queryClient, {
+      userId: readyState.bootstrap.identity.user_id,
+      workspaceId,
+    })
+  }
+
+  async function openGovernance(trigger?: HTMLElement) {
+    governanceReturnFocus.current = trigger ?? governanceReturnFocus.current
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++governanceRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && governanceRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setGovernancePanel({
+      members: null,
+      audit: null,
+      selectedBaseId: null,
+      membersLoading: true,
+      auditLoading: false,
+      membersError: false,
+      auditError: false,
+      membersLoadMoreError: false,
+      auditLoadMoreError: false,
+    })
+    try {
+      const members = await queryClient.fetchQuery({
+        queryKey: governanceKeys.members(scope, null),
+        queryFn: ({ signal }) => api.listGovernanceMembers(workspaceId, null, { signal }),
+      })
+      if (isCurrent()) setGovernancePanel((current) => current ? {
+        ...current,
+        members,
+        membersLoading: false,
+        membersError: false,
+      } : current)
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await denyInvalidSession()
+      } else if (error instanceof ApiError && error.status === 403) {
+        await denyWorkspace(scope)
+      } else {
+        setGovernancePanel((current) => current ? {
+          ...current,
+          membersLoading: false,
+          membersError: true,
+        } : current)
+      }
+    }
+  }
+
+  async function selectGovernanceBase(baseId: string) {
+    if (!baseId || !governancePanel) return
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const previousBaseId = governancePanel.selectedBaseId
+    const requestVersion = ++governanceRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && governanceRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    if (previousBaseId) await clearGovernanceQueries(queryClient, scope, previousBaseId)
+    setGovernancePanel((current) => current ? {
+      ...current,
+      selectedBaseId: baseId,
+      audit: null,
+      auditLoading: true,
+      auditError: false,
+      auditLoadMoreError: false,
+    } : current)
+    try {
+      const audit = await queryClient.fetchQuery({
+        queryKey: governanceKeys.audit(scope, baseId, null),
+        queryFn: ({ signal }) => api.listGovernanceAuditEvents(baseId, null, { signal }),
+      })
+      if (isCurrent()) setGovernancePanel((current) => current?.selectedBaseId === baseId ? {
+        ...current,
+        audit,
+        auditLoading: false,
+        auditError: false,
+      } : current)
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await denyInvalidSession()
+      } else if (error instanceof ApiError && error.status === 403) {
+        await denyWorkspace(scope)
+      } else {
+        if (error instanceof ApiError && error.status === 404) {
+          await clearGovernanceQueries(queryClient, scope, baseId)
+        }
+        setGovernancePanel((current) => current?.selectedBaseId === baseId ? {
+          ...current,
+          auditLoading: false,
+          auditError: true,
+        } : current)
+      }
+    }
+  }
+
+  async function loadMoreGovernanceMembers() {
+    const panel = governancePanel
+    const workspaceId = readyState.home.workspace_id
+    const cursor = panel?.members?.nextCursor
+    if (!panel?.members || !cursor || panel.membersLoading) return
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++governanceRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && governanceRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setGovernancePanel((current) => current ? { ...current, membersLoading: true, membersLoadMoreError: false } : current)
+    try {
+      const page = await queryClient.fetchQuery({
+        queryKey: governanceKeys.members(scope, cursor),
+        queryFn: ({ signal }) => api.listGovernanceMembers(workspaceId, cursor, { signal }),
+      })
+      if (isCurrent()) setGovernancePanel((current) => {
+        if (!current?.members) return current
+        const knownIds = new Set(current.members.members.map((member) => member.id))
+        return {
+          ...current,
+          members: {
+            ...page,
+            members: [...current.members.members, ...page.members.filter((member) => !knownIds.has(member.id))],
+          },
+          membersLoading: false,
+          membersLoadMoreError: false,
+        }
+      })
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else setGovernancePanel((current) => current ? { ...current, membersLoading: false, membersLoadMoreError: true } : current)
+    }
+  }
+
+  async function loadMoreGovernanceAudit() {
+    const panel = governancePanel
+    const workspaceId = readyState.home.workspace_id
+    const baseId = panel?.selectedBaseId
+    const cursor = panel?.audit?.nextCursor
+    if (!panel?.audit || !baseId || !cursor || panel.auditLoading) return
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++governanceRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && governanceRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setGovernancePanel((current) => current ? { ...current, auditLoading: true, auditLoadMoreError: false } : current)
+    try {
+      const page = await queryClient.fetchQuery({
+        queryKey: governanceKeys.audit(scope, baseId, cursor),
+        queryFn: ({ signal }) => api.listGovernanceAuditEvents(baseId, cursor, { signal }),
+      })
+      if (isCurrent()) setGovernancePanel((current) => {
+        if (!current?.audit || current.selectedBaseId !== baseId) return current
+        const knownIds = new Set(current.audit.events.map((event) => event.id))
+        return {
+          ...current,
+          audit: {
+            ...page,
+            events: [...current.audit.events, ...page.events.filter((event) => !knownIds.has(event.id))],
+          },
+          auditLoading: false,
+          auditLoadMoreError: false,
+        }
+      })
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else setGovernancePanel((current) => current ? { ...current, auditLoading: false, auditLoadMoreError: true } : current)
+    }
   }
 
   function openWorkspaceImport() {
@@ -1320,5 +1521,27 @@ function AppContent() {
         : templateImportPanel?.mode === 'base-import'
           ? <ImportWizard target={{ kind: 'base', workspaceId: readyState.home.workspace_id, baseId: templateImportPanel.base.id, baseName: templateImportPanel.base.name }} onCreatePreview={(values) => createImportPreview({ kind: 'base', workspaceId: readyState.home.workspace_id, baseId: templateImportPanel.base.id, baseName: templateImportPanel.base.name }, values)} onCommit={(jobId, values) => commitImport({ kind: 'base', workspaceId: readyState.home.workspace_id, baseId: templateImportPanel.base.id, baseName: templateImportPanel.base.name }, jobId, values)} onClose={closeTemplateImport} />
       : null
-  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace}>{content}{builderOverlay}{templateImportOverlay}</AppShell>
+  const governanceOverlay = governancePanel
+    ? <GovernanceWorkbench
+      bases={readyState.home.recent_bases}
+      members={governancePanel.members}
+      audit={governancePanel.audit}
+      selectedBaseId={governancePanel.selectedBaseId}
+      membersLoading={governancePanel.membersLoading}
+      auditLoading={governancePanel.auditLoading}
+      membersError={governancePanel.membersError}
+      auditError={governancePanel.auditError}
+      membersLoadMoreError={governancePanel.membersLoadMoreError}
+      auditLoadMoreError={governancePanel.auditLoadMoreError}
+      onSelectBase={(baseId) => { void selectGovernanceBase(baseId) }}
+      onLoadMoreMembers={() => { void loadMoreGovernanceMembers() }}
+      onLoadMoreAudit={() => { void loadMoreGovernanceAudit() }}
+      onRetryMembers={() => { void openGovernance() }}
+      onRetryAudit={() => {
+        if (governancePanel.selectedBaseId) void selectGovernanceBase(governancePanel.selectedBaseId)
+      }}
+      onClose={closeGovernance}
+    />
+    : null
+  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} onOpenGovernance={(trigger) => { void openGovernance(trigger) }}>{content}{builderOverlay}{templateImportOverlay}{governanceOverlay}</AppShell>
 }
