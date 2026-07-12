@@ -123,8 +123,55 @@ test.each([401, 403, 404, 409])('does not let a delayed governance role mutation
   fireEvent.click(await screen.findByRole('button', { name: '打开治理工作台' }))
   fireEvent.click(await screen.findByRole('button', { name: '打开权限设置' }))
   fireEvent.change(await screen.findByLabelText('成员 operator-1 的角色'), { target: { value: 'builder' } })
-  fireEvent.click(screen.getByRole('button', { name: '确认改为 builder' }))
+  fireEvent.click(await screen.findByRole('button', { name: '确认改为 builder' }))
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/mini-app/workspaces/workspace-1/governance/members/member-1/role', expect.objectContaining({ method: 'PATCH' })))
+
+  fireEvent.change(screen.getByLabelText('切换工作区（桌面）'), { target: { value: 'workspace-2' } })
+  expect(await screen.findByRole('main', { name: '工作区首页' })).toHaveTextContent('Northwind')
+  mutation.resolve(json({ detail: 'expired or denied identity' }, status))
+
+  await waitFor(() => expect(screen.getByRole('main', { name: '工作区首页' })).toHaveTextContent('Northwind'))
+  expect(screen.queryByRole('main', { name: '无工作区访问权限' })).not.toBeInTheDocument()
+  expect(screen.queryByText('expired or denied identity')).not.toBeInTheDocument()
+})
+
+test.each([401, 403, 404, 409])('does not let a delayed governance field-policy mutation for the old workspace deny a replacement workspace on %s', async (status) => {
+  const mutation = deferred<Response>()
+  const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const path = String(input)
+    if (path === '/mini-app/bootstrap') return Promise.resolve(json({
+      identity: { user_id: 'owner-1', source: 'header' },
+      workspaces: [
+        { id: 'workspace-1', name: 'Acme', slug: 'acme', role: 'owner', capabilities: { can_read_bases: true, can_manage_workspace: true, can_manage_schema: true, can_review_drafts: false } },
+        { id: 'workspace-2', name: 'Northwind', slug: 'northwind', role: 'owner', capabilities: { can_read_bases: true, can_manage_workspace: true, can_manage_schema: true, can_review_drafts: false } },
+      ],
+    }))
+    if (path === '/workspaces/workspace-1/home') return Promise.resolve(json({ workspace_id: 'workspace-1', recent_bases: [{ id: 'base-1', name: 'CRM', source_type: 'manual' }], queue: [] }))
+    if (path === '/workspaces/workspace-2/home') return Promise.resolve(json({ workspace_id: 'workspace-2', recent_bases: [{ id: 'base-2', name: 'Operations', source_type: 'manual' }], queue: [] }))
+    if (path === '/mini-app/workspaces/workspace-1/governance/members?limit=50') return Promise.resolve(json({ workspace_id: 'workspace-1', members: [], next_cursor: null, has_more: false }))
+    if (path === '/mini-app/workspaces/workspace-1/governance/member-editor?limit=50') return Promise.resolve(json({ workspace_id: 'workspace-1', members: [], next_cursor: null, has_more: false }))
+    if (path === '/bases/base-1/tables') return Promise.resolve(json({ tables: [{ id: 'table-1', base_id: 'base-1', name: 'Customers', key: 'customers', status: 'active' }] }))
+    if (path === '/bases/base-1/views') return Promise.resolve(json({ views: [] }))
+    if (path === '/mini-app/tables/table-1/governance/field-permissions') return Promise.resolve(json({
+      table_id: 'table-1',
+      fields: [{ id: 'field-1', key: 'internal', label: 'Internal', field_type: 'text', policy: { owner: 'write', admin: 'write', builder: 'write', operator: 'read', viewer: 'hidden' }, permission_version: 1 }],
+    }))
+    if (path === '/mini-app/tables/table-1/governance/fields/field-1/permission-policy' && init?.method === 'PUT') return mutation.promise
+    return Promise.resolve(json({ detail: 'unexpected raw server detail' }, 404))
+  })
+  vi.stubGlobal('fetch', fetchMock)
+
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: '打开治理工作台' }))
+  fireEvent.click(await screen.findByRole('button', { name: '打开权限设置' }))
+  const dialog = await screen.findByRole('dialog', { name: '权限设置' })
+  fireEvent.change(within(dialog).getByLabelText('选择 Base'), { target: { value: 'base-1' } })
+  await within(dialog).findByRole('option', { name: 'Customers' })
+  fireEvent.change(within(dialog).getByLabelText('选择数据表'), { target: { value: 'table-1' } })
+  await within(dialog).findByLabelText('字段 Internal 的 viewer 权限')
+  fireEvent.change(within(dialog).getByLabelText('字段 Internal 的 viewer 权限'), { target: { value: 'read' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: '确认字段权限' }))
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/mini-app/tables/table-1/governance/fields/field-1/permission-policy', expect.objectContaining({ method: 'PUT' })))
 
   fireEvent.change(screen.getByLabelText('切换工作区（桌面）'), { target: { value: 'workspace-2' } })
   expect(await screen.findByRole('main', { name: '工作区首页' })).toHaveTextContent('Northwind')
