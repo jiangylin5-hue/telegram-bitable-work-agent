@@ -118,6 +118,20 @@ export type BootstrapResponse = {
   workspaces: Workspace[]
 }
 
+export type TelegramDeepLinkDestination = {
+  kind: 'base' | 'view' | 'record' | 'record_change_draft'
+  workspaceId: string
+  baseId?: string
+  tableId?: string
+  viewId?: string
+  recordId?: string
+  draftId?: string
+}
+
+export type TelegramDeepLinkResolution =
+  | { outcome: 'resolved'; destination: TelegramDeepLinkDestination }
+  | { outcome: 'recovery' }
+
 export type WorkspaceHome = {
   workspace_id: string
   recent_bases: { id: string; name: string; source_type: string }[]
@@ -297,11 +311,24 @@ async function safeErrorCode(response: Response): Promise<SafeApiErrorCode | und
   }
 }
 
+let telegramInitData: string | null = null
+
+export function setTelegramInitData(value: string | null): void {
+  telegramInitData = value?.trim() || null
+}
+
+function protectedHeaders(input?: HeadersInit): Headers {
+  const headers = new Headers(input)
+  if (!headers.has('Accept')) headers.set('Accept', 'application/json')
+  if (telegramInitData) headers.set('X-Telegram-Init-Data', telegramInitData)
+  return headers
+}
+
 async function getJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(path, {
-    headers: { Accept: 'application/json' },
     credentials: 'same-origin',
     ...init,
+    headers: Object.fromEntries(protectedHeaders(init.headers).entries()),
   })
   if (!response.ok) throw new ApiError(response.status, await safeErrorCode(response))
   return response.json() as Promise<T>
@@ -542,6 +569,33 @@ function safeS5InvocationResult(value: unknown): S5InvocationResult {
   throw new Error('Invalid S5 response')
 }
 
+function safeTelegramDeepLinkResolution(value: unknown): TelegramDeepLinkResolution {
+  const record = jsonRecord(value)
+  if (record.outcome === 'recovery') {
+    if (Object.keys(record).length !== 1) throw new Error('Invalid Telegram deep-link response')
+    return { outcome: 'recovery' }
+  }
+  if (record.outcome !== 'resolved') throw new Error('Invalid Telegram deep-link response')
+  const destination = jsonRecord(record.destination)
+  const kind = stringValue(destination.kind)
+  if (!['base', 'view', 'record', 'record_change_draft'].includes(kind)) throw new Error('Invalid Telegram deep-link response')
+  const allowedKeys = new Set(['kind', 'workspace_id', 'base_id', 'table_id', 'view_id', 'record_id', 'draft_id'])
+  if (Object.keys(destination).some((key) => !allowedKeys.has(key))) throw new Error('Invalid Telegram deep-link response')
+  const optionalId = (key: string): string | undefined => destination[key] === undefined ? undefined : stringValue(destination[key])
+  return {
+    outcome: 'resolved',
+    destination: {
+      kind: kind as TelegramDeepLinkDestination['kind'],
+      workspaceId: stringValue(destination.workspace_id),
+      ...(optionalId('base_id') ? { baseId: optionalId('base_id') } : {}),
+      ...(optionalId('table_id') ? { tableId: optionalId('table_id') } : {}),
+      ...(optionalId('view_id') ? { viewId: optionalId('view_id') } : {}),
+      ...(optionalId('record_id') ? { recordId: optionalId('record_id') } : {}),
+      ...(optionalId('draft_id') ? { draftId: optionalId('draft_id') } : {}),
+    },
+  }
+}
+
 function safeTemplateSummary(value: unknown): TemplateSummary {
   const record = jsonRecord(value)
   return {
@@ -776,7 +830,16 @@ export function toSafeViewError(error: unknown): string {
 }
 
 export const api = {
+  setTelegramInitData,
   bootstrap: (init?: RequestInit) => getJson<BootstrapResponse>('/mini-app/bootstrap', init),
+  resolveTelegramDeepLink: async (startParam: string, init?: RequestInit): Promise<TelegramDeepLinkResolution> => safeTelegramDeepLinkResolution(
+    await getJson<unknown>('/mini-app/telegram/deep-links/resolve', {
+      ...init,
+      method: 'POST',
+      headers: { ...Object.fromEntries(new Headers(init?.headers).entries()), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ start_param: startParam }),
+    }),
+  ),
   workspaceHome: (workspaceId: string, init?: RequestInit) => getJson<WorkspaceHome>(`/workspaces/${workspaceId}/home`, init),
   workspaceBases: async (workspaceId: string, init?: RequestInit): Promise<{ bases: BaseSummary[] }> => {
     const response = jsonRecord(await getJson<unknown>(`/workspaces/${encodeURIComponent(workspaceId)}/bases`, init))

@@ -60,6 +60,24 @@ export const draftEmployeeKeys = {
   ),
 }
 
+export const telegramDeepLinkKeys = {
+  resolver: (scope: ProtectedScope): QueryKey => protectedQueryKey(scope, 's6', 'telegram-deep-link'),
+}
+
+export async function clearTelegramDeepLinkQueries(
+  queryClient: QueryClient,
+  scope: ProtectedScope,
+  destination?: { recordId?: string; draftId?: string },
+): Promise<void> {
+  const queryKeys: QueryKey[] = [
+    telegramDeepLinkKeys.resolver(scope),
+    ...(destination?.recordId ? [protectedQueryKey(scope, 'record', destination.recordId)] : []),
+    ...(destination?.draftId ? [draftEmployeeKeys.draft(scope, destination.draftId)] : []),
+  ]
+  await Promise.all(queryKeys.map((queryKey) => queryClient.cancelQueries({ queryKey })))
+  for (const queryKey of queryKeys) queryClient.removeQueries({ queryKey })
+}
+
 export async function clearDraftEmployeeTerminalQueries(
   queryClient: QueryClient,
   scope: ProtectedScope,

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { isCancelledError, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { ApiError, api, type BaseSummary, type BootstrapResponse, type CreateForm, type PlatformTable, type RecordDetail, type TableSchema, type ViewPresentation, type ViewRecords, type ViewSummary, type WorkspaceHome } from './api'
+import { ApiError, api, type BaseSummary, type BootstrapResponse, type CreateForm, type PlatformTable, type RecordDetail, type TableSchema, type TelegramDeepLinkDestination, type ViewPresentation, type ViewRecords, type ViewSummary, type WorkspaceHome } from './api'
 import { AppShell } from './AppShell'
 import { BaseCanvas } from './BaseCanvas'
 import { BuilderCreatePanel } from './BuilderCreatePanel'
@@ -17,7 +17,8 @@ import { SaveTemplatePanel } from './SaveTemplatePanel'
 import { TemplateImportHub } from './TemplateImportHub'
 import { ViewBuilderPanel } from './ViewBuilderPanel'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
-import { clearAllProtectedQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, draftEmployeeKeys, governanceKeys, governanceWriteKeys, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
+import { clearAllProtectedQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTelegramDeepLinkQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, draftEmployeeKeys, governanceKeys, governanceWriteKeys, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
+import { readTelegramMiniAppLaunch, type TelegramMiniAppLaunch } from './telegram-mini-app'
 import type { GovernanceAuditPage, GovernanceMemberPage } from './governance-types'
 import type { GovernanceEditableMemberPage, GovernanceFieldPermissionPage, GovernanceFieldPermissionPolicy } from './governance-write-types'
 import type { CurrentCanvasInvocationContext, S5Contact, S5DraftDetail, S5InvocationRequest, S5InvocationResult } from './draft-employee-types'
@@ -46,7 +47,7 @@ type AppState =
   | { status: 'error' }
   | { status: 'ready'; bootstrap: BootstrapResponse; home: WorkspaceHome; canvas?: BaseCanvasState; canvasLoading?: boolean }
 
-type CanvasTarget = { tableId: string; viewId: string; openViewBuilder?: boolean }
+type CanvasTarget = { tableId?: string; viewId?: string; recordId?: string; openViewBuilder?: boolean }
 type BuilderPanel =
   | { mode: 'base' }
   | { mode: 'table'; base: BaseSummary }
@@ -129,6 +130,11 @@ export function App() {
 function AppContent() {
   const queryClient = useQueryClient()
   const [state, setState] = useState<AppState>({ status: 'loading' })
+  const telegramLaunch = useRef<TelegramMiniAppLaunch | null | undefined>(undefined)
+  if (telegramLaunch.current === undefined) {
+    telegramLaunch.current = readTelegramMiniAppLaunch()
+    api.setTelegramInitData(telegramLaunch.current?.initData ?? null)
+  }
   const homeRequestVersion = useRef(0)
   const canvasRequestVersion = useRef(0)
   const activeWorkspaceId = useRef<string | undefined>(undefined)
@@ -139,11 +145,17 @@ function AppContent() {
   const governanceRequestVersion = useRef(0)
   const governanceWriteRequestVersion = useRef(0)
   const draftEmployeeRequestVersion = useRef(0)
+  const telegramLaunchRequestVersion = useRef(0)
+  const telegramLaunchHandled = useRef(false)
+  const pendingTelegramDestination = useRef<TelegramDeepLinkDestination | null>(null)
+  const telegramDestinationHandoff = useRef<((destination: TelegramDeepLinkDestination) => Promise<void>) | null>(null)
+  const telegramRecoveryButton = useRef<HTMLButtonElement | null>(null)
   const viewBuilderReturnFocus = useRef<HTMLElement | null>(null)
   const governanceReturnFocus = useRef<HTMLElement | null>(null)
   const governanceWriteReturnFocus = useRef<HTMLElement | null>(null)
   const draftEmployeeReturnFocus = useRef<HTMLElement | null>(null)
   const sessionInvalidated = useRef(false)
+  const [telegramRecovery, setTelegramRecovery] = useState(false)
   const [builderPanel, setBuilderPanel] = useState<BuilderPanel>()
   const [templateImportPanel, setTemplateImportPanel] = useState<TemplateImportPanel>()
   const [governancePanel, setGovernancePanel] = useState<GovernancePanel>()
@@ -160,7 +172,28 @@ function AppContent() {
     governanceRequestVersion.current += 1
     governanceWriteRequestVersion.current += 1
     draftEmployeeRequestVersion.current += 1
+    telegramLaunchRequestVersion.current += 1
+    pendingTelegramDestination.current = null
   }
+
+  useEffect(() => () => {
+    telegramLaunchRequestVersion.current += 1
+    pendingTelegramDestination.current = null
+    api.setTelegramInitData(null)
+  }, [])
+
+  useEffect(() => {
+    if (!telegramRecovery || state.status !== 'ready') return
+    queueMicrotask(() => telegramRecoveryButton.current?.focus())
+  }, [state.status, telegramRecovery])
+
+  useEffect(() => {
+    if (state.status !== 'ready') return
+    const destination = pendingTelegramDestination.current
+    if (!destination) return
+    pendingTelegramDestination.current = null
+    void telegramDestinationHandoff.current?.(destination)
+  }, [state])
 
   async function denyInvalidSession() {
     sessionInvalidated.current = true
@@ -255,7 +288,47 @@ function AppContent() {
       setState({ status: 'denied' })
       return
     }
-    void loadWorkspaceHome(bootstrap, workspace.id)
+    if (telegramLaunchHandled.current) {
+      void loadWorkspaceHome(bootstrap, workspace.id)
+      return
+    }
+    telegramLaunchHandled.current = true
+    const launch = telegramLaunch.current
+    const startParam = launch?.startParam
+    if (!startParam) {
+      void loadWorkspaceHome(bootstrap, workspace.id)
+      return
+    }
+    const requestVersion = ++telegramLaunchRequestVersion.current
+    void (async () => {
+      try {
+        const resolution = await api.resolveTelegramDeepLink(startParam)
+        if (telegramLaunchRequestVersion.current !== requestVersion || sessionInvalidated.current) return
+        if (resolution.outcome === 'recovery') {
+          setTelegramRecovery(true)
+          await loadWorkspaceHome(bootstrap, workspace.id)
+          return
+        }
+        const targetWorkspace = bootstrap.workspaces.find((item) => item.id === resolution.destination.workspaceId)
+        if (!targetWorkspace) {
+          setTelegramRecovery(true)
+          await loadWorkspaceHome(bootstrap, workspace.id)
+          return
+        }
+        pendingTelegramDestination.current = resolution.destination
+        await loadWorkspaceHome(bootstrap, targetWorkspace.id)
+      } catch (error) {
+        if (telegramLaunchRequestVersion.current !== requestVersion || isAbortError(error)) return
+        if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+        else if (error instanceof ApiError && error.status === 403) {
+          await clearAllProtectedQueries(queryClient)
+          setState({ status: 'denied' })
+        } else {
+          setTelegramRecovery(true)
+          await loadWorkspaceHome(bootstrap, workspace.id)
+        }
+      }
+    })()
   }, [bootstrapQuery.data])
 
   useEffect(() => {
@@ -282,6 +355,8 @@ function AppContent() {
     templateImportRequestVersion.current += 1
     governanceRequestVersion.current += 1
     draftEmployeeRequestVersion.current += 1
+    telegramLaunchRequestVersion.current += 1
+    pendingTelegramDestination.current = null
     setBuilderPanel(undefined)
     setTemplateImportPanel(undefined)
     setGovernancePanel(undefined)
@@ -321,8 +396,10 @@ function AppContent() {
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'base', base.id, 'views'), queryFn: ({ signal }) => api.baseViews(base.id, { signal }) }),
       ])
       if (!isCurrent()) return false
-      const table = target ? tables.find((item) => item.id === target.tableId) ?? null : tables[0] ?? null
-      const view = target
+      const table = target?.tableId
+        ? tables.find((item) => item.id === target.tableId) ?? null
+        : tables[0] ?? null
+      const view = target?.viewId
         ? views.find((item) => item.id === target.viewId && item.table_id === table?.id) ?? null
         : table ? views.find((item) => item.table_id === table.id) ?? null : null
       if (!table || !view) {
@@ -330,7 +407,7 @@ function AppContent() {
         setState({ ...canvasState, canvas: { base, tables, views, table, view, schema: null, records: null, presentation: null } })
         return true
       }
-      const [schema, presentation, records, builder, builderContext] = await Promise.all([
+      const [schema, presentation, records, builder, builderContext, detail] = await Promise.all([
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'table', table.id, 'schema'), queryFn: ({ signal }) => api.tableSchema(table.id, { signal }) }),
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'presentation'), queryFn: ({ signal }) => api.viewPresentation(view.id, { signal }) }),
         queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'view', view.id, 'records', null), queryFn: ({ signal }) => api.viewRecords(view.id, undefined, { signal }) }),
@@ -338,9 +415,13 @@ function AppContent() {
         target?.openViewBuilder
           ? queryClient.fetchQuery({ queryKey: viewBuilderKeys.context(scope, table.id), queryFn: ({ signal }) => api.viewBuilderContext(table.id, { signal }) })
           : Promise.resolve(undefined),
+        target?.recordId
+          ? queryClient.fetchQuery({ queryKey: protectedQueryKey(scope, 'record', target.recordId), queryFn: ({ signal }) => api.recordDetail(target.recordId!, { signal }) })
+          : Promise.resolve(undefined),
       ])
       if (!isCurrent()) return false
-      setState({ ...canvasState, canvas: { base, tables, views, table, view, schema, presentation: builder ? canvasPresentationFromV1Builder(builder) : presentation, serverQuerySummary: builder ? v1ServerQuerySummary(builder) : undefined, records } })
+      if (detail && detail.table_id !== table.id) return false
+      setState({ ...canvasState, canvas: { base, tables, views, table, view, schema, presentation: builder ? canvasPresentationFromV1Builder(builder) : presentation, serverQuerySummary: builder ? v1ServerQuerySummary(builder) : undefined, records, ...(detail ? { detail } : {}) } })
       if (target?.openViewBuilder) setBuilderPanel(builder && builderContext
         ? { mode: 'view', tableId: table.id, context: builderContext, builder }
         : undefined)
@@ -356,6 +437,60 @@ function AppContent() {
         setState({ status: 'error' })
       }
       return false
+    }
+  }
+
+  async function recoverTelegramDeepLink(destination?: TelegramDeepLinkDestination) {
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    await clearTelegramDeepLinkQueries(queryClient, scope, {
+      recordId: destination?.recordId,
+      draftId: destination?.draftId,
+    })
+    pendingTelegramDestination.current = null
+    setTelegramRecovery(true)
+    await loadWorkspaceHome(readyState.bootstrap, workspaceId)
+  }
+
+  telegramDestinationHandoff.current = async (destination) => {
+    const workspaceId = readyState.home.workspace_id
+    if (destination.workspaceId !== workspaceId) {
+      await recoverTelegramDeepLink(destination)
+      return
+    }
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    try {
+      if (destination.kind === 'record_change_draft') {
+        if (!destination.draftId || !await openDraftEmployeeHub(undefined, destination.draftId)) {
+          await recoverTelegramDeepLink(destination)
+        }
+        return
+      }
+      if (!destination.baseId) {
+        await recoverTelegramDeepLink(destination)
+        return
+      }
+      const bases = await queryClient.fetchQuery({
+        queryKey: protectedQueryKey(scope, 's6', 'bases'),
+        queryFn: ({ signal }) => api.workspaceBases(workspaceId, { signal }),
+      })
+      const base = bases.bases.find((item) => item.id === destination.baseId)
+      if (!base) {
+        await recoverTelegramDeepLink(destination)
+        return
+      }
+      const target: CanvasTarget | undefined = destination.kind === 'base'
+        ? undefined
+        : {
+            ...(destination.tableId ? { tableId: destination.tableId } : {}),
+            ...(destination.viewId ? { viewId: destination.viewId } : {}),
+            ...(destination.recordId ? { recordId: destination.recordId } : {}),
+          }
+      if (!await openBase(base, target)) await recoverTelegramDeepLink(destination)
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else await recoverTelegramDeepLink(destination)
     }
   }
 
@@ -387,8 +522,8 @@ function AppContent() {
     return { baseId: canvas.base.id, viewId: canvas.view.id, recordId: canvas.detail?.id ?? null }
   }
 
-  async function openDraftEmployeeHub(trigger: HTMLElement, draftId?: string) {
-    draftEmployeeReturnFocus.current = trigger
+  async function openDraftEmployeeHub(trigger?: HTMLElement, draftId?: string): Promise<boolean> {
+    if (trigger) draftEmployeeReturnFocus.current = trigger
     const workspaceId = readyState.home.workspace_id
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
     const requestVersion = ++draftEmployeeRequestVersion.current
@@ -409,12 +544,17 @@ function AppContent() {
           })
           : Promise.resolve(null),
       ])
-      if (isCurrent()) setDraftEmployeePanel({ contacts: contacts.contacts, draft, loading: false, targetDraftId: draftId ?? null, failed: false })
+      if (isCurrent()) {
+        setDraftEmployeePanel({ contacts: contacts.contacts, draft, loading: false, targetDraftId: draftId ?? null, failed: false })
+        return true
+      }
+      return false
     } catch (error) {
-      if (!isCurrent() || isAbortError(error)) return
+      if (!isCurrent() || isAbortError(error)) return false
       if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
       else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
       else if (isCurrent()) setDraftEmployeePanel({ contacts: [], draft: null, loading: false, targetDraftId: draftId ?? null, failed: true })
+      return false
     }
   }
 
@@ -1890,11 +2030,17 @@ function AppContent() {
     }
   }
 
+  const telegramRecoveryNotice = telegramRecovery
+    ? <section className="telegram-deep-link-recovery" aria-live="polite">
+      <p>链接不可用，已返回工作区首页。</p>
+      <button ref={telegramRecoveryButton} type="button" onClick={() => setTelegramRecovery(false)}>返回工作区首页</button>
+    </section>
+    : null
   const content = readyState.canvasLoading
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
     ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} canCreateRecords={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role)} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (!canvas?.table) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id, canvas.view.id) }} onSaveTemplate={() => setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base })} onImportIntoBase={() => openBaseImport(readyState.canvas!.base)} onOpenDraftHub={(trigger) => { void openDraftEmployeeHub(trigger) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
-      : <WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={() => { void openTemplateImportHub() }} onOpenDraftHub={(trigger, draftId) => { void openDraftEmployeeHub(trigger, draftId) }} />
+      : <>{telegramRecoveryNotice}<WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={() => { void openTemplateImportHub() }} onOpenDraftHub={(trigger, draftId) => { void openDraftEmployeeHub(trigger, draftId) }} /></>
   const builderOverlay = builderPanel?.mode === 'base'
     ? <BuilderCreatePanel mode="base" onSubmit={(values, idempotencyKey) => createBase(values as { baseName: string; tableName: string }, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
     : builderPanel?.mode === 'table'
