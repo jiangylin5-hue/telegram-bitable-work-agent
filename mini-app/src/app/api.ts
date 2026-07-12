@@ -36,6 +36,18 @@ import type {
   GovernanceMember,
   GovernanceMemberPage,
 } from './governance-types'
+import type {
+  GovernanceAssignableRole,
+  GovernanceEditableMember,
+  GovernanceEditableMemberPage,
+  GovernanceFieldPermission,
+  GovernanceFieldPermissionPage,
+  GovernanceFieldPermissionPolicy,
+  GovernanceFieldPermissionReceipt,
+  GovernanceFieldPermissionMode,
+  GovernanceMemberRoleReceipt,
+  GovernanceRole,
+} from './governance-write-types'
 
 export type {
   SafeViewErrorCode,
@@ -72,6 +84,18 @@ export type {
   GovernanceMember,
   GovernanceMemberPage,
 } from './governance-types'
+export type {
+  GovernanceAssignableRole,
+  GovernanceEditableMember,
+  GovernanceEditableMemberPage,
+  GovernanceFieldPermission,
+  GovernanceFieldPermissionPage,
+  GovernanceFieldPermissionPolicy,
+  GovernanceFieldPermissionReceipt,
+  GovernanceFieldPermissionMode,
+  GovernanceMemberRoleReceipt,
+  GovernanceRole,
+} from './governance-write-types'
 
 export type WorkspaceCapabilities = {
   can_read_bases: boolean
@@ -171,6 +195,12 @@ export type SafeApiErrorCode =
   | 'template_not_found'
   | 'idempotency_conflict'
   | 'idempotency_in_progress'
+  | 'governance_revision_conflict'
+  | 'governance_role_change_forbidden'
+  | 'governance_member_inactive'
+  | 'governance_field_policy_invalid'
+  | 'governance_field_owner_write_required'
+  | 'governance_field_policy_forbidden'
   | SafeViewErrorCode
 
 export class ApiError extends Error {
@@ -209,6 +239,12 @@ const safeApiErrorCodes = new Set<SafeApiErrorCode>([
   'template_not_found',
   'idempotency_conflict',
   'idempotency_in_progress',
+  'governance_revision_conflict',
+  'governance_role_change_forbidden',
+  'governance_member_inactive',
+  'governance_field_policy_invalid',
+  'governance_field_owner_write_required',
+  'governance_field_policy_forbidden',
   'view_name_invalid',
   'view_type_unsupported',
   'view_version_conflict',
@@ -356,6 +392,90 @@ function safeGovernanceAuditPage(value: unknown): GovernanceAuditPage {
     nextCursor: nullableStringValue(record.next_cursor),
     hasMore: booleanValue(record.has_more),
   }
+}
+
+const governanceRoles = new Set<GovernanceRole>(['owner', 'admin', 'builder', 'operator', 'viewer'])
+const governanceAssignableRoles = new Set<GovernanceAssignableRole>(['admin', 'builder', 'operator', 'viewer'])
+const governanceFieldPermissionModes = new Set<GovernanceFieldPermissionMode>(['hidden', 'read', 'write'])
+
+function governanceRole(value: unknown): GovernanceRole {
+  const role = stringValue(value)
+  if (!governanceRoles.has(role as GovernanceRole)) throw new Error('Invalid governance write response')
+  return role as GovernanceRole
+}
+
+function governanceActiveStatus(value: unknown): 'active' {
+  if (value !== 'active') throw new Error('Invalid governance write response')
+  return 'active'
+}
+
+function governanceVersion(value: unknown): number {
+  const version = numberValue(value)
+  if (!Number.isInteger(version) || version < 1) throw new Error('Invalid governance write response')
+  return version
+}
+
+function governanceAssignableRoleList(value: unknown): GovernanceAssignableRole[] {
+  if (!Array.isArray(value) || value.length === 0) throw new Error('Invalid governance write response')
+  const roles = value.map((item) => stringValue(item))
+  if (roles.some((role) => !governanceAssignableRoles.has(role as GovernanceAssignableRole))) throw new Error('Invalid governance write response')
+  return [...new Set(roles)] as GovernanceAssignableRole[]
+}
+
+function safeGovernanceEditableMember(value: unknown): GovernanceEditableMember {
+  const record = jsonRecord(value)
+  return {
+    id: stringValue(record.id), userId: stringValue(record.user_id), role: governanceRole(record.role),
+    status: governanceActiveStatus(record.status), version: governanceVersion(record.version),
+    assignableRoles: governanceAssignableRoleList(record.assignable_roles),
+  }
+}
+
+function safeGovernanceEditableMemberPage(value: unknown): GovernanceEditableMemberPage {
+  const record = jsonRecord(value)
+  if (!Array.isArray(record.members)) throw new Error('Invalid governance write response')
+  return {
+    workspaceId: stringValue(record.workspace_id), members: record.members.map(safeGovernanceEditableMember),
+    nextCursor: nullableStringValue(record.next_cursor), hasMore: booleanValue(record.has_more),
+  }
+}
+
+function safeGovernanceFieldPermissionPolicy(value: unknown): GovernanceFieldPermissionPolicy {
+  const record = jsonRecord(value)
+  const expectedRoles: GovernanceRole[] = ['owner', 'admin', 'builder', 'operator', 'viewer']
+  if (Object.keys(record).length !== expectedRoles.length || expectedRoles.some((role) => !(role in record))) throw new Error('Invalid governance write response')
+  const policy = {} as GovernanceFieldPermissionPolicy
+  for (const role of expectedRoles) {
+    const mode = stringValue(record[role])
+    if (!governanceFieldPermissionModes.has(mode as GovernanceFieldPermissionMode)) throw new Error('Invalid governance write response')
+    policy[role] = mode as GovernanceFieldPermissionMode
+  }
+  if (policy.owner !== 'write') throw new Error('Invalid governance write response')
+  return policy
+}
+
+function safeGovernanceFieldPermission(value: unknown): GovernanceFieldPermission {
+  const record = jsonRecord(value)
+  return {
+    id: stringValue(record.id), key: stringValue(record.key), label: stringValue(record.label), fieldType: stringValue(record.field_type),
+    policy: safeGovernanceFieldPermissionPolicy(record.policy), permissionVersion: governanceVersion(record.permission_version),
+  }
+}
+
+function safeGovernanceFieldPermissionPage(value: unknown): GovernanceFieldPermissionPage {
+  const record = jsonRecord(value)
+  if (!Array.isArray(record.fields)) throw new Error('Invalid governance write response')
+  return { tableId: stringValue(record.table_id), fields: record.fields.map(safeGovernanceFieldPermission) }
+}
+
+function safeGovernanceMemberRoleReceipt(value: unknown): GovernanceMemberRoleReceipt {
+  const record = jsonRecord(value)
+  return { id: stringValue(record.id), userId: stringValue(record.user_id), role: governanceRole(record.role), status: governanceActiveStatus(record.status), version: governanceVersion(record.version) }
+}
+
+function safeGovernanceFieldPermissionReceipt(value: unknown): GovernanceFieldPermissionReceipt {
+  const record = jsonRecord(value)
+  return { id: stringValue(record.id), key: stringValue(record.key), policy: safeGovernanceFieldPermissionPolicy(record.policy), permissionVersion: governanceVersion(record.permission_version) }
 }
 
 function safeTemplateSummary(value: unknown): TemplateSummary {
@@ -575,6 +695,14 @@ function writeJson<T>(path: string, method: 'PATCH' | 'PUT', payload: unknown): 
   })
 }
 
+function writeIdempotentJson<T>(path: string, method: 'PATCH' | 'PUT', payload: unknown, idempotencyKey: string): Promise<T> {
+  return getJson<T>(path, {
+    method,
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
+    body: JSON.stringify(payload),
+  })
+}
+
 export function toSafeViewError(error: unknown): string {
   const source = error && typeof error === 'object' ? error as { code?: unknown } : undefined
   const code = source?.code
@@ -618,6 +746,52 @@ export const api = {
       init,
     ))
   },
+  listGovernanceEditableMembers: async (
+    workspaceId: string,
+    cursor: string | null = null,
+    init?: RequestInit,
+  ): Promise<GovernanceEditableMemberPage> => {
+    const parameters = new URLSearchParams({ limit: '50' })
+    if (cursor) parameters.set('cursor', cursor)
+    return safeGovernanceEditableMemberPage(await getJson<unknown>(
+      `/mini-app/workspaces/${encodeURIComponent(workspaceId)}/governance/member-editor?${parameters.toString()}`,
+      init,
+    ))
+  },
+  changeGovernanceMemberRole: async (
+    workspaceId: string,
+    memberId: string,
+    role: GovernanceAssignableRole,
+    expectedVersion: number,
+    idempotencyKey: string,
+  ): Promise<GovernanceMemberRoleReceipt> => safeGovernanceMemberRoleReceipt(
+    await writeIdempotentJson<unknown>(
+      `/mini-app/workspaces/${encodeURIComponent(workspaceId)}/governance/members/${encodeURIComponent(memberId)}/role`,
+      'PATCH',
+      { role, expected_version: expectedVersion },
+      idempotencyKey,
+    ),
+  ),
+  listGovernanceFieldPermissions: async (
+    tableId: string,
+    init?: RequestInit,
+  ): Promise<GovernanceFieldPermissionPage> => safeGovernanceFieldPermissionPage(
+    await getJson<unknown>(`/mini-app/tables/${encodeURIComponent(tableId)}/governance/field-permissions`, init),
+  ),
+  replaceGovernanceFieldPermissionPolicy: async (
+    tableId: string,
+    fieldId: string,
+    policy: GovernanceFieldPermissionPolicy,
+    expectedPermissionVersion: number,
+    idempotencyKey: string,
+  ): Promise<GovernanceFieldPermissionReceipt> => safeGovernanceFieldPermissionReceipt(
+    await writeIdempotentJson<unknown>(
+      `/mini-app/tables/${encodeURIComponent(tableId)}/governance/fields/${encodeURIComponent(fieldId)}/permission-policy`,
+      'PUT',
+      { expected_permission_version: expectedPermissionVersion, policy },
+      idempotencyKey,
+    ),
+  ),
   listTemplates: async (init?: RequestInit): Promise<TemplateSummary[]> => {
     const response = jsonRecord(await getJson<unknown>('/templates', init))
     if (!Array.isArray(response.templates)) throw new Error('Invalid import response')

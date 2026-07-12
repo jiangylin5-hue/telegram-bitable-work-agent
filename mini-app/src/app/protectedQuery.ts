@@ -42,6 +42,27 @@ export const governanceKeys = {
   ),
 }
 
+export const governanceWriteKeys = {
+  members: (scope: ProtectedScope, cursor: string | null): QueryKey => (
+    protectedQueryKey(scope, 'governance-write', 'members', cursor)
+  ),
+  fieldPermissions: (scope: ProtectedScope, tableId: string): QueryKey => (
+    protectedQueryKey(scope, 'governance-write', 'field-policy', tableId)
+  ),
+}
+
+export async function clearGovernanceWriteQueries(
+  queryClient: QueryClient,
+  scope: ProtectedScope,
+  tableId?: string,
+): Promise<void> {
+  const queryKey = tableId
+    ? protectedQueryKey(scope, 'governance-write', 'field-policy', tableId)
+    : protectedQueryKey(scope, 'governance-write')
+  await queryClient.cancelQueries({ queryKey })
+  queryClient.removeQueries({ queryKey })
+}
+
 export async function clearGovernanceQueries(
   queryClient: QueryClient,
   scope: ProtectedScope,
