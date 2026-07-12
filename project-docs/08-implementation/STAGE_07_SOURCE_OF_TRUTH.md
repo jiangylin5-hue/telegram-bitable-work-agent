@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 planning source of truth
 - Scope: Telegram Mini App and desktop browser UI for the generic workspace, Bitable and digital-employee platform
-- Current Progress: 2026-07-12 Package 1 and bounded Package 2 paths through F2 are `implemented-local`. V1-1 through V1-15 are `partial-local`: real FastAPI + disposable PostgreSQL Browser evidence proves owner/editor/viewer Canvas separation, allowed Base/Table/Field intersection, hidden-field omission, numeric lookup projection and one owner Record Detail relation edit through the existing versioned PATCH with authoritative reread. It found and repaired a viewer create-entry visibility defect by reusing the existing server-derived workspace role with an unknown-role fail-closed UI path; no API/schema/capability/permission-table change was made. Real stale/type-invalid states, numeric-filter mutation, Telegram, staging and production remain unaccepted. Measured `EXPLAIN` retains both optional non-unique access/list indexes as deferred; no index migration exists. Imports/templates, Package 3 and Package 4 remain incomplete or contract-gated.
+- Current Progress: 2026-07-12 Package 1 and bounded Package 2 paths through F2 are `implemented-local`. V1-1 through V1-15 are `partial-local`: real FastAPI + disposable PostgreSQL Browser evidence proves owner/editor/viewer Canvas separation, allowed Base/Table/Field intersection, hidden-field omission, numeric lookup projection and one owner Record Detail relation edit through the existing versioned PATCH with authoritative reread. It found and repaired a viewer create-entry visibility defect by reusing the existing server-derived workspace role with an unknown-role fail-closed UI path; no API/schema/capability/permission-table change was made. The user selected a complete existing-contract template/import package; its design, BDD, SDD, module and complex-index documents are now `specified-awaiting-review`, with no code or contract expansion. Real stale/type-invalid states, numeric-filter mutation, Telegram, staging and production remain unaccepted. Measured `EXPLAIN` retains both optional non-unique access/list indexes as deferred; no index migration exists. Package 3 and Package 4 remain incomplete or contract-gated.
 
 ## 1. Stage Goal
 
@@ -44,17 +44,22 @@ verified identity -> workspace member -> permission-filtered UI
 16. [Stage07 V1 Work Surface](modules/STAGE_07_V1_VIEW_BUILDER_WORK_SURFACE.md)
 17. [Stage07 V1 Complex Feature Index](STAGE_07_V1_VIEW_BUILDER_COMPLEX_FEATURE_INDEX.md)
 18. [Stage07 V1 Saved View Builder Implementation Plan](../../docs/superpowers/plans/2026-07-11-stage07-v1-saved-view-builder-implementation.md)
-19. [Stage 07 SDD](STAGE_07_SDD.md)
-20. [Stage 07 API Data Security Contract](STAGE_07_API_DATA_SECURITY_CONTRACT.md)
-21. [Stage 07 BDD And Acceptance](STAGE_07_BDD_AND_ACCEPTANCE.md)
-22. [Stage 07 Module Index](STAGE_07_MODULE_INDEX.md)
-23. [Stage 07 Test Plan](STAGE_07_TEST_PLAN.md)
-24. [Stage 07 Risk Register](STAGE_07_RISK_REGISTER.md)
-25. [Stage 07 Implementation Plan](STAGE_07_IMPLEMENTATION_PLAN.md)
-26. [Stage 07 Acceptance Checklist](STAGE_07_ACCEPTANCE_CHECKLIST.md)
-27. [Stage 07 Progress](STAGE_07_PROGRESS.md)
-28. [Stage 07 Requirement Traceability Audit](STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md)
-29. [Technical Decision 001: Protected Query State](STAGE_07_TECHNICAL_DECISION_001_PROTECTED_QUERY_STATE.md)
+19. [Stage07 Template And Import Design](../../docs/superpowers/specs/2026-07-12-stage07-template-import-design.md)
+20. [Stage07 Template And Import BDD And Acceptance](STAGE_07_TEMPLATE_IMPORT_BDD_AND_ACCEPTANCE.md)
+21. [Stage07 Template And Import SDD](STAGE_07_TEMPLATE_IMPORT_SDD.md)
+22. [Stage07 Template And Import Work Surface](modules/STAGE_07_TEMPLATE_IMPORT_WORK_SURFACE.md)
+23. [Stage07 Template And Import Complex Feature Index](STAGE_07_TEMPLATE_IMPORT_COMPLEX_FEATURE_INDEX.md)
+24. [Stage 07 SDD](STAGE_07_SDD.md)
+25. [Stage 07 API Data Security Contract](STAGE_07_API_DATA_SECURITY_CONTRACT.md)
+26. [Stage 07 BDD And Acceptance](STAGE_07_BDD_AND_ACCEPTANCE.md)
+27. [Stage 07 Module Index](STAGE_07_MODULE_INDEX.md)
+28. [Stage 07 Test Plan](STAGE_07_TEST_PLAN.md)
+29. [Stage 07 Risk Register](STAGE_07_RISK_REGISTER.md)
+30. [Stage 07 Implementation Plan](STAGE_07_IMPLEMENTATION_PLAN.md)
+31. [Stage 07 Acceptance Checklist](STAGE_07_ACCEPTANCE_CHECKLIST.md)
+32. [Stage 07 Progress](STAGE_07_PROGRESS.md)
+33. [Stage 07 Requirement Traceability Audit](STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md)
+34. [Technical Decision 001: Protected Query State](STAGE_07_TECHNICAL_DECISION_001_PROTECTED_QUERY_STATE.md)
 
 Stage06 is the backend contract baseline. Stage02-05 documents are historical capability evidence only.
 

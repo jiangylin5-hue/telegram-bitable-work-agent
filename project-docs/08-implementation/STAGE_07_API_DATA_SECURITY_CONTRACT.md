@@ -152,6 +152,23 @@ The existing `GET /bases/{base_id}/views` list is the Canvas tab source, not a l
 
 The existing `GET /views/{view_id}/presentation` reader follows the same rule before a Canvas can render a selected resource. For a V1 row, denied callers receive the standard non-disclosing V1 denial; the route never falls through to the legacy permission-policy branch. The successful response remains the existing safe presentation shape, so this correction adds no browser parameter or raw configuration field.
 
+## 5.6 Selected Existing Template And Import Contract
+
+The user-selected Package 2 template/import UI consumes existing Stage06 routes only. It adds no read model, schema/migration, permission action, capability hint, storage service, queue state or public template lifecycle. The complete behavior boundary is `STAGE_07_TEMPLATE_IMPORT_BDD_AND_ACCEPTANCE.md` and `STAGE_07_TEMPLATE_IMPORT_SDD.md`; implementation remains blocked on user review of those documents.
+
+| Endpoint | Browser input boundary | Safe response/use boundary |
+| --- | --- | --- |
+| `GET /templates` | none | render only `{ id, name, category, description, version, status }`; never manifest/creator/resource map |
+| `POST /workspaces/{workspace_id}/template-installations` | `{ template_id, installed_by_user_id }` plus `Idempotency-Key`; legacy actor field copies verified bootstrap ID and is not editable | server checks `template.install`; response `base_id` is a pointer used only after authorized Home/Base reread |
+| `POST /bases/{base_id}/templates` | `{ name, category, description, created_by_user_id }`; legacy actor field copies verified bootstrap ID and is not editable | server checks `template.save`; render safe template metadata only; no manifest/publication/sharing/delete UI |
+| `POST /workspaces/{workspace_id}/imports` | one CSV UTF-8 text or XLSX base64 string, filename, source type, optional already-open authorized `base_id`, verified bootstrap ID and `Idempotency-Key` | server checks `import.create`, owns parsing/limits/schema inference and returns bounded preview/job state; browser retains raw file only while request is active |
+| `GET /imports/{import_job_id}` | none | server checks `import.read`; use exact safe job state only while panel remains in scope; no job-list/recovery route is assumed |
+| `POST /imports/{import_job_id}/commit` | Base/table names/key plus scalar mapping and `Idempotency-Key` | server checks `import.commit`; `{ resource_map }` is narrowed to validated `base_id`/`table_id` only for authoritative reread navigation |
+
+The UI accepts only existing server-inferred scalar import mapping types `text`, `number`, `date` and `checkbox`; it cannot construct relation, lookup, select/status, user, formula, arbitrary options or raw schema configuration. Existing server limits remain final: CSV 5 MiB, XLSX 10 MiB, 10,000 rows, 200 columns, 64 KiB cell text and 20 preview rows. Client size/type checks are advisory only.
+
+`ImportJob(status=awaiting_confirmation)` is persisted preview state, not a completed import. The browser uses a distinct idempotency key for create-preview and commit; it does not automatically retry 409 or commit-invalid-state responses. A successful receipt never inserts a local Base/table/record: exact protected state is cleared, authorized Home/Base resources reread and only then may the returned Base/table be opened. Raw file bytes, complete rows, `error_summary`, manifest, audit data, server message and unknown error bodies may not enter UI state, query keys, storage, URLs or telemetry.
+
 ## 6. Client Security Rules
 
 - Do not derive permissions from navigation visibility or cached role strings.
