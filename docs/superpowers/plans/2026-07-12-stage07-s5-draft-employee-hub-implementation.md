@@ -26,7 +26,7 @@ Current implementation note: safe contact opening, Home queue-to-draft detail, c
 ### G3 — Evidence and Cleanup
 
 1. Use synthetic disposable PostgreSQL/browser fixture only; observe one permitted summary, draft creation, confirm, reject, stale/denied paths and four target widths.
-2. Run console scan, audit/redaction inspection, index measurement decision, cleanup and requirement-by-requirement DE-A01..DE-A10 reconciliation.
+2. Run console scan, audit/redaction inspection, index measurement decision, cleanup and requirement-by-requirement DE-A01..DE-A10 reconciliation. Completed locally for the index gate: the `512` pending / `1,536` terminal fixture reused `ix_stage06_drafts_base_status` in `0.913 ms`, so I-A is retained and no partial-index migration is added.
 3. Record actual command counts and remaining external Telegram/identity risks; do not claim S6 or Stage07 completion.
 
 ## Non-Negotiable Boundaries

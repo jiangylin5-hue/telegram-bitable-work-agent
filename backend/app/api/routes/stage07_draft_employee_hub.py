@@ -28,7 +28,13 @@ from app.services.stage06_authorization import (
 )
 from app.services.stage06_identity import Stage06RequestIdentity
 from app.services.permissions import Actor
-from app.services.stage06_pagination import Stage06PaginationError, paginate_items
+from app.services.stage06_pagination import (
+    Stage06PaginationError,
+    bounded_page_size,
+    decode_page_cursor,
+    encode_page_cursor,
+    paginate_items,
+)
 from app.services.stage06_idempotency import (
     begin_idempotent_operation,
     complete_idempotent_operation,
@@ -218,16 +224,36 @@ def list_safe_drafts(
     try:
         workspace_id = workspace_id_for_base(uow, base_id)
         authorize_workspace_action(uow, identity, workspace_id, "record_change_draft.read")
-        page = paginate_items(uow.list_record_change_drafts(base_id), limit=limit, cursor=cursor)
+        page_size = bounded_page_size(limit)
+        after = None
+        if cursor is not None:
+            try:
+                after_id = UUID(decode_page_cursor(cursor))
+            except ValueError as exc:
+                raise Stage06PaginationError("invalid_page_cursor") from exc
+            after = uow.get_record_change_draft(after_id)
+            if (
+                after is None
+                or after.base_id != base_id
+                or after.status != "pending_confirmation"
+            ):
+                raise Stage06PaginationError("invalid_page_cursor")
+        window = uow.list_pending_record_change_drafts(
+            base_id,
+            after=after,
+            limit=page_size + 1,
+        )
     except Stage06AuthorizationError as exc:
         raise _authorization_error(exc) from exc
     except Stage06PaginationError as exc:
         raise HTTPException(status_code=422, detail=error_detail("draft_invalid_cursor", "draft_invalid_cursor")) from exc
+    drafts = window[:page_size]
+    has_more = len(window) > page_size
     return SafeDraftPageResponse(
         base_id=str(base_id),
-        drafts=[_safe_draft_summary(draft) for draft in page.items],
-        next_cursor=page.next_cursor,
-        has_more=page.has_more,
+        drafts=[_safe_draft_summary(draft) for draft in drafts],
+        next_cursor=encode_page_cursor(str(drafts[-1].id)) if has_more and drafts else None,
+        has_more=has_more,
     )
 
 

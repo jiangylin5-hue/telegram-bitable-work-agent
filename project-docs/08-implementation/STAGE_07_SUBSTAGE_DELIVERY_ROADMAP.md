@@ -27,7 +27,7 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 | S2 | Views, template and import | saved views, template/install/save, CSV/XLSX server preview/import | implemented-local / partial-local | existing contracts; Browser file upload unproven |
 | S3 | Governance Readback | safe paged member directory and Base audit timeline | implemented-local; Browser external evidence pending | Technical Decision 003 |
 | S4 | Governance Write | bounded member-role, field-policy and existing V1 view-grant operations | implemented-local; negative lifecycle evidence partial | Technical Decision 004 |
-| S5 | Draft and Digital Employee Hub | field-filtered draft review, contacts and assistant surface | implementation-in-progress | approved Technical Decision 005 Option A |
+| S5 | Draft and Digital Employee Hub | field-filtered draft review, contacts and assistant surface | partial-local; provider/Browser/acceptance evidence pending | approved Technical Decision 005 Option A and TD006 Option A |
 | S6 | Telegram and final acceptance | verified identity/deep link, full safety/visual matrix and release evidence | external-evidence-pending | approved test environment and user authority |
 
 ## S3 Governance Readback
@@ -122,7 +122,7 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 | work surface / complex index | modules/STAGE_07_DRAFT_EMPLOYEE_HUB_WORK_SURFACE.md / STAGE_07_DRAFT_EMPLOYEE_HUB_COMPLEX_FEATURE_INDEX.md |
 | implementation plan | docs/superpowers/plans/2026-07-12-stage07-s5-draft-employee-hub-implementation.md |
 
-TD005 Option A is approved for S5 implementation. It authorizes only the two draft columns, a measured conditional queue index, safe Mini App routes and the bounded S5 UI described here. It does not authorize S6 scope. TD006 Option A is also approved and implemented locally: App root may pass opaque current-Canvas IDs without a new route. It does not authorize a standalone picker, generic context projection, storage or S6 scope.
+TD005 Option A is approved for S5 implementation. It authorizes only the two draft columns, the documented measured queue-index decision, safe Mini App routes and the bounded S5 UI described here. The local I-A measurement reused the existing Base/status index and did not justify a new partial-index migration. It does not authorize S6 scope. TD006 Option A is also approved and implemented locally: App root may pass opaque current-Canvas IDs without a new route. It does not authorize a standalone picker, generic context projection, storage or S6 scope.
 
 ### Exit Criteria After Approval
 
@@ -131,11 +131,12 @@ TD005 Option A is approved for S5 implementation. It authorizes only the two dra
 - Draft field filtering, current-write recheck, terminal revision/idempotency/audit reference and no-record-write reject have real PostgreSQL evidence.
 - No memory/knowledge/Telegram/publication/external-send route or persistent client state is added.
 - TD006 current-Canvas bridge passes only opaque IDs; it does not query generic context or retain it after Canvas/workspace replacement.
+- The pending queue returns only `pending_confirmation` rows in newest-first keyset order. Its local `512` pending / `1,536` terminal PostgreSQL measurement reuses the existing Base/status index; no S5 partial-index migration is added.
 - Built-client Browser observation is still required. The local loopback fixture was unreachable from both available browser surfaces, so no visual/four-width claim is made.
 
 ## Sequencing Guard
 
-S4 is implemented only within TD004 and remains partially accepted until its documented negative lifecycle matrix is complete. S5 cannot consume generic runtime payloads; TD005 is approved, while TD006 must receive explicit approval before browser invocation controls or a context data source are added. S6 cannot treat local header identity or disposable PostgreSQL as Telegram proof.
+S4 is implemented only within TD004 and remains partially accepted until its documented negative lifecycle matrix is complete. S5 cannot consume generic runtime payloads; TD005 and TD006 are approved, and the current-Canvas bridge is limited to their opaque transient context. S6 cannot treat local header identity or disposable PostgreSQL as Telegram proof.
 
 ## Checkpoint Report
 

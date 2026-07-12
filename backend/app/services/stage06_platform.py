@@ -346,6 +346,15 @@ class Stage06PlatformUnitOfWork(Protocol):
     def list_record_change_drafts(self, base_id: UUID) -> list[RecordChangeDraft]:
         pass
 
+    def list_pending_record_change_drafts(
+        self,
+        base_id: UUID,
+        *,
+        after: RecordChangeDraft | None,
+        limit: int,
+    ) -> list[RecordChangeDraft]:
+        pass
+
     def add_notification_request(self, request: NotificationRequest) -> None:
         pass
 
@@ -589,6 +598,35 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def list_record_change_drafts(self, base_id: UUID) -> list[RecordChangeDraft]:
         return [draft for draft in self.record_change_drafts if draft.base_id == base_id]
+
+    def list_pending_record_change_drafts(
+        self,
+        base_id: UUID,
+        *,
+        after: RecordChangeDraft | None,
+        limit: int,
+    ) -> list[RecordChangeDraft]:
+        pending = sorted(
+            (
+                draft
+                for draft in self.record_change_drafts
+                if draft.base_id == base_id and draft.status == "pending_confirmation"
+            ),
+            key=lambda draft: (
+                "" if draft.created_at is None else draft.created_at.isoformat(),
+                str(draft.id),
+            ),
+            reverse=True,
+        )
+        if after is not None:
+            after_index = next(
+                (index for index, draft in enumerate(pending) if draft.id == after.id),
+                None,
+            )
+            if after_index is None:
+                return []
+            pending = pending[after_index + 1 :]
+        return pending[:limit]
 
     def add_notification_request(self, request: NotificationRequest) -> None:
         self.notification_requests.append(request)
@@ -891,6 +929,33 @@ class SqlAlchemyStage06PlatformUnitOfWork:
                 select(RecordChangeDraft).where(RecordChangeDraft.base_id == base_id)
             )
         )
+
+    def list_pending_record_change_drafts(
+        self,
+        base_id: UUID,
+        *,
+        after: RecordChangeDraft | None,
+        limit: int,
+    ) -> list[RecordChangeDraft]:
+        statement = select(RecordChangeDraft).where(
+            RecordChangeDraft.base_id == base_id,
+            RecordChangeDraft.status == "pending_confirmation",
+        )
+        if after is not None:
+            statement = statement.where(
+                or_(
+                    RecordChangeDraft.created_at < after.created_at,
+                    and_(
+                        RecordChangeDraft.created_at == after.created_at,
+                        RecordChangeDraft.id < after.id,
+                    ),
+                )
+            )
+        statement = statement.order_by(
+            RecordChangeDraft.created_at.desc(),
+            RecordChangeDraft.id.desc(),
+        ).limit(limit)
+        return list(self.session.scalars(statement))
 
     def add_notification_request(self, request: NotificationRequest) -> None:
         self.session.add(request)

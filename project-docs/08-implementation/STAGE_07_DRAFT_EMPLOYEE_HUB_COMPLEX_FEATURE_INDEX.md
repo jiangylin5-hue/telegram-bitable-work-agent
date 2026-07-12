@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: approved TD005 Option A index decision. I-A starts as the measured baseline; I-B remains conditional on the documented `EXPLAIN (ANALYZE, BUFFERS)` gate.
+- Status: TD005 Option A index decision measured locally. I-A is retained; I-B is not created because the documented disposable `EXPLAIN (ANALYZE, BUFFERS)` gate did not show it necessary.
 - Scope: S5 transition, scope, safe-diff and pending-queue complexity; not a general database tuning or agent-memory proposal.
 
 ## Logical Feature Index
@@ -43,6 +43,23 @@ LIMIT :limit
 | I-C — broad status/workspace/full-text index | multiple generic queue/search indexes | apparent flexibility | rejected: no approved query/filter/search contract and unnecessary write overhead |
 
 No index is created merely because an S5 document names it. The implementation plan must first seed a disposable representative draft distribution, capture sanitized `EXPLAIN (ANALYZE, BUFFERS)` for I-A, then create I-B only if the measured result supports it. No raw draft values are used as index/evidence data.
+
+### 2026-07-12 I-A Local Measurement and Decision
+
+The S5 adapter was first corrected to make its actual list query match the protected query above: it returns pending drafts only, orders by `created_at DESC, id DESC`, and uses a bounded keyset cursor. Terminal drafts remain reachable through their explicitly addressed safe detail route; they are not mixed into the pending queue.
+
+On disposable local PostgreSQL, the measurement seeded one authorized Base with `512` pending drafts and `1,536` terminal drafts, executed the exact protected predicate with `LIMIT 50`, then reset the disposable schema and upgraded it back to the Alembic head. The safe route returned `50` pending summaries and `has_more=true`.
+
+| Sanitized plan property | Observed result |
+| --- | --- |
+| planner path | `Limit -> Sort -> Bitmap Heap Scan -> Bitmap Index Scan` |
+| reused index | `ix_stage06_drafts_base_status` |
+| pending rows scanned | `512` |
+| page rows returned | `50` |
+| shared reads | `0` |
+| execution time | `0.913 ms` |
+
+This is a local fixture observation, not a production latency claim or load test. At this documented distribution the existing Base/status index selected the pending population with no physical reads and a sub-millisecond execution time. Therefore I-A remains the approved implementation: **no S5 partial-index migration is created**. I-B must be reconsidered only after a later approved query/distribution change or a new measured degradation; it is not an open implementation task for this S5 package.
 
 ## Scope Guard
 

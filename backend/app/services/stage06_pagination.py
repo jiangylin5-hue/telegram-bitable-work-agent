@@ -40,7 +40,7 @@ def paginate_items(
 ) -> Stage06Page[T]:
     page_size = bounded_page_size(limit)
     ordered = list(items) if preserve_order else sorted(items, key=lambda item: str(item.id))
-    cursor_id = _decode_cursor(cursor) if cursor else None
+    cursor_id = decode_page_cursor(cursor) if cursor else None
     if cursor_id is not None:
         if preserve_order:
             cursor_index = next(
@@ -56,7 +56,7 @@ def paginate_items(
     has_more = len(window) > page_size
     selected = window[:page_size]
     next_cursor = (
-        _encode_cursor(str(selected[-1].id))
+        encode_page_cursor(str(selected[-1].id))
         if has_more and selected
         else None
     )
@@ -67,12 +67,12 @@ def paginate_items(
     )
 
 
-def _encode_cursor(item_id: str) -> str:
+def encode_page_cursor(item_id: str) -> str:
     payload = json.dumps({"id": item_id}, separators=(",", ":")).encode("utf-8")
     return base64.urlsafe_b64encode(payload).decode("ascii").rstrip("=")
 
 
-def _decode_cursor(value: str) -> str:
+def decode_page_cursor(value: str) -> str:
     try:
         padding = "=" * (-len(value) % 4)
         payload = json.loads(

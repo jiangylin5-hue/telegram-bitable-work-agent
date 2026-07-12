@@ -118,9 +118,9 @@ Then it cannot create/publish a contact, persist memory, access knowledge, claim
 
 | Covered behavior | Fresh evidence | Acceptance gap retained |
 | --- | --- | --- |
-| safe summary projection and context intersection | backend unit plus local PostgreSQL run: `14 passed`; malicious citation fields and unknown record IDs are dropped, cross-Base view is denied before runtime, and terminal concurrency is locked | real provider and stale/hidden context matrix remain absent |
-| safe client transport and TD006 Option A bridge | focused Mini App run: `4 files / 15 tests`; strict parser retains only `answer` and `{recordId}` citations; Canvas UI sends only current Base/view and disables draft creation without an open record | no generic context source/persistence is allowed; Browser matrix remains unavailable |
-| terminal draft baseline | real local PostgreSQL proves confirm replay, reject no-record-write, and concurrent confirm rolls back the losing command's ledger | conditional-index measurement and full field-filtered Browser matrix remain pending |
+| safe summary projection and context intersection | backend unit plus local PostgreSQL run: `15 passed`; malicious citation fields and unknown record IDs are dropped, cross-Base view is denied before runtime, and terminal concurrency is locked | real provider and stale/hidden context matrix remain absent |
+| safe client transport and TD006 Option A bridge | focused Mini App run: `4 files / 16 tests`; strict parser retains only `answer` and `{recordId}` citations; Canvas UI sends only current Base/view and disables draft creation without an open record | no generic context source/persistence is allowed; Browser matrix remains unavailable |
+| terminal draft baseline and queue query | real local PostgreSQL proves confirm replay, reject no-record-write, concurrent confirm rolls back the losing command's ledger, and a `512` pending / `1,536` terminal queue measurement reuses the existing Base/status index for the bounded pending-only route | full field-filtered Browser matrix remains pending; the optional partial index is intentionally not created |
 | production compilation | `npm.cmd run build` completed after the current-Canvas invocation UI change | both available browsers refused the temporary loopback fixture; no S5 visual observation is claimed |
 
 These checkpoints move implementation forward but do not change any `unevaluated` acceptance row to accepted. DE-A01 through DE-A10 require the complete specified evidence, including the TD006-approved invocation path where applicable.

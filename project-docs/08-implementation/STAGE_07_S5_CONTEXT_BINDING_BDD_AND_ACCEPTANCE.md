@@ -77,7 +77,7 @@ Then stale output is discarded and focus returns predictably without persisting 
 ### 2026-07-12 Interim Evidence (not acceptance closure)
 
 - Focused Mini App S5 suite reports `4 files / 16 tests`: component checks cover current-Canvas summary IDs, disabled draft creation without an open record, draft idempotency and discarding a result after Canvas replacement; App flow checks the Canvas toolbar summary request uses only the current Base/view pair.
-- The focused backend suite reports `14 passed`, including real PostgreSQL confirm replay, reject-without-record-write and concurrent confirm where the losing command rolls back its idempotency ledger.
+- The focused backend suite reports `15 passed`, including pending-only newest-first keyset queue coverage plus real PostgreSQL confirm replay, reject-without-record-write and concurrent confirm where the losing command rolls back its idempotency ledger. The separate disposable `512` pending / `1,536` terminal measurement reused `ix_stage06_drafts_base_status`, so no partial index is created.
 - The production build completes. A disposable loopback fixture was started solely to inspect the built client, then removed. Both available browser surfaces refused `127.0.0.1:4179`; no interaction, screenshot, console scan or responsive-width result is claimed.
 
 ## Deliberate Non-Goals

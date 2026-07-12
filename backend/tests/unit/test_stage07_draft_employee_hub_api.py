@@ -1,4 +1,5 @@
-from uuid import uuid4
+from datetime import datetime, timedelta, timezone
+from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
 
@@ -143,6 +144,60 @@ def test_s5_draft_read_models_filter_hidden_values_and_metadata() -> None:
     assert "secret" not in (listed.text + detail.text)
     assert "private-employee" not in detail.text
     assert "private-trace" not in detail.text
+
+
+def test_s5_draft_queue_lists_only_pending_drafts_newest_first_with_keyset_cursor() -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="S5 queue", owner_user_id=owner.actor_id, actor=owner)
+    base = create_base(uow, workspace.id, name="Operations", actor=owner)
+    table = create_table(uow, base.id, name="Tasks", key="tasks", actor=owner)
+    created_at = datetime(2026, 7, 12, tzinfo=timezone.utc)
+    older_pending = RecordChangeDraft(
+        id=UUID(int=20), workspace_id=workspace.id, base_id=base.id, table_id=table.id,
+        record_id=None, draft_type="update_record", proposed_values={"title": "Older"},
+        before_values=None, created_by_type="digital_employee", created_by_id="private",
+        status="pending_confirmation", confirmation_policy={}, trace_id="older-pending",
+        expected_version=1, version=1, created_at=created_at,
+    )
+    terminal = RecordChangeDraft(
+        id=UUID(int=999), workspace_id=workspace.id, base_id=base.id, table_id=table.id,
+        record_id=None, draft_type="update_record", proposed_values={"title": "Terminal"},
+        before_values=None, created_by_type="digital_employee", created_by_id="private",
+        status="confirmed", confirmation_policy={}, trace_id="terminal",
+        expected_version=1, version=2, created_at=created_at + timedelta(seconds=1),
+    )
+    newest_pending = RecordChangeDraft(
+        id=UUID(int=10), workspace_id=workspace.id, base_id=base.id, table_id=table.id,
+        record_id=None, draft_type="update_record", proposed_values={"title": "Newest"},
+        before_values=None, created_by_type="digital_employee", created_by_id="private",
+        status="pending_confirmation", confirmation_policy={}, trace_id="newest-pending",
+        expected_version=1, version=1, created_at=created_at + timedelta(seconds=2),
+    )
+    for draft in (older_pending, terminal, newest_pending):
+        uow.add_record_change_draft(draft)
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_runtime_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = owner.actor_id
+        first = client.get(f"/mini-app/bases/{base.id}/drafts?limit=1")
+        second = client.get(
+            f"/mini-app/bases/{base.id}/drafts?limit=1&cursor={first.json()['next_cursor']}"
+        )
+
+    assert first.status_code == second.status_code == 200
+    assert first.json()["drafts"] == [{
+        "id": str(newest_pending.id), "base_id": str(base.id), "table_id": str(table.id),
+        "record_id": None, "draft_type": "update_record", "status": "pending_confirmation", "version": 1,
+    }]
+    assert first.json()["has_more"] is True
+    assert second.json()["drafts"] == [{
+        "id": str(older_pending.id), "base_id": str(base.id), "table_id": str(table.id),
+        "record_id": None, "draft_type": "update_record", "status": "pending_confirmation", "version": 1,
+    }]
+    assert second.json()["has_more"] is False
 
 
 def test_s5_reject_is_versioned_idempotent_and_has_no_record_write() -> None:
