@@ -2,7 +2,7 @@
 
 ## Status
 
-- Evidence status: expanded partial local Browser acceptance; it does not accept V1 or Stage07 as a whole
+- Evidence status: expanded partial local Browser acceptance, including a real FastAPI + disposable PostgreSQL pass; it does not accept V1 or Stage07 as a whole
 - Date: 2026-07-12
 - Scope: approved V1 saved-view UI only
 - Environment: disposable local fixture serving the built Mini App at `127.0.0.1:4174`; fixed safe fixture responses only
@@ -45,12 +45,28 @@ A second disposable fixture ran on `127.0.0.1:4175`. It served the already built
 - Page-level console query for `error`, `warn` and `warning` returned `[]` after the follow-up. A browser-bridge telemetry timeout appeared outside the page console and is not recorded as an application warning/error.
 - DOM snapshots and actual click/fill/select interactions were used for the visual/interaction review. `Page.captureScreenshot` timed out in the Browser bridge, so no screenshot is retained and no screenshot claim is made.
 
+## V1-14: Real FastAPI And Disposable PostgreSQL Follow-up
+
+The local database migration smoke reset the explicitly disposable `STAGE06_LOCAL_DATABASE_URL` database to Alembic head `20260711_0022`. A temporary seed created synthetic owner, builder and viewer workspace members, a restricted private Grid, permitted relation target, numeric `sum` lookup and one policy-hidden field. A temporary same-origin proxy mapped only a server-set synthetic role cookie to the existing local development identity header and forwarded requests to FastAPI; it served no fixture business data and did not log request bodies, credentials or database URLs.
+
+| Actor / flow | Real Browser observation | Result |
+| --- | --- | --- |
+| owner | Real Canvas rendered the server query summary, permitted relation label and numeric lookup output; V1 Builder showed owner-only `管理访问权限`, `Lookup score` as sortable, and only `Status` as a grouping option. | observed |
+| editor | Real Builder exposed `保存视图` and did not expose `管理访问权限`. | observed |
+| viewer, before repair | The server-safe Canvas omitted `Internal` and rendered only permitted title/relation/lookup data, but the client still displayed an enabled `新建记录` entry. | defect found; not accepted |
+| viewer, after repair | With the same real backend and seeded user, `Internal`, `配置视图`, `新建视图` and `新建记录` were absent; permitted title, relation label and numeric lookup remained rendered. | observed |
+
+The repair is a UI visibility guard only: it reuses the server-derived existing workspace role and permits the create entry only for `owner`, `admin`, `builder` or `operator`. `viewer` and unknown roles are hidden fail-closed. The existing FastAPI `record.create` authorization remains the mutation authority; no schema, API route, capability or permission-table change was introduced.
+
+- Both real Browser passes returned page-level `error` log count `0`.
+- This pass proves a real Base/Table/Field intersection and role-specific Canvas projection. It does **not** prove the complete F2 Record Detail relation-edit or stale-version interaction matrix.
+
 ## Deliberately Unaccepted Browser Cases
 
 The following required V1 checks were **not** re-run as Browser actions in this evidence session and therefore remain automated/contract evidence only:
 
-1. a real backend Browser request/response trace, or a real underlying Base/Table/Field denial screen after a valid grant;
-2. a server-produced unsupported-operator payload, numeric lookup filter mutation and Record Detail relation-edit regression in this V1 fixture;
+1. a real underlying Base/Table/Field **denial screen** after a valid grant; the real-backend pass did prove the allowed-field intersection and hidden-field omission, but not this denial presentation;
+2. a server-produced unsupported-operator payload, numeric lookup filter mutation and Record Detail relation-edit regression in the real Browser;
 3. every Kanban/Calendar/Form invalid configuration state at Browser level;
 4. Escape-key/live-region coverage beyond the observed focus return.
 
@@ -59,5 +75,7 @@ Those gaps keep V1-A02, V1-A05, V1-A07, V1-A08 and V1-A10 at `partial-local`. V1
 ## Cleanup
 
 - Stopped both local fixture processes; ports `4174` and `4175` had no listening socket in their post-run checks.
-- Deleted both fixture scripts and all temporary `.out.log` / `.err.log` files.
+- Stopped the temporary FastAPI/proxy processes; ports `8001` and `4176` had no listening socket in the post-run check.
+- Deleted all fixture/seed/proxy scripts and temporary `.out.log` / `.err.log` files.
+- Re-ran the local PostgreSQL migration smoke after Browser work, which erased the synthetic V1 rows and reached Alembic head `20260711_0022`.
 - No screenshots, test records, secrets, external writes or running Browser session were retained.
