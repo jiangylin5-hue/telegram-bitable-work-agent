@@ -4,21 +4,21 @@
 
 - Document status: implementation/risk index awaiting review
 - Scope: high-risk behavior of the selected existing-contract template/import package
-- Status convention: all TI-I items are `specified-awaiting-review`; none is implemented by this document
+- Status convention: TI-I01--TI-I08 are `implemented-local`; TI-I09 is `partial-local` because this package did not rerun the four-width Browser matrix or a real Browser file-upload path.
 
 ## 1. Index
 
 | ID | Complex behavior | Primary source | Required proof | Current status |
 | --- | --- | --- | --- | --- |
-| TI-I01 | safe template projection and shelf ordering | BDD TI-01; SDD §2/4 | transport response scan + component render | specified-awaiting-review |
-| TI-I02 | installation idempotency/replay and authoritative Base navigation | BDD TI-03; SDD §7 | API/client lifecycle + PostgreSQL replay | specified-awaiting-review |
-| TI-I03 | Base-to-draft-template save without manifest disclosure | BDD TI-04; SDD §2/8 | API/component negative render tests | specified-awaiting-review |
-| TI-I04 | CSV/XLSX encoding, file-memory lifecycle and server limits | BDD TI-05/06; SDD §5 | unit/API limit and client cleanup tests | specified-awaiting-review |
-| TI-I05 | persisted preview/not-committed state | BDD TI-07; SDD §6 | API/application state tests | specified-awaiting-review |
-| TI-I06 | scalar mapping validation and no complex field authoring | BDD TI-08; SDD §4/6/8 | component/API negative tests | specified-awaiting-review |
-| TI-I07 | new-Base/in-Base target scope and commit transaction | BDD TI-09/10; SDD §2/6 | PostgreSQL rollback/replay + lifecycle tests | specified-awaiting-review |
-| TI-I08 | protected query cancellation, no file/raw data retention | BDD TI-11; SDD §7 | application/transport tests | specified-awaiting-review |
-| TI-I09 | responsive modal/sheet, focus and safe error feedback | BDD TI-12; Work Surface §5 | Browser 1440/1280/430/390 | specified-awaiting-review |
+| TI-I01 | safe template projection and shelf ordering | BDD TI-01; SDD §2/4 | transport response scan + component render | implemented-local |
+| TI-I02 | installation idempotency/replay and authoritative Base navigation | BDD TI-03; SDD §7 | API/client lifecycle + PostgreSQL replay | implemented-local |
+| TI-I03 | Base-to-draft-template save without manifest disclosure | BDD TI-04; SDD §2/8 | API/component negative render tests | implemented-local |
+| TI-I04 | CSV/XLSX encoding, file-memory lifecycle and server limits | BDD TI-05/06; SDD §5 | unit/API limit and client cleanup tests | implemented-local |
+| TI-I05 | persisted preview/not-committed state | BDD TI-07; SDD §6 | API/application state tests | implemented-local |
+| TI-I06 | scalar mapping validation and no complex field authoring | BDD TI-08; SDD §4/6/8 | component/API negative tests | implemented-local |
+| TI-I07 | new-Base/in-Base target scope and commit transaction | BDD TI-09/10; SDD §2/6 | PostgreSQL rollback/replay + lifecycle tests | implemented-local |
+| TI-I08 | protected query cancellation, no file/raw data retention | BDD TI-11; SDD §7 | application/transport tests | implemented-local |
+| TI-I09 | responsive modal/sheet, focus and safe error feedback | BDD TI-12; Work Surface §5 | Browser 1440/1280/430/390 | partial-local |
 
 ## 2. Implementation Dependencies
 
