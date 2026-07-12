@@ -26,8 +26,8 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 | S1 | Bitable authoring and records | Base/Table, F1 field, F2 relation/lookup and Record Detail work | implemented-local / partial-local | existing builder contracts |
 | S2 | Views, template and import | saved views, template/install/save, CSV/XLSX server preview/import | implemented-local / partial-local | existing contracts; Browser file upload unproven |
 | S3 | Governance Readback | safe paged member directory and Base audit timeline | implemented-local; Browser external evidence pending | Technical Decision 003 |
-| S4 | Governance Write | bounded member-role, field-policy and existing V1 view-grant operations | approved, implementation active | Technical Decision 004 |
-| S5 | Draft and Digital Employee Hub | field-filtered draft review, contacts and assistant surface | contract-gated | separate draft/employee/context decision |
+| S4 | Governance Write | bounded member-role, field-policy and existing V1 view-grant operations | implemented-local; negative lifecycle evidence partial | Technical Decision 004 |
+| S5 | Draft and Digital Employee Hub | field-filtered draft review, contacts and assistant surface | specified-awaiting-review | Technical Decision 005 |
 | S6 | Telegram and final acceptance | verified identity/deep link, full safety/visual matrix and release evidence | external-evidence-pending | approved test environment and user authority |
 
 ## S3 Governance Readback
@@ -67,7 +67,7 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 
 ## S4 Governance Write
 
-### Proposed Scope
+### Implemented Scope
 
 - Versioned change of an existing active member's fixed role, under server-side owner/admin target constraints.
 - Versioned replacement of a field's fixed five-role `hidden/read/write` policy.
@@ -97,9 +97,43 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 - Existing V1 grant route remains the only view-member mutation path.
 - Built UI Browser evidence covers all required widths with synthetic data; cleanup is documented.
 
+## S5 Draft and Digital Employee Hub
+
+### Proposed Scope
+
+- Server-safe active digital-employee contacts scoped by existing workspace/Base membership.
+- Explicit selected Base/view/record context for fixed `summarize` and `draft_update` intents only.
+- Field-filtered immutable draft diff and revisioned/idempotent confirm/reject terminal receipts.
+- Existing Stage06 LangGraph/runtime, record validation, idempotency and audit reuse through narrow Mini App adapter routes.
+
+### Not In Scope
+
+- employee create/edit/publish lifecycle, personal memory, knowledge source, conversation persistence or browser storage;
+- Telegram alias/deep links/group handoff, notification send/external execution or production identity;
+- raw runtime/record/draft config exposure, arbitrary agent tool/runtime selection or agent self-confirmation.
+
+### Required Documents and Gate
+
+| Artifact | Location |
+| --- | --- |
+| decision | STAGE_07_TECHNICAL_DECISION_005_DRAFT_EMPLOYEE_HUB.md |
+| design | docs/superpowers/specs/2026-07-12-stage07-s5-draft-employee-hub-design.md |
+| BDD / SDD | STAGE_07_DRAFT_EMPLOYEE_HUB_BDD_AND_ACCEPTANCE.md / STAGE_07_DRAFT_EMPLOYEE_HUB_SDD.md |
+| work surface / complex index | modules/STAGE_07_DRAFT_EMPLOYEE_HUB_WORK_SURFACE.md / STAGE_07_DRAFT_EMPLOYEE_HUB_COMPLEX_FEATURE_INDEX.md |
+| implementation plan | docs/superpowers/plans/2026-07-12-stage07-s5-draft-employee-hub-implementation.md |
+
+TD005 Option A requires explicit approval before two draft columns, a measured conditional queue index, safe Mini App routes or any S5 UI code. Approval does not authorize S6 scope.
+
+### Exit Criteria After Approval
+
+- DE-A01 through DE-A10 are reconciled against fresh code, PostgreSQL, client and Browser evidence.
+- Generic Stage06 runtime/draft APIs remain unchanged and never reach the browser.
+- Draft field filtering, current-write recheck, terminal revision/idempotency/audit reference and no-record-write reject have real PostgreSQL evidence.
+- No memory/knowledge/Telegram/publication/external-send route or persistent client state is added.
+
 ## Sequencing Guard
 
-S4 implementation cannot start merely because S3 UI exists; TD004 requires explicit approval before its schema/API/permission changes. S5 cannot consume generic runtime payloads; it needs field-filtered draft and employee/context authority design. S6 cannot treat local header identity or disposable PostgreSQL as Telegram proof.
+S4 is implemented only within TD004 and remains partially accepted until its documented negative lifecycle matrix is complete. S5 cannot consume generic runtime payloads; TD005 now specifies the required field-filtered draft and employee/context authority design but must receive explicit approval before implementation. S6 cannot treat local header identity or disposable PostgreSQL as Telegram proof.
 
 ## Checkpoint Report
 

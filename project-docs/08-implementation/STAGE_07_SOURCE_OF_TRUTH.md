@@ -4,11 +4,11 @@
 
 - Document status: active Stage07 planning source of truth
 - Scope: Telegram Mini App and desktop browser UI for the generic workspace, Bitable and digital-employee platform
-- Current Progress: 2026-07-12 Package 1 and bounded Package 2 paths through F2 are `implemented-local`. V1-1 through V1-15 are `partial-local`: real FastAPI + disposable PostgreSQL Browser evidence proves owner/editor/viewer Canvas separation, allowed Base/Table/Field intersection, hidden-field omission, numeric lookup projection and one owner Record Detail relation edit through the existing versioned PATCH with authoritative reread. The complete existing-contract template/import package is `implemented-local`: its typed transport, shelf/install, draft-template save, server preview, scalar mapping and explicit commit have component/API, local PostgreSQL, production-build and focused Browser evidence. S3 Governance Readback is `implemented-local` with Browser external-environment evidence pending. S4 Governance Write now has a proposed, user-review-gated decision/specification package only; no S4 code, migration, endpoint or permission-action change exists. Browser file selection is explicitly unaccepted because the provided Browser API cannot choose a file. Real stale/type-invalid states, numeric-filter mutation, Telegram, staging and production remain unaccepted. Measured `EXPLAIN` retains both optional non-unique access/list indexes as deferred; no index migration exists. Package 4 remains contract-gated.
+- Current Progress: 2026-07-12 Package 1 and bounded Package 2 paths through F2 are `implemented-local`. V1-1 through V1-15 are `partial-local`: real FastAPI + disposable PostgreSQL Browser evidence proves owner/editor/viewer Canvas separation, allowed Base/Table/Field intersection, hidden-field omission, numeric lookup projection and one owner Record Detail relation edit through the existing versioned PATCH with authoritative reread. The complete existing-contract template/import package is `implemented-local`: its typed transport, shelf/install, draft-template save, server preview, scalar mapping and explicit commit have component/API, local PostgreSQL, production-build and focused Browser evidence. S3 Governance Readback is `implemented-local` with Browser external-environment evidence pending. S4 Governance Write is a bounded local vertical slice: GW-A01--GW-A05/GW-A08 are evidenced; GW-A06/GW-A07 retain their explicit negative-lifecycle gap. S5 Draft and Digital Employee Hub now has a detailed proposed TD005 package; it is not approved and no S5 schema/API/permission/UI code exists. Browser file selection is explicitly unaccepted because the provided Browser API cannot choose a file. Real stale/type-invalid states, numeric-filter mutation, Telegram, staging and production remain unaccepted. Measured `EXPLAIN` retains optional indices as deferred until their substage evidence proves them. Package 4 beyond TD005 remains contract-gated.
 
 - Template/Import Package Update: the approved existing-contract package is `implemented-local`. Typed template/import transport, shelf/install, draft-template save, server preview, scalar mapping and explicit commit have fresh component/API, build, real disposable PostgreSQL and focused Browser evidence. Browser CSV/XLSX upload is explicitly unaccepted because the available automation API cannot choose a file. No schema/API/permission/dependency expansion was made; Telegram, staging and production remain unaccepted. See [local evidence](evidence/stage07-template-import-ui.md).
-- Governance Package Update: S3 has delivered the approved read-only projections locally. S4 now proposes narrowly versioned member-role and field-policy commands plus existing V1 view-grant reuse. It requires explicit approval of Technical Decision 004 before any migration, new action, endpoint or frontend mutation work.
-- Substage Delivery Update: Stage07 now uses the S0--S6 coherent-substage roadmap. S4 Governance Write is in document-review state; S5 Draft/Digital Employee and S6 Telegram/final acceptance remain independently contract- or evidence-gated. See [Substage Delivery Roadmap](STAGE_07_SUBSTAGE_DELIVERY_ROADMAP.md).
+- Governance Package Update: S3 has delivered the approved read-only projections locally. S4 implemented TD004's narrowly versioned member-role and field-policy commands plus existing V1 view-grant reuse; its remaining negative-lifecycle acceptance gaps are recorded in `evidence/stage07-governance-write.md`.
+- Substage Delivery Update: Stage07 now uses the S0--S6 coherent-substage roadmap. S5 has a one-time-review TD005 decision/design/BDD/SDD/module/index/plan package; S6 Telegram/final acceptance remains independently contract- or evidence-gated. See [Substage Delivery Roadmap](STAGE_07_SUBSTAGE_DELIVERY_ROADMAP.md).
 
 ## 1. Stage Goal
 
@@ -80,6 +80,13 @@ verified identity -> workspace member -> permission-filtered UI
 48. [Stage 07 Progress](STAGE_07_PROGRESS.md)
 49. [Stage 07 Requirement Traceability Audit](STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md)
 50. [Technical Decision 001: Protected Query State](STAGE_07_TECHNICAL_DECISION_001_PROTECTED_QUERY_STATE.md)
+51. [Stage07 Draft and Digital Employee Hub Decision](STAGE_07_TECHNICAL_DECISION_005_DRAFT_EMPLOYEE_HUB.md)
+52. [Stage07 Draft and Digital Employee Hub Design](../../docs/superpowers/specs/2026-07-12-stage07-s5-draft-employee-hub-design.md)
+53. [Stage07 Draft and Digital Employee Hub BDD And Acceptance](STAGE_07_DRAFT_EMPLOYEE_HUB_BDD_AND_ACCEPTANCE.md)
+54. [Stage07 Draft and Digital Employee Hub SDD](STAGE_07_DRAFT_EMPLOYEE_HUB_SDD.md)
+55. [Stage07 Draft and Digital Employee Hub Work Surface](modules/STAGE_07_DRAFT_EMPLOYEE_HUB_WORK_SURFACE.md)
+56. [Stage07 Draft and Digital Employee Hub Complex Feature Index](STAGE_07_DRAFT_EMPLOYEE_HUB_COMPLEX_FEATURE_INDEX.md)
+57. [Stage07 Draft and Digital Employee Hub Plan](../../docs/superpowers/plans/2026-07-12-stage07-s5-draft-employee-hub-implementation.md)
 
 Stage06 is the backend contract baseline. Stage02-05 documents are historical capability evidence only.
 
@@ -112,7 +119,7 @@ Approved Package 1/2 read-model boundary:
 - `GET /views/{view_id}/presentation` and `GET /records/{record_id}` may expose only the normalized, field-read-filtered models defined in the API Data Security Contract. Schema, presentation, list and detail must make the same hidden-field decision.
 - Both endpoints are read-only and must reuse Stage06 membership and action authorization. The client does not receive raw record values, draft before/proposed values, trace data, policies, or a role it can submit back to the server.
 
-The following remain a separate, unapproved Package 4 contract gate:
+The following remain a separate, unapproved Package 4 contract gate. TD005 is the only proposed exception: it is a bounded contact/context/draft-review adapter over existing Stage06 resources and still requires explicit approval before implementation.
 
 Stage06 currently provides base-bound `DigitalEmployee` resources. The following are Stage07 proposals, not approved implementation work:
 

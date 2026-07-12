@@ -9,6 +9,12 @@
 
 ## Progress Log
 
+### 2026-07-12: S5 Draft and Digital Employee Hub — One-Time Review Package
+
+- TD005 compares three paths and recommends one coherent bounded vertical slice: safe active contacts, explicit Base/view/record context, fixed summary/draft intents, field-filtered draft review and locked/idempotent terminal confirm/reject with an opaque audit receipt. It reuses existing Stage06 LangGraph/runtime, record service, audit and idempotency patterns rather than introducing a new agent/chat framework.
+- The proposed boundary deliberately excludes contact publication, employee configuration, personal memory, knowledge retrieval, Telegram handoff/deep links, notification/external action and client persistence. Existing generic runtime/draft responses remain forbidden from the browser because they contain configuration/raw values/trace data.
+- The detailed design, BDD/acceptance, SDD, functional work surface, complex/index decision and execution plan are written for one user review. No S5 source, migration, API, authorization change, seed, test fixture or external write was created.
+
 ### 2026-07-12: Stage07 Substage Delivery Rhythm
 
 - Stage07 now follows a one-stage/multiple-substages rhythm instead of user-facing micro-fragments. S0 Foundation, S1 Bitable authoring and S2 views/template/import retain their documented local states; S3 Governance Readback is active and approved; S4 Governance Write, S5 Draft/Digital Employee and S6 Telegram/final acceptance remain separately gated.
