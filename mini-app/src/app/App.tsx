@@ -82,6 +82,7 @@ type GovernanceWritePanel = {
   membersLoading: boolean
   tablesLoading: boolean
   fieldsLoading: boolean
+  contextError?: 'base_not_available' | 'table_not_available'
 }
 
 function isAbortError(error: unknown): boolean {
@@ -144,7 +145,6 @@ function AppContent() {
     builderRequestVersion.current += 1
     templateImportRequestVersion.current += 1
     governanceRequestVersion.current += 1
-    governanceWriteRequestVersion.current += 1
     governanceWriteRequestVersion.current += 1
   }
 
@@ -441,6 +441,7 @@ function AppContent() {
       membersLoading: true,
       tablesLoading: false,
       fieldsLoading: false,
+      contextError: undefined,
     })
     try {
       const members = await queryClient.fetchQuery({
@@ -466,7 +467,7 @@ function AppContent() {
       && governanceWriteRequestVersion.current === requestVersion
       && activeWorkspaceId.current === workspaceId
     setGovernanceWritePanel((current) => current ? {
-      ...current, selectedBaseId: baseId, selectedTableId: null, tables: [], views: [], fields: null, tablesLoading: true, fieldsLoading: false,
+      ...current, selectedBaseId: baseId, selectedTableId: null, tables: [], views: [], fields: null, tablesLoading: true, fieldsLoading: false, contextError: undefined,
     } : current)
     try {
       const [{ tables }, { views }] = await Promise.all([
@@ -485,8 +486,13 @@ function AppContent() {
     } catch (error) {
       if (!isCurrent() || isAbortError(error)) return
       if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
-      else if (error instanceof ApiError && (error.status === 403 || error.status === 404)) await denyWorkspace(scope)
-      else setGovernanceWritePanel((current) => current ? { ...current, tablesLoading: false } : current)
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else if (error instanceof ApiError && error.status === 404) {
+        await clearGovernanceWriteQueries(queryClient, scope)
+        setGovernanceWritePanel((current) => current?.selectedBaseId === baseId
+          ? { ...current, selectedBaseId: null, selectedTableId: null, tables: [], views: [], fields: null, tablesLoading: false, fieldsLoading: false, contextError: 'base_not_available' }
+          : current)
+      } else setGovernanceWritePanel((current) => current ? { ...current, tablesLoading: false } : current)
     }
   }
 
@@ -500,7 +506,7 @@ function AppContent() {
       && governanceWriteRequestVersion.current === requestVersion
       && activeWorkspaceId.current === workspaceId
     setGovernanceWritePanel((current) => current ? {
-      ...current, selectedTableId: tableId, fields: null, fieldsLoading: true,
+      ...current, selectedTableId: tableId, fields: null, fieldsLoading: true, contextError: undefined,
     } : current)
     try {
       const fields = await queryClient.fetchQuery({
@@ -515,8 +521,12 @@ function AppContent() {
       if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
       else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
       else {
-        if (error instanceof ApiError && error.status === 404) await clearGovernanceWriteQueries(queryClient, scope, tableId)
-        setGovernanceWritePanel((current) => current?.selectedTableId === tableId ? { ...current, fieldsLoading: false } : current)
+        if (error instanceof ApiError && error.status === 404) {
+          await clearGovernanceWriteQueries(queryClient, scope, tableId)
+          setGovernanceWritePanel((current) => current?.selectedTableId === tableId
+            ? { ...current, selectedTableId: null, fields: null, fieldsLoading: false, contextError: 'table_not_available' }
+            : current)
+        } else setGovernanceWritePanel((current) => current?.selectedTableId === tableId ? { ...current, fieldsLoading: false } : current)
       }
     }
   }
@@ -1755,6 +1765,7 @@ function AppContent() {
       membersLoading={governanceWritePanel.membersLoading}
       tablesLoading={governanceWritePanel.tablesLoading}
       fieldsLoading={governanceWritePanel.fieldsLoading}
+      contextError={governanceWritePanel.contextError}
       onSelectBase={(baseId) => { void selectGovernanceWriteBase(baseId) }}
       onSelectTable={(tableId) => { void selectGovernanceWriteTable(tableId) }}
       onChangeRole={changeGovernanceWriteRole}

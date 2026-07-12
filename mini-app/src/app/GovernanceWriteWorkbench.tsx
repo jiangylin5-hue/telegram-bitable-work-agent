@@ -19,6 +19,7 @@ type GovernanceWriteWorkbenchProps = {
   membersLoading: boolean
   tablesLoading: boolean
   fieldsLoading: boolean
+  contextError?: 'base_not_available' | 'table_not_available'
   onSelectBase: (baseId: string) => void
   onSelectTable: (tableId: string) => void
   onChangeRole: (memberId: string, role: GovernanceAssignableRole, expectedVersion: number) => Promise<void>
@@ -53,6 +54,7 @@ export function GovernanceWriteWorkbench({
   membersLoading,
   tablesLoading,
   fieldsLoading,
+  contextError,
   onSelectBase,
   onSelectTable,
   onChangeRole,
@@ -121,6 +123,7 @@ export function GovernanceWriteWorkbench({
         <button type="button" aria-label="关闭权限设置" onClick={onClose}>×</button>
       </header>
       {error && <p className="governance-write-error" role="alert">{error}</p>}
+      {contextError && <p className="governance-write-error" role="alert">{contextError === 'base_not_available' ? '所选 Base 已不可用，请重新选择。' : '所选数据表已不可用，请重新选择。'}</p>}
       <div className="governance-write-columns">
         <section className="governance-write-section" aria-label="成员角色设置">
           <header><p>MEMBER ROLES</p><h3>成员角色</h3></header>
