@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: TD007 Option A design; no physical index, migration or implementation exists until the reviewed S6 plan is approved.
+- Status: TD007 Option A `partial-local`; migration `20260712_0025` and only `UNIQUE(token_hash)` exist. A rollback-only synthetic PostgreSQL `EXPLAIN` confirmed the unique lookup path; no speculative index was added.
 - Scope: launch proof parsing, binding ambiguity, opaque-link lifecycle, resolver non-enumeration and the one approved PostgreSQL lookup.
 
 ## Logical Feature Index

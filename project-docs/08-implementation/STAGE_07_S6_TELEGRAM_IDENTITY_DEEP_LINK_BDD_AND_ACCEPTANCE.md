@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: approved TD007 Option A design; S6.1 document package, including the file-level implementation plan, is complete and implementation remains pending user code approval.
+- Status: S6.1 code is `partial-local`. TD007 Option A identity, opaque-pointer, resolver and Mini App handoff code exist with focused local/disposable PostgreSQL evidence. Four-width target-state Browser proof and real Telegram smoke remain unaccepted.
 - Scope: verified Telegram Mini App identity, active binding/member resolution, safe opaque deep-link resolution and client recovery only.
 - Exclusions: Bot delivery/configuration, automatic replies, memory, knowledge, personal assistant, employee lifecycle, external execution, staging/production release and Stage07 completion.
 
@@ -119,15 +119,15 @@ And it does not create a memory entry, conversation, contact publication, notifi
 
 | ID | Requirement | Required evidence | Status |
 | --- | --- | --- |
-| S6-A01 | official HMAC/freshness/duplicate input validation | pure service test vectors, malformed/future/stale/forged API tests | unevaluated |
-| S6-A02 | active binding resolves exactly one member user | unit/API none/inactive/ambiguous/same-user-multiple-binding matrix | unevaluated |
-| S6-A03 | normal resource authorization remains authoritative | Base/view/record/draft cross-workspace/revoked-field denial tests | unevaluated |
-| S6-A04 | raw launch data never leaks | DTO/error/audit/client parser/cache/DOM negative tests | unevaluated |
-| S6-A05 | opaque link hash/expiry/revocation/subject rules | migration plus disposable PostgreSQL uniqueness/race/expiry/revoke tests | unevaluated |
-| S6-A06 | resolver is non-enumerable and mismatch-safe | endpoint response equivalence and no-target-lookup tests | unevaluated |
-| S6-A07 | resolved target is reread and stale-safe | App query/route tests for 401/403/404/network/workspace replacement | unevaluated |
-| S6-A08 | desktop fallback and four-width recovery path | component/build and synthetic Browser matrix | unevaluated |
-| S6-A09 | no S6.1 delivery/external action leak | route/client inventory, mock transport negative test | unevaluated |
+| S6-A01 | official HMAC/freshness/duplicate input validation | `test_stage07_telegram_mini_app_identity.py` covers valid, forged, duplicate, stale/future, malformed user and 8 KiB limits; focused backend matrix `44 passed` | implemented-local |
+| S6-A02 | active binding resolves exactly one member user | same-user multiple, none, inactive and ambiguous binding unit/API matrix; development header loses to valid Telegram proof | implemented-local |
+| S6-A03 | normal resource authorization remains authoritative | Base/View/Record/Draft resolver reread tests, current source-chat binding and member revocation recovery | partial-local; cross-workspace and field-policy mutation matrix remains open |
+| S6-A04 | raw launch data never leaks | minimal launch DTO, stable code-only errors, hash-only model, closed client parser and raw-token DOM negative test | partial-local; independent audit-store inspection remains open |
+| S6-A05 | opaque link hash/expiry/revocation/subject rules | migration and disposable PostgreSQL unique/expiry test `1 passed`; unit revoke/subject recovery | partial-local; concurrent revoke race remains open |
+| S6-A06 | resolver is non-enumerable and mismatch-safe | unknown and subject-mismatch endpoint responses are byte-equivalent `{ outcome: 'recovery' }`; signed/body mismatch has early recovery path | partial-local; explicit query-count assertion remains open |
+| S6-A07 | resolved target is reread and stale-safe | Mini App flow verifies resolver pointer causes Base/View/Record rereads before display; recovery focus test passed | partial-local; exhaustive 401/403/404/409/422/network/supersession matrix remains open |
+| S6-A08 | desktop fallback and four-width recovery path | runtime-absent tests and production build passed; Browser reached local Vite only to generic backend-unavailable state | partial-local; target-state 1440/1280/430/390 Browser matrix is unaccepted |
+| S6-A09 | no S6.1 delivery/external action leak | resolver router exposes resolve only; no mint/send route or Telegram action client is added | partial-local; automated source inventory remains open |
 | S6-A10 | real Telegram manual smoke is bounded | user-authorized non-production bot/test-chat evidence, sanitized only | external-authority-required |
 
 ## Evidence Rules
@@ -136,6 +136,13 @@ And it does not create a memory entry, conversation, contact publication, notifi
 - Disposable PostgreSQL tests reset their schema and retain no raw token, message body, Bot token or real Telegram identity in output.
 - Browser evidence may use a synthetic verified adapter and fixed resolver outcomes; it does not count as a real Telegram identity smoke.
 - A real manual smoke requires user authority, a non-production bot and allowlisted test chat/user. It may record only outcome, sanitized timestamps and opaque IDs; no Bot token, raw `initData`, full chat ID or message body.
+
+## 2026-07-13 Local Evidence
+
+- Backend focused matrix: `pytest tests/unit/test_stage06_identity.py tests/unit/test_stage07_mini_app_api.py tests/unit/test_stage07_telegram_mini_app_identity.py tests/unit/test_stage07_telegram_deep_link_api.py tests/integration/test_stage07_telegram_deep_link_postgres.py -q` returned `44 passed`.
+- Disposable PostgreSQL migration reached `20260712_0025`. The S6 table test proved the unique token-hash constraint and excluded expired rows. A rollback-only synthetic 4,096-row `EXPLAIN (ANALYZE, BUFFERS)` used `uq_stage07_telegram_deep_links_token_hash`, reported `0.045 ms` execution and `shared hit=3`; no speculative index was created.
+- Mini App focused matrix returned `6 files / 38 tests`; `npm.cmd run build` completed. The Record handoff test proves Base/View/Record rereads after a closed resolver pointer and the recovery test proves raw token omission/focus return.
+- Browser reached the temporary local Vite app, which displayed only the expected generic backend-unavailable state because no synthetic backend fixture was started. It does not prove deep-link target/recovery layout at four widths. The Vite process was stopped and port `4179` closed.
 
 ## Non-Goals and Prohibited Claims
 

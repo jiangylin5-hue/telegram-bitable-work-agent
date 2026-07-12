@@ -23,6 +23,12 @@
 
 ---
 
+## Execution Status (2026-07-13)
+
+- Tasks 1–5 are implemented locally in commits `6826df8`, `a13e39d` and `ff7b89e`: launch validation, binding identity, migration/hash lookup, safe resolver and Mini App handoff are present.
+- Task 6 local evidence is partly complete: focused backend `44 passed`, disposable PostgreSQL `1 passed`, synthetic 4,096-row unique-index plan (`0.045 ms`, `shared hit=3`), focused Mini App `6 files / 38 tests`, and production build. The temporary Vite UI was closed after Browser reached only a generic backend-unavailable page.
+- The remaining plan items are acceptance gaps, not unimplemented scope: target-state four-width Browser matrix, exhaustive App failure/supersession permutations, concurrent revoke proof and S6.2 external authority. No delivery/configuration code is permitted until separately authorized.
+
 ## File Structure
 
 | File | Responsibility |
@@ -270,7 +276,7 @@ git commit -m "feat(stage07): persist opaque telegram deep links"
 def test_all_non_resolved_links_are_same_recovery(client, token) -> None:
     response = client.post(RESOLVE_URL, json={"start_param": token}, headers=valid_headers(token))
     assert response.status_code == 200
-    assert response.json() == {"outcome": "recovery", "destination": None}
+    assert response.json() == {"outcome": "recovery"}
 
 def test_resolver_returns_pointer_without_labels_or_values(client, seeded_link) -> None:
     body = client.post(RESOLVE_URL, json={"start_param": seeded_link.raw_token}, headers=valid_headers(seeded_link.raw_token)).json()

@@ -2,7 +2,7 @@
 
 ## Status
 
-- Decision status: approved Option A on 2026-07-12 for S6.1 documentation and implementation planning. It authorizes no code until the complete document package and implementation plan are reviewed; it never authorizes external Telegram configuration, BotFather change, webhook registration, message delivery or production test by itself.
+- Decision status: approved Option A on 2026-07-12 and implemented locally on 2026-07-13 after user approval of the complete plan. It never authorizes external Telegram configuration, BotFather change, webhook registration, message delivery or production test by itself.
 - Scope: S6's verified Telegram Mini App identity path and a safe, durable deep-link resolver over existing workspace resources.
 - Authority: current user instruction, `AGENTS.md`, Stage07 source of truth, Stage06 identity/security contract, TD005/TD006 boundaries and the product constitution.
 

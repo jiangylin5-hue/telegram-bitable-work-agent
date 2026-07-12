@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: TD007 Option A documentation package; no S6 implementation started.
+- Status: TD007 Option A `partial-local` implementation; S6.1 code/test evidence exists while delivery/manual smoke remains separately gated.
 - Ownership: verified Mini App identity and safe durable destination handoff.
 - Boundary: one coherent S6.1 surface, with S6.2 real Bot delivery/manual smoke explicitly separated.
 

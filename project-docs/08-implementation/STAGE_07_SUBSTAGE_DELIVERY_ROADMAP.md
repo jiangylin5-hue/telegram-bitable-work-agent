@@ -4,7 +4,7 @@
 
 - Document status: active Stage07 delivery roadmap
 - Purpose: organize Stage07 as coherent substages rather than individual UI/API fragments
-- Current active substage: S6.1 Telegram Mini App identity/deep-link implementation-plan review. S5 remains partial-local with separate provider/Browser evidence gaps; S4 retains its negative-lifecycle evidence gap.
+- Current active substage: S6.1 Telegram Mini App identity/deep-link local acceptance reconciliation. S5 remains partial-local with separate provider/Browser evidence gaps; S4 retains its negative-lifecycle evidence gap.
 
 ## Delivery Rule
 
@@ -28,7 +28,7 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 | S3 | Governance Readback | safe paged member directory and Base audit timeline | implemented-local; Browser external evidence pending | Technical Decision 003 |
 | S4 | Governance Write | bounded member-role, field-policy and existing V1 view-grant operations | implemented-local; negative lifecycle evidence partial | Technical Decision 004 |
 | S5 | Draft and Digital Employee Hub | field-filtered draft review, contacts and assistant surface | partial-local; provider/Browser/acceptance evidence pending | approved Technical Decision 005 Option A and TD006 Option A |
-| S6 | Telegram identity, deep link and final acceptance | verified identity/deep link, bounded external smoke and final safety/visual matrix | TD007 A complete review package ready; code approval pending; S6.2 external evidence pending | TD007 Option A plus later user authority for test bot/delivery |
+| S6 | Telegram identity, deep link and final acceptance | verified identity/deep link, bounded external smoke and final safety/visual matrix | S6.1 `partial-local`: implementation, focused backend/Mini App tests and PostgreSQL evidence exist; four-width target Browser and S6.2 external evidence pending | TD007 Option A plus later user authority for test bot/delivery |
 
 ## S3 Governance Readback
 
