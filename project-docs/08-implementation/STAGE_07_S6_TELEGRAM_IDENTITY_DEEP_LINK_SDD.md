@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: approved TD007 Option A specification; code implementation awaits a reviewed implementation plan.
+- Status: approved TD007 Option A specification; the implementation plan is complete and code implementation awaits user approval.
 - Scope: server identity adaptation and opaque destination resolution for Telegram Mini App launches.
 - Current Progress: documentation only. No S6.1 route, schema, migration, frontend header, Telegram configuration, external message or real identity test exists yet.
 

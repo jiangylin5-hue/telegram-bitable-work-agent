@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: approved TD007 Option A design; S6.1 documentation is complete and implementation remains pending written implementation-plan review.
+- Status: approved TD007 Option A design; S6.1 document package, including the file-level implementation plan, is complete and implementation remains pending user code approval.
 - Scope: verified Telegram Mini App identity, active binding/member resolution, safe opaque deep-link resolution and client recovery only.
 - Exclusions: Bot delivery/configuration, automatic replies, memory, knowledge, personal assistant, employee lifecycle, external execution, staging/production release and Stage07 completion.
 

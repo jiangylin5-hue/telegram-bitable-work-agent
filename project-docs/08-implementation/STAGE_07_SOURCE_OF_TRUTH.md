@@ -98,6 +98,7 @@ verified identity -> workspace member -> permission-filtered UI
 66. [Stage07 S6 Telegram Mini App Identity and Deep-Link SDD](STAGE_07_S6_TELEGRAM_IDENTITY_DEEP_LINK_SDD.md)
 67. [Stage07 S6 Telegram Mini App Identity and Deep-Link Work Surface](modules/STAGE_07_S6_TELEGRAM_IDENTITY_DEEP_LINK_WORK_SURFACE.md)
 68. [Stage07 S6 Telegram Mini App Identity and Deep-Link Complex Feature Index](STAGE_07_S6_TELEGRAM_IDENTITY_DEEP_LINK_COMPLEX_FEATURE_INDEX.md)
+69. [Stage07 S6 Telegram Mini App Identity and Deep-Link Implementation Plan](../../docs/superpowers/plans/2026-07-12-stage07-s6-telegram-identity-deep-link-implementation.md)
 
 Stage06 is the backend contract baseline. Stage02-05 documents are historical capability evidence only.
 
