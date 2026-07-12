@@ -4,7 +4,7 @@
 
 - Status: TD007 Option A is `partial-local` implementation. Backend validation/identity/storage/resolver and Mini App memory/handoff code exist; external delivery and unaccepted evidence remain outside this SDD's implemented boundary.
 - Scope: server identity adaptation and opaque destination resolution for Telegram Mini App launches.
-- Current Progress: S6.1 route, schema/migration, frontend header and local synthetic validation exist. A disposable safe-DTO Browser fixture observed recovery and Record handoff at 1440/1280/430/390, including the 44px recovery action and raw-token absence. No Telegram configuration, external message or real Telegram identity test exists; exhaustive failure/supersession and external evidence remain unaccepted.
+- Current Progress: S6.1 route, schema/migration, frontend header and local synthetic validation exist. A disposable safe-DTO Browser fixture observed recovery and Record handoff at 1440/1280/430/390, including the 44px recovery action and raw-token absence. The local resolver matrix now proves cross-workspace recovery and the existing field-read rule: hiding a field after issuance retains only a closed record pointer and the authoritative reread omits the field. No Telegram configuration, external message or real Telegram identity test exists; exhaustive failure/supersession and external evidence remain unaccepted.
 
 ## Architecture
 
@@ -129,7 +129,7 @@ The query must not prefetch resource labels or values before link/membership che
 | `record` | Record -> table -> Base -> workspace | `record.read` |
 | `record_change_draft` | Draft -> record/table -> Base -> workspace | `record_change_draft.read`; detail later rechecks field filtering |
 
-The resolver does not bypass field filtering. A `record` pointer never returns record values; a `draft` pointer never returns before/proposed values. The normal destination screen performs its own safe read after navigation.
+The resolver does not bypass field filtering. A `record` pointer never returns record values; a `draft` pointer never returns before/proposed values. A changed field-read policy does not itself deny a still-readable record: the normal destination screen performs its own safe read after navigation and omits newly hidden field keys. A changed workspace/resource read action, resource ownership chain or binding/member state instead returns recovery.
 
 ## Client State and Failure Rules
 

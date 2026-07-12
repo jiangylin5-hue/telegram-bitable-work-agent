@@ -22,7 +22,9 @@ from app.services.stage06_platform import (
     create_record,
     create_table,
     create_workspace,
+    read_record_for_actor,
 )
+from app.services.permissions import Actor
 from app.services.stage07_telegram_deep_links import (
     TelegramDeepLinkDestinationInput,
     resolve_telegram_deep_link,
@@ -332,6 +334,122 @@ def test_resolver_recovers_when_link_is_revoked_or_source_member_loses_access() 
     link.status = "active"
     uow.list_workspace_members(link.workspace_id)[0].status = "inactive"
     assert resolve_telegram_deep_link(uow, identity=identity, launch=launch, start_param=start_param, now=NOW) is None
+
+
+def test_resolver_recovers_when_destination_chain_crosses_link_workspace() -> None:
+    start_param = "crossWorkspaceToken_123456"
+    uow = InMemoryStage06PlatformUnitOfWork()
+    source_workspace = create_workspace(
+        uow,
+        name="Source workspace",
+        owner_user_id="member-1",
+    )
+    source_member = uow.list_workspace_members(source_workspace.id)[0]
+    target_workspace = create_workspace(
+        uow,
+        name="Target workspace",
+        owner_user_id="member-1",
+    )
+    target_base = create_base(uow, target_workspace.id, name="Target Base")
+    uow.add_telegram_binding(
+        Stage06TelegramBinding(
+            id=uuid4(),
+            workspace_id=source_workspace.id,
+            workspace_member_id=source_member.id,
+            telegram_chat_id="chat-1",
+            telegram_user_id="123",
+            binding_type="member",
+            default_base_id=None,
+            default_digital_employee_id=None,
+            scope_policy={},
+            status="active",
+        )
+    )
+    uow.add_telegram_deep_link(
+        Stage07TelegramDeepLink(
+            id=uuid4(),
+            token_hash=hashlib.sha256(start_param.encode("ascii")).hexdigest(),
+            workspace_id=source_workspace.id,
+            subject_telegram_user_id="123",
+            source_telegram_chat_id="chat-1",
+            destination_kind="base",
+            destination_id=target_base.id,
+            status="active",
+            expires_at=NOW + timedelta(minutes=10),
+            created_by_type="system",
+            created_by_id="test",
+        )
+    )
+
+    destination = resolve_telegram_deep_link(
+        uow,
+        identity=Stage06RequestIdentity("member-1", "telegram_binding", "123"),
+        launch=ValidatedTelegramMiniAppLaunch("123", NOW, start_param, None, None),
+        start_param=start_param,
+        now=NOW,
+    )
+
+    assert destination is None
+
+
+def test_record_pointer_reread_omits_fields_hidden_after_link_issuance() -> None:
+    start_param = "fieldPolicyToken_123456"
+    uow = InMemoryStage06PlatformUnitOfWork()
+    workspace = create_workspace(uow, name="Field policy", owner_user_id="member-1")
+    member = uow.list_workspace_members(workspace.id)[0]
+    base = create_base(uow, workspace.id, name="Ops")
+    table = create_table(uow, base.id, name="Tasks", key="tasks")
+    field = create_field(uow, table.id, name="Private note", key="private_note", field_type="text")
+    record = create_record(uow, table.id, values={"private_note": "must-not-return"})
+    uow.add_telegram_binding(
+        Stage06TelegramBinding(
+            id=uuid4(),
+            workspace_id=workspace.id,
+            workspace_member_id=member.id,
+            telegram_chat_id="chat-1",
+            telegram_user_id="123",
+            binding_type="member",
+            default_base_id=base.id,
+            default_digital_employee_id=None,
+            scope_policy={},
+            status="active",
+        )
+    )
+    uow.add_telegram_deep_link(
+        Stage07TelegramDeepLink(
+            id=uuid4(),
+            token_hash=hashlib.sha256(start_param.encode("ascii")).hexdigest(),
+            workspace_id=workspace.id,
+            subject_telegram_user_id="123",
+            source_telegram_chat_id="chat-1",
+            destination_kind="record",
+            destination_id=record.id,
+            status="active",
+            expires_at=NOW + timedelta(minutes=10),
+            created_by_type="system",
+            created_by_id="test",
+        )
+    )
+    field.permission_policy = {"owner": "hidden"}
+
+    destination = resolve_telegram_deep_link(
+        uow,
+        identity=Stage06RequestIdentity("member-1", "telegram_binding", "123"),
+        launch=ValidatedTelegramMiniAppLaunch("123", NOW, start_param, None, None),
+        start_param=start_param,
+        now=NOW,
+    )
+
+    assert destination is not None
+    assert destination.record_id == record.id
+    safe_record = read_record_for_actor(
+        uow,
+        record.id,
+        actor=Actor(actor_type="user", actor_id="member-1", role="owner"),
+    )
+    assert safe_record["values"] == {}
+    assert "must-not-return" not in repr(destination)
+    assert "must-not-return" not in repr(safe_record)
 
 
 def test_resolver_locks_active_link_before_rechecking_authorization() -> None:

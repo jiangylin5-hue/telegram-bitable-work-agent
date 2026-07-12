@@ -51,10 +51,15 @@ When that exact subject launches the Mini App with the matching signed `start_pa
 Then the resolver hashes the raw token, loads only its server row, confirms its current status/expiry/subject plus still-active source-chat binding and reruns resource ownership plus authorization
 And it returns only a closed safe destination pointer.
 
-Given another user receives the raw URL, the source binding/resource is deleted, membership is revoked, a field/resource permission has changed, the link is revoked or the link expires
+Given another user receives the raw URL, the source binding/resource is deleted, membership is revoked, the destination's workspace/resource read action is denied, the link is revoked or the link expires
 When the resolver receives the launch
 Then it returns the same safe recovery outcome without revealing which condition occurred
 And no destination content is rendered or retained.
+
+Given only a field-read policy changes while the destination's current resource read action remains allowed
+When the resolver returns a record or draft pointer and the App rereads the target
+Then the pointer still contains no values and the existing safe target read omits every newly hidden field
+And field hiding never becomes an implicit whole-record denial or a client-side field-policy decision.
 
 ### S6-05 Link resolution is bounded and non-enumerable
 
@@ -119,9 +124,9 @@ And it does not create a memory entry, conversation, contact publication, notifi
 
 | ID | Requirement | Required evidence | Status |
 | --- | --- | --- |
-| S6-A01 | official HMAC/freshness/duplicate input validation | `test_stage07_telegram_mini_app_identity.py` covers valid, forged, duplicate, stale/future, malformed user and 8 KiB limits; focused backend matrix `44 passed` | implemented-local |
+| S6-A01 | official HMAC/freshness/duplicate input validation | `test_stage07_telegram_mini_app_identity.py` covers valid, forged, duplicate, stale/future, malformed user and 8 KiB limits; current focused backend matrix `52 passed` | implemented-local |
 | S6-A02 | active binding resolves exactly one member user | same-user multiple, none, inactive and ambiguous binding unit/API matrix; development header loses to valid Telegram proof | implemented-local |
-| S6-A03 | normal resource authorization remains authoritative | Base/View/Record/Draft resolver reread tests, current source-chat binding and member revocation recovery | partial-local; cross-workspace and field-policy mutation matrix remains open |
+| S6-A03 | normal resource authorization remains authoritative | Base/View/Record/Draft resolver reread tests, current source-chat binding/member-revocation recovery, explicit cross-workspace chain recovery, and post-issuance field-read-policy proof that the pointer stays closed while authoritative record reread omits the hidden field | implemented-local; field hiding is projection filtering, while resource-action denial remains recovery |
 | S6-A04 | raw launch data never leaks | minimal launch DTO, stable code-only errors, hash-only model, closed client parser/raw-token DOM negative test and both in-memory/real PostgreSQL persisted resolved-audit assertions retaining only fixed outcome/kind/durable ID | implemented-local |
 | S6-A05 | opaque link hash/expiry/revocation/subject rules | migration and disposable PostgreSQL unique/expiry test; unit revoke/subject recovery; Resolver requests a `FOR UPDATE` active-row lock and a second PostgreSQL session's revoke is rejected by the configured lock timeout | implemented-local; this proves transaction serialization, not an external Telegram smoke |
 | S6-A06 | resolver is non-enumerable and mismatch-safe | unknown and subject-mismatch endpoint responses are byte-equivalent `{ outcome: 'recovery' }`; signed/body mismatch has early recovery path and the new unit assertion proves it performs zero token lookups/audits | implemented-local |
@@ -139,10 +144,10 @@ And it does not create a memory entry, conversation, contact publication, notifi
 
 ## 2026-07-13 Local Evidence
 
-- Backend focused matrix: `pytest tests/unit/test_stage06_identity.py tests/unit/test_stage07_mini_app_api.py tests/unit/test_stage07_telegram_mini_app_identity.py tests/unit/test_stage07_telegram_deep_link_api.py tests/integration/test_stage07_telegram_deep_link_postgres.py -q` returned `50 passed`.
+- Backend focused matrix: `pytest tests/unit/test_stage06_identity.py tests/unit/test_stage07_mini_app_api.py tests/unit/test_stage07_telegram_mini_app_identity.py tests/unit/test_stage07_telegram_deep_link_api.py tests/integration/test_stage07_telegram_deep_link_postgres.py -q` returned `52 passed`.
 - Disposable PostgreSQL migration reached `20260712_0025`. The S6 table test proved the unique token-hash constraint and excluded expired rows. A separate two-session test proved the Resolver's `FOR UPDATE` active-link lock causes a concurrent `status='revoked'` update to fail under a 100ms local lock timeout. A third real PostgreSQL case persists a resolved audit row and proves it contains only `outcome`, `destination_kind` and durable `destination_id`. A rollback-only synthetic 4,096-row `EXPLAIN (ANALYZE, BUFFERS)` used `uq_stage07_telegram_deep_links_token_hash`, reported `0.045 ms` execution and `shared hit=3`; no speculative index was created.
 - Mini App focused matrix returned `6 files / 38 tests`; `npm.cmd run build` completed. The Record handoff test proves Base/View/Record rereads after a closed resolver pointer and the recovery test proves raw token omission/focus return.
-- Final local regression after the persisted-audit proof: backend `pytest -q` returned `572 passed, 17 skipped` (the skips are historical Stage02 online-smoke prerequisites). The prior Mini App `npm.cmd test -- --run` returned `46 files / 170 tests` and production build completed; this subpackage changed no frontend source.
+- The resolver matrix additionally proves cross-workspace recovery and post-issuance field-policy projection: a closed record pointer remains value-free while the ordinary reread omits the newly hidden key. Final local regression after this evidence: backend `pytest -q` returned `574 passed, 17 skipped` (the skips are historical Stage02 online-smoke prerequisites). The prior Mini App `npm.cmd test -- --run` returned `46 files / 170 tests` and production build completed; this subpackage changed no frontend source.
 - A disposable local fixture injected only synthetic `initData` and returned closed safe DTOs. Browser DOM inspection at `1440`, `1280`, `430` and `390` verified recovery/Home focus and the Record handoff's existing Base/View/Record reread layout. Recovery action was unique and visible at every width with `44px` height; Record edit/close controls were visible at every width; raw token was absent. The fixture file was deleted, viewport reset and port `4179` closed.
 
 ## Non-Goals and Prohibited Claims
