@@ -29,6 +29,13 @@ import type {
   TemplateInstallationReceipt,
   TemplateSummary,
 } from './template-import-types'
+import type {
+  GovernanceAuditActorType,
+  GovernanceAuditEvent,
+  GovernanceAuditPage,
+  GovernanceMember,
+  GovernanceMemberPage,
+} from './governance-types'
 
 export type {
   SafeViewErrorCode,
@@ -58,6 +65,13 @@ export type {
   TemplateInstallationReceipt,
   TemplateSummary,
 } from './template-import-types'
+export type {
+  GovernanceAuditActorType,
+  GovernanceAuditEvent,
+  GovernanceAuditPage,
+  GovernanceMember,
+  GovernanceMemberPage,
+} from './governance-types'
 
 export type WorkspaceCapabilities = {
   can_read_bases: boolean
@@ -295,6 +309,54 @@ function nullableStringValue(value: unknown): string | null {
 }
 
 const importScalarFieldTypes = new Set<ImportScalarFieldType>(['text', 'number', 'date', 'checkbox'])
+const governanceActorTypes = new Set<GovernanceAuditActorType>(['user', 'digital_employee', 'system'])
+
+function safeGovernanceMember(value: unknown): GovernanceMember {
+  const record = jsonRecord(value)
+  return {
+    id: stringValue(record.id),
+    userId: stringValue(record.user_id),
+    role: stringValue(record.role),
+    status: stringValue(record.status),
+  }
+}
+
+function safeGovernanceMemberPage(value: unknown): GovernanceMemberPage {
+  const record = jsonRecord(value)
+  if (!Array.isArray(record.members)) throw new Error('Invalid governance response')
+  return {
+    workspaceId: stringValue(record.workspace_id),
+    members: record.members.map(safeGovernanceMember),
+    nextCursor: nullableStringValue(record.next_cursor),
+    hasMore: booleanValue(record.has_more),
+  }
+}
+
+function safeGovernanceAuditEvent(value: unknown): GovernanceAuditEvent {
+  const record = jsonRecord(value)
+  const actorType = stringValue(record.actor_type)
+  if (!governanceActorTypes.has(actorType as GovernanceAuditActorType)) {
+    throw new Error('Invalid governance response')
+  }
+  return {
+    id: stringValue(record.id),
+    occurredAt: stringValue(record.occurred_at),
+    actorType: actorType as GovernanceAuditActorType,
+    eventType: stringValue(record.event_type),
+    entityType: stringValue(record.entity_type),
+  }
+}
+
+function safeGovernanceAuditPage(value: unknown): GovernanceAuditPage {
+  const record = jsonRecord(value)
+  if (!Array.isArray(record.events)) throw new Error('Invalid governance response')
+  return {
+    baseId: stringValue(record.base_id),
+    events: record.events.map(safeGovernanceAuditEvent),
+    nextCursor: nullableStringValue(record.next_cursor),
+    hasMore: booleanValue(record.has_more),
+  }
+}
 
 function safeTemplateSummary(value: unknown): TemplateSummary {
   const record = jsonRecord(value)
@@ -531,6 +593,30 @@ export const api = {
       const base = jsonRecord(item)
       return { id: stringValue(base.id), name: stringValue(base.name), source_type: stringValue(base.source_type), ...(typeof base.status === 'string' ? { status: base.status } : {}) }
     }) }
+  },
+  listGovernanceMembers: async (
+    workspaceId: string,
+    cursor: string | null = null,
+    init?: RequestInit,
+  ): Promise<GovernanceMemberPage> => {
+    const parameters = new URLSearchParams({ limit: '50' })
+    if (cursor) parameters.set('cursor', cursor)
+    return safeGovernanceMemberPage(await getJson<unknown>(
+      `/mini-app/workspaces/${encodeURIComponent(workspaceId)}/governance/members?${parameters.toString()}`,
+      init,
+    ))
+  },
+  listGovernanceAuditEvents: async (
+    baseId: string,
+    cursor: string | null = null,
+    init?: RequestInit,
+  ): Promise<GovernanceAuditPage> => {
+    const parameters = new URLSearchParams({ limit: '50' })
+    if (cursor) parameters.set('cursor', cursor)
+    return safeGovernanceAuditPage(await getJson<unknown>(
+      `/mini-app/bases/${encodeURIComponent(baseId)}/governance/audit-events?${parameters.toString()}`,
+      init,
+    ))
   },
   listTemplates: async (init?: RequestInit): Promise<TemplateSummary[]> => {
     const response = jsonRecord(await getJson<unknown>('/templates', init))

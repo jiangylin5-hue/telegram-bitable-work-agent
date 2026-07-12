@@ -33,6 +33,27 @@ export const templateImportKeys = {
   importJob: (scope: ProtectedScope, importJobId: string): QueryKey => protectedQueryKey(scope, 'import', importJobId),
 }
 
+export const governanceKeys = {
+  members: (scope: ProtectedScope, cursor: string | null): QueryKey => (
+    protectedQueryKey(scope, 'governance', 'members', cursor)
+  ),
+  audit: (scope: ProtectedScope, baseId: string, cursor: string | null): QueryKey => (
+    protectedQueryKey(scope, 'governance', 'audit', baseId, cursor)
+  ),
+}
+
+export async function clearGovernanceQueries(
+  queryClient: QueryClient,
+  scope: ProtectedScope,
+  baseId?: string,
+): Promise<void> {
+  const queryKey = baseId
+    ? protectedQueryKey(scope, 'governance', 'audit', baseId)
+    : protectedQueryKey(scope, 'governance')
+  await queryClient.cancelQueries({ queryKey })
+  queryClient.removeQueries({ queryKey })
+}
+
 export async function clearTemplateImportQueries(
   queryClient: QueryClient,
   scope: ProtectedScope,
