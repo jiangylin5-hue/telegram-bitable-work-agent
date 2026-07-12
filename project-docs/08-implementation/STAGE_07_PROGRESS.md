@@ -11,6 +11,7 @@
 
 - User selected Package A: templates shelf/install, Base-to-draft-template save, CSV/XLSX file intake, persistent server preview, scalar mapping and explicit import commit. The package deliberately reuses existing Stage06 routes, authorization, idempotency, audit and PostgreSQL persistence; no schema, API, permission, capability, storage or dependency change is proposed.
 - Detailed design, BDD/acceptance, SDD, functional work-surface and complex-feature index now define every state, safe payload, mapping limit, failure rule, authoritative reread and out-of-scope boundary. The documents are `specified-awaiting-review`; no product code, migration, test fixture or external write was created.
+- The corresponding four-task implementation plan is written for inline execution and awaits user plan approval. It keeps the package coherent: safe transport/protected state, template management, full import lifecycle, then evidence/cleanup—without a new architecture decision.
 
 ### 2026-07-12: V1-15 Real Record Detail Relation-Edit Main Path
 
