@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
 from app.api.deps import get_stage06_request_identity
 from app.api.routes.stage06_platform import get_stage06_platform_uow
@@ -13,6 +13,8 @@ from app.schemas.stage07_draft_employee_hub import (
     SafeDraftFieldResponse,
     SafeDraftPageResponse,
     SafeDraftSummaryResponse,
+    SafeDraftTerminalReceipt,
+    SafeDraftTerminalRequest,
 )
 from app.services.stage06_authorization import (
     Stage06AuthorizationError,
@@ -22,11 +24,19 @@ from app.services.stage06_authorization import (
 )
 from app.services.stage06_identity import Stage06RequestIdentity
 from app.services.stage06_pagination import Stage06PaginationError, paginate_items
+from app.services.stage06_idempotency import (
+    begin_idempotent_operation,
+    complete_idempotent_operation,
+    fingerprint_request,
+    idempotency_trace_id,
+)
 from app.services.stage06_platform import (
+    PlatformValidationError,
     Stage06PlatformUnitOfWork,
     get_table_schema,
     list_bases_for_workspace,
 )
+from app.services.stage07_draft_employee_hub import reject_s5_draft
 
 
 router = APIRouter(tags=["stage07-draft-employee-hub"])
@@ -158,6 +168,39 @@ def get_safe_draft(
     )
 
 
+@router.post("/mini-app/drafts/{draft_id}/reject", response_model=SafeDraftTerminalReceipt)
+def reject_safe_draft(
+    draft_id: UUID,
+    request: SafeDraftTerminalRequest,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=160),
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> SafeDraftTerminalReceipt:
+    draft = uow.get_record_change_draft(draft_id)
+    if draft is None:
+        raise HTTPException(status_code=404, detail=error_detail("record_change_draft_not_found", "record_change_draft_not_found"))
+    try:
+        actor = authorize_workspace_action(uow, identity, draft.workspace_id, "record_change_draft.reject")
+        fingerprint = fingerprint_request({"draft_id": str(draft_id), "expected_version": request.expected_version, "user_id": identity.user_id})
+        decision = begin_idempotent_operation(
+            uow, workspace_id=draft.workspace_id, operation="stage07.s5.draft.reject",
+            idempotency_key=idempotency_key, request_fingerprint=fingerprint,
+            trace_id=idempotency_trace_id("stage07.s5.draft.reject", fingerprint, idempotency_key),
+        )
+        if decision.status == "replay":
+            replay_draft = uow.get_record_change_draft(UUID(str((decision.response_ref or {})["draft_id"])))
+            if replay_draft is None or replay_draft.terminal_audit_event_id is None:
+                raise PlatformValidationError("record_change_draft_not_found", str(draft_id))
+            return _terminal_receipt(replay_draft)
+        terminal = reject_s5_draft(uow, draft_id, expected_version=request.expected_version, actor=actor)
+        complete_idempotent_operation(decision.record, response_ref={"draft_id": str(terminal.id)})
+    except Stage06AuthorizationError as exc:
+        raise _authorization_error(exc) from exc
+    except PlatformValidationError as exc:
+        raise _platform_error(exc) from exc
+    return _terminal_receipt(terminal)
+
+
 _UNSAFE = object()
 
 
@@ -173,8 +216,22 @@ def _safe_draft_summary(draft) -> SafeDraftSummaryResponse:
     )
 
 
+def _terminal_receipt(draft) -> SafeDraftTerminalReceipt:
+    if draft.terminal_audit_event_id is None:
+        raise RuntimeError("terminal draft missing audit reference")
+    return SafeDraftTerminalReceipt(
+        id=str(draft.id), status=draft.status, version=draft.version,
+        terminal_audit_event_id=str(draft.terminal_audit_event_id),
+    )
+
+
 def _authorization_error(exc: Stage06AuthorizationError) -> HTTPException:
     return HTTPException(
         status_code=404 if exc.code.endswith("_not_found") else 403,
         detail=error_detail(exc.code, exc.code),
     )
+
+
+def _platform_error(exc: PlatformValidationError) -> HTTPException:
+    status_code = 404 if exc.code.endswith("_not_found") else 409 if "conflict" in exc.code or "invalid_state" in exc.code or "idempotency" in exc.code else 422
+    return HTTPException(status_code=status_code, detail=error_detail(exc.code, exc.code))

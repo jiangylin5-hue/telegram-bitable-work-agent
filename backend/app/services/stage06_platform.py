@@ -338,6 +338,11 @@ class Stage06PlatformUnitOfWork(Protocol):
     def get_record_change_draft(self, draft_id: UUID) -> RecordChangeDraft | None:
         pass
 
+    def lock_record_change_draft_for_transition(
+        self, draft_id: UUID
+    ) -> RecordChangeDraft | None:
+        pass
+
     def list_record_change_drafts(self, base_id: UUID) -> list[RecordChangeDraft]:
         pass
 
@@ -576,6 +581,11 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def get_record_change_draft(self, draft_id: UUID) -> RecordChangeDraft | None:
         return _find_by_id(self.record_change_drafts, draft_id)
+
+    def lock_record_change_draft_for_transition(
+        self, draft_id: UUID
+    ) -> RecordChangeDraft | None:
+        return self.get_record_change_draft(draft_id)
 
     def list_record_change_drafts(self, base_id: UUID) -> list[RecordChangeDraft]:
         return [draft for draft in self.record_change_drafts if draft.base_id == base_id]
@@ -865,6 +875,15 @@ class SqlAlchemyStage06PlatformUnitOfWork:
 
     def get_record_change_draft(self, draft_id: UUID) -> RecordChangeDraft | None:
         return self.session.get(RecordChangeDraft, draft_id)
+
+    def lock_record_change_draft_for_transition(
+        self, draft_id: UUID
+    ) -> RecordChangeDraft | None:
+        return self.session.scalar(
+            select(RecordChangeDraft)
+            .where(RecordChangeDraft.id == draft_id)
+            .with_for_update()
+        )
 
     def list_record_change_drafts(self, base_id: UUID) -> list[RecordChangeDraft]:
         return list(

@@ -62,3 +62,16 @@ class SafeDraftDetailResponse(BaseModel):
     fields: list[SafeDraftFieldResponse]
     actions: SafeDraftActionsResponse
     terminal_audit_event_id: str | None
+
+
+class SafeDraftTerminalRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    expected_version: int
+
+
+class SafeDraftTerminalReceipt(BaseModel):
+    id: str
+    status: str
+    version: int
+    terminal_audit_event_id: str

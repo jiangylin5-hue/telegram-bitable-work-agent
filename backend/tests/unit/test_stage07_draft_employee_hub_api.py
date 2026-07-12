@@ -140,3 +140,40 @@ def test_s5_draft_read_models_filter_hidden_values_and_metadata() -> None:
     assert "secret" not in (listed.text + detail.text)
     assert "private-employee" not in detail.text
     assert "private-trace" not in detail.text
+
+
+def test_s5_reject_is_versioned_idempotent_and_has_no_record_write() -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="S5 reject", owner_user_id=owner.actor_id, actor=owner)
+    base = create_base(uow, workspace.id, name="Operations", actor=owner)
+    table = create_table(uow, base.id, name="Tasks", key="tasks", actor=owner)
+    draft = RecordChangeDraft(
+        id=uuid4(), workspace_id=workspace.id, base_id=base.id, table_id=table.id,
+        record_id=None, draft_type="update_record", proposed_values={"title": "never-write"},
+        before_values=None, created_by_type="digital_employee", created_by_id="private", status="pending_confirmation",
+        confirmation_policy={}, trace_id="private-trace", expected_version=1, version=1,
+    )
+    uow.add_record_change_draft(draft)
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_runtime_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = owner.actor_id
+        first = client.post(
+            f"/mini-app/drafts/{draft.id}/reject", headers={"Idempotency-Key": "s5-reject-1"},
+            json={"expected_version": 1},
+        )
+        replay = client.post(
+            f"/mini-app/drafts/{draft.id}/reject", headers={"Idempotency-Key": "s5-reject-1"},
+            json={"expected_version": 1},
+        )
+
+    assert first.status_code == replay.status_code == 200
+    assert first.json() == replay.json()
+    assert first.json()["status"] == "rejected"
+    assert first.json()["version"] == 2
+    assert first.json()["terminal_audit_event_id"]
+    assert uow.records == []
+    assert "private-trace" not in first.text
