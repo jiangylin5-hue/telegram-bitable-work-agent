@@ -9,6 +9,11 @@
 
 ## Progress Log
 
+### 2026-07-12: Stage07 Substage Delivery Rhythm
+
+- Stage07 now follows a one-stage/multiple-substages rhythm instead of user-facing micro-fragments. S0 Foundation, S1 Bitable authoring and S2 views/template/import retain their documented local states; S3 Governance Readback is active and approved; S4 Governance Write, S5 Draft/Digital Employee and S6 Telegram/final acceptance remain separately gated.
+- Each substage must complete its document package, have one approval for its technical boundary, deliver a coherent vertical implementation, run proportional verification including built UI where applicable, and publish evidence-backed closure. The roadmap records scope, exclusions and exit criteria.
+
 ### 2026-07-12: Proposed Package 3 Governance Readback — Documentation Only
 
 - Current backend contract review found an implementation-blocking safety boundary: `GET /workspaces/{id}/members` has no cursor contract, while generic Base audit reads include trace/actor/state fields that are forbidden in Mini App client state. Frontend omission is rejected because it would disclose data before filtering.

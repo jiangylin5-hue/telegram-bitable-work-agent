@@ -8,6 +8,7 @@
 
 - Template/Import Package Update: the approved existing-contract package is `implemented-local`. Typed template/import transport, shelf/install, draft-template save, server preview, scalar mapping and explicit commit have fresh component/API, build, real disposable PostgreSQL and focused Browser evidence. Browser CSV/XLSX upload is explicitly unaccepted because the available automation API cannot choose a file. No schema/API/permission/dependency expansion was made; Telegram, staging and production remain unaccepted. See [local evidence](evidence/stage07-template-import-ui.md).
 - Governance Package Update: a coherent read-only Governance proposal is documented. It exposes a required decision: existing members are unpaged and existing audit HTTP responses contain fields forbidden to the Mini App. No Governance code is authorised until the user approves the proposed two safe Mini App read projections in Technical Decision 003.
+- Substage Delivery Update: Stage07 now uses the S0--S6 coherent-substage roadmap. S3 Governance Readback is active and approved; S4 Governance Write, S5 Draft/Digital Employee and S6 Telegram/final acceptance remain independently contract- or evidence-gated. See [Substage Delivery Roadmap](STAGE_07_SUBSTAGE_DELIVERY_ROADMAP.md).
 
 ## 1. Stage Goal
 
@@ -60,14 +61,16 @@ verified identity -> workspace member -> permission-filtered UI
 29. [Stage07 Governance Readback SDD](STAGE_07_GOVERNANCE_READBACK_SDD.md)
 30. [Stage07 Governance Readback Work Surface](modules/STAGE_07_GOVERNANCE_READBACK_WORK_SURFACE.md)
 31. [Stage07 Governance Readback Complex Feature Index](STAGE_07_GOVERNANCE_READBACK_COMPLEX_FEATURE_INDEX.md)
-32. [Stage 07 SDD](STAGE_07_SDD.md)
-33. [Stage 07 API Data Security Contract](STAGE_07_API_DATA_SECURITY_CONTRACT.md)
-34. [Stage 07 BDD And Acceptance](STAGE_07_BDD_AND_ACCEPTANCE.md)
-35. [Stage 07 Module Index](STAGE_07_MODULE_INDEX.md)
-36. [Stage 07 Test Plan](STAGE_07_TEST_PLAN.md)
-37. [Stage 07 Risk Register](STAGE_07_RISK_REGISTER.md)
-38. [Stage 07 Implementation Plan](STAGE_07_IMPLEMENTATION_PLAN.md)
-39. [Stage 07 Acceptance Checklist](STAGE_07_ACCEPTANCE_CHECKLIST.md)
+32. [Stage07 Governance Readback Implementation Plan](../../docs/superpowers/plans/2026-07-12-stage07-governance-readback-implementation.md)
+33. [Stage 07 SDD](STAGE_07_SDD.md)
+34. [Stage 07 API Data Security Contract](STAGE_07_API_DATA_SECURITY_CONTRACT.md)
+35. [Stage 07 BDD And Acceptance](STAGE_07_BDD_AND_ACCEPTANCE.md)
+36. [Stage 07 Module Index](STAGE_07_MODULE_INDEX.md)
+37. [Stage 07 Test Plan](STAGE_07_TEST_PLAN.md)
+38. [Stage 07 Risk Register](STAGE_07_RISK_REGISTER.md)
+39. [Stage 07 Implementation Plan](STAGE_07_IMPLEMENTATION_PLAN.md)
+40. [Stage 07 Acceptance Checklist](STAGE_07_ACCEPTANCE_CHECKLIST.md)
+41. [Stage07 Substage Delivery Roadmap](STAGE_07_SUBSTAGE_DELIVERY_ROADMAP.md)
 33. [Stage 07 Progress](STAGE_07_PROGRESS.md)
 34. [Stage 07 Requirement Traceability Audit](STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md)
 35. [Technical Decision 001: Protected Query State](STAGE_07_TECHNICAL_DECISION_001_PROTECTED_QUERY_STATE.md)
