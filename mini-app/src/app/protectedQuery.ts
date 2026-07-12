@@ -62,6 +62,24 @@ export const draftEmployeeKeys = {
   draft: (scope: ProtectedScope, draftId: string): QueryKey => (
     protectedQueryKey(scope, 's5', 'draft', draftId)
   ),
+  assistantContext: (scope: ProtectedScope, employeeId: string, cursor: string | null): QueryKey => (
+    protectedQueryKey(scope, 'assistant-context', employeeId, cursor)
+  ),
+  assistantView: (scope: ProtectedScope, employeeId: string, viewId: string): QueryKey => (
+    protectedQueryKey(scope, 'assistant-context', employeeId, 'view', viewId)
+  ),
+}
+
+export async function clearAssistantContextQueries(
+  queryClient: QueryClient,
+  scope: ProtectedScope,
+  employeeId?: string,
+): Promise<void> {
+  const queryKey = employeeId
+    ? protectedQueryKey(scope, 'assistant-context', employeeId)
+    : protectedQueryKey(scope, 'assistant-context')
+  await queryClient.cancelQueries({ queryKey })
+  queryClient.removeQueries({ queryKey })
 }
 
 export const telegramDeepLinkKeys = {

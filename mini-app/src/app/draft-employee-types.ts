@@ -8,3 +8,6 @@ export type S5InvocationResult = { kind: 'summary'; answer: string; citations: S
 export type S5DraftField = { key: string; label: string; fieldType: string; beforeValue: string | number | boolean | null; proposedValue: string | number | boolean | null }
 export type S5DraftDetail = { id: string; baseId: string; tableId: string; recordId: string | null; draftType: string; status: 'pending_confirmation' | 'confirmed' | 'rejected' | 'expired'; version: number; fields: S5DraftField[]; actions: { canConfirm: boolean; canReject: boolean }; terminalAuditEventId: string | null }
 export type S5TerminalReceipt = { id: string; status: 'confirmed' | 'rejected'; version: number; terminalAuditEventId: string }
+export type AssistantContextView = { id: string; name: string; viewType: 'grid' | 'kanban' | 'calendar' | 'form' }
+export type AssistantContextPage = { employee: { id: string; name: string; description: string; baseId: string }; views: AssistantContextView[]; nextCursor: string | null; hasMore: boolean }
+export type AssistantSelectedView = AssistantContextView & { baseId: string }

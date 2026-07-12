@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query'
 import { expect, test } from 'vitest'
 
-import { clearDraftEmployeeTerminalQueries, draftEmployeeKeys, protectedQueryKey } from '../app/protectedQuery'
+import { clearAssistantContextQueries, clearDraftEmployeeTerminalQueries, draftEmployeeKeys, protectedQueryKey } from '../app/protectedQuery'
 
 test('keeps S5 contact and draft keys inside the verified user and workspace scope', () => {
   const first = { userId: 'user-1', workspaceId: 'workspace-1' }
@@ -28,4 +28,23 @@ test('removes the terminal draft, its S5 state, home queue and record cache with
   expect(client.getQueryData(protectedQueryKey(scope, 'home'))).toBeUndefined()
   expect(client.getQueryData(protectedQueryKey(scope, 'record', 'record-1'))).toBeUndefined()
   expect(client.getQueryData(draftEmployeeKeys.draft(another, 'draft-1'))).toEqual({ id: 'draft-1' })
+})
+
+test('isolates and clears only the selected assistant contact context', async () => {
+  const client = new QueryClient()
+  const scope = { userId: 'user-1', workspaceId: 'workspace-1' }
+  const another = { userId: 'user-1', workspaceId: 'workspace-2' }
+  const context = draftEmployeeKeys.assistantContext(scope, 'employee-1', null)
+  const selectedView = draftEmployeeKeys.assistantView(scope, 'employee-1', 'view-1')
+  const anotherContext = draftEmployeeKeys.assistantContext(another, 'employee-1', null)
+  client.setQueryData(context, { views: ['view-1'] })
+  client.setQueryData(selectedView, { id: 'view-1' })
+  client.setQueryData(anotherContext, { views: ['other-view'] })
+
+  await clearAssistantContextQueries(client, scope, 'employee-1')
+
+  expect(context).toEqual(['stage07', 'user-1', 'workspace-1', 'assistant-context', 'employee-1', null])
+  expect(client.getQueryData(context)).toBeUndefined()
+  expect(client.getQueryData(selectedView)).toBeUndefined()
+  expect(client.getQueryData(anotherContext)).toEqual({ views: ['other-view'] })
 })

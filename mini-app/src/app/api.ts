@@ -48,7 +48,7 @@ import type {
   GovernanceMemberRoleReceipt,
   GovernanceRole,
 } from './governance-write-types'
-import type { S5Citation, S5Contact, S5ContactPage, S5DraftDetail, S5DraftField, S5Intent, S5InvocationRequest, S5InvocationResult, S5TerminalReceipt } from './draft-employee-types'
+import type { AssistantContextPage, AssistantContextView, AssistantSelectedView, S5Citation, S5Contact, S5ContactPage, S5DraftDetail, S5DraftField, S5Intent, S5InvocationRequest, S5InvocationResult, S5TerminalReceipt } from './draft-employee-types'
 
 export type {
   SafeViewErrorCode,
@@ -572,6 +572,43 @@ function safeS5InvocationResult(value: unknown): S5InvocationResult {
   throw new Error('Invalid S5 response')
 }
 
+function assistantContextViewType(value: unknown): AssistantContextView['viewType'] {
+  if (value === 'grid' || value === 'kanban' || value === 'calendar' || value === 'form') return value
+  throw new Error('Invalid assistant context response')
+}
+
+function assertAssistantContextKeys(record: Record<string, unknown>, keys: string[]): void {
+  if (Object.keys(record).length !== keys.length || keys.some((key) => !(key in record))) {
+    throw new Error('Invalid assistant context response')
+  }
+}
+
+function safeAssistantContextView(value: unknown): AssistantContextView {
+  const record = jsonRecord(value)
+  assertAssistantContextKeys(record, ['id', 'name', 'view_type'])
+  return { id: stringValue(record.id), name: stringValue(record.name), viewType: assistantContextViewType(record.view_type) }
+}
+
+function safeAssistantContextPage(value: unknown): AssistantContextPage {
+  const record = jsonRecord(value)
+  assertAssistantContextKeys(record, ['employee', 'views', 'next_cursor', 'has_more'])
+  const employee = jsonRecord(record.employee)
+  assertAssistantContextKeys(employee, ['id', 'name', 'description', 'base_id'])
+  if (!Array.isArray(record.views)) throw new Error('Invalid assistant context response')
+  return {
+    employee: { id: stringValue(employee.id), name: stringValue(employee.name), description: stringValue(employee.description), baseId: stringValue(employee.base_id) },
+    views: record.views.map(safeAssistantContextView),
+    nextCursor: nullableStringValue(record.next_cursor),
+    hasMore: booleanValue(record.has_more),
+  }
+}
+
+function safeAssistantSelectedView(value: unknown): AssistantSelectedView {
+  const record = jsonRecord(value)
+  assertAssistantContextKeys(record, ['id', 'name', 'view_type', 'base_id'])
+  return { id: stringValue(record.id), name: stringValue(record.name), viewType: assistantContextViewType(record.view_type), baseId: stringValue(record.base_id) }
+}
+
 function safeTelegramDeepLinkResolution(value: unknown): TelegramDeepLinkResolution {
   const record = jsonRecord(value)
   if (record.outcome === 'recovery') {
@@ -927,6 +964,14 @@ export const api = {
     if (cursor) parameters.set('cursor', cursor)
     return safeS5ContactPage(await getJson<unknown>(`/mini-app/workspaces/${encodeURIComponent(workspaceId)}/digital-employee-contacts?${parameters.toString()}`, init))
   },
+  getAssistantContext: async (employeeId: string, cursor: string | null = null, init?: RequestInit): Promise<AssistantContextPage> => {
+    const parameters = new URLSearchParams({ limit: '50' })
+    if (cursor) parameters.set('cursor', cursor)
+    return safeAssistantContextPage(await getJson<unknown>(`/mini-app/digital-employees/${encodeURIComponent(employeeId)}/assistant-context?${parameters.toString()}`, init))
+  },
+  getAssistantSelectedView: async (employeeId: string, viewId: string, init?: RequestInit): Promise<AssistantSelectedView> => safeAssistantSelectedView(
+    await getJson<unknown>(`/mini-app/digital-employees/${encodeURIComponent(employeeId)}/assistant-context/views/${encodeURIComponent(viewId)}`, init),
+  ),
   invokeS5Employee: async (employeeId: string, request: S5InvocationRequest, idempotencyKey?: string): Promise<S5InvocationResult> => {
     if (request.intent === 'draft_update' && !idempotencyKey) throw new Error('Idempotency key is required')
     return safeS5InvocationResult(await postJson<unknown>(
