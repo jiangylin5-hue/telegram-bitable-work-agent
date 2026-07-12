@@ -11,7 +11,7 @@
 - Governance Package Update: S3 has delivered the approved read-only projections locally. S4 implemented TD004's narrowly versioned member-role and field-policy commands plus existing V1 view-grant reuse; its remaining negative-lifecycle acceptance gaps are recorded in `evidence/stage07-governance-write.md`.
 - Substage Delivery Update: Stage07 now uses the S0--S6 coherent-substage roadmap. S5 has approved TD005 and TD006 decision/design/BDD/SDD/module/index/plan packages plus local implementation evidence. TD007 Option A now has its decision/design/BDD/SDD/module/index/implementation package plus its complete local App failure matrix. TD008 Option A has its approved local implementation, migration, confirmation-denial, two-session Worker-collision and no-logger evidence package; only real Bot delivery/manual smoke remains independently gated. See [Substage Delivery Roadmap](STAGE_07_SUBSTAGE_DELIVERY_ROADMAP.md).
 - Current substage update: TD009 Option B is `partial-local`. Its two safe read routes, strict Mini App transport/query isolation, Home workbench, selected-view re-read and existing fixed summary reuse are implemented and proportionally verified. No migration, new permission action, dependency, lifecycle, memory, knowledge, record picker, Telegram operation, browser control, PostgreSQL TD009 evidence, staging or production action is claimed; broader Stage07 acceptance remains open.
-- Next approved design substage: TD010 Option A defines a Base-bound digital employee management plane with versioned `draft|active|paused` lifecycle, optional member-use grants and safe management adapters while preserving existing runtime/Base/view authority. The user approved its schema/API/permission boundary; the detailed implementation plan now awaits separate review before code.
+- Current completed local substage: TD010 Option A is `implemented-local`. It adds only a Base-bound management plane: additive employee version/access mode, member-use grants, versioned `draft|active|paused` lifecycle, eight safe management routes, protected workbench and TD005/TD006/TD009 assigned-member eligibility gates. Focused backend (`35 passed`), disposable PostgreSQL migration (`3 passed, 3 deselected`), full Mini App (`56 files / 215 tests`) and production build pass. Manual browser review is not performed by user instruction; Telegram/provider/staging/production and whole-Stage07 acceptance remain open.
 
 ## 1. Stage Goal
 
@@ -115,6 +115,12 @@ verified identity -> workspace member -> permission-filtered UI
 80. [Stage07 Personal Assistant Context Discovery SDD](STAGE_07_ASSISTANT_CONTEXT_DISCOVERY_SDD.md)
 81. [Stage07 Personal Assistant Context Discovery Work Surface](../03-modules/STAGE_07_ASSISTANT_CONTEXT_DISCOVERY_WORK_SURFACE.md)
 82. [Stage07 Personal Assistant Context Discovery Complex Feature Index](STAGE_07_ASSISTANT_CONTEXT_DISCOVERY_COMPLEX_FEATURE_INDEX.md)
+83. [Technical Decision 010: Digital Employee Management](STAGE_07_TECHNICAL_DECISION_010_DIGITAL_EMPLOYEE_MANAGEMENT.md)
+84. [Stage07 Digital Employee Management BDD And Acceptance](STAGE_07_DIGITAL_EMPLOYEE_MANAGEMENT_BDD_AND_ACCEPTANCE.md)
+85. [Stage07 Digital Employee Management SDD](STAGE_07_DIGITAL_EMPLOYEE_MANAGEMENT_SDD.md)
+86. [Stage07 Digital Employee Management Work Surface](../03-modules/STAGE_07_DIGITAL_EMPLOYEE_MANAGEMENT_WORK_SURFACE.md)
+87. [Stage07 Digital Employee Management Complex Feature Index](STAGE_07_DIGITAL_EMPLOYEE_MANAGEMENT_COMPLEX_FEATURE_INDEX.md)
+88. [Stage07 Digital Employee Management Implementation Plan](../../docs/superpowers/plans/2026-07-13-stage07-digital-employee-management-implementation.md)
 
 Stage06 is the backend contract baseline. Stage02-05 documents are historical capability evidence only.
 

@@ -4,6 +4,8 @@
 
 **Goal:** Deliver TD010 Option A: Base-bound versioned digital employee configuration, optional member-use eligibility, explicit activation/pause, and no general agent framework.
 
+**Current Progress (2026-07-13):** Tasks 1--7 are implemented locally in commits `07db313`, `0aaa237`, `8b60d8f`, `9e3f1f6`, `fff3145`, `bf1754d` and `38c370b`. Task 8 evidence reconciliation is in progress. Focused backend `35 passed`, disposable PostgreSQL migration `3 passed, 3 deselected`, full Mini App `56 files / 215 tests` and production build pass. Browser visual review, a two-session lifecycle-command PostgreSQL observation and all external evidence remain open.
+
 **Architecture:** Extend existing `DigitalEmployee`, Stage06 authorization and S4 row-lock/version/idempotency/audit conventions. A new strict Stage07 management adapter owns browser-safe configuration; existing S5/TD009 consumer routes retain their current Base/view/field/record checks and add only assigned-member eligibility.
 
 **Tech Stack:** FastAPI, SQLAlchemy 2.x, Alembic, PostgreSQL, current Stage06 UoW/authorization, React, Vite, TypeScript, TanStack Query and Vitest.
@@ -189,7 +191,7 @@ Run `npm.cmd test -- --run src/test/digital-employee-management-app-flow.test.ts
 - Modify TD010/design/BDD/SDD/work-surface/complex-index documents.
 - Modify Stage07 source, roadmap, progress, traceability audit and acceptance checklist.
 
-- [ ] **Step 1: Run verification**
+- [x] **Step 1: Run proportional local verification**
 
 Run backend focus: `python -m pytest -q backend/tests/unit/test_stage07_digital_employee_management_models.py backend/tests/unit/test_stage07_digital_employee_management_service.py backend/tests/unit/test_stage07_digital_employee_management_api.py backend/tests/unit/test_stage07_draft_employee_hub_api.py backend/tests/unit/test_stage07_assistant_context_api.py`.
 
@@ -197,17 +199,17 @@ Run PostgreSQL: `python -m pytest -q backend/tests/integration/test_stage07_digi
 
 Run Mini App focus/full/build: `npm.cmd test -- --run src/test/digital-employee-management-api.test.ts src/test/digital-employee-management-query.test.ts src/test/digital-employee-management-workbench.test.tsx src/test/digital-employee-management-app-flow.test.tsx`; `npm.cmd test -- --run`; `npm.cmd run build`.
 
-Run full backend: `python -m pytest -q backend`.
+Actual evidence is the focused backend command recorded in the BDD (`35 passed`), the documented disposable PostgreSQL command (`3 passed, 3 deselected`), full Mini App suite (`56 files / 215 tests`) and `npm.cmd run build` (passed). A fresh full-backend regression is intentionally not claimed by this TD010 reconciliation.
 
 - [ ] **Step 2: Inspect UI only when locally available without browser control**
 
 Record actual manual desktop/mobile observations only. If no locally available fixture/application exists without browser control, leave visual acceptance open.
 
-- [ ] **Step 3: Reconcile DEM-A01 through DEM-A11**
+- [x] **Step 3: Reconcile DEM-A01 through DEM-A11**
 
 Promote only direct evidence to `implemented-local`. Record migration head/replay/downgrade, lock/idempotency, measured index plan if run, skipped database/browser checks and cleanup. Keep provider/Telegram/staging/production/excluded Package4 work open.
 
-- [ ] **Step 4: Documentation check and commit**
+- [x] **Step 4: Documentation check and commit**
 
 Run `git diff --check` and forbidden-marker scan over TD010/design/BDD/SDD/work-surface/complex-index/plan. Commit `docs(stage07): reconcile employee management evidence` only after the evidence is truthful.
 

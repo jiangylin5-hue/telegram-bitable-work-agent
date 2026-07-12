@@ -2,8 +2,9 @@
 
 ## Status
 
-- Status: approved TD010 Option A module boundary; no implementation exists.
+- Status: `implemented-local` for the approved TD010 Option A module boundary.
 - Scope: one Base-bound management plane for existing DigitalEmployee runtime objects.
+- Acceptance limit: automatic/local database evidence exists; user-controlled browser visual review and all external environment evidence remain open.
 
 ## Functional Modules
 
@@ -46,9 +47,14 @@
 - General chat/thread, memory, knowledge/indexing, record picker/search and direct write/send.
 - Telegram routing/publication/binding, notifications, deployment and production operations.
 
-## Acceptance Dependencies
+## Acceptance Status
 
-1. TD010 Option A user approval of the durable schema/API/member-eligibility boundary.
-2. Detailed implementation plan approval before code.
-3. Disposable PostgreSQL migration/lock/replay/legacy-compatibility evidence before local promotion.
-4. Existing S5/TD009 safe contact/context/invocation tests must remain green with `workspace` and `assigned` modes.
+1. **Completed:** TD010 Option A user approval of the durable schema/API/member-eligibility boundary.
+2. **Completed:** detailed implementation plan approval before code.
+3. **Completed locally:** disposable PostgreSQL migration shape, downgrade/upgrade replay and legacy-compatibility evidence.
+4. **Completed locally:** focused TD005/TD006/TD009 contact/context/invocation regression runs remain green with `workspace` and `assigned` modes.
+5. **Open:** user-controlled browser visual review and real Telegram/provider/staging/production evidence; none is substituted by the automatic suite.
+
+## Implementation Reconciliation
+
+The delivered workbench contains only the listed management entry, directory, scoped selector, draft editor, grant replacement and lifecycle controls. The entry is capability-gated by server bootstrap data; every route independently rechecks existing authorization. Member labels remain opaque, active configuration is read-only until pause, and successful mutation causes authoritative reread rather than an optimistic configuration/lifecycle state. No excluded module was introduced.

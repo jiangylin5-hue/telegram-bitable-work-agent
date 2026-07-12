@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: approved TD010 Option A acceptance contract; no implementation evidence exists.
+- Status: `implemented-local` for the approved TD010 code boundary; acceptance remains partial because no user-controlled browser visual review or real Telegram/provider/staging/production evidence is claimed.
 - Scope: Option A base-bound employee management, member eligibility and `draft|active|paused` transitions.
 
 ## BDD Scenarios
@@ -95,6 +95,32 @@ Then no multi-Base scope, Base reassignment, archive/delete, custom action/tool 
 | DEM-A10 | deferred App-flow replacement/close tests and protected-query cleanup | mobile/desktop focus return | deployment evidence |
 | DEM-A11 | route/model/migration/dependency inventory | document review | future Package4 capabilities |
 
+## Evidence Reconciliation (2026-07-13)
+
+| Scenario | Current local evidence | Current acceptance limit |
+| --- | --- | --- |
+| DEM-A01--A04 | `test_stage07_digital_employee_management_api.py`, service tests and strict Mini App parser/workbench tests cover closed manager DTOs, draft creation/idempotency, Base/table/view validation and fixed intents. | No user-controlled visual check of the editor is recorded. |
+| DEM-A05--A06 | Service and assignment-route tests cover active same-workspace grants, unassigned denial and legacy `workspace` eligibility. Disposable PostgreSQL migration tests prove upgrade/replay and legacy active-row defaults. | This does not create a broader member-permission model. |
+| DEM-A07--A09 | Service/API tests cover activation prerequisites, pause, expected-version conflict, changed-payload idempotency conflict and active alias collision. The implementation uses the existing lock/version/idempotency service pattern. | The disposable PostgreSQL run proves migration shape/downgrade/replay/legacy compatibility, not a two-session management-command race observation. Browser lifecycle observation is also open. |
+| DEM-A10 | Protected-query tests prove user/workspace subtree isolation and scoped cleanup; Mini App component/app-flow tests cover bounded workbench states and fixed conflict handling. | No user-controlled desktop/mobile focus-return observation was performed. |
+| DEM-A11 | Route, migration, model and client inventory were checked against TD010's explicit non-goals; the delivered routes and controls remain closed to the documented scope. | Future Package4 capabilities still require their own decision and approval. |
+
+Fresh commands and results:
+
+```text
+backend: python -m pytest -q tests/unit/test_stage07_digital_employee_management_models.py tests/unit/test_stage07_digital_employee_management_service.py tests/unit/test_stage07_digital_employee_management_api.py tests/unit/test_stage07_digital_employee_assignment_api.py tests/unit/test_stage07_draft_employee_hub_api.py tests/unit/test_stage07_mini_app_api.py
+result: 35 passed
+
+postgres: python -m pytest -q tests/integration/test_stage07_digital_employee_management_postgres.py tests/integration/test_stage07_draft_employee_hub_postgres.py -m postgres
+result: 3 passed, 3 deselected
+
+mini-app: npm.cmd test -- --run
+result: 56 files passed, 215 tests passed
+
+mini-app: npm.cmd run build
+result: passed
+```
+
 ## Failure Matrix
 
 | Boundary | `401` | `403` | `404` | `409` | `422` / malformed / `5xx` |
@@ -109,3 +135,4 @@ Then no multi-Base scope, Base reassignment, archive/delete, custom action/tool 
 - Multi-Base scope, Base reassignment, archive/delete and custom employee actions.
 - Generic chat/memory/knowledge/record search or primary-field display algorithm.
 - Telegram assignment/binding, notification/external action, real provider call, staging and production.
+- User-controlled browser visual review is intentionally not performed in this package because browser control is currently out of scope by user instruction.

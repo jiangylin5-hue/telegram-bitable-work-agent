@@ -2,8 +2,9 @@
 
 ## Status
 
-- Status: approved TD010 Option A software design; requires implementation-plan approval before code.
+- Status: `implemented-local` against the approved TD010 Option A design and separately approved implementation plan.
 - Scope: safe Mini App management adapter over the current one-Base `DigitalEmployee` runtime.
+- Evidence boundary: focused backend tests, a disposable real PostgreSQL migration suite, full Mini App tests and production build pass. Browser visual, Telegram/provider, staging and production evidence remain unaccepted.
 
 ## Architecture
 
@@ -84,7 +85,7 @@ type EmployeeManagementContext = {
 }
 ```
 
-Parsers require exact roots, non-empty opaque IDs, known status/access/action/view types and bounded arrays. They reject policy/configuration/runtime/record/field/provider/trace keys. IDs are only selection values, not substitute record labels or authorization claims.
+Parsers require exact roots, non-empty opaque IDs, known status/access/action/view types and bounded arrays. They reject policy/configuration/runtime/record/field/provider/trace keys. IDs are only selection values, not substitute record labels or authorization claims. The context adapter returns opaque member labels in the form `成员 {id-prefix}` with role, rather than raw identity/profile data; client selection arrays are capped at `100` values.
 
 ## Commands And State Transition
 
@@ -112,16 +113,26 @@ All commands load the employee `FOR UPDATE`. Configuration validates fixed enums
 
 All Mini App keys are prefixed by existing `{userId, workspaceId}` protected scope and then `employee-management`. Close, Base/workspace replacement, manager mutation and exact `404` remove only the relevant directory/context/detail/grant keys before authoritative reread. No URL, localStorage, sessionStorage or persisted QueryClient state is used.
 
-## Migration And Index Plan
+## Implemented Migration And Index Evidence
 
-1. Add non-null employee `version` with server default `1`, backfill existing rows and add positive version constraint.
-2. Add non-null employee `access_mode` with server default `workspace`, backfill existing rows, then add closed check constraint.
-3. Create `digital_employee_member_grants` with uniqueness and foreign keys.
-4. Add `ix_stage07_digital_employee_management_base_updated` on `(base_id, updated_at DESC, id DESC)` for cursor-paged manager directory.
-5. Upgrade/downgrade/replay must preserve active legacy behavior and the existing partial active-alias index.
+Migration `20260713_0027_stage07_digital_employee_management` performs the following reversible physical changes:
+
+1. Adds non-null employee `version` with server default `1` and `version > 0` constraint.
+2. Adds non-null employee `access_mode` with server default `workspace` and the closed `workspace|assigned` check constraint.
+3. Creates `digital_employee_member_grants` with employee/member foreign keys and `uq_stage07_digital_employee_member_grant` uniqueness.
+4. Adds `ix_stage07_digital_employee_management_base_updated` on `(base_id, updated_at DESC, id DESC)` for the Base directory.
+5. Leaves the existing active-alias index intact; it does not rewrite status, Base scope, policies, records or drafts.
+
+The disposable PostgreSQL suite proves physical shape, downgrade/upgrade replay and that a legacy active row remains `version=1` / `access_mode=workspace`. It is local database evidence only; a real two-session lifecycle-command contention run is not claimed.
 
 No JSONB GIN index is proposed: scope/action JSONB is validated and read by employee ID under a row lock, not queried as a broad management filter. Any future multi-Base scope needs its own relational table/index decision.
 
 ## Non-Goals And Safety
 
 No raw generic runtime endpoint reaches Mini App management UI. No employee may obtain database credentials, raw SQL, a provider key, unrestricted send right, self-confirmation ability or a bypass of current caller permission. TD010 does not create a contact binding, Bot publication, general chat/memory, knowledge/retrieval, external send or deployment path.
+
+## Implemented File Boundaries
+
+- Backend: `stage07_digital_employee_management` service/schema/route, `DigitalEmployeeMemberGrant`, migration `20260713_0027`, existing Stage06 platform UoW lock/grant seams and the TD005/TD006/TD009 safe-consumer checks.
+- Frontend: strict management transport/type parser, protected management query keys, Base Canvas entry, bounded workbench and App lifecycle wiring.
+- No dependency, generic runtime browser adapter, localStorage/sessionStorage cache, provider integration or Telegram operation was introduced.

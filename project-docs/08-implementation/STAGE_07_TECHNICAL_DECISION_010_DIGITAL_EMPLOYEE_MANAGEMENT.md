@@ -2,9 +2,10 @@
 
 ## Status
 
-- Decision status: Option A approved by user on 2026-07-13; detailed implementation plan review is required before code.
+- Decision status: Option A and its detailed implementation plan were approved by the user on 2026-07-13.
 - Scope: one coherent management plane for the existing base-bound `DigitalEmployee` runtime.
-- Code status: no implementation, migration, endpoint, UI, test fixture, dependency or external action is authorized until the detailed implementation plan is reviewed.
+- Code status: `implemented-local`. The approved boundary is implemented by migration `20260713_0027`, a closed FastAPI management adapter, existing-action reuse, protected Mini App workbench and safe consumer eligibility gates. No external action was performed.
+- Acceptance status: local automated and disposable local PostgreSQL evidence exists. User-controlled browser visual review, Telegram/provider, staging and production evidence remain open and are not implied by this status.
 
 ## Product Problem
 
@@ -114,6 +115,16 @@ Pause immediately removes the employee from TD009 contacts/context and rejects s
 - Telegram member/group/contact routing, Bot publication, notifications, deployment or production rollout.
 - New general permission engine or a grant that bypasses workspace/Base/view/field/record authority.
 
-## Approval Requested
+## Decision And Implementation Record
 
-Approval of Option A would authorize a detailed implementation plan only. It does **not** authorize code until the plan is separately reviewed. It would require a migration, safe API contract and member-assignment permission behavior; these are the exact technical/permission changes awaiting user approval.
+The two required approval gates were completed before implementation: Option A approved the schema/API/permission boundary, and the separately written implementation plan approved code work. The implementation reuses the existing `digital_employee.create`, `digital_employee.update` and `digital_employee.invoke` actions; it adds no RBAC action or general permission engine.
+
+Implemented changes are limited to the decision boundary:
+
+- additive `DigitalEmployee.version` and `access_mode`, plus `DigitalEmployeeMemberGrant` and migration `20260713_0027`;
+- the eight documented Mini App management routes, strict closed DTOs and redacted audit summaries;
+- server-owned locked/versioned lifecycle and member-grant replacement commands;
+- protected Mini App directory/detail/editor lifecycle, with no persistent browser state;
+- TD005/TD006/TD009 contact, context and invocation eligibility checks for `assigned` employees.
+
+The implementation does not add any item in the explicit non-goal list. Full evidence and remaining acceptance gaps are maintained in the linked BDD, SDD, work-surface, complex-index and Stage07 acceptance documents.

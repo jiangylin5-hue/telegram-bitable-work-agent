@@ -119,11 +119,14 @@ These checks cover only the approved Home contact-to-view-to-summary slice. They
 - [x] Local evidence: focused backend `17 passed`, full Mini App `51 files / 204 tests`, TypeScript/Vite production build passed.
 - [ ] TD009 disposable PostgreSQL intersection/revocation, dedicated delayed workspace-replacement and user-controlled visual review remain required before this package can be promoted beyond `partial-local`.
 
-### TD010 Digital Employee Management — Proposed Only
+### TD010 Digital Employee Management — Local Evidence
 
-- [x] User approved the additive employee version/access-mode and member-grant schema/API/permission behavior; the detailed implementation plan remains a separate pre-code review gate.
-- [ ] Future implementation proves manager/use-member separation, legacy `workspace` compatibility, row-lock/version/idempotency, scope intersection, active alias collision and strict safe DTO boundaries.
-- [ ] Future implementation proves active/paused contact/context/invocation eligibility behavior without creating multi-Base scope, memory, knowledge, record picker, Telegram or external-action behavior.
+- [x] User approved the additive employee version/access-mode and member-grant schema/API/permission behavior and the separate detailed implementation plan before code.
+- [x] Focused backend tests prove manager/use-member separation, legacy `workspace` compatibility, expected-version/idempotency conflict handling, Base/table/view scope validation, active alias collision and strict safe DTO/parser boundaries (`35 passed`).
+- [x] Disposable local PostgreSQL verifies migration physical shape, downgrade/upgrade replay and legacy active-row default compatibility (`3 passed, 3 deselected`). It is not a two-session lifecycle-command contention or external environment claim.
+- [x] Active/paused contact/context/invocation behavior is gated by active status and, for `assigned`, a same-workspace active member grant; no multi-Base scope, memory, knowledge, record picker, Telegram or external-action behavior is introduced.
+- [x] Strict protected transport/query/workbench tests and full Mini App suite pass (`56 files / 215 tests`); production build passes.
+- [ ] User-controlled desktop/mobile visual review, real two-session lifecycle-command PostgreSQL contention, Telegram/provider/staging/production evidence and whole-Stage07 exit remain open.
 
 ### S6.1 Telegram Identity and Deep-Link Local Evidence
 

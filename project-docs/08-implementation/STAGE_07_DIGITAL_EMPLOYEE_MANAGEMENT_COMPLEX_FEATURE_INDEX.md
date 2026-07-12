@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: approved TD010 complexity/index decision; no physical change has been made.
+- Status: `implemented-local`; the approved physical schema/index decision is migration `20260713_0027_stage07_digital_employee_management`.
 
 ## Complexity Map
 
@@ -18,13 +18,13 @@
 | safe management DTO | generic runtime response carries forbidden data | parser/API/DOM never receives policies, runtime/provider/trace or values | negative response/parser/DOM inventory |
 | cache replacement | panel and mutations can outlive Base/workspace state | late result cannot display/mutate replacement scope | deferred App-flow/query cleanup tests |
 
-## Proposed Physical Indexes
+## Implemented Physical Indexes
 
 | Object | Proposed index/constraint | Query served | Rationale |
 | --- | --- | --- | --- |
-| `digital_employees` | retain `uq_stage06_digital_employee_alias` active partial unique index | active alias uniqueness | existing safety behavior remains authoritative |
-| `digital_employees` | `ix_stage07_digital_employee_management_base_updated (base_id, updated_at DESC, id DESC)` | cursor-paged Base directory | ordered, stable manager list; avoids JSONB scope scans |
-| `digital_employee_member_grants` | unique `(employee_id, workspace_member_id)` | exact grant existence/replacement | prevents duplicates and supports assigned eligibility check |
+| `digital_employees` | retained `uq_stage06_digital_employee_alias` active partial unique index | active alias uniqueness | existing safety behavior remains authoritative |
+| `digital_employees` | `ix_stage07_digital_employee_management_base_updated (base_id, updated_at DESC, id DESC)` | cursor-paged Base directory | created by `20260713_0027`; ordered, stable manager list without JSONB scope scans |
+| `digital_employee_member_grants` | `uq_stage07_digital_employee_member_grant (employee_id, workspace_member_id)` | exact grant existence/replacement | created by `20260713_0027`; prevents duplicates and supports assigned eligibility check |
 | `digital_employee_member_grants` | index `(workspace_member_id, employee_id)` only if profile-wide assigned-employee list is introduced later | no TD010 query | deliberately not created now |
 
 ## Explicitly Rejected Indexes
@@ -33,12 +33,13 @@
 - No workspace-wide alias index: existing active alias uniqueness is Base-local by product constitution.
 - No member-grant status/history table: grants have no independent lifecycle/audit surface in this package; employee versioned replacement/audit is the source of truth.
 
-## Migration Safety
+## Migration Safety And Evidence
 
-1. Migration is additive and reversible: add employee columns/defaults, create grant table/index/constraints, preserve existing foreign keys and alias index.
-2. Upgrade gives every existing employee `version=1` and `access_mode=workspace`; it does not create grants, alter status or change Base scope.
-3. Downgrade drops only TD010 additions after tests prove no unrelated Stage07 migration dependency.
-4. Migration must not inspect or rewrite `field_policy`, `confirmation_policy`, `response_style`, runtime outputs, records or drafts.
+1. Migration is additive and reversible: employee columns/defaults/checks plus grant table/uniqueness/directory index preserve existing foreign keys and alias index.
+2. Upgrade gives every existing employee `version=1` and `access_mode=workspace`; it creates no grants and does not alter status or Base scope.
+3. Downgrade drops only TD010 additions; the disposable PostgreSQL suite then upgrades back to head successfully.
+4. Migration does not inspect or rewrite `field_policy`, `confirmation_policy`, `response_style`, runtime outputs, records or drafts.
+5. Real local PostgreSQL tests passed for physical shape, downgrade/replay and legacy active-row behavior. They do not stand in for staging/production performance or a two-session lifecycle contention measurement.
 
 ## Future Decision Boundaries
 
