@@ -9,14 +9,16 @@ import { FieldBuilderPanel, type FieldBuilderValues } from './FieldBuilderPanel'
 import { ImportWizard, type ImportTarget } from './ImportWizard'
 import { CreateRecordPanel } from './CreateRecordPanel'
 import { GovernanceWorkbench } from './GovernanceWorkbench'
+import { GovernanceWriteWorkbench } from './GovernanceWriteWorkbench'
 import { RecordDetailPanel } from './RecordDetail'
 import { RelationLookupFieldBuilderPanel, type F2FieldBuilderValues } from './RelationLookupFieldBuilderPanel'
 import { SaveTemplatePanel } from './SaveTemplatePanel'
 import { TemplateImportHub } from './TemplateImportHub'
 import { ViewBuilderPanel } from './ViewBuilderPanel'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
-import { clearAllProtectedQueries, clearFieldMutationQueries, clearGovernanceQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, governanceKeys, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
+import { clearAllProtectedQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, governanceKeys, governanceWriteKeys, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
 import type { GovernanceAuditPage, GovernanceMemberPage } from './governance-types'
+import type { GovernanceEditableMemberPage, GovernanceFieldPermissionPage, GovernanceFieldPermissionPolicy } from './governance-write-types'
 import type { CommitImportValues, CreateImportValues, ImportCommitReceipt, ImportPreview, TemplateSummary } from './template-import-types'
 import type { ViewBuilderContext, ViewBuilderResponse, ViewInitializationRequest, ViewMemberReplaceRequest, ViewPresentationPatchRequest } from './view-builder-types'
 
@@ -70,6 +72,17 @@ type GovernancePanel = {
   auditLoadMoreError: boolean
 }
 
+type GovernanceWritePanel = {
+  members: GovernanceEditableMemberPage | null
+  tables: PlatformTable[]
+  fields: GovernanceFieldPermissionPage | null
+  selectedBaseId: string | null
+  selectedTableId: string | null
+  membersLoading: boolean
+  tablesLoading: boolean
+  fieldsLoading: boolean
+}
+
 function isAbortError(error: unknown): boolean {
   return isCancelledError(error) || (error instanceof DOMException && error.name === 'AbortError')
 }
@@ -112,12 +125,15 @@ function AppContent() {
   const builderRequestVersion = useRef(0)
   const templateImportRequestVersion = useRef(0)
   const governanceRequestVersion = useRef(0)
+  const governanceWriteRequestVersion = useRef(0)
   const viewBuilderReturnFocus = useRef<HTMLElement | null>(null)
   const governanceReturnFocus = useRef<HTMLElement | null>(null)
+  const governanceWriteReturnFocus = useRef<HTMLElement | null>(null)
   const sessionInvalidated = useRef(false)
   const [builderPanel, setBuilderPanel] = useState<BuilderPanel>()
   const [templateImportPanel, setTemplateImportPanel] = useState<TemplateImportPanel>()
   const [governancePanel, setGovernancePanel] = useState<GovernancePanel>()
+  const [governanceWritePanel, setGovernanceWritePanel] = useState<GovernanceWritePanel>()
 
   function invalidateInFlightRequests() {
     homeRequestVersion.current += 1
@@ -127,6 +143,8 @@ function AppContent() {
     builderRequestVersion.current += 1
     templateImportRequestVersion.current += 1
     governanceRequestVersion.current += 1
+    governanceWriteRequestVersion.current += 1
+    governanceWriteRequestVersion.current += 1
   }
 
   async function denyInvalidSession() {
@@ -251,6 +269,7 @@ function AppContent() {
     setBuilderPanel(undefined)
     setTemplateImportPanel(undefined)
     setGovernancePanel(undefined)
+    setGovernanceWritePanel(undefined)
     activeWorkspaceId.current = workspaceId
     setState({ status: 'loading' })
     await clearProtectedWorkspace(queryClient, { userId: readyState.bootstrap.identity.user_id, workspaceId: activeWorkspace.id })
@@ -382,6 +401,158 @@ function AppContent() {
           membersError: true,
         } : current)
       }
+    }
+  }
+
+  function closeGovernanceWrite() {
+    governanceWriteRequestVersion.current += 1
+    setGovernanceWritePanel(undefined)
+    const trigger = governanceWriteReturnFocus.current
+    governanceWriteReturnFocus.current = null
+    queueMicrotask(() => {
+      if (trigger?.isConnected) trigger.focus()
+    })
+  }
+
+  async function openGovernanceWrite(trigger: HTMLElement) {
+    governanceWriteReturnFocus.current = trigger
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++governanceWriteRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && governanceWriteRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setGovernanceWritePanel({
+      members: null,
+      tables: [],
+      fields: null,
+      selectedBaseId: null,
+      selectedTableId: null,
+      membersLoading: true,
+      tablesLoading: false,
+      fieldsLoading: false,
+    })
+    try {
+      const members = await queryClient.fetchQuery({
+        queryKey: governanceWriteKeys.members(scope, null),
+        queryFn: ({ signal }) => api.listGovernanceEditableMembers(workspaceId, null, { signal }),
+      })
+      if (isCurrent()) setGovernanceWritePanel((current) => current ? { ...current, members, membersLoading: false } : current)
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else setGovernanceWritePanel((current) => current ? { ...current, membersLoading: false } : current)
+    }
+  }
+
+  async function selectGovernanceWriteBase(baseId: string) {
+    const panel = governanceWritePanel
+    if (!panel || !baseId) return
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++governanceWriteRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && governanceWriteRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setGovernanceWritePanel((current) => current ? {
+      ...current, selectedBaseId: baseId, selectedTableId: null, tables: [], fields: null, tablesLoading: true, fieldsLoading: false,
+    } : current)
+    try {
+      const response = await queryClient.fetchQuery({
+        queryKey: protectedQueryKey(scope, 'governance-write', 'tables', baseId),
+        queryFn: ({ signal }) => api.baseTables(baseId, { signal }),
+      })
+      if (isCurrent()) setGovernanceWritePanel((current) => current?.selectedBaseId === baseId
+        ? { ...current, tables: response.tables, tablesLoading: false }
+        : current)
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && (error.status === 403 || error.status === 404)) await denyWorkspace(scope)
+      else setGovernanceWritePanel((current) => current ? { ...current, tablesLoading: false } : current)
+    }
+  }
+
+  async function selectGovernanceWriteTable(tableId: string) {
+    const panel = governanceWritePanel
+    if (!panel || !tableId) return
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++governanceWriteRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && governanceWriteRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setGovernanceWritePanel((current) => current ? {
+      ...current, selectedTableId: tableId, fields: null, fieldsLoading: true,
+    } : current)
+    try {
+      const fields = await queryClient.fetchQuery({
+        queryKey: governanceWriteKeys.fieldPermissions(scope, tableId),
+        queryFn: ({ signal }) => api.listGovernanceFieldPermissions(tableId, { signal }),
+      })
+      if (isCurrent()) setGovernanceWritePanel((current) => current?.selectedTableId === tableId
+        ? { ...current, fields, fieldsLoading: false }
+        : current)
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else {
+        if (error instanceof ApiError && error.status === 404) await clearGovernanceWriteQueries(queryClient, scope, tableId)
+        setGovernanceWritePanel((current) => current?.selectedTableId === tableId ? { ...current, fieldsLoading: false } : current)
+      }
+    }
+  }
+
+  async function refreshGovernanceWriteMemberContext(scope: { userId: string; workspaceId: string }) {
+    await clearGovernanceWriteQueries(queryClient, scope)
+    const members = await queryClient.fetchQuery({
+      queryKey: governanceWriteKeys.members(scope, null),
+      queryFn: ({ signal }) => api.listGovernanceEditableMembers(scope.workspaceId, null, { signal }),
+    })
+    setGovernanceWritePanel((current) => current ? { ...current, members, membersLoading: false } : current)
+  }
+
+  async function changeGovernanceWriteRole(memberId: string, role: 'admin' | 'builder' | 'operator' | 'viewer', expectedVersion: number): Promise<void> {
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    try {
+      await api.changeGovernanceMemberRole(workspaceId, memberId, role, expectedVersion, crypto.randomUUID())
+      await refreshGovernanceWriteMemberContext(scope)
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else if (error instanceof ApiError && error.status === 404) await clearGovernanceWriteQueries(queryClient, scope)
+      throw error
+    }
+  }
+
+  async function replaceGovernanceWriteFieldPolicy(fieldId: string, policy: GovernanceFieldPermissionPolicy, expectedPermissionVersion: number): Promise<void> {
+    const panel = governanceWritePanel
+    const tableId = panel?.selectedTableId
+    if (!tableId) return
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    try {
+      await api.replaceGovernanceFieldPermissionPolicy(tableId, fieldId, policy, expectedPermissionVersion, crypto.randomUUID())
+      const viewIds = readyState.canvas?.table?.id === tableId
+        ? readyState.canvas.views.filter((view) => view.table_id === tableId).map((view) => view.id)
+        : []
+      await Promise.all([
+        clearGovernanceWriteQueries(queryClient, scope, tableId),
+        clearFieldMutationQueries(queryClient, scope, tableId, viewIds),
+      ])
+      const fields = await queryClient.fetchQuery({
+        queryKey: governanceWriteKeys.fieldPermissions(scope, tableId),
+        queryFn: ({ signal }) => api.listGovernanceFieldPermissions(tableId, { signal }),
+      })
+      setGovernanceWritePanel((current) => current?.selectedTableId === tableId ? { ...current, fields, fieldsLoading: false } : current)
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else if (error instanceof ApiError && error.status === 404) await clearGovernanceWriteQueries(queryClient, scope, tableId)
+      throw error
     }
   }
 
@@ -1540,8 +1711,27 @@ function AppContent() {
       onRetryAudit={() => {
         if (governancePanel.selectedBaseId) void selectGovernanceBase(governancePanel.selectedBaseId)
       }}
+      onOpenWrite={(trigger) => { void openGovernanceWrite(trigger) }}
       onClose={closeGovernance}
     />
     : null
-  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} onOpenGovernance={(trigger) => { void openGovernance(trigger) }}>{content}{builderOverlay}{templateImportOverlay}{governanceOverlay}</AppShell>
+  const governanceWriteOverlay = governanceWritePanel
+    ? <GovernanceWriteWorkbench
+      bases={readyState.home.recent_bases}
+      tables={governanceWritePanel.tables}
+      members={governanceWritePanel.members}
+      fields={governanceWritePanel.fields}
+      selectedBaseId={governanceWritePanel.selectedBaseId}
+      selectedTableId={governanceWritePanel.selectedTableId}
+      membersLoading={governanceWritePanel.membersLoading}
+      tablesLoading={governanceWritePanel.tablesLoading}
+      fieldsLoading={governanceWritePanel.fieldsLoading}
+      onSelectBase={(baseId) => { void selectGovernanceWriteBase(baseId) }}
+      onSelectTable={(tableId) => { void selectGovernanceWriteTable(tableId) }}
+      onChangeRole={changeGovernanceWriteRole}
+      onReplacePolicy={replaceGovernanceWriteFieldPolicy}
+      onClose={closeGovernanceWrite}
+    />
+    : null
+  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} onOpenGovernance={(trigger) => { void openGovernance(trigger) }}>{content}{builderOverlay}{templateImportOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
 }

@@ -17,6 +17,7 @@ type GovernanceWorkbenchProps = {
   onLoadMoreAudit: () => void
   onRetryMembers: () => void
   onRetryAudit: () => void
+  onOpenWrite?: (trigger: HTMLElement) => void
   onClose: () => void
 }
 
@@ -76,6 +77,7 @@ export function GovernanceWorkbench({
   onLoadMoreAudit,
   onRetryMembers,
   onRetryAudit,
+  onOpenWrite,
   onClose,
 }: GovernanceWorkbenchProps) {
   return <div className="governance-backdrop" role="presentation">
@@ -86,7 +88,10 @@ export function GovernanceWorkbench({
           <h2>成员与审计</h2>
           <span>仅展示当前权限范围内的安全摘要。</span>
         </div>
-        <button type="button" aria-label="关闭治理工作台" onClick={onClose}>×</button>
+        <div className="governance-header-actions">
+          {onOpenWrite && <button className="governance-open-write" type="button" aria-label="打开权限设置" onClick={(event) => onOpenWrite(event.currentTarget)}>权限设置</button>}
+          <button type="button" aria-label="关闭治理工作台" onClick={onClose}>×</button>
+        </div>
       </header>
       <div className="governance-columns">
         <section className="governance-section" aria-label="成员目录">

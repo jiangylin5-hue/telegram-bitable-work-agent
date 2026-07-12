@@ -1,0 +1,173 @@
+import { useEffect, useRef, useState } from 'react'
+
+import type { BaseSummary, PlatformTable } from './api'
+import type {
+  GovernanceAssignableRole,
+  GovernanceEditableMemberPage,
+  GovernanceFieldPermissionPage,
+  GovernanceFieldPermissionPolicy,
+} from './governance-write-types'
+
+type GovernanceWriteWorkbenchProps = {
+  bases: BaseSummary[]
+  tables: PlatformTable[]
+  members: GovernanceEditableMemberPage | null
+  fields: GovernanceFieldPermissionPage | null
+  selectedBaseId: string | null
+  selectedTableId: string | null
+  membersLoading: boolean
+  tablesLoading: boolean
+  fieldsLoading: boolean
+  onSelectBase: (baseId: string) => void
+  onSelectTable: (tableId: string) => void
+  onChangeRole: (memberId: string, role: GovernanceAssignableRole, expectedVersion: number) => Promise<void>
+  onReplacePolicy: (fieldId: string, policy: GovernanceFieldPermissionPolicy, expectedVersion: number) => Promise<void>
+  onClose: () => void
+}
+
+const roleLabel: Record<string, string> = {
+  owner: '所有者', admin: '管理员', builder: '构建者', operator: '运营者', viewer: '查看者',
+}
+
+const policyLabel: Record<string, string> = {
+  hidden: '隐藏', read: '可读', write: '可写',
+}
+
+function fixedError(error: unknown): string {
+  const status = error && typeof error === 'object' && 'status' in error ? (error as { status?: unknown }).status : undefined
+  if (status === 409) return '数据已更新，请重新读取后再提交。'
+  if (status === 401 || status === 403 || status === 404) return '权限状态已失效，请重新打开治理工作台。'
+  return '无法提交权限更改，请稍后重试。'
+}
+
+export function GovernanceWriteWorkbench({
+  bases,
+  tables,
+  members,
+  fields,
+  selectedBaseId,
+  selectedTableId,
+  membersLoading,
+  tablesLoading,
+  fieldsLoading,
+  onSelectBase,
+  onSelectTable,
+  onChangeRole,
+  onReplacePolicy,
+  onClose,
+}: GovernanceWriteWorkbenchProps) {
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  const [roleDrafts, setRoleDrafts] = useState<Record<string, GovernanceAssignableRole>>({})
+  const [policyDrafts, setPolicyDrafts] = useState<Record<string, GovernanceFieldPermissionPolicy>>({})
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null)
+  const [pendingKey, setPendingKey] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => { headingRef.current?.focus() }, [])
+  useEffect(() => {
+    setRoleDrafts(Object.fromEntries((members?.members ?? []).map((member) => [member.id, member.role as GovernanceAssignableRole])))
+  }, [members])
+  useEffect(() => {
+    const next = Object.fromEntries((fields?.fields ?? []).map((field) => [field.id, field.policy]))
+    setPolicyDrafts(next)
+    setSelectedFieldId((current) => current && next[current] ? current : fields?.fields[0]?.id ?? null)
+  }, [fields])
+
+  const selectedField = fields?.fields.find((field) => field.id === selectedFieldId) ?? null
+  const selectedPolicy = selectedField ? policyDrafts[selectedField.id] ?? selectedField.policy : null
+
+  async function submitRole(memberId: string, role: GovernanceAssignableRole, expectedVersion: number) {
+    setError(null)
+    setPendingKey(`role:${memberId}`)
+    try {
+      await onChangeRole(memberId, role, expectedVersion)
+    } catch (reason) {
+      setError(fixedError(reason))
+    } finally {
+      setPendingKey(null)
+    }
+  }
+
+  async function submitPolicy() {
+    if (!selectedField || !selectedPolicy) return
+    setError(null)
+    setPendingKey(`policy:${selectedField.id}`)
+    try {
+      await onReplacePolicy(selectedField.id, selectedPolicy, selectedField.permissionVersion)
+    } catch (reason) {
+      setError(fixedError(reason))
+    } finally {
+      setPendingKey(null)
+    }
+  }
+
+  return <div className="governance-write-backdrop" role="presentation">
+    <aside className="governance-write-workbench" aria-label="权限设置" aria-modal="true" role="dialog">
+      <header className="governance-write-header">
+        <div>
+          <p>GOVERNANCE WRITE</p>
+          <h2 ref={headingRef} tabIndex={-1}>成员角色与字段权限</h2>
+          <span>变更会经过服务器权限、版本与审计校验。</span>
+        </div>
+        <button type="button" aria-label="关闭权限设置" onClick={onClose}>×</button>
+      </header>
+      {error && <p className="governance-write-error" role="alert">{error}</p>}
+      <div className="governance-write-columns">
+        <section className="governance-write-section" aria-label="成员角色设置">
+          <header><p>MEMBER ROLES</p><h3>成员角色</h3></header>
+          {membersLoading
+            ? <p className="governance-write-empty" role="status">正在读取可编辑成员…</p>
+            : members?.members.length
+              ? <ul className="governance-write-member-list">{members.members.map((member) => {
+                const draft = roleDrafts[member.id] ?? member.role as GovernanceAssignableRole
+                const pending = pendingKey === `role:${member.id}`
+                return <li key={member.id}>
+                  <strong>{member.userId}</strong>
+                  <label>成员 {member.userId} 的角色
+                    <select value={draft} disabled={pending} onChange={(event) => setRoleDrafts((current) => ({ ...current, [member.id]: event.target.value as GovernanceAssignableRole }))}>
+                      {member.assignableRoles.map((role) => <option key={role} value={role}>{roleLabel[role]}</option>)}
+                    </select>
+                  </label>
+                  <button type="button" disabled={pending || draft === member.role} onClick={() => { void submitRole(member.id, draft, member.version) }} aria-label={`确认改为 ${draft}`}>
+                    {pending ? '提交中…' : `确认改为 ${draft}`}
+                  </button>
+                </li>
+              })}</ul>
+              : <p className="governance-write-empty">当前没有可编辑成员。</p>}
+        </section>
+        <section className="governance-write-section" aria-label="字段权限设置">
+          <header><p>FIELD ACCESS</p><h3>字段权限</h3></header>
+          <label className="governance-write-select">选择 Base
+            <select value={selectedBaseId ?? ''} onChange={(event) => onSelectBase(event.target.value)}>
+              <option value="">选择已授权 Base</option>
+              {bases.map((base) => <option key={base.id} value={base.id}>{base.name}</option>)}
+            </select>
+          </label>
+          {selectedBaseId && <label className="governance-write-select">选择数据表
+            <select value={selectedTableId ?? ''} disabled={tablesLoading} onChange={(event) => onSelectTable(event.target.value)}>
+              <option value="">选择数据表</option>
+              {tables.map((table) => <option key={table.id} value={table.id}>{table.name}</option>)}
+            </select>
+          </label>}
+          {fieldsLoading
+            ? <p className="governance-write-empty" role="status">正在读取字段权限…</p>
+            : selectedField && selectedPolicy
+              ? <div className="governance-write-policy">
+                <label className="governance-write-select">选择字段
+                  <select value={selectedField.id} onChange={(event) => setSelectedFieldId(event.target.value)}>{fields?.fields.map((field) => <option value={field.id} key={field.id}>{field.label}</option>)}</select>
+                </label>
+                {(['owner', 'admin', 'builder', 'operator', 'viewer'] as const).map((role) => <label className="governance-write-policy-row" key={role}>字段 {selectedField.label} 的 {role} 权限
+                  <select value={selectedPolicy[role]} disabled={role === 'owner' || pendingKey === `policy:${selectedField.id}`} onChange={(event) => setPolicyDrafts((current) => ({ ...current, [selectedField.id]: { ...selectedPolicy, [role]: event.target.value as GovernanceFieldPermissionPolicy[typeof role] } }))}>
+                    {(['hidden', 'read', 'write'] as const).map((mode) => <option key={mode} value={mode}>{policyLabel[mode]}</option>)}
+                  </select>
+                </label>)}
+                <button type="button" disabled={pendingKey === `policy:${selectedField.id}`} onClick={() => { void submitPolicy() }} aria-label="确认字段权限">
+                  {pendingKey === `policy:${selectedField.id}` ? '提交中…' : '确认字段权限'}
+                </button>
+              </div>
+              : selectedTableId ? <p className="governance-write-empty">当前数据表没有可编辑字段。</p> : <p className="governance-write-empty">选择 Base 和数据表后配置字段权限。</p>}
+        </section>
+      </div>
+    </aside>
+  </div>
+}
