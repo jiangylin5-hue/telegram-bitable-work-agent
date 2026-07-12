@@ -57,7 +57,7 @@ For every requirement the audit records the source, current evidence, status and
 | Workspace switch removes old protected model | SDD §3; App Shell module | `partial-local` | `protectedQuery.ts` has user/workspace-prefixed keys and cancellation/removal; `App.tsx` clears the old scope before target Home, invalidates request generations on session expiry and observes that latch in direct record mutations; Base/view/record/cursor queries consume cancellation signals. Application tests and a disposable browser run prove old reads or a delayed PATCH cannot restore previous workspace state. | Full real revocation/expiry integration coverage remains incomplete. |
 | Desktop/mobile navigation derives from server capability | Source §5; BDD 1/2 | `partial-local` | management entries conditionally render from `capabilities` | Primary links are presentation anchors; Bases/Bots/More routes and management route behavior are incomplete. |
 | Loading, denied and network states | Source §5; SDD §8 | `partial-local` | `App.tsx` loading/denied/error branches | No density-matched skeleton, retry, expired-session recovery or 401 cache purge. |
-| Safe deep-link resolver | TD007; S6 SDD/BDD | `partial-local` | `stage07_telegram_mini_app_identity`, `stage07_telegram_deep_links`, migration `20260712_0025`, resolver route, focused backend `44 passed`, PostgreSQL `1 passed`, Mini App resolver/recovery tests and build | Complete target-state Browser width matrix, exhaustive App failure/supersession cases and real Telegram evidence remain open. |
+| Safe deep-link resolver | TD007; S6 SDD/BDD | `partial-local` | `stage07_telegram_mini_app_identity`, `stage07_telegram_deep_links`, migration `20260712_0025`, resolver route, focused backend `44 passed`, PostgreSQL `1 passed`, Mini App resolver/recovery tests/build and synthetic Browser recovery/Record matrix at 1440/1280/430/390 | Exhaustive App failure/supersession cases and real Telegram evidence remain open. |
 
 ## 5. Package 2: Workspace And Bitable Work Surface
 
@@ -141,7 +141,7 @@ This table closes only F2-A01 through F2-A10. Each item remains subject to the g
 
 ## 10. Exit Gate Audit
 
-Stage07 acceptance is **not proven**. The following required exit items currently lack evidence: remaining Package 2 matrix, S3 Browser external-environment proof and deeper 401/403/404 App-flow coverage, the retained S4 governance-write negative-lifecycle matrix, S5 provider/Browser/DE-A01--DE-A10 evidence, S6.1 four-width target Browser and exhaustive negative-state evidence, remaining Package 4/S6 delivery scope, protected-state revocation/expiry handling, whole-product visual QA, approved Telegram smoke and requirement-by-requirement automated/negative tests.
+Stage07 acceptance is **not proven**. The following required exit items currently lack evidence: remaining Package 2 matrix, S3 Browser external-environment proof and deeper 401/403/404 App-flow coverage, the retained S4 governance-write negative-lifecycle matrix, S5 provider/Browser/DE-A01--DE-A10 evidence, S6.1 exhaustive negative-state evidence, remaining Package 4/S6 delivery scope, protected-state revocation/expiry handling, whole-product visual QA, approved Telegram smoke and requirement-by-requirement automated/negative tests.
 
 No Stage07 document, commit or test result may be used to claim stage completion until this audit's incomplete and contract-gated rows have explicit implementation/evidence or a revised, user-approved scope decision.
 

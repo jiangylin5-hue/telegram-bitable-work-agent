@@ -126,7 +126,7 @@ And it does not create a memory entry, conversation, contact publication, notifi
 | S6-A05 | opaque link hash/expiry/revocation/subject rules | migration and disposable PostgreSQL unique/expiry test `1 passed`; unit revoke/subject recovery | partial-local; concurrent revoke race remains open |
 | S6-A06 | resolver is non-enumerable and mismatch-safe | unknown and subject-mismatch endpoint responses are byte-equivalent `{ outcome: 'recovery' }`; signed/body mismatch has early recovery path | partial-local; explicit query-count assertion remains open |
 | S6-A07 | resolved target is reread and stale-safe | Mini App flow verifies resolver pointer causes Base/View/Record rereads before display; recovery focus test passed | partial-local; exhaustive 401/403/404/409/422/network/supersession matrix remains open |
-| S6-A08 | desktop fallback and four-width recovery path | runtime-absent tests and production build passed; Browser reached local Vite only to generic backend-unavailable state | partial-local; target-state 1440/1280/430/390 Browser matrix is unaccepted |
+| S6-A08 | desktop fallback and four-width recovery path | runtime-absent tests/build plus a disposable synthetic safe-DTO Browser fixture: recovery and Record handoff inspected at 1440/1280/430/390; Home action is 44px and raw token is absent | implemented-local; synthetic fixture is not real Telegram evidence |
 | S6-A09 | no S6.1 delivery/external action leak | resolver router exposes resolve only; no mint/send route or Telegram action client is added | partial-local; automated source inventory remains open |
 | S6-A10 | real Telegram manual smoke is bounded | user-authorized non-production bot/test-chat evidence, sanitized only | external-authority-required |
 
@@ -143,7 +143,7 @@ And it does not create a memory entry, conversation, contact publication, notifi
 - Disposable PostgreSQL migration reached `20260712_0025`. The S6 table test proved the unique token-hash constraint and excluded expired rows. A rollback-only synthetic 4,096-row `EXPLAIN (ANALYZE, BUFFERS)` used `uq_stage07_telegram_deep_links_token_hash`, reported `0.045 ms` execution and `shared hit=3`; no speculative index was created.
 - Mini App focused matrix returned `6 files / 38 tests`; `npm.cmd run build` completed. The Record handoff test proves Base/View/Record rereads after a closed resolver pointer and the recovery test proves raw token omission/focus return.
 - Final local regression after the transport/focus compatibility repair: backend `pytest -q` returned `566 passed, 17 skipped` (the skips are historical Stage02 online-smoke prerequisites); Mini App `npm.cmd test -- --run` returned `46 files / 170 tests`; production build completed.
-- Browser reached the temporary local Vite app, which displayed only the expected generic backend-unavailable state because no synthetic backend fixture was started. It does not prove deep-link target/recovery layout at four widths. The Vite process was stopped and port `4179` closed.
+- A disposable local fixture injected only synthetic `initData` and returned closed safe DTOs. Browser DOM inspection at `1440`, `1280`, `430` and `390` verified recovery/Home focus and the Record handoff's existing Base/View/Record reread layout. Recovery action was unique and visible at every width with `44px` height; Record edit/close controls were visible at every width; raw token was absent. The fixture file was deleted, viewport reset and port `4179` closed.
 
 ## Non-Goals and Prohibited Claims
 
