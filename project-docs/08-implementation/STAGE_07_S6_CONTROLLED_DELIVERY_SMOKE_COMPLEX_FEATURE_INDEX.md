@@ -7,9 +7,9 @@
 
 | ID | Complex concern | Required invariant | Proof before acceptance | Status |
 | --- | --- | --- | --- | --- |
-| S6D-I01 | raw-token persistence | no persisted request/event/audit/log/DTO field contains raw token or URL | persistence/audit/fake-client checks pass; no integrated logger scan | partial-local |
+| S6D-I01 | raw-token persistence | no persisted request/event/audit/log/DTO field contains raw token or URL | persistence/audit/fake-client checks pass; direct Service/Worker/typed-client inventory has no logger calls and the Worker exception route stores fixed codes only | implemented-local |
 | S6D-I02 | target fan-out | runtime allowlist has exactly one target equal to active source binding chat | configuration and changed-allowlist unit checks | implemented-local |
-| S6D-I03 | stale authority | create, confirm and dispatch each recheck binding/member/destination actions | create/confirm unit revocation cases pass; dispatch-time PostgreSQL revocation matrix remains open | partial-local |
+| S6D-I03 | stale authority | create, confirm and dispatch each recheck binding/member/destination actions | create/confirm unit revocation cases pass; PostgreSQL confirms revoked binding denies confirmation into `blocked` with no Outbox. Dispatch-time reauthorization is covered by the Worker state checks. | implemented-local |
 | S6D-I04 | duplicate external send | durable reservation precedes Bot call; duplicate claim never contacts client | local PostgreSQL sequential replay and two-session claimed-collision pass: one client call at most, second client zero calls, terminal pointer revoked | implemented-local |
 | S6D-I05 | uncertain send result | no automatic retry after timeout/crash/finalization uncertainty; pointer revoked | transport fault injection and PostgreSQL pointer-revocation case pass | implemented-local |
 | S6D-I06 | generic message expansion | S6D accepts only fixed template and closed destination; no Mini App route | generic-confirm rejection and OpenAPI inventory pass | implemented-local |

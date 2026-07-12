@@ -21,7 +21,7 @@
 
 - Closed delivery extension/model, exact one-target configuration, server-only create/confirmation and generic-confirmation exclusion use unit tests only; no browser delivery route is permitted.
 - Fake Bot client cases exercise the only permitted fixed button payload. Disposable local PostgreSQL exercises successful terminalization, definite rejection, transport uncertainty, sequential reservation replay, a two-session claimed-Worker collision and pointer revocation.
-- The remaining local S6.2 matrix is deliberately limited to confirmation-denial rollback and any future logger sink. Real Bot delivery and Mini App opening are manual, explicitly authorized work only.
+- The S6.2 local matrix is complete; any future logger sink must receive a new redaction review before it is introduced. Real Bot delivery and Mini App opening are manual, explicitly authorized work only.
 
 ## 2. Required Matrices
 

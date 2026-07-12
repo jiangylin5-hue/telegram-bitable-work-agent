@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: TD008 Option A is `partial-local` as of 2026-07-13. S6D-A01/A03/A05/A06/A07/A08 have bounded local evidence; S6D-A02 retains its PostgreSQL denial-rollback gap and S6D-A04 retains its logger-sink gap. S6D-A09/S6D-A10 remain `external-authority-required`.
+- Status: TD008 Option A is `partial-local` as of 2026-07-13. S6D-A01 through S6D-A08 have bounded local evidence. S6D-A09/S6D-A10 remain `external-authority-required`.
 - Scope: one fixed deep-link delivery to one private, allowlisted non-production test chat and a sanitized real Mini App smoke.
 - Exclusions: browser send/mint UI, arbitrary message bodies, groups/channels/broadcasts, automatic retries, production, Telegram reply handling, provider actions and all broader Package 4 scope.
 
@@ -82,9 +82,9 @@ Then the UI receives the existing indistinguishable recovery outcome and renders
 | ID | Requirement | Required evidence | Status |
 | --- | --- | --- | --- |
 | S6D-A01 | server-only closed delivery request | `test_stage07_telegram_deep_link_delivery.py`: closed model/service and no browser route inventory | implemented-local |
-| S6D-A02 | confirmation rechecks exact allowlist, binding/member and resource authority | unit checks cover changed allowlist, revoked binding/inactive member/deleted destination; no PostgreSQL denial rollback matrix yet | partial-local |
+| S6D-A02 | confirmation rechecks exact allowlist, binding/member and resource authority | unit checks cover changed allowlist, revoked binding/inactive member/deleted destination; PostgreSQL proves a revoked binding persists closed `blocked` request/delivery state with no Outbox event | implemented-local |
 | S6D-A03 | one-event confirmation and lock-safe reservation | one typed event, sequential reserved replay and a two-session PostgreSQL collision prove at most one Bot call; the claimed collision reaches `delivery_unknown` and revokes its pointer | implemented-local |
-| S6D-A04 | no raw token/URL/body persistence or audit/log leakage | closed-column, Outbox/audit and fake-client negative assertions pass; no integrated logger scan exists | partial-local |
+| S6D-A04 | no raw token/URL/body persistence or audit/log leakage | closed-column, Outbox/audit and fake-client negative assertions pass; direct Service/Worker/typed-client inventory has no logger calls and its Worker exception path persists fixed error codes only | implemented-local |
 | S6D-A05 | fixed Main Mini App URL-button Bot-client contract | `test_stage04_telegram_bot_client.py` fake HTTP contract passes with no real send | implemented-local |
 | S6D-A06 | definite failure and unknown outcome revoke/no-retry semantics | disposable PostgreSQL proves rejection/timeout/replay terminal states and pointer revocation | implemented-local |
 | S6D-A07 | no browser delivery/mint route or generic message input | OpenAPI inventory and generic-confirmation rejection regression pass | implemented-local |

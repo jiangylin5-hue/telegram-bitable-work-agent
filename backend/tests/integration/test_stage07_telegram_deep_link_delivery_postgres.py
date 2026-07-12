@@ -3,14 +3,17 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Event
 from uuid import uuid4
 
+import pytest
 from sqlalchemy import select
 
 from app.models.audit import OpsAuditEvent
+from app.models.outbox import OutboxEvent
 from app.models.stage06_platform import Stage06TelegramBinding
 from app.models.stage07_telegram import (
     Stage07TelegramDeepLink,
     Stage07TelegramDeepLinkDelivery,
 )
+from app.models.telegram import TelegramSendRequest
 from app.services.permissions import Actor
 from app.services.stage06_platform import (
     SqlAlchemyStage06PlatformUnitOfWork,
@@ -19,6 +22,7 @@ from app.services.stage06_platform import (
 )
 from app.services.stage07_telegram_deep_link_delivery import (
     Stage07TelegramDeepLinkDeliveryCommand,
+    Stage07TelegramDeepLinkDeliveryBlocked,
     confirm_stage07_telegram_deep_link_delivery,
     create_stage07_telegram_deep_link_delivery,
     dispatch_stage07_telegram_deep_link_delivery,
@@ -75,7 +79,7 @@ class BlockingFakeTelegramBotClient(FakeTelegramBotClient):
         )()
 
 
-def _confirmed_delivery(stage06_postgres: Stage06Postgres):
+def _confirmed_delivery(stage06_postgres: Stage06Postgres, *, confirm: bool = True):
     with stage06_postgres.session_factory() as session:
         platform_uow = SqlAlchemyStage06PlatformUnitOfWork(session)
         send_uow = SqlAlchemyTelegramSendRequestUnitOfWork(session)
@@ -116,14 +120,15 @@ def _confirmed_delivery(stage06_postgres: Stage06Postgres):
             allowed_chat_ids=("synthetic-chat",),
             now=NOW,
         )
-        confirm_stage07_telegram_deep_link_delivery(
-            platform_uow,
-            send_uow,
-            actor=Actor(actor_type="user", actor_id="manager-1", role="manager"),
-            request_id=receipt.request_id,
-            allowed_chat_ids=("synthetic-chat",),
-            now=NOW,
-        )
+        if confirm:
+            confirm_stage07_telegram_deep_link_delivery(
+                platform_uow,
+                send_uow,
+                actor=Actor(actor_type="user", actor_id="manager-1", role="manager"),
+                request_id=receipt.request_id,
+                allowed_chat_ids=("synthetic-chat",),
+                now=NOW,
+            )
         session.commit()
         return receipt.request_id
 
@@ -307,3 +312,52 @@ def test_simultaneous_workers_make_at_most_one_external_call_and_revoke_after_cl
         link = session.get(Stage07TelegramDeepLink, delivery.stage07_telegram_deep_link_id)
         assert link is not None
         assert link.status == "revoked"
+
+
+def test_confirmation_denial_persists_blocked_without_an_outbox_event(
+    stage06_postgres: Stage06Postgres,
+) -> None:
+    request_id = _confirmed_delivery(stage06_postgres, confirm=False)
+
+    with stage06_postgres.session_factory() as session:
+        platform_uow = SqlAlchemyStage06PlatformUnitOfWork(session)
+        send_uow = SqlAlchemyTelegramSendRequestUnitOfWork(session)
+        delivery = session.scalar(
+            select(Stage07TelegramDeepLinkDelivery).where(
+                Stage07TelegramDeepLinkDelivery.send_request_id == request_id
+            )
+        )
+        assert delivery is not None
+        binding = session.get(Stage06TelegramBinding, delivery.source_binding_id)
+        assert binding is not None
+        binding.status = "revoked"
+
+        with pytest.raises(Stage07TelegramDeepLinkDeliveryBlocked):
+            confirm_stage07_telegram_deep_link_delivery(
+                platform_uow,
+                send_uow,
+                actor=Actor(actor_type="user", actor_id="manager-1", role="manager"),
+                request_id=request_id,
+                allowed_chat_ids=("synthetic-chat",),
+                now=NOW,
+            )
+        session.commit()
+
+    with stage06_postgres.session_factory() as session:
+        delivery = session.scalar(
+            select(Stage07TelegramDeepLinkDelivery).where(
+                Stage07TelegramDeepLinkDelivery.send_request_id == request_id
+            )
+        )
+        request = session.get(TelegramSendRequest, request_id)
+        event = session.scalar(
+            select(OutboxEvent).where(
+                OutboxEvent.idempotency_key
+                == f"stage07.telegram_deep_link_delivery:{request_id}"
+            )
+        )
+        assert delivery is not None
+        assert request is not None
+        assert delivery.dispatch_state == "blocked"
+        assert request.status == "blocked"
+        assert event is None

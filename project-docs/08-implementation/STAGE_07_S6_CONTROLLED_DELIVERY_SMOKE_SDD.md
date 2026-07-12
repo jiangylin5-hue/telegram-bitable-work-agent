@@ -13,7 +13,7 @@
 - The trusted Python command derives subject/chat from the active binding, rechecks target authority at create/confirm/dispatch and prevents the historical generic confirmation service from routing this purpose as a text send.
 - The Worker commits `dispatch_reserved` before it mints or calls the typed Bot client; fake-client PostgreSQL cases prove one normal send, definite rejection, transport uncertainty, sequential replay and a two-session Worker collision. The collision makes at most one Bot call, ends `delivery_unknown` and revokes the minted pointer rather than retrying.
 - There is no Mini App delivery/mint endpoint or UI. The local configuration helper requires `restricted_test`, one allowlist value, a valid server-owned Bot username and a runtime Bot token before the Worker registers the event handler.
-- Open gaps: an integrated logger-sink scan and the S6D-A02 PostgreSQL denial-rollback matrix. Real configuration/send/smoke is not attempted.
+- Local matrix is complete: direct Service/Worker/typed-client inventory has no logger sink, while persisted exception paths retain fixed codes only. Real configuration/send/smoke is not attempted.
 
 ## Architecture
 
