@@ -84,6 +84,17 @@ The design and implementation plan are user-approved. The items remain unchecked
 - [ ] Every Bot write remains `record_change_draft` until explicit confirmation.
 - [ ] Confirm/reject/replay/conflict/expired states produce one authoritative outcome and audit reference.
 
+### S6.1 Telegram Identity and Deep-Link Design Boundary
+
+These items are unchecked until TD007's reviewed implementation plan and code provide their own evidence. They do not authorize Bot delivery or a production test.
+
+- [ ] Telegram Mini App `initData` is verified server-side using official HMAC/freshness rules; `initDataUnsafe`, URL user data and development headers cannot bypass production identity.
+- [ ] A validated Telegram user resolves through active bindings to exactly one active internal member user or fails closed.
+- [ ] An opaque, subject-bound, expiring pointer resolves only an authorized durable Base/view/record/draft after a server reread; no raw token/launch data leaks.
+- [ ] Invalid, expired, revoked, mismatched, deleted and unauthorized pointers share safe recovery without target enumeration.
+- [ ] Four-width recovery UI and desktop/no-Telegram fallback have evidence; S6.1 sends no message or external action.
+- [ ] A real Telegram deep-link smoke is recorded only after separately authorized non-production Bot/test-chat setup.
+
 ## Evidence
 
 - [ ] Automated unit, integration, contract and negative security tests pass.

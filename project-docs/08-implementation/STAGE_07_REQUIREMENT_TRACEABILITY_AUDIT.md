@@ -8,6 +8,8 @@
 
 - S5 update: TD005 Option A is approved for one bounded contact/context/draft adapter over existing Stage06 runtime. It is `implementation-in-progress`; broader Package 4/S6 remains contract-gated.
 
+- S6 update: TD007 Option A is approved for the S6.1 identity/deep-link documentation package. The decision, design, BDD, SDD, work surface and complex-index documents are written; its implementation plan, code, migration, client path and external evidence remain pending.
+
 ## 1. Purpose
 
 This audit prevents three incorrect conclusions:
@@ -113,7 +115,8 @@ This table closes only F2-A01 through F2-A10. Each item remains subject to the g
 | Knowledge source selection and retrieval filtering | Source §6; UI spec | `contract-gated` | no Stage07 model/evidence | Requires scope, retrieval-time permission, retention and audit decision. |
 | Per-user memory partition and clear controls | Source §6; BDD 6/7 | `contract-gated` | no model/evidence | Requires schema, ownership, retention/deletion and cross-user denial decision. |
 | Record-change draft review/confirm/reject | BDD 8/9; S5 BDD/SDD | `partial-local` | approved two draft columns, safe Mini App detail and versioned terminal adapter are implemented; queue-to-safe-detail/terminal reread have focused client evidence and local PostgreSQL now proves confirm replay, reject no-record-write and concurrent terminal lock/loser-ledger rollback | Field-filtered Browser matrix, provider evidence and full draft lifecycle reconciliation remain; generic runtime payload remains forbidden from the browser. |
-| Telegram `@` deep link/handoff | BDD 10; UI spec | `contract-gated` | Stage06 has mention/binding primitives | Mini App identity/deep-link and group/chat scope UI contract is explicitly unapproved. |
+| Telegram Mini App identity and durable deep-link resolver | BDD 10/12; TD007; S6 BDD/SDD | `approved-design-unimplemented` | TD007 Option A specifies official raw-initData validation, active binding/member resolution, opaque expiring pointer, safe resolver/recovery, local/PostgreSQL/client proof and no-send boundary | Implementation plan, code, migration, tests, Browser path and real non-production identity smoke remain absent. |
+| Telegram `@` handoff/link delivery | BDD 6/10; UI spec | `contract-gated` | Stage06 has mention/binding primitives; TD007 S6.1 intentionally excludes delivery | Requires separately approved controlled delivery workflow and user authority for non-production Bot/test-chat configuration; no broad/group send may be inferred. |
 
 ## 8. Cross-Cutting Security And Quality Gates
 
@@ -134,10 +137,11 @@ This table closes only F2-A01 through F2-A10. Each item remains subject to the g
 3. **P3 and F1 bounded implementation is complete locally:** their six disposable real-PostgreSQL rollback/replay/concurrency/default-view cases now pass. F1's direct-edit, duplicate-name feedback and pending-dialog lock have four-width browser evidence; delayed workspace replacement remains an application-level scope-isolation proof. Do not treat this local evidence as production proof.
 4. **V1 Saved View Builder is through V1-15 reconciliation locally:** focused backend `24 passed`, V1 PostgreSQL `11 passed`, full backend `512 passed, 17 historical Stage02 skips`, Mini App `24 files / 114 tests` and build passed. Browser evidence now has a four-width core matrix, owner/editor/viewer UI separation, bounded query controls, safe relation candidate label, editor save/safe conflict reread, and one real-backend owner relation edit with versioned PATCH and authoritative relation/lookup reread. It is deliberately `partial-local`, because real stale/type-invalid and numeric-filter Browser flows are absent. This is not Telegram, staging, production or Stage07 acceptance. Import/template, governance and field-filtered draft detail remain separate specification work.
 5. **S5 is partial-local:** TD005 safe contact/draft loop, terminal transition and allowlisted invocation result transport, plus approved TD006 Option A's current-Canvas invocation controls, have fresh focused backend, local PostgreSQL, frontend and build evidence. Its pending-only newest-first queue has a documented local I-A index measurement; existing `ix_stage06_drafts_base_status` was sufficient, so no new partial index was added. The local Browser environment cannot reach its loopback fixture, so visual evidence is not claimed. Publication, personal memory, knowledge, Telegram proof/deep link and lifecycle remain contract-gated.
+6. **S6.1 is approved-design-unimplemented:** TD007 A documents official Telegram `initData` verification, one unambiguous binding/member identity, opaque 10-minute destination pointers and identical safe recovery. It intentionally leaves Bot delivery, configuration and real smoke outside the code boundary until separately authorized. The next action is a reviewed implementation plan, not an implementation claim.
 
 ## 10. Exit Gate Audit
 
-Stage07 acceptance is **not proven**. The following required exit items currently lack evidence: remaining Package 2 matrix, S3 Browser external-environment proof and deeper 401/403/404 App-flow coverage, the retained S4 governance-write negative-lifecycle matrix, S5 provider/Browser/DE-A01--DE-A10 evidence, remaining Package 4/S6 scope, protected-state revocation/expiry handling, whole-product visual QA, approved Telegram smoke and requirement-by-requirement automated/negative tests.
+Stage07 acceptance is **not proven**. The following required exit items currently lack evidence: remaining Package 2 matrix, S3 Browser external-environment proof and deeper 401/403/404 App-flow coverage, the retained S4 governance-write negative-lifecycle matrix, S5 provider/Browser/DE-A01--DE-A10 evidence, all S6.1 implementation/evidence, remaining Package 4/S6 delivery scope, protected-state revocation/expiry handling, whole-product visual QA, approved Telegram smoke and requirement-by-requirement automated/negative tests.
 
 No Stage07 document, commit or test result may be used to claim stage completion until this audit's incomplete and contract-gated rows have explicit implementation/evidence or a revised, user-approved scope decision.
 
