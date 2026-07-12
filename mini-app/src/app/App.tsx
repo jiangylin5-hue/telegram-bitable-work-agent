@@ -5,6 +5,7 @@ import { ApiError, api, type BaseSummary, type BootstrapResponse, type CreateFor
 import { AppShell, type AppShellRoute } from './AppShell'
 import { AssistantContextWorkbench } from './AssistantContextWorkbench'
 import { BaseCanvas } from './BaseCanvas'
+import { DigitalEmployeeManagementWorkbench } from './DigitalEmployeeManagementWorkbench'
 import { BaseDirectory, type BaseDirectoryState } from './BaseDirectory'
 import { BuilderCreatePanel } from './BuilderCreatePanel'
 import { FieldBuilderPanel, type FieldBuilderValues } from './FieldBuilderPanel'
@@ -19,11 +20,12 @@ import { SaveTemplatePanel } from './SaveTemplatePanel'
 import { TemplateImportHub } from './TemplateImportHub'
 import { ViewBuilderPanel } from './ViewBuilderPanel'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
-import { clearAllProtectedQueries, clearAssistantContextQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTelegramDeepLinkQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, draftEmployeeKeys, governanceKeys, governanceWriteKeys, navigationKeys, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
+import { clearAllProtectedQueries, clearAssistantContextQueries, clearDigitalEmployeeManagementQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTelegramDeepLinkQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, digitalEmployeeManagementKeys, draftEmployeeKeys, governanceKeys, governanceWriteKeys, navigationKeys, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
 import { readTelegramMiniAppLaunch, type TelegramMiniAppLaunch } from './telegram-mini-app'
 import type { GovernanceAuditPage, GovernanceMemberPage } from './governance-types'
 import type { GovernanceEditableMemberPage, GovernanceFieldPermissionPage, GovernanceFieldPermissionPolicy } from './governance-write-types'
 import type { AssistantContextPage, AssistantSelectedView, CurrentCanvasInvocationContext, S5Contact, S5DraftDetail, S5InvocationRequest, S5InvocationResult } from './draft-employee-types'
+import type { ManagedEmployeeDetail, ManagedEmployeeDirectory, ManagedEmployeeManagementContext, ManagedEmployeeUpdateValues } from './digital-employee-management-types'
 import type { CommitImportValues, CreateImportValues, ImportCommitReceipt, ImportPreview, TemplateSummary } from './template-import-types'
 import type { ViewBuilderContext, ViewBuilderResponse, ViewInitializationRequest, ViewMemberReplaceRequest, ViewPresentationPatchRequest } from './view-builder-types'
 
@@ -110,6 +112,16 @@ type AssistantContextPanel = {
   failed: boolean
 }
 
+type DigitalEmployeeManagementPanel = {
+  baseId: string
+  context: ManagedEmployeeManagementContext | null
+  directory: ManagedEmployeeDirectory | null
+  detail: ManagedEmployeeDetail | null
+  selectedEmployeeId: string | null
+  loading: boolean
+  failed: boolean
+}
+
 function isAbortError(error: unknown): boolean {
   return isCancelledError(error) || (error instanceof DOMException && error.name === 'AbortError')
 }
@@ -161,6 +173,7 @@ function AppContent() {
   const governanceWriteRequestVersion = useRef(0)
   const draftEmployeeRequestVersion = useRef(0)
   const assistantContextRequestVersion = useRef(0)
+  const digitalEmployeeManagementRequestVersion = useRef(0)
   const telegramLaunchRequestVersion = useRef(0)
   const telegramLaunchHandled = useRef(false)
   const pendingTelegramDestination = useRef<TelegramDeepLinkDestination | null>(null)
@@ -171,6 +184,7 @@ function AppContent() {
   const governanceWriteReturnFocus = useRef<HTMLElement | null>(null)
   const draftEmployeeReturnFocus = useRef<HTMLElement | null>(null)
   const assistantContextReturnFocus = useRef<HTMLElement | null>(null)
+  const digitalEmployeeManagementReturnFocus = useRef<HTMLElement | null>(null)
   const sessionInvalidated = useRef(false)
   const [telegramRecovery, setTelegramRecovery] = useState(false)
   const [navigationRoute, setNavigationRoute] = useState<AppShellRoute>('home')
@@ -181,6 +195,7 @@ function AppContent() {
   const [governanceWritePanel, setGovernanceWritePanel] = useState<GovernanceWritePanel>()
   const [draftEmployeePanel, setDraftEmployeePanel] = useState<DraftEmployeePanel>()
   const [assistantContextPanel, setAssistantContextPanel] = useState<AssistantContextPanel>()
+  const [digitalEmployeeManagementPanel, setDigitalEmployeeManagementPanel] = useState<DigitalEmployeeManagementPanel>()
 
   function invalidateInFlightRequests() {
     homeRequestVersion.current += 1
@@ -194,6 +209,7 @@ function AppContent() {
     governanceWriteRequestVersion.current += 1
     draftEmployeeRequestVersion.current += 1
     assistantContextRequestVersion.current += 1
+    digitalEmployeeManagementRequestVersion.current += 1
     telegramLaunchRequestVersion.current += 1
     pendingTelegramDestination.current = null
   }
@@ -388,6 +404,7 @@ function AppContent() {
     setGovernanceWritePanel(undefined)
     setDraftEmployeePanel(undefined)
     setAssistantContextPanel(undefined)
+    setDigitalEmployeeManagementPanel(undefined)
     setNavigationRoute('home')
     setBaseDirectory({ state: 'loading', bases: [] })
     activeWorkspaceId.current = workspaceId
@@ -457,6 +474,9 @@ function AppContent() {
   }
 
   async function openBase(base: BaseSummary, target?: CanvasTarget, homeOverride: WorkspaceHome = readyState.home, builderVersion = ++builderRequestVersion.current): Promise<boolean> {
+    if (digitalEmployeeManagementPanel?.baseId !== undefined && digitalEmployeeManagementPanel.baseId !== base.id) {
+      closeDigitalEmployeeManagement()
+    }
     const requestVersion = ++canvasRequestVersion.current
     createFormRequestVersion.current += 1
     if (!target) setBuilderPanel(undefined)
@@ -601,6 +621,150 @@ function AppContent() {
     void clearAssistantContextQueries(queryClient, scope)
     queueMicrotask(() => {
       if (trigger?.isConnected) trigger.focus()
+    })
+  }
+
+  function closeDigitalEmployeeManagement() {
+    const panel = digitalEmployeeManagementPanel
+    digitalEmployeeManagementRequestVersion.current += 1
+    setDigitalEmployeeManagementPanel(undefined)
+    const trigger = digitalEmployeeManagementReturnFocus.current
+    digitalEmployeeManagementReturnFocus.current = null
+    if (panel) {
+      const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
+      void clearDigitalEmployeeManagementQueries(queryClient, scope)
+    }
+    queueMicrotask(() => {
+      if (trigger?.isConnected) trigger.focus()
+    })
+  }
+
+  async function openDigitalEmployeeManagement(trigger: HTMLElement): Promise<void> {
+    const base = readyState.canvas?.base
+    if (!base) return
+    digitalEmployeeManagementReturnFocus.current = trigger
+    await refreshDigitalEmployeeManagement(base.id, null)
+  }
+
+  async function refreshDigitalEmployeeManagement(baseId: string, selectedEmployeeId: string | null): Promise<void> {
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++digitalEmployeeManagementRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && digitalEmployeeManagementRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+      && readyState.canvas?.base.id === baseId
+    setDigitalEmployeeManagementPanel({ baseId, context: null, directory: null, detail: null, selectedEmployeeId, loading: true, failed: false })
+    try {
+      const [context, directory] = await Promise.all([
+        queryClient.fetchQuery({ queryKey: digitalEmployeeManagementKeys.context(scope, baseId), queryFn: ({ signal }) => api.getDigitalEmployeeManagementContext(baseId, { signal }) }),
+        queryClient.fetchQuery({ queryKey: digitalEmployeeManagementKeys.directory(scope, baseId, null), queryFn: ({ signal }) => api.listManagedDigitalEmployees(baseId, null, { signal }) }),
+      ])
+      if (!isCurrent()) {
+        await clearDigitalEmployeeManagementQueries(queryClient, scope)
+        return
+      }
+      const employeeId = selectedEmployeeId && directory.employees.some((employee) => employee.id === selectedEmployeeId)
+        ? selectedEmployeeId
+        : null
+      const detail = employeeId
+        ? await queryClient.fetchQuery({ queryKey: digitalEmployeeManagementKeys.detail(scope, employeeId), queryFn: ({ signal }) => api.getManagedDigitalEmployee(employeeId, { signal }) })
+        : null
+      if (!isCurrent()) {
+        await clearDigitalEmployeeManagementQueries(queryClient, scope)
+        return
+      }
+      setDigitalEmployeeManagementPanel({ baseId, context, directory, detail, selectedEmployeeId: employeeId, loading: false, failed: false })
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) {
+        await denyInvalidSession()
+      } else if (error instanceof ApiError && error.status === 403) {
+        await denyWorkspace(scope)
+      } else if (error instanceof ApiError && error.status === 404) {
+        await clearDigitalEmployeeManagementQueries(queryClient, scope)
+        if (isCurrent()) setDigitalEmployeeManagementPanel(undefined)
+      } else if (isCurrent()) {
+        setDigitalEmployeeManagementPanel({ baseId, context: null, directory: null, detail: null, selectedEmployeeId, loading: false, failed: true })
+      }
+    }
+  }
+
+  async function selectDigitalEmployeeManagementEmployee(employeeId: string): Promise<void> {
+    const panel = digitalEmployeeManagementPanel
+    if (!panel || !panel.directory?.employees.some((employee) => employee.id === employeeId)) return
+    await refreshDigitalEmployeeManagement(panel.baseId, employeeId)
+  }
+
+  async function mutateDigitalEmployeeManagement(
+    employeeId: string | null,
+    operation: () => Promise<void>,
+  ): Promise<void> {
+    const panel = digitalEmployeeManagementPanel
+    if (!panel) return
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = digitalEmployeeManagementRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && digitalEmployeeManagementRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+      && digitalEmployeeManagementPanel?.baseId === panel.baseId
+    try {
+      await operation()
+      if (!isCurrent()) {
+        await clearDigitalEmployeeManagementQueries(queryClient, scope)
+        return
+      }
+      await clearDigitalEmployeeManagementQueries(queryClient, scope)
+      if (!isCurrent()) return
+      await refreshDigitalEmployeeManagement(panel.baseId, employeeId)
+    } catch (error) {
+      if (!isCurrent()) {
+        await clearDigitalEmployeeManagementQueries(queryClient, scope)
+        return
+      }
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else if (error instanceof ApiError && error.status === 404) {
+        await clearDigitalEmployeeManagementQueries(queryClient, scope)
+        if (isCurrent()) setDigitalEmployeeManagementPanel(undefined)
+      }
+      throw error
+    }
+  }
+
+  async function createManagedDigitalEmployee(values: { name: string; description: string; telegramAlias: string | null }): Promise<void> {
+    const panel = digitalEmployeeManagementPanel
+    if (!panel) return
+    let createdId: string | null = null
+    await mutateDigitalEmployeeManagement(null, async () => {
+      const created = await api.createManagedDigitalEmployee(panel.baseId, values, crypto.randomUUID())
+      createdId = created.id
+    })
+    if (createdId) await refreshDigitalEmployeeManagement(panel.baseId, createdId)
+  }
+
+  async function updateManagedDigitalEmployee(employeeId: string, values: ManagedEmployeeUpdateValues, expectedVersion: number): Promise<void> {
+    await mutateDigitalEmployeeManagement(employeeId, async () => {
+      await api.updateManagedDigitalEmployee(employeeId, values, expectedVersion)
+    })
+  }
+
+  async function replaceManagedDigitalEmployeeGrants(employeeId: string, memberIds: string[], expectedVersion: number): Promise<void> {
+    await mutateDigitalEmployeeManagement(employeeId, async () => {
+      await api.replaceManagedDigitalEmployeeGrants(employeeId, memberIds, expectedVersion, crypto.randomUUID())
+    })
+  }
+
+  async function activateManagedDigitalEmployee(employeeId: string, expectedVersion: number): Promise<void> {
+    await mutateDigitalEmployeeManagement(employeeId, async () => {
+      await api.activateManagedDigitalEmployee(employeeId, expectedVersion, crypto.randomUUID())
+    })
+  }
+
+  async function pauseManagedDigitalEmployee(employeeId: string, expectedVersion: number): Promise<void> {
+    await mutateDigitalEmployeeManagement(employeeId, async () => {
+      await api.pauseManagedDigitalEmployee(employeeId, expectedVersion, crypto.randomUUID())
     })
   }
 
@@ -2333,7 +2497,7 @@ function AppContent() {
   const content = readyState.canvasLoading
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
-    ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} canCreateRecords={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role)} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (!canvas?.table) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id, canvas.view.id) }} onSaveTemplate={() => setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base })} onImportIntoBase={() => openBaseImport(readyState.canvas!.base)} onOpenDraftHub={(trigger) => { void openDraftEmployeeHub(trigger) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
+    ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} canCreateRecords={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role)} canManageDigitalEmployees={selectedWorkspace.capabilities.can_manage_digital_employees === true} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; closeDigitalEmployeeManagement(); abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (!canvas?.table) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id, canvas.view.id) }} onSaveTemplate={() => setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base })} onImportIntoBase={() => openBaseImport(readyState.canvas!.base)} onOpenDraftHub={(trigger) => { void openDraftEmployeeHub(trigger) }} onOpenDigitalEmployeeManagement={(trigger) => { void openDigitalEmployeeManagement(trigger) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
       : navigationRoute === 'bases'
         ? <BaseDirectory state={baseDirectory.state} bases={baseDirectory.bases} onOpenBase={(base) => { void openBase(base) }} onHome={() => selectNavigation('home')} onRetry={() => { void loadBaseDirectory() }} />
         : <>{telegramRecoveryNotice}<WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={() => { void openTemplateImportHub() }} onOpenDraftHub={(trigger, draftId) => { void openDraftEmployeeHub(trigger, draftId) }} onOpenAssistantContext={(trigger) => { void openAssistantContext(trigger) }} /></>
@@ -2394,6 +2558,26 @@ function AppContent() {
       onClose={closeAssistantContext}
     />
     : null
+  const digitalEmployeeManagementOverlay = digitalEmployeeManagementPanel
+    ? <DigitalEmployeeManagementWorkbench
+      context={digitalEmployeeManagementPanel.context}
+      directory={digitalEmployeeManagementPanel.directory}
+      detail={digitalEmployeeManagementPanel.detail}
+      loading={digitalEmployeeManagementPanel.loading}
+      failed={digitalEmployeeManagementPanel.failed}
+      onSelectEmployee={(employeeId) => { void selectDigitalEmployeeManagementEmployee(employeeId) }}
+      onCreate={createManagedDigitalEmployee}
+      onUpdate={updateManagedDigitalEmployee}
+      onReplaceGrants={replaceManagedDigitalEmployeeGrants}
+      onActivate={activateManagedDigitalEmployee}
+      onPause={pauseManagedDigitalEmployee}
+      onReload={() => refreshDigitalEmployeeManagement(
+        digitalEmployeeManagementPanel.baseId,
+        digitalEmployeeManagementPanel.selectedEmployeeId,
+      )}
+      onClose={closeDigitalEmployeeManagement}
+    />
+    : null
   const governanceOverlay = governancePanel
     ? <GovernanceWorkbench
       bases={readyState.home.recent_bases}
@@ -2440,5 +2624,5 @@ function AppContent() {
       onClose={closeGovernanceWrite}
     />
     : null
-  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} activeRoute={navigationRoute} onNavigate={selectNavigation} onOpenGovernance={(trigger) => { void openGovernance(trigger) }}>{content}{builderOverlay}{templateImportOverlay}{draftEmployeeOverlay}{assistantContextOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
+  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} activeRoute={navigationRoute} onNavigate={selectNavigation} onOpenGovernance={(trigger) => { void openGovernance(trigger) }}>{content}{builderOverlay}{templateImportOverlay}{draftEmployeeOverlay}{assistantContextOverlay}{digitalEmployeeManagementOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
 }

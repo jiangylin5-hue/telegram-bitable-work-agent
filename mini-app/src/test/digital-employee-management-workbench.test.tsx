@@ -3,6 +3,7 @@ import type { ComponentProps } from 'react'
 import { expect, test, vi } from 'vitest'
 
 import { DigitalEmployeeManagementWorkbench } from '../app/DigitalEmployeeManagementWorkbench'
+import type { ManagedEmployeeDetail } from '../app/digital-employee-management-types'
 
 const context = {
   base: { id: 'base-1', name: '客户' },
@@ -17,7 +18,7 @@ const context = {
   members: [{ id: 'member-1', label: '成员 1', role: 'operator' as const }],
 }
 
-const draft = {
+const draft: ManagedEmployeeDetail = {
   id: 'employee-1', name: '客户助手', description: '安全汇总客户', status: 'draft' as const,
   accessMode: 'assigned' as const, tableCount: 0, viewCount: 0, memberCount: 0, version: 1,
   baseId: 'base-1', telegramAlias: null, accessibleTableIds: [], accessibleViewIds: [], allowedActions: ['summarize' as const], memberIds: [],
