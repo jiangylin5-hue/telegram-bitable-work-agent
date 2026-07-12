@@ -15,6 +15,8 @@ from app.schemas.stage07_draft_employee_hub import (
     SafeDraftSummaryResponse,
     SafeDraftTerminalReceipt,
     SafeDraftTerminalRequest,
+    SafeEmployeeInvocationRequest,
+    SafeEmployeeInvocationResponse,
 )
 from app.services.stage06_authorization import (
     Stage06AuthorizationError,
@@ -37,6 +39,7 @@ from app.services.stage06_platform import (
     list_bases_for_workspace,
 )
 from app.services.stage07_draft_employee_hub import confirm_s5_draft, reject_s5_draft
+from app.services.stage06_digital_employees import invoke_digital_employee
 
 
 router = APIRouter(tags=["stage07-draft-employee-hub"])
@@ -104,6 +107,59 @@ def list_digital_employee_contacts(
         next_cursor=page.next_cursor,
         has_more=page.has_more,
     )
+
+
+@router.post(
+    "/mini-app/digital-employees/{employee_id}/invocations",
+    response_model=SafeEmployeeInvocationResponse,
+)
+def invoke_safe_digital_employee(
+    employee_id: UUID,
+    request: SafeEmployeeInvocationRequest,
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> SafeEmployeeInvocationResponse:
+    employee = uow.get_digital_employee(employee_id)
+    if employee is None or employee.status != "active":
+        raise HTTPException(status_code=404, detail=error_detail("digital_employee_not_found", "digital_employee_not_found"))
+    try:
+        actor = authorize_workspace_action(uow, identity, employee.workspace_id, "digital_employee.invoke")
+    except Stage06AuthorizationError as exc:
+        raise _authorization_error(exc) from exc
+    try:
+        base_id = UUID(request.base_id)
+        view_id = None if request.view_id is None else UUID(request.view_id)
+        record_id = None if request.record_id is None else UUID(request.record_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=error_detail("invalid_uuid", "invalid_uuid")) from exc
+    if base_id != employee.base_id:
+        raise HTTPException(status_code=404, detail=error_detail("resource_scope_mismatch", "resource_scope_mismatch"))
+    if request.intent == "summarize" and view_id is None:
+        raise HTTPException(status_code=422, detail=error_detail("view_required", "view_required"))
+    if request.intent == "draft_update" and (view_id is None or record_id is None):
+        raise HTTPException(status_code=422, detail=error_detail("draft_context_required", "draft_context_required"))
+    try:
+        result = invoke_digital_employee(
+            uow,
+            employee_id,
+            action=request.intent,
+            view_id=view_id,
+            record_id=record_id,
+            runtime_mode="live",
+            prompt=request.instruction,
+            actor=actor,
+        )
+    except PlatformValidationError as exc:
+        raise _platform_error(exc) from exc
+    if request.intent == "draft_update":
+        draft_id = result.get("draft_id")
+        if not isinstance(draft_id, str) or result.get("status") != "pending_confirmation":
+            raise HTTPException(status_code=422, detail=error_detail("safe_draft_result_unavailable", "safe_draft_result_unavailable"))
+        return SafeEmployeeInvocationResponse(kind="draft", draft_id=draft_id, status="pending_confirmation")
+    answer = result.get("answer")
+    if not isinstance(answer, str):
+        raise HTTPException(status_code=422, detail=error_detail("safe_summary_result_unavailable", "safe_summary_result_unavailable"))
+    return SafeEmployeeInvocationResponse(kind="summary", answer=answer)
 
 
 @router.get("/mini-app/bases/{base_id}/drafts", response_model=SafeDraftPageResponse)

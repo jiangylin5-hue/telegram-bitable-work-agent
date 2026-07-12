@@ -214,3 +214,27 @@ def test_s5_confirm_reuses_versioned_record_update_and_safe_receipt() -> None:
     assert record.values == {"title": "After"}
     assert record.version == 2
     assert "private-trace" not in response.text
+
+
+def test_s5_invocation_rejects_generic_action_and_runtime_payloads() -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="S5 invoke", owner_user_id=owner.actor_id, actor=owner)
+    base = create_base(uow, workspace.id, name="Operations", actor=owner)
+    table = create_table(uow, base.id, name="Tasks", key="tasks", actor=owner)
+    employee = create_digital_employee(
+        uow, base.id, name="Assistant", description="Safe", telegram_alias=None,
+        accessible_tables=[str(table.id)], accessible_views=[], allowed_actions=["summarize"], actor=owner,
+    )
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_runtime_uow] = lambda: uow
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = owner.actor_id
+        response = client.post(
+            f"/mini-app/digital-employees/{employee.id}/invocations",
+            json={"intent": "summarize", "base_id": str(base.id), "action": "query", "runtime_mode": "deterministic"},
+        )
+
+    assert response.status_code == 422

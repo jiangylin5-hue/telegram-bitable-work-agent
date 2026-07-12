@@ -75,3 +75,20 @@ class SafeDraftTerminalReceipt(BaseModel):
     status: str
     version: int
     terminal_audit_event_id: str
+
+
+class SafeEmployeeInvocationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    intent: Literal["summarize", "draft_update"]
+    base_id: str
+    view_id: str | None = None
+    record_id: str | None = None
+    instruction: str | None = None
+
+
+class SafeEmployeeInvocationResponse(BaseModel):
+    kind: Literal["summary", "draft"]
+    answer: str | None = None
+    draft_id: str | None = None
+    status: Literal["pending_confirmation"] | None = None
