@@ -187,9 +187,17 @@ def invoke_digital_employee(
     runtime_mode: str = "deterministic",
     prompt: str | None = None,
     llm_client: StructuredLLMClient | None = None,
+    view_records_override: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     employee = _require_employee(uow, employee_id)
     _assert_employee_action(employee, action)
+    if view_records_override is not None and (
+        runtime_mode != "live_openrouter" or action != "summarize"
+    ):
+        raise PlatformValidationError(
+            "live_employee_record_override_not_allowed",
+            action,
+        )
     skill_evidence = _build_skill_evidence_for_invocation(
         employee=employee,
         action=action,
@@ -210,6 +218,7 @@ def invoke_digital_employee(
             prompt=prompt,
             llm_client=llm_client,
             skill_evidence=skill_evidence,
+            view_records_override=view_records_override,
         )
         _record_runtime_audit(
             uow,
@@ -282,17 +291,21 @@ def _invoke_live_digital_employee(
     prompt: str | None,
     llm_client: StructuredLLMClient | None,
     skill_evidence: dict[str, object],
+    view_records_override: list[dict[str, Any]] | None,
 ) -> dict[str, Any]:
     if action not in {"summarize", "draft_update"}:
         raise PlatformValidationError("unsupported_live_employee_action", action)
     if view_id is None:
         raise PlatformValidationError("view_required", action)
     _assert_view_in_scope(employee, view_id)
-    view_payload = list_view_records(uow, view_id, actor=actor)
-    visible_records = [
-        {"id": record["id"], "fields": record["fields"]}
-        for record in view_payload["records"]
-    ]
+    if view_records_override is None:
+        view_payload = list_view_records(uow, view_id, actor=actor)
+        visible_records = [
+            {"id": record["id"], "fields": record["fields"]}
+            for record in view_payload["records"]
+        ]
+    else:
+        visible_records = _normalize_live_view_records_override(view_records_override)
     visible_field_keys = _visible_field_keys(visible_records)
     schema = {
         "view_id": str(view_id),
@@ -366,6 +379,21 @@ def _invoke_live_digital_employee(
         record_count=len(visible_records),
     )
     return response
+
+
+def _normalize_live_view_records_override(
+    records: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for record in records:
+        record_id = record.get("id")
+        fields = record.get("fields")
+        if not isinstance(record_id, str) or not record_id:
+            raise PlatformValidationError("live_employee_override_invalid", "record_id")
+        if not isinstance(fields, dict):
+            raise PlatformValidationError("live_employee_override_invalid", "fields")
+        normalized.append({"id": record_id, "fields": dict(fields)})
+    return normalized
 
 
 def _build_skill_evidence_for_invocation(
