@@ -19,6 +19,9 @@ from app.api.routes.stage07_draft_employee_hub import (
 from app.api.routes.stage07_digital_employee_management import (
     router as stage07_digital_employee_management_router,
 )
+from app.api.routes.stage07_team_bot_knowledge import (
+    router as stage07_team_bot_knowledge_router,
+)
 from app.api.routes.stage07_telegram import router as stage07_telegram_router
 from app.api.routes.telegram_bindings import router as telegram_bindings_router
 from app.api.routes.telegram_send_requests import (
@@ -46,6 +49,7 @@ def create_app() -> FastAPI:
     app.include_router(stage07_governance_write_router)
     app.include_router(stage07_draft_employee_hub_router)
     app.include_router(stage07_digital_employee_management_router)
+    app.include_router(stage07_team_bot_knowledge_router)
     app.include_router(stage07_telegram_router)
     app.include_router(telegram_bindings_router)
     app.include_router(telegram_send_requests_router)
