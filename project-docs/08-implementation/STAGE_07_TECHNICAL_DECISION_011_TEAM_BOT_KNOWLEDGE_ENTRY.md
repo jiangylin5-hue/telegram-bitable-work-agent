@@ -4,7 +4,7 @@
 
 - Decision status: approved for implementation by the user on 2026-07-14 after A+B direction and the detailed implementation plan were reviewed.
 - Scope: S5.3, one Team Bot entry surface plus one-shot, permission-filtered knowledge summaries over existing employee-scoped Base views.
-- Code status: implementation is authorized only within this document package and `docs/superpowers/plans/2026-07-14-stage07-s5-team-bot-knowledge-entry-implementation.md`; no schema/migration/index/RBAC action/dependency, Telegram operation, browser control or deployment is authorized.
+- Code status: partial-local implementation is complete within `docs/superpowers/plans/2026-07-14-stage07-s5-team-bot-knowledge-entry-implementation.md`: four safe routes, a server-only 101/100 runtime window, redacted audit/idempotency receipt and an isolated Home workbench. No schema/migration/index/RBAC action/dependency, Telegram operation, browser control or deployment was added. Evidence and gaps are recorded in `evidence/stage07-s5-team-bot-knowledge.md`.
 
 ## Product Problem
 

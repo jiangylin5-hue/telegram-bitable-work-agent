@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: TD011 approved complexity and index decision; no physical index change is authorized or planned.
+- Status: TD011 index decision is implemented-local: no physical index was added, and the bounded existing access path is exercised by unit and disposable local PostgreSQL evidence.
 
 ## Complexity Map
 
@@ -32,7 +32,7 @@ No JSONB GIN index, vector index, knowledge-source relation index or global empl
 | selected context | exact employee/view reread | one view |
 | summary source | existing saved-view record query with one-row truncation probe | first `100` permitted rows reach runtime; `101`st row only sets truncation |
 
-The first implementation must capture a sanitized local query measurement before any optional index is proposed. A measurement cannot be converted into a production capacity claim.
+No optional index is proposed. A sanitized local query-plan/capacity measurement remains deferred until a measured scale requirement exists; it cannot be inferred from the one-command PostgreSQL acceptance test or converted into a production capacity claim.
 
 ## Future Decision Boundaries
 

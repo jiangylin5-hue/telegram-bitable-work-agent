@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: TD011 approved S5.3 module boundary; implementation is in progress and no durable knowledge model exists.
+- Status: TD011 module is partial-local: the documented Home surface, safe routes/service and protected state are implemented locally; no durable knowledge model exists.
 - Scope: one Home Team Bot workbench over active employees and caller-permitted saved-view knowledge windows.
 
 ## Functional Modules
@@ -45,5 +45,5 @@
 
 1. TD011 technical boundary and this document package were user-reviewed before the implementation plan and execution authorization.
 2. Existing TD010 member-eligibility and TD005 citation/invocation boundaries remain authoritative.
-3. Automated route/service/parser/protected-state coverage proves every BDD row before local promotion.
+3. Automated route/service/parser/protected-state coverage is reconciled per BDD row in the local evidence note; untested external/manual gates remain open.
 4. User-controlled visual review and any real OpenRouter/Telegram evidence remain separate later gates.

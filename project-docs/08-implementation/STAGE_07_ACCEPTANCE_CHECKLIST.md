@@ -92,7 +92,7 @@ The design and implementation plan are user-approved. V1 is `partial-local`: V1-
 
 ## Digital Employees
 
-- [ ] Team Bot and personal assistant contexts are visibly different and server-authorized across the full product.
+- [ ] Partial-local: Team Bot and personal assistant contexts are separate local workbenches/routes/DTOs/query subtrees and server-authorized in the implemented S5.3 slice; user-controlled visual review across the full product remains open.
 - [x] TD009 Personal Assistant has no Home work context until a user selects an existing safe contact and a server-projected permitted view.
 - [ ] Team Bot memory is user-partitioned under the separately approved contract.
 - [ ] Every Bot write remains `record_change_draft` until explicit confirmation.
@@ -128,12 +128,13 @@ These checks cover only the approved Home contact-to-view-to-summary slice. They
 - [x] Strict protected transport/query/workbench tests and full Mini App suite pass (`56 files / 215 tests`); production build passes.
 - [ ] User-controlled desktop/mobile visual review, real two-session lifecycle-command PostgreSQL contention, Telegram/provider/staging/production evidence and whole-Stage07 exit remain open.
 
-### S5.3 Team Bot Entry And View Knowledge — Proposed Only
+### S5.3 Team Bot Entry And View Knowledge — Partial Local
 
 - [x] User selected the A+B documentation direction: Team Bot entry plus one permission-filtered saved-view knowledge window.
 - [x] TD011/design/BDD/SDD/work-surface/complex-index document the closed contract, all state/error boundaries, no-index decision and explicit non-goals.
-- [ ] User review and a separately approved detailed implementation plan are required before code.
-- [ ] Later implementation must prove TBK-A01--TBK-A11, including Team/Personal state separation, live employee/view/field intersection, fixed 100-row window, empty/truncated provider boundary, replay/audit redaction and scoped stale-result cleanup.
+- [x] User approved the technical boundary and detailed plan, then instructed execution on 2026-07-14.
+- [ ] Partial-local: TD011 implementation has four safe routes, server-side selected-view reread, 101/100 bounded runtime input, empty-context audit/replay, isolated Team Bot transport/cache/workbench and explicit Base handoff. Evidence: focused backend 23 passed, disposable PostgreSQL 1 passed, Mini App 60 files / 221 tests and build.
+- [ ] Complete remaining TBK matrix: user-controlled visual desktop/mobile review, real OpenRouter, lifecycle/grant revocation, changed-key conflict, delayed-error replacement, Telegram/staging/production and whole-Stage07 acceptance.
 - [ ] No RAG/vector/files/memory/record picker/Telegram/direct-write capability may be claimed without a later approved decision.
 
 ### S6.1 Telegram Identity and Deep-Link Local Evidence

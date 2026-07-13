@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: TD011 approved software design; implementation began on 2026-07-14 under the detailed S5.3 implementation plan.
+- Status: TD011 is partial-local: backend routes/service/runtime-boundary and Mini App workbench were implemented and proportionally verified on 2026-07-14. Detailed evidence and open gates are in evidence/stage07-s5-team-bot-knowledge.md.
 - Scope: Team Bot is a Home workbench over active employees; knowledge is one safe selected saved-view window, not a durable knowledge system.
 
 ## Architecture
@@ -115,4 +115,4 @@ The Home workbench visibly labels itself `团队 Bot` and explains that it has n
 
 ## Failure And Safety Boundary
 
-Provider failure writes only a fixed outcome/code audit summary, returns fixed retry copy and never retries automatically. A response is never presented as successful unless the safe command outcome and audit reference are durable. No provider credentials or raw request/response enters logs, audit, QueryClient or DOM.
+Provider failure uses fixed safe retry/error handling and never retries automatically. This local evidence does not claim a real-provider failure/audit observation. A successful response is presented only after the safe command outcome and audit reference are durable. No provider credentials or raw request/response enters QueryClient or DOM.

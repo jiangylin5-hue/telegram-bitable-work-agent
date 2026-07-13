@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: TD011 approved acceptance contract; implementation evidence is pending and must be reconciled per scenario after the code substage.
+- Status: TD011 is partial-local after backend/frontend delivery and proportional evidence reconciliation on 2026-07-14. See evidence/stage07-s5-team-bot-knowledge.md; browser, real provider, Telegram, staging, production and whole-Stage07 acceptance remain open.
 - Scope: S5.3 Team Bot entry, one selected saved-view knowledge window and one-shot safe summary only.
 
 ## BDD Scenarios
@@ -102,6 +102,20 @@ Then no knowledge-source table, vector query, file/URL ingestion, memory/thread 
 | TBK-A07--A08 | empty/no-provider, truncation, idempotency replay/conflict, citation/audit redaction tests | result/retry/handoff observation | provider success claim without configured smoke |
 | TBK-A09 | deferred replacement, exact cleanup and malformed/error parser tests | desktop/mobile focus return | persistent cache evidence |
 | TBK-A10--A11 | route/model/migration/dependency/source inventory | product-boundary review | memory, retrieval or Telegram expansion |
+
+## Local Evidence Reconciliation
+
+| BDD IDs | Local status | Evidence | Remaining gate |
+| --- | --- | --- | --- |
+| TBK-A01 | implemented-local | contact route/DTO tests and disposable PostgreSQL contact projection | lifecycle/grant-change observation |
+| TBK-A02 | partial-local | separate Home entry/workbench and team-bot protected-query subtree tests | user-controlled desktop/mobile visual review |
+| TBK-A03 | implemented-local | current Base/table/view/saved-view intersection service and safe context routes | revoke/grant PostgreSQL matrix |
+| TBK-A04--A05 | partial-local | command-time selected-view reread, closed request models and <=600 bound | paused/revoked/cross-Base command matrix |
+| TBK-A06--A07 | implemented-local | captured 101/100 window, citation guard, empty/no-provider audit and truncation tests | configured-provider/UI observation |
+| TBK-A08--A09 | partial-local | same-key replay, safe receipt/parser, scoped cleanup and request generations | changed-key conflict and delayed-error replacement matrix |
+| TBK-A10--A11 | implemented-local | source inventory confirms no direct write, RAG/memory/files/Telegram/model/migration expansion | later product-boundary review |
+
+Focused backend result: 23 passed; disposable local PostgreSQL result: 1 passed; full Mini App: 60 files / 221 tests; production build passed. These are local-only results.
 
 ## Explicitly Deferred
 

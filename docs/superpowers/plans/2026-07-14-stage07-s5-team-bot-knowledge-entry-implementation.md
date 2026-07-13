@@ -13,6 +13,8 @@ Output:
 
 **Tech stack:** Existing FastAPI, SQLAlchemy 2.x, PostgreSQL JSONB view projections, LangGraph/OpenRouter-compatible structured runtime, React, Vite, TypeScript, TanStack Query and Vitest. No schema migration, new index, new RBAC action, provider replacement or frontend framework is introduced.
 
+**Current Progress (2026-07-14):** Tasks 1--5 are implemented locally in commits `2b173fc`, `11c229e`, `0c1e900` and `d36f002`. Task 6 proportional verification is complete: focused backend `23 passed`; disposable local PostgreSQL `1 passed`; full Mini App `60 files / 221 tests`; production build passed. User-controlled visual review, real OpenRouter/Telegram, staging/production and the untested BDD matrix rows remain open.
+
 ## Global Constraints
 
 - A contact must be `active`, member-eligible, authorized for `digital_employee.invoke`, and configured for `summarize`; it is not enough to be merely readable.
@@ -262,6 +264,5 @@ Commit: `docs(stage07): reconcile team bot knowledge evidence`.
 | Local PostgreSQL and full frontend evidence, no browser control | 6 |
 
 No task creates a new employee type, database schema/index, generic knowledge base, chat history, persistent memory, record picker, direct record mutation, Telegram routing, provider configuration, deployment or a general agent/permission framework.
-
 
 
