@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: TD011 proposed S5.3 module boundary; no implementation exists.
+- Status: TD011 approved S5.3 module boundary; implementation is in progress and no durable knowledge model exists.
 - Scope: one Home Team Bot workbench over active employees and caller-permitted saved-view knowledge windows.
 
 ## Functional Modules
@@ -43,7 +43,7 @@
 
 ## Acceptance Dependencies
 
-1. TD011 technical boundary and this document package are user-reviewed before an implementation plan.
+1. TD011 technical boundary and this document package were user-reviewed before the implementation plan and execution authorization.
 2. Existing TD010 member-eligibility and TD005 citation/invocation boundaries remain authoritative.
 3. Automated route/service/parser/protected-state coverage proves every BDD row before local promotion.
 4. User-controlled visual review and any real OpenRouter/Telegram evidence remain separate later gates.

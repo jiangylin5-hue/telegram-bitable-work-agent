@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: TD011 proposed software design; code waits for user review of this document package and a separate approved implementation plan.
+- Status: TD011 approved software design; implementation began on 2026-07-14 under the detailed S5.3 implementation plan.
 - Scope: Team Bot is a Home workbench over active employees; knowledge is one safe selected saved-view window, not a durable knowledge system.
 
 ## Architecture

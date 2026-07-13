@@ -2,9 +2,9 @@
 
 ## Status
 
-- Decision status: the user confirmed the recommended A+B product direction on 2026-07-14. This document proposes the exact technical boundary for review; it does not authorize implementation.
+- Decision status: approved for implementation by the user on 2026-07-14 after A+B direction and the detailed implementation plan were reviewed.
 - Scope: S5.3, one Team Bot entry surface plus one-shot, permission-filtered knowledge summaries over existing employee-scoped Base views.
-- Code status: no schema, migration, endpoint, permission action, dependency, provider call, Telegram operation or browser change is authorized by this document alone.
+- Code status: implementation is authorized only within this document package and `docs/superpowers/plans/2026-07-14-stage07-s5-team-bot-knowledge-entry-implementation.md`; no schema/migration/index/RBAC action/dependency, Telegram operation, browser control or deployment is authorized.
 
 ## Product Problem
 
@@ -86,4 +86,4 @@ Every selector and the summary command recomputes this intersection. A contact o
 
 ## Approval Boundary
 
-User approval of this decision would authorize writing the detailed implementation plan only. It would authorize no code until that plan is separately reviewed. The later implementation must be confined to the four safe routes, fixed knowledge-window semantics, strict Mini App state and existing authorization/runtime reuse stated here.
+The user approved the A+B direction, reviewed the document package, and instructed execution on 2026-07-14. Implementation remains confined to the four safe routes, fixed knowledge-window semantics, strict Mini App state and existing authorization/runtime reuse stated here.

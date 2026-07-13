@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: TD011 proposed acceptance contract; no implementation evidence exists.
+- Status: TD011 approved acceptance contract; implementation evidence is pending and must be reconciled per scenario after the code substage.
 - Scope: S5.3 Team Bot entry, one selected saved-view knowledge window and one-shot safe summary only.
 
 ## BDD Scenarios
