@@ -108,6 +108,30 @@ export async function clearAssistantContextQueries(
   queryClient.removeQueries({ queryKey })
 }
 
+export const teamBotKeys = {
+  contacts: (scope: ProtectedScope, cursor: string | null): QueryKey => (
+    protectedQueryKey(scope, 'team-bot', 'contacts', cursor)
+  ),
+  contexts: (scope: ProtectedScope, employeeId: string, cursor: string | null): QueryKey => (
+    protectedQueryKey(scope, 'team-bot', 'employee', employeeId, 'contexts', cursor)
+  ),
+  selectedView: (scope: ProtectedScope, employeeId: string, viewId: string): QueryKey => (
+    protectedQueryKey(scope, 'team-bot', 'employee', employeeId, 'view', viewId)
+  ),
+}
+
+export async function clearTeamBotQueries(
+  queryClient: QueryClient,
+  scope: ProtectedScope,
+  employeeId?: string,
+): Promise<void> {
+  const queryKey = employeeId
+    ? protectedQueryKey(scope, 'team-bot', 'employee', employeeId)
+    : protectedQueryKey(scope, 'team-bot')
+  await queryClient.cancelQueries({ queryKey })
+  queryClient.removeQueries({ queryKey })
+}
+
 export const telegramDeepLinkKeys = {
   resolver: (scope: ProtectedScope): QueryKey => protectedQueryKey(scope, 's6', 'telegram-deep-link'),
 }

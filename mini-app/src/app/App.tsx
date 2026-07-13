@@ -4,6 +4,7 @@ import { isCancelledError, QueryClientProvider, useQuery, useQueryClient } from 
 import { ApiError, api, type BaseSummary, type BootstrapResponse, type CreateForm, type PlatformTable, type RecordDetail, type TableSchema, type TelegramDeepLinkDestination, type ViewPresentation, type ViewRecords, type ViewSummary, type WorkspaceHome } from './api'
 import { AppShell, type AppShellRoute } from './AppShell'
 import { AssistantContextWorkbench } from './AssistantContextWorkbench'
+import { TeamBotWorkbench } from './TeamBotWorkbench'
 import { BaseCanvas } from './BaseCanvas'
 import { DigitalEmployeeManagementWorkbench } from './DigitalEmployeeManagementWorkbench'
 import { BaseDirectory, type BaseDirectoryState } from './BaseDirectory'
@@ -20,11 +21,12 @@ import { SaveTemplatePanel } from './SaveTemplatePanel'
 import { TemplateImportHub } from './TemplateImportHub'
 import { ViewBuilderPanel } from './ViewBuilderPanel'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
-import { clearAllProtectedQueries, clearAssistantContextQueries, clearDigitalEmployeeManagementQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTelegramDeepLinkQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, digitalEmployeeManagementKeys, draftEmployeeKeys, governanceKeys, governanceWriteKeys, navigationKeys, protectedQueryKey, relationCandidateQueryKey, templateImportKeys, viewBuilderKeys } from './protectedQuery'
+import { clearAllProtectedQueries, clearAssistantContextQueries, clearDigitalEmployeeManagementQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTeamBotQueries, clearTelegramDeepLinkQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, digitalEmployeeManagementKeys, draftEmployeeKeys, governanceKeys, governanceWriteKeys, navigationKeys, protectedQueryKey, relationCandidateQueryKey, teamBotKeys, templateImportKeys, viewBuilderKeys } from './protectedQuery'
 import { readTelegramMiniAppLaunch, type TelegramMiniAppLaunch } from './telegram-mini-app'
 import type { GovernanceAuditPage, GovernanceMemberPage } from './governance-types'
 import type { GovernanceEditableMemberPage, GovernanceFieldPermissionPage, GovernanceFieldPermissionPolicy } from './governance-write-types'
 import type { AssistantContextPage, AssistantSelectedView, CurrentCanvasInvocationContext, S5Contact, S5DraftDetail, S5InvocationRequest, S5InvocationResult } from './draft-employee-types'
+import type { TeamBotContact, TeamBotKnowledgeContextPage, TeamBotSelectedView, TeamBotSummary } from './team-bot-knowledge-types'
 import type { ManagedEmployeeDetail, ManagedEmployeeDirectory, ManagedEmployeeManagementContext, ManagedEmployeeUpdateValues } from './digital-employee-management-types'
 import type { CommitImportValues, CreateImportValues, ImportCommitReceipt, ImportPreview, TemplateSummary } from './template-import-types'
 import type { ViewBuilderContext, ViewBuilderResponse, ViewInitializationRequest, ViewMemberReplaceRequest, ViewPresentationPatchRequest } from './view-builder-types'
@@ -112,6 +114,16 @@ type AssistantContextPanel = {
   failed: boolean
 }
 
+type TeamBotPanel = {
+  contacts: TeamBotContact[]
+  selectedEmployeeId: string | null
+  context: TeamBotKnowledgeContextPage | null
+  selectedView: TeamBotSelectedView | null
+  summary: TeamBotSummary | null
+  loading: boolean
+  failed: boolean
+}
+
 type DigitalEmployeeManagementPanel = {
   baseId: string
   context: ManagedEmployeeManagementContext | null
@@ -173,6 +185,7 @@ function AppContent() {
   const governanceWriteRequestVersion = useRef(0)
   const draftEmployeeRequestVersion = useRef(0)
   const assistantContextRequestVersion = useRef(0)
+  const teamBotRequestVersion = useRef(0)
   const digitalEmployeeManagementRequestVersion = useRef(0)
   const telegramLaunchRequestVersion = useRef(0)
   const telegramLaunchHandled = useRef(false)
@@ -184,6 +197,7 @@ function AppContent() {
   const governanceWriteReturnFocus = useRef<HTMLElement | null>(null)
   const draftEmployeeReturnFocus = useRef<HTMLElement | null>(null)
   const assistantContextReturnFocus = useRef<HTMLElement | null>(null)
+  const teamBotReturnFocus = useRef<HTMLElement | null>(null)
   const digitalEmployeeManagementReturnFocus = useRef<HTMLElement | null>(null)
   const sessionInvalidated = useRef(false)
   const [telegramRecovery, setTelegramRecovery] = useState(false)
@@ -195,6 +209,7 @@ function AppContent() {
   const [governanceWritePanel, setGovernanceWritePanel] = useState<GovernanceWritePanel>()
   const [draftEmployeePanel, setDraftEmployeePanel] = useState<DraftEmployeePanel>()
   const [assistantContextPanel, setAssistantContextPanel] = useState<AssistantContextPanel>()
+  const [teamBotPanel, setTeamBotPanel] = useState<TeamBotPanel>()
   const [digitalEmployeeManagementPanel, setDigitalEmployeeManagementPanel] = useState<DigitalEmployeeManagementPanel>()
 
   function invalidateInFlightRequests() {
@@ -209,6 +224,7 @@ function AppContent() {
     governanceWriteRequestVersion.current += 1
     draftEmployeeRequestVersion.current += 1
     assistantContextRequestVersion.current += 1
+    teamBotRequestVersion.current += 1
     digitalEmployeeManagementRequestVersion.current += 1
     telegramLaunchRequestVersion.current += 1
     pendingTelegramDestination.current = null
@@ -396,6 +412,7 @@ function AppContent() {
     governanceWriteRequestVersion.current += 1
     draftEmployeeRequestVersion.current += 1
     assistantContextRequestVersion.current += 1
+    teamBotRequestVersion.current += 1
     telegramLaunchRequestVersion.current += 1
     pendingTelegramDestination.current = null
     setBuilderPanel(undefined)
@@ -404,6 +421,7 @@ function AppContent() {
     setGovernanceWritePanel(undefined)
     setDraftEmployeePanel(undefined)
     setAssistantContextPanel(undefined)
+    setTeamBotPanel(undefined)
     setDigitalEmployeeManagementPanel(undefined)
     setNavigationRoute('home')
     setBaseDirectory({ state: 'loading', bases: [] })
@@ -619,6 +637,18 @@ function AppContent() {
     assistantContextReturnFocus.current = null
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
     void clearAssistantContextQueries(queryClient, scope)
+    queueMicrotask(() => {
+      if (trigger?.isConnected) trigger.focus()
+    })
+  }
+
+  function closeTeamBot() {
+    teamBotRequestVersion.current += 1
+    setTeamBotPanel(undefined)
+    const trigger = teamBotReturnFocus.current
+    teamBotReturnFocus.current = null
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: readyState.home.workspace_id }
+    void clearTeamBotQueries(queryClient, scope)
     queueMicrotask(() => {
       if (trigger?.isConnected) trigger.focus()
     })
@@ -926,6 +956,165 @@ function AppContent() {
       if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
       else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
       else setAssistantContextPanel({ contacts: [], selectedEmployeeId: null, context: null, selectedView: null, summary: null, loading: false, failed: true })
+    }
+  }
+
+  async function openTeamBot(trigger?: HTMLElement): Promise<boolean> {
+    if (trigger) teamBotReturnFocus.current = trigger
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++teamBotRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && teamBotRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setTeamBotPanel({ contacts: [], selectedEmployeeId: null, context: null, selectedView: null, summary: null, loading: true, failed: false })
+    try {
+      const contacts = await queryClient.fetchQuery({
+        queryKey: teamBotKeys.contacts(scope, null),
+        queryFn: ({ signal }) => api.listTeamBotContacts(workspaceId, null, { signal }),
+      })
+      if (isCurrent()) {
+        setTeamBotPanel({ contacts: contacts.contacts, selectedEmployeeId: null, context: null, selectedView: null, summary: null, loading: false, failed: false })
+        return true
+      }
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return false
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else if (isCurrent()) setTeamBotPanel({ contacts: [], selectedEmployeeId: null, context: null, selectedView: null, summary: null, loading: false, failed: true })
+    }
+    return false
+  }
+
+  async function selectTeamBotEmployee(employeeId: string): Promise<void> {
+    const panel = teamBotPanel
+    const contact = panel?.contacts.find((item) => item.id === employeeId)
+    if (!panel || !contact) return
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++teamBotRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && teamBotRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setTeamBotPanel({ ...panel, selectedEmployeeId: employeeId, context: null, selectedView: null, summary: null, loading: true, failed: false })
+    try {
+      const context = await queryClient.fetchQuery({
+        queryKey: teamBotKeys.contexts(scope, employeeId, null),
+        queryFn: ({ signal }) => api.getTeamBotKnowledgeContexts(employeeId, null, { signal }),
+      })
+      if (!isCurrent()) return
+      if (context.employee.id !== contact.id || context.employee.baseId !== contact.baseId) throw new Error('Team Bot context does not match selected contact')
+      setTeamBotPanel({ contacts: panel.contacts, selectedEmployeeId: employeeId, context, selectedView: null, summary: null, loading: false, failed: false })
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else {
+        if (error instanceof ApiError && error.status === 404) await clearTeamBotQueries(queryClient, scope, employeeId)
+        if (isCurrent()) setTeamBotPanel({ contacts: panel.contacts, selectedEmployeeId: employeeId, context: null, selectedView: null, summary: null, loading: false, failed: true })
+      }
+    }
+  }
+
+  async function selectTeamBotView(viewId: string): Promise<void> {
+    const panel = teamBotPanel
+    const context = panel?.context
+    if (!panel || !context || !context.views.some((view) => view.id === viewId)) return
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++teamBotRequestVersion.current
+    const employeeId = context.employee.id
+    const isCurrent = () => !sessionInvalidated.current
+      && teamBotRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setTeamBotPanel({ ...panel, selectedView: null, summary: null, loading: true, failed: false })
+    try {
+      const selectedView = await queryClient.fetchQuery({
+        queryKey: teamBotKeys.selectedView(scope, employeeId, viewId),
+        queryFn: ({ signal }) => api.getTeamBotKnowledgeContextView(employeeId, viewId, { signal }),
+      })
+      if (!isCurrent()) return
+      if (selectedView.id !== viewId || selectedView.baseId !== context.employee.baseId) throw new Error('Team Bot view no longer matches context')
+      setTeamBotPanel({ ...panel, selectedView, summary: null, loading: false, failed: false })
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else {
+        if (error instanceof ApiError && error.status === 404) await clearTeamBotQueries(queryClient, scope, employeeId)
+        if (isCurrent()) setTeamBotPanel({ contacts: panel.contacts, selectedEmployeeId: panel.selectedEmployeeId, context: null, selectedView: null, summary: null, loading: false, failed: true })
+      }
+    }
+  }
+
+  async function summarizeTeamBot(instruction?: string): Promise<void> {
+    const panel = teamBotPanel
+    const context = panel?.context
+    const selectedView = panel?.selectedView
+    if (!panel || !context || !selectedView || selectedView.baseId !== context.employee.baseId) return
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++teamBotRequestVersion.current
+    const employeeId = context.employee.id
+    const isCurrent = () => !sessionInvalidated.current
+      && teamBotRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setTeamBotPanel({ ...panel, loading: true, failed: false })
+    try {
+      const viewKey = teamBotKeys.selectedView(scope, employeeId, selectedView.id)
+      await queryClient.cancelQueries({ queryKey: viewKey })
+      queryClient.removeQueries({ queryKey: viewKey })
+      const reread = await queryClient.fetchQuery({
+        queryKey: viewKey,
+        queryFn: ({ signal }) => api.getTeamBotKnowledgeContextView(employeeId, selectedView.id, { signal }),
+      })
+      if (!isCurrent()) return
+      if (reread.id !== selectedView.id || reread.baseId !== context.employee.baseId) throw new Error('Team Bot view reread does not match context')
+      const summary = await api.summarizeTeamBot(employeeId, {
+        baseId: reread.baseId,
+        viewId: reread.id,
+        ...(instruction ? { instruction } : {}),
+      }, crypto.randomUUID())
+      if (!isCurrent()) return
+      setTeamBotPanel({ ...panel, selectedView: reread, summary, loading: false, failed: false })
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else {
+        if (error instanceof ApiError && error.status === 404) await clearTeamBotQueries(queryClient, scope, employeeId)
+        if (isCurrent()) setTeamBotPanel({ contacts: [], selectedEmployeeId: null, context: null, selectedView: null, summary: null, loading: false, failed: true })
+      }
+    }
+  }
+
+  async function openTeamBotBase(): Promise<void> {
+    const panel = teamBotPanel
+    const baseId = panel?.selectedView?.baseId
+    if (!panel || !baseId || panel.context?.employee.baseId !== baseId) return
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = teamBotRequestVersion.current
+    try {
+      let base = readyState.home.recent_bases.find((item) => item.id === baseId)
+      if (!base) {
+        const directory = await queryClient.fetchQuery({
+          queryKey: navigationKeys.bases(scope),
+          queryFn: ({ signal }) => api.workspaceBases(workspaceId, { signal }),
+        })
+        if (teamBotRequestVersion.current !== requestVersion || activeWorkspaceId.current !== workspaceId) return
+        base = directory.bases.find((item) => item.id === baseId)
+      }
+      if (!base) throw new Error('Team Bot Base is unavailable')
+      teamBotRequestVersion.current += 1
+      setTeamBotPanel(undefined)
+      await clearTeamBotQueries(queryClient, scope)
+      await openBase(base)
+    } catch (error) {
+      if (teamBotRequestVersion.current !== requestVersion || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else setTeamBotPanel({ contacts: [], selectedEmployeeId: null, context: null, selectedView: null, summary: null, loading: false, failed: true })
     }
   }
 
@@ -2500,7 +2689,7 @@ function AppContent() {
     ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} canCreateRecords={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role)} canManageDigitalEmployees={selectedWorkspace.capabilities.can_manage_digital_employees === true} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; closeDigitalEmployeeManagement(); abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (!canvas?.table) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id, canvas.view.id) }} onSaveTemplate={() => setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base })} onImportIntoBase={() => openBaseImport(readyState.canvas!.base)} onOpenDraftHub={(trigger) => { void openDraftEmployeeHub(trigger) }} onOpenDigitalEmployeeManagement={(trigger) => { void openDigitalEmployeeManagement(trigger) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
       : navigationRoute === 'bases'
         ? <BaseDirectory state={baseDirectory.state} bases={baseDirectory.bases} onOpenBase={(base) => { void openBase(base) }} onHome={() => selectNavigation('home')} onRetry={() => { void loadBaseDirectory() }} />
-        : <>{telegramRecoveryNotice}<WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={() => { void openTemplateImportHub() }} onOpenDraftHub={(trigger, draftId) => { void openDraftEmployeeHub(trigger, draftId) }} onOpenAssistantContext={(trigger) => { void openAssistantContext(trigger) }} /></>
+        : <>{telegramRecoveryNotice}<WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={() => { void openTemplateImportHub() }} onOpenDraftHub={(trigger, draftId) => { void openDraftEmployeeHub(trigger, draftId) }} onOpenAssistantContext={(trigger) => { void openAssistantContext(trigger) }} onOpenTeamBot={(trigger) => { void openTeamBot(trigger) }} /></>
   const builderOverlay = builderPanel?.mode === 'base'
     ? <BuilderCreatePanel mode="base" onSubmit={(values, idempotencyKey) => createBase(values as { baseName: string; tableName: string }, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
     : builderPanel?.mode === 'table'
@@ -2556,6 +2745,22 @@ function AppContent() {
       onOpenBase={() => { void openAssistantContextBase() }}
       onRetry={() => { void openAssistantContext() }}
       onClose={closeAssistantContext}
+    />
+    : null
+  const teamBotOverlay = teamBotPanel
+    ? <TeamBotWorkbench
+      contacts={teamBotPanel.contacts}
+      context={teamBotPanel.context}
+      selectedView={teamBotPanel.selectedView}
+      summary={teamBotPanel.summary}
+      loading={teamBotPanel.loading}
+      failed={teamBotPanel.failed}
+      onSelectContact={(employeeId) => { void selectTeamBotEmployee(employeeId) }}
+      onSelectView={(viewId) => { void selectTeamBotView(viewId) }}
+      onSummarize={summarizeTeamBot}
+      onOpenBase={() => { void openTeamBotBase() }}
+      onRetry={() => { void openTeamBot() }}
+      onClose={closeTeamBot}
     />
     : null
   const digitalEmployeeManagementOverlay = digitalEmployeeManagementPanel
@@ -2624,5 +2829,5 @@ function AppContent() {
       onClose={closeGovernanceWrite}
     />
     : null
-  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} activeRoute={navigationRoute} onNavigate={selectNavigation} onOpenGovernance={(trigger) => { void openGovernance(trigger) }}>{content}{builderOverlay}{templateImportOverlay}{draftEmployeeOverlay}{assistantContextOverlay}{digitalEmployeeManagementOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
+  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} activeRoute={navigationRoute} onNavigate={selectNavigation} onOpenGovernance={(trigger) => { void openGovernance(trigger) }}>{content}{builderOverlay}{templateImportOverlay}{draftEmployeeOverlay}{assistantContextOverlay}{teamBotOverlay}{digitalEmployeeManagementOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
 }

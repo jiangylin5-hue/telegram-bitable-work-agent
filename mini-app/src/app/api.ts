@@ -50,6 +50,17 @@ import type {
 } from './governance-write-types'
 import type { AssistantContextPage, AssistantContextView, AssistantSelectedView, S5Citation, S5Contact, S5ContactPage, S5DraftDetail, S5DraftField, S5Intent, S5InvocationRequest, S5InvocationResult, S5TerminalReceipt } from './draft-employee-types'
 import type {
+  TeamBotCitation,
+  TeamBotContact,
+  TeamBotContactPage,
+  TeamBotKnowledgeContextPage,
+  TeamBotKnowledgeView,
+  TeamBotSelectedView,
+  TeamBotSummary,
+  TeamBotSummaryRequest,
+  TeamBotViewType,
+} from './team-bot-knowledge-types'
+import type {
   ManagedEmployeeAccessMode,
   ManagedEmployeeAction,
   ManagedEmployeeCreateValues,
@@ -656,6 +667,89 @@ function safeAssistantSelectedView(value: unknown): AssistantSelectedView {
   return { id: stringValue(record.id), name: stringValue(record.name), viewType: assistantContextViewType(record.view_type), baseId: stringValue(record.base_id) }
 }
 
+function assertTeamBotKeys(record: Record<string, unknown>, keys: string[]): void {
+  if (Object.keys(record).length !== keys.length || keys.some((key) => !(key in record))) {
+    throw new Error('Invalid team bot response')
+  }
+}
+
+function teamBotId(value: unknown): string {
+  const id = stringValue(value).trim()
+  if (!id) throw new Error('Invalid team bot response')
+  return id
+}
+
+function teamBotViewType(value: unknown): TeamBotViewType {
+  if (value === 'grid' || value === 'kanban' || value === 'calendar' || value === 'form') return value
+  throw new Error('Invalid team bot response')
+}
+
+function safeTeamBotContact(value: unknown): TeamBotContact {
+  const record = jsonRecord(value)
+  assertTeamBotKeys(record, ['id', 'base_id', 'name', 'description', 'available_intents'])
+  if (!Array.isArray(record.available_intents) || record.available_intents.length !== 1 || record.available_intents[0] !== 'summarize') {
+    throw new Error('Invalid team bot response')
+  }
+  return { id: teamBotId(record.id), baseId: teamBotId(record.base_id), name: stringValue(record.name), description: stringValue(record.description), availableIntents: ['summarize'] }
+}
+
+function safeTeamBotContactPage(value: unknown): TeamBotContactPage {
+  const record = jsonRecord(value)
+  assertTeamBotKeys(record, ['workspace_id', 'contacts', 'next_cursor', 'has_more'])
+  if (!Array.isArray(record.contacts)) throw new Error('Invalid team bot response')
+  return { workspaceId: teamBotId(record.workspace_id), contacts: record.contacts.map(safeTeamBotContact), nextCursor: nullableStringValue(record.next_cursor), hasMore: booleanValue(record.has_more) }
+}
+
+function safeTeamBotKnowledgeView(value: unknown): TeamBotKnowledgeView {
+  const record = jsonRecord(value)
+  assertTeamBotKeys(record, ['id', 'name', 'view_type'])
+  return { id: teamBotId(record.id), name: stringValue(record.name), viewType: teamBotViewType(record.view_type) }
+}
+
+function safeTeamBotKnowledgeContextPage(value: unknown): TeamBotKnowledgeContextPage {
+  const record = jsonRecord(value)
+  assertTeamBotKeys(record, ['employee', 'views', 'next_cursor', 'has_more'])
+  const employee = jsonRecord(record.employee)
+  assertTeamBotKeys(employee, ['id', 'name', 'description', 'base_id'])
+  if (!Array.isArray(record.views)) throw new Error('Invalid team bot response')
+  return {
+    employee: { id: teamBotId(employee.id), name: stringValue(employee.name), description: stringValue(employee.description), baseId: teamBotId(employee.base_id) },
+    views: record.views.map(safeTeamBotKnowledgeView),
+    nextCursor: nullableStringValue(record.next_cursor),
+    hasMore: booleanValue(record.has_more),
+  }
+}
+
+function safeTeamBotSelectedView(value: unknown): TeamBotSelectedView {
+  const record = jsonRecord(value)
+  assertTeamBotKeys(record, ['id', 'name', 'view_type', 'base_id'])
+  return { id: teamBotId(record.id), name: stringValue(record.name), viewType: teamBotViewType(record.view_type), baseId: teamBotId(record.base_id) }
+}
+
+function safeTeamBotCitation(value: unknown): TeamBotCitation {
+  const record = jsonRecord(value)
+  assertTeamBotKeys(record, ['record_id'])
+  return { recordId: teamBotId(record.record_id) }
+}
+
+function safeTeamBotSummary(value: unknown): TeamBotSummary {
+  const record = jsonRecord(value)
+  assertTeamBotKeys(record, ['kind', 'employee_id', 'base_id', 'view_id', 'answer', 'citations', 'knowledge_window_truncated', 'audit_event_id'])
+  if ((record.kind !== 'summary' && record.kind !== 'empty_context') || !Array.isArray(record.citations)) {
+    throw new Error('Invalid team bot response')
+  }
+  return {
+    kind: record.kind,
+    employeeId: teamBotId(record.employee_id),
+    baseId: teamBotId(record.base_id),
+    viewId: teamBotId(record.view_id),
+    answer: stringValue(record.answer),
+    citations: record.citations.map(safeTeamBotCitation),
+    knowledgeWindowTruncated: booleanValue(record.knowledge_window_truncated),
+    auditEventId: teamBotId(record.audit_event_id),
+  }
+}
+
 const managedEmployeeStatuses = new Set<ManagedEmployeeStatus>(['draft', 'active', 'paused'])
 const managedEmployeeAccessModes = new Set<ManagedEmployeeAccessMode>(['workspace', 'assigned'])
 const managedEmployeeActions = new Set<ManagedEmployeeAction>(['summarize', 'draft_update'])
@@ -1251,6 +1345,33 @@ export const api = {
     const parameters = new URLSearchParams({ limit: '50' })
     if (cursor) parameters.set('cursor', cursor)
     return safeS5ContactPage(await getJson<unknown>(`/mini-app/workspaces/${encodeURIComponent(workspaceId)}/digital-employee-contacts?${parameters.toString()}`, init))
+  },
+  listTeamBotContacts: async (workspaceId: string, cursor: string | null = null, init?: RequestInit): Promise<TeamBotContactPage> => {
+    const parameters = new URLSearchParams({ limit: '50' })
+    if (cursor) parameters.set('cursor', cursor)
+    return safeTeamBotContactPage(await getJson<unknown>(`/mini-app/workspaces/${encodeURIComponent(workspaceId)}/team-bot-contacts?${parameters.toString()}`, init))
+  },
+  getTeamBotKnowledgeContexts: async (employeeId: string, cursor: string | null = null, init?: RequestInit): Promise<TeamBotKnowledgeContextPage> => {
+    const parameters = new URLSearchParams({ limit: '50' })
+    if (cursor) parameters.set('cursor', cursor)
+    return safeTeamBotKnowledgeContextPage(await getJson<unknown>(`/mini-app/team-bots/${encodeURIComponent(employeeId)}/knowledge-contexts?${parameters.toString()}`, init))
+  },
+  getTeamBotKnowledgeContextView: async (employeeId: string, viewId: string, init?: RequestInit): Promise<TeamBotSelectedView> => safeTeamBotSelectedView(
+    await getJson<unknown>(`/mini-app/team-bots/${encodeURIComponent(employeeId)}/knowledge-contexts/${encodeURIComponent(viewId)}`, init),
+  ),
+  summarizeTeamBot: async (employeeId: string, request: TeamBotSummaryRequest, idempotencyKey: string, init?: RequestInit): Promise<TeamBotSummary> => {
+    const instruction = request.instruction?.trim()
+    if (instruction && instruction.length > 600) throw new Error('Team Bot instruction is too long')
+    return safeTeamBotSummary(await postJson<unknown>(
+      `/mini-app/team-bots/${encodeURIComponent(employeeId)}/summaries`,
+      {
+        base_id: request.baseId,
+        view_id: request.viewId,
+        ...(instruction ? { instruction } : {}),
+      },
+      idempotencyKey,
+      init,
+    ))
   },
   getAssistantContext: async (employeeId: string, cursor: string | null = null, init?: RequestInit): Promise<AssistantContextPage> => {
     const parameters = new URLSearchParams({ limit: '50' })
