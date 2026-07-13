@@ -128,6 +128,14 @@ These checks cover only the approved Home contact-to-view-to-summary slice. They
 - [x] Strict protected transport/query/workbench tests and full Mini App suite pass (`56 files / 215 tests`); production build passes.
 - [ ] User-controlled desktop/mobile visual review, real two-session lifecycle-command PostgreSQL contention, Telegram/provider/staging/production evidence and whole-Stage07 exit remain open.
 
+### S5.3 Team Bot Entry And View Knowledge — Proposed Only
+
+- [x] User selected the A+B documentation direction: Team Bot entry plus one permission-filtered saved-view knowledge window.
+- [x] TD011/design/BDD/SDD/work-surface/complex-index document the closed contract, all state/error boundaries, no-index decision and explicit non-goals.
+- [ ] User review and a separately approved detailed implementation plan are required before code.
+- [ ] Later implementation must prove TBK-A01--TBK-A11, including Team/Personal state separation, live employee/view/field intersection, fixed 100-row window, empty/truncated provider boundary, replay/audit redaction and scoped stale-result cleanup.
+- [ ] No RAG/vector/files/memory/record picker/Telegram/direct-write capability may be claimed without a later approved decision.
+
 ### S6.1 Telegram Identity and Deep-Link Local Evidence
 
 TD007 is `partial-local`, not a delivery or production approval. The checked rows below reflect the complete approved local identity/resolver/client matrix; only a real Telegram identity/deep-link smoke remains external evidence.

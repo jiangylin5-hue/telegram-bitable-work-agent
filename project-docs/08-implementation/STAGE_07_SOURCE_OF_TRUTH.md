@@ -12,6 +12,7 @@
 - Substage Delivery Update: Stage07 now uses the S0--S6 coherent-substage roadmap. S5 has approved TD005 and TD006 decision/design/BDD/SDD/module/index/plan packages plus local implementation evidence. TD007 Option A now has its decision/design/BDD/SDD/module/index/implementation package plus its complete local App failure matrix. TD008 Option A has its approved local implementation, migration, confirmation-denial, two-session Worker-collision and no-logger evidence package; only real Bot delivery/manual smoke remains independently gated. See [Substage Delivery Roadmap](STAGE_07_SUBSTAGE_DELIVERY_ROADMAP.md).
 - Current substage update: TD009 Option B is `partial-local`. Its two safe read routes, strict Mini App transport/query isolation, Home workbench, selected-view re-read and existing fixed summary reuse are implemented and proportionally verified. No migration, new permission action, dependency, lifecycle, memory, knowledge, record picker, Telegram operation, browser control, PostgreSQL TD009 evidence, staging or production action is claimed; broader Stage07 acceptance remains open.
 - Current completed local substage: TD010 Option A is `implemented-local`. It adds only a Base-bound management plane: additive employee version/access mode, member-use grants, versioned `draft|active|paused` lifecycle, eight safe management routes, protected workbench and TD005/TD006/TD009 assigned-member eligibility gates. Focused backend (`35 passed`), disposable PostgreSQL migration (`3 passed, 3 deselected`), full Mini App (`56 files / 215 tests`) and production build pass. Manual browser review is not performed by user instruction; Telegram/provider/staging/production and whole-Stage07 acceptance remain open.
+- Proposed next product substage: S5.3 / TD011 combines a Team Bot Home entry with permission-filtered saved-view knowledge summaries. The user confirmed this A+B direction for documentation. It reuses active employee scope, member eligibility, existing saved-view authorization and the LangGraph summary path; it proposes no schema/index/permission-action/dependency expansion. The decision/design/BDD/SDD/module/index package awaits one written review before an implementation plan or code.
 
 ## 1. Stage Goal
 
@@ -121,6 +122,12 @@ verified identity -> workspace member -> permission-filtered UI
 86. [Stage07 Digital Employee Management Work Surface](../03-modules/STAGE_07_DIGITAL_EMPLOYEE_MANAGEMENT_WORK_SURFACE.md)
 87. [Stage07 Digital Employee Management Complex Feature Index](STAGE_07_DIGITAL_EMPLOYEE_MANAGEMENT_COMPLEX_FEATURE_INDEX.md)
 88. [Stage07 Digital Employee Management Implementation Plan](../../docs/superpowers/plans/2026-07-13-stage07-digital-employee-management-implementation.md)
+89. [Technical Decision 011: Team Bot Knowledge Entry](STAGE_07_TECHNICAL_DECISION_011_TEAM_BOT_KNOWLEDGE_ENTRY.md)
+90. [Stage07 S5.3 Team Bot Knowledge Entry Design](../../docs/superpowers/specs/2026-07-14-stage07-s5-team-bot-knowledge-entry-design.md)
+91. [Stage07 Team Bot Knowledge Entry BDD And Acceptance](STAGE_07_TEAM_BOT_KNOWLEDGE_ENTRY_BDD_AND_ACCEPTANCE.md)
+92. [Stage07 Team Bot Knowledge Entry SDD](STAGE_07_TEAM_BOT_KNOWLEDGE_ENTRY_SDD.md)
+93. [Stage07 Team Bot Knowledge Entry Work Surface](../03-modules/STAGE_07_TEAM_BOT_KNOWLEDGE_ENTRY_WORK_SURFACE.md)
+94. [Stage07 Team Bot Knowledge Entry Complex Feature Index](STAGE_07_TEAM_BOT_KNOWLEDGE_ENTRY_COMPLEX_FEATURE_INDEX.md)
 
 Stage06 is the backend contract baseline. Stage02-05 documents are historical capability evidence only.
 
