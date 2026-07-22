@@ -1,2 +1,4 @@
 # Native Stage09 deployment assets run under Ubuntu /bin/sh.
 *.sh text eol=lf
+# Every sealed native asset is inspected by POSIX tools on the target host.
+deploy/stage09-native/** text eol=lf

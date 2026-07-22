@@ -58,13 +58,20 @@ do
     [ -f "$release_root/$required" ] && [ ! -L "$release_root/$required" ] || fail
 done
 
-# Linux systemd executes these assets with POSIX sh. Reject CRLF before a
-# release can become current, because dash parses the trailing carriage return
-# as an invalid shell option.
-for script in "$release_root"/deploy/stage09-native/scripts/*.sh; do
-    [ -f "$script" ] || fail
-    od -An -tx1 "$script" | grep -Eq '(^|[[:space:]])0d([[:space:]]|$)' && fail
+# Native service, SQL, Nginx and shell assets are all inspected by POSIX tools
+# on the target host. Reject CRLF anywhere in their sealed tree before a
+# release can become current: a CRLF unit or SQL file invalidates exact-line
+# security validation just as surely as a CRLF shell script breaks dash.
+if find "$release_root/deploy/stage09-native" -type f -print | while IFS= read -r asset; do
+    if od -An -tx1 "$asset" | grep -Eq '(^|[[:space:]])0d([[:space:]]|$)'; then
+        exit 1
+    fi
 done
+then
+    :
+else
+    fail
+fi
 
 # Built frontend assets are deployed separately at /var/www/stage09-p1/<id>.
 # The source release must not pretend to contain P1-B static assets.
