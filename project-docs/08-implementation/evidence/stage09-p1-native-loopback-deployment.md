@@ -2,6 +2,8 @@
 
 ## Status
 
+- Current Progress Update (2026-07-23, server local time): 已从已推送提交 `bddf4e6` 封存并激活 `stage09-p1-20260722-r4`。固定 revision `20260720_0032` 的离线 SQL 与实际 `stage09-p1-migrate.service` 均成功；Redis、API、worker、outbox bridge、Nginx 均为 `active`，并以独立脚本实测 `127.0.0.1:18080/health`、`127.0.0.1:18090/health` 和 Nginx 静态根路径。Nginx 只监听 `127.0.0.1:18090`，不绑定 80/443；按用户授权仅移除了 `last30days-api` 的 enabled 链接，未修改其源配置、Docker、Stage03、Caddy、Telegram 或 Provider。未激活的 r3 release/venv/static 与临时上传包已清理。
+
 - Result：`complete — native loopback deployment`
 - Date：2026-07-22
 - Artifact：`stage09-p1-20260722-r2`

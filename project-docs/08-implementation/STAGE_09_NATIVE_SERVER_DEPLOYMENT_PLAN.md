@@ -2,6 +2,8 @@
 
 ## Status
 
+- Current Progress Update (2026-07-23, server local time): P1-B 原生服务与内部 Nginx 已真实激活到 `stage09-p1-20260722-r4`（Git `bddf4e6`）。`20260720_0032` 迁移、Redis/API/worker/outbox、`127.0.0.1:18080` API 与 `127.0.0.1:18090` Nginx 静态/API 入口均有独立实测证据。该进度不代表公共 HTTPS、DNS、真实 Telegram 或 Provider 上线完成；公网入口仍是下一独立门禁。
+
 - Document status：active — 2026-07-22 用户确认，替代 Stage09 中所有“新建 Docker Compose/容器/卷”的 P1 实施路径。
 - Scope：Ubuntu 原生 `systemd` 服务、服务器本地 PostgreSQL + pgvector、原生 Redis、原生 Nginx 静态/反向代理，以及与历史 Caddy 的最小 HTTPS ingress 衔接。
 - Out of scope：迁移或替换历史 Stage03 Docker 服务；将 PostgreSQL/Redis 暴露公网；真实 Telegram/Provider 调用；Stage07 Browser/UI 验收；购买或迁移到托管数据库。
