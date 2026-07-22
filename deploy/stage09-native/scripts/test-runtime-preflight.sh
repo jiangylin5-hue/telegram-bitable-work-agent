@@ -40,15 +40,18 @@ write_fixture() {
 
 write_controlled_fixture() {
     fixture_path=$1
+    send_mode=$2
     write_fixture "$fixture_path" "$loopback_db" "$socket_redis"
+    sed -i \
+        -e 's/^LLM_ENABLED=false$/LLM_ENABLED=true/' \
+        -e 's/^AGENT_WORKFLOW_MODE=fake$/AGENT_WORKFLOW_MODE=real_openrouter/' \
+        -e "s/^TELEGRAM_SEND_MODE=dry_run$/TELEGRAM_SEND_MODE=$send_mode/" \
+        -e 's/^TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS=$/TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS=fixture-chat/' \
+        -e 's/^TELEGRAM_ALLOWED_CHAT_IDS=$/TELEGRAM_ALLOWED_CHAT_IDS=fixture-chat/' \
+        "$fixture_path"
     printf '%s\n' \
         'TELEGRAM_BOT_TOKEN=fixture-bot-token' \
-        'OPENROUTER_API_KEY=fixture-openrouter-key' \
-        'LLM_ENABLED=true' \
-        'AGENT_WORKFLOW_MODE=real_openrouter' \
-        'TELEGRAM_SEND_MODE=restricted_test' \
-        'TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS=fixture-chat' \
-        'TELEGRAM_ALLOWED_CHAT_IDS=fixture-chat' >> "$fixture_path"
+        'OPENROUTER_API_KEY=fixture-openrouter-key' >> "$fixture_path"
 }
 
 assert_pass() {
@@ -72,7 +75,7 @@ assert_rejected_without_value_leak() {
         exit 1
     fi
     case "$output" in
-        *fixture-postgres-password*|*fixture-webhook-nonce*|*198.51.100.42*|*stage03-fixture*|*stage07-fixture*)
+        *fixture-postgres-password*|*fixture-webhook-nonce*|*fixture-openrouter-key*|*fixture-bot-token*|*fixture-chat*|*other-chat*|*198.51.100.42*|*stage03-fixture*|*stage07-fixture*)
             printf '%s\n' "$assertion_name: FAIL" >&2
             exit 1
             ;;
@@ -115,14 +118,29 @@ write_fixture "$tmpdir/unsafe-mode.env" "$loopback_db" "$socket_redis"
 sed -i 's/^TELEGRAM_SEND_MODE=dry_run$/TELEGRAM_SEND_MODE=unsafe-mode/' "$tmpdir/unsafe-mode.env"
 assert_rejected_without_value_leak 'unsafe-mode' "$tmpdir/unsafe-mode.env"
 
-write_controlled_fixture "$tmpdir/controlled.env"
-assert_pass 'controlled-real-llm-and-restricted-send' "$tmpdir/controlled.env"
+write_fixture "$tmpdir/real-send.env" "$loopback_db" "$socket_redis"
+sed -i 's/^TELEGRAM_SEND_MODE=dry_run$/TELEGRAM_SEND_MODE=real/' "$tmpdir/real-send.env"
+assert_rejected_without_value_leak 'real-send-mode' "$tmpdir/real-send.env"
 
-cp "$tmpdir/controlled.env" "$tmpdir/missing-key.env"
+write_fixture "$tmpdir/provider-enabled.env" "$loopback_db" "$socket_redis"
+sed -i 's/^PROVIDER_MODE=disabled$/PROVIDER_MODE=enabled/' "$tmpdir/provider-enabled.env"
+assert_rejected_without_value_leak 'provider-mode-enabled' "$tmpdir/provider-enabled.env"
+
+write_controlled_fixture "$tmpdir/controlled-dry-run.env" dry_run
+sed -i \
+    -e 's/^TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS=fixture-chat$/TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS=/' \
+    -e 's/^TELEGRAM_ALLOWED_CHAT_IDS=fixture-chat$/TELEGRAM_ALLOWED_CHAT_IDS=/' \
+    "$tmpdir/controlled-dry-run.env"
+assert_pass 'controlled-real-llm-and-dry-run' "$tmpdir/controlled-dry-run.env"
+
+write_controlled_fixture "$tmpdir/controlled-restricted.env" restricted_test
+assert_pass 'controlled-real-llm-and-restricted-send' "$tmpdir/controlled-restricted.env"
+
+cp "$tmpdir/controlled-restricted.env" "$tmpdir/missing-key.env"
 sed -i 's/^OPENROUTER_API_KEY=.*/OPENROUTER_API_KEY=/' "$tmpdir/missing-key.env"
 assert_rejected_without_value_leak 'controlled-llm-missing-key' "$tmpdir/missing-key.env"
 
-cp "$tmpdir/controlled.env" "$tmpdir/mismatched-allowlist.env"
+cp "$tmpdir/controlled-restricted.env" "$tmpdir/mismatched-allowlist.env"
 sed -i 's/^TELEGRAM_ALLOWED_CHAT_IDS=.*/TELEGRAM_ALLOWED_CHAT_IDS=other-chat/' "$tmpdir/mismatched-allowlist.env"
 assert_rejected_without_value_leak 'restricted-send-mismatched-allowlist' "$tmpdir/mismatched-allowlist.env"
 
