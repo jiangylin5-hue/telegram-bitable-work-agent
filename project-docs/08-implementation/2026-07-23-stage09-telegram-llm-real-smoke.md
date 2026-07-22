@@ -37,3 +37,10 @@
 ## 2026-07-23 运行时输入发现
 
 受保护 env 的 `TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS` 键存在但值为空。r11 的 Stage09 运行时更新因此在写入前被拒绝，服务器 runtime 未改变。r12 允许先启用不产生 Telegram 消息写入的真实 OpenRouter dry-run；要进行 webhook 接收及受限真实发送，用户须在目标 bot 对话中发送一条唯一测试文本。系统将从收到的 webhook 取得 chat 事实、立即写入精确双 allowlist，再执行 send-request/confirm 的真实回包，不会猜测或手工编造 chat ID。
+
+## 2026-07-23 已执行状态
+
+- r14 已通过 sealed release、systemd、loopback 与外部 HTTPS 健康检查；受控真实 LLM profile 为 active，Telegram 保持 `dry_run`。
+- 实际运行 Stage08 12 case 真实 Provider 评测：12/12 通过、9 个 Provider 调用完成、0 timeout；所有安全 gate 均通过，未产生 Telegram、Provider 业务写入、draft 确认或完整 prompt/response 持久化。
+- 已实际调用 Telegram `getMe`、`getWebhookInfo` 与 `setWebhook`。新的 webhook 指向 Stage09 endpoint、无 API error、pending update 为 0；这替换了此前非 Stage09 的 bot webhook。
+- 当前 Telegram receive/send allowlist 均为空，尚无真实 outgoing message。需要用户在 bot 私聊发送一次唯一 nonce 后，系统才可从 webhook 取得事实 chat ID，写入精确双 allowlist 并开展受限真实回包。
