@@ -58,11 +58,19 @@ app_env=$(value_for APP_ENV)
 [ "$app_env" = "staging" ] || fail "unsafe-APP_ENV"
 
 telegram_send_mode=$(value_for TELEGRAM_SEND_MODE)
-[ "$telegram_send_mode" = "dry_run" ] || fail "unsafe-TELEGRAM_SEND_MODE"
+case "$telegram_send_mode" in
+    dry_run|restricted_test) ;;
+    *) fail "unsafe-TELEGRAM_SEND_MODE" ;;
+esac
 llm_enabled=$(value_for LLM_ENABLED)
-[ "$llm_enabled" = "false" ] || fail "unsafe-LLM_ENABLED"
 agent_workflow_mode=$(value_for AGENT_WORKFLOW_MODE)
-[ "$agent_workflow_mode" = "fake" ] || fail "unsafe-AGENT_WORKFLOW_MODE"
+case "$llm_enabled:$agent_workflow_mode" in
+    false:fake|true:real_openrouter) ;;
+    *) fail "unsafe-LLM-workflow-combination" ;;
+esac
+if [ "$llm_enabled" = "true" ]; then
+    require_value OPENROUTER_API_KEY
+fi
 provider_mode=$(value_for PROVIDER_MODE)
 [ "$provider_mode" = "disabled" ] || fail "unsafe-PROVIDER_MODE"
 save_full_prompt=$(value_for AGENT_SAVE_FULL_PROMPT)
@@ -70,22 +78,29 @@ save_full_prompt=$(value_for AGENT_SAVE_FULL_PROMPT)
 save_full_response=$(value_for AGENT_SAVE_FULL_RESPONSE)
 [ "$save_full_response" = "false" ] || fail "unsafe-AGENT_SAVE_FULL_RESPONSE"
 
-if ! awk -F= '
-    /^[[:space:]]*($|#)/ { next }
-    /^[A-Za-z_][A-Za-z0-9_]*=/ {
-        key = $1
-        value = $0
-        sub(/^[^=]*=/, "", value)
-        sub(/^[[:space:]]+/, "", value)
-        sub(/[[:space:]]+$/, "", value)
-        if ((key ~ /^TELEGRAM_.*ALLOW/) || key == "STAGE06_NOTIFICATION_ALLOWED_CHAT_IDS") {
-            if (value != "") invalid = 1
-        }
-    }
-    END { exit invalid ? 1 : 0 }
-' "$runtime_file"; then
-    fail "nonempty-telegram-allowlist"
-fi
+telegram_test_send_allowed_chat_ids=$(value_for TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS)
+telegram_allowed_chat_ids=$(value_for TELEGRAM_ALLOWED_CHAT_IDS)
+telegram_allowed_user_ids=$(value_for TELEGRAM_ALLOWED_USER_IDS)
+stage06_notification_allowed_chat_ids=$(value_for STAGE06_NOTIFICATION_ALLOWED_CHAT_IDS)
+
+[ -z "$telegram_allowed_user_ids" ] || fail "nonempty-telegram-user-allowlist"
+[ -z "$stage06_notification_allowed_chat_ids" ] || fail "nonempty-stage06-notification-allowlist"
+
+case "$telegram_send_mode" in
+    dry_run)
+        [ -z "$telegram_test_send_allowed_chat_ids" ] && [ -z "$telegram_allowed_chat_ids" ] || \
+            fail "nonempty-telegram-allowlist"
+        telegram_allowlists_status=empty
+        ;;
+    restricted_test)
+        require_value TELEGRAM_BOT_TOKEN
+        [ -n "$telegram_test_send_allowed_chat_ids" ] || fail "missing-TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS"
+        [ -n "$telegram_allowed_chat_ids" ] || fail "missing-TELEGRAM_ALLOWED_CHAT_IDS"
+        [ "$telegram_test_send_allowed_chat_ids" = "$telegram_allowed_chat_ids" ] || \
+            fail "mismatched-telegram-allowlists"
+        telegram_allowlists_status=matched-controlled
+        ;;
+esac
 
 validate_postgres_url() {
     # The complete URL is whitelisted to prevent query/socket host overrides.
@@ -124,10 +139,10 @@ for configured_key in \
 do
     printf '%s\n' "$configured_key: configured"
 done
-printf '%s\n' "TELEGRAM_ALLOWLISTS: empty"
-printf '%s\n' "TELEGRAM_SEND_MODE: dry_run"
-printf '%s\n' "LLM_ENABLED: false"
-printf '%s\n' "AGENT_WORKFLOW_MODE: fake"
+printf '%s\n' "TELEGRAM_ALLOWLISTS: $telegram_allowlists_status"
+printf '%s\n' "TELEGRAM_SEND_MODE: $telegram_send_mode"
+printf '%s\n' "LLM_ENABLED: $llm_enabled"
+printf '%s\n' "AGENT_WORKFLOW_MODE: $agent_workflow_mode"
 printf '%s\n' "PROVIDER_MODE: disabled"
 printf '%s\n' "AGENT_SAVE_FULL_PROMPT: false"
 printf '%s\n' "AGENT_SAVE_FULL_RESPONSE: false"
