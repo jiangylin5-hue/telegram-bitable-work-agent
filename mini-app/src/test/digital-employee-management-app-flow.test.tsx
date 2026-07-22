@@ -53,7 +53,7 @@ test('opens the Base management panel and creates only through TD010 endpoints w
   fireEvent.click(await screen.findByRole('link', { name: 'CRM' }))
   const entry = await screen.findByRole('button', { name: '数字员工管理' })
   fireEvent.click(entry)
-  expect(await screen.findByRole('dialog', { name: '数字员工管理' })).toBeVisible()
+  expect(await screen.findByRole('region', { name: '数字员工管理' })).toBeVisible()
 
   fireEvent.change(screen.getByLabelText('员工名称'), { target: { value: '客户助手' } })
   fireEvent.change(screen.getByLabelText('员工说明'), { target: { value: '安全汇总客户' } })

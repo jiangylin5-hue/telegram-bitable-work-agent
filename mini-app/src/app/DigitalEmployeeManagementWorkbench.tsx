@@ -141,7 +141,7 @@ export function DigitalEmployeeManagementWorkbench({
   }
 
   return <div className="digital-employee-management-backdrop" role="presentation">
-    <aside className="digital-employee-management-workbench" aria-label="数字员工管理" aria-modal="true" role="dialog">
+    <section className="digital-employee-management-workbench" aria-label="数字员工管理" data-testid="digital-employee-workbench" data-workbench-layout="three-pane">
       <header className="digital-employee-management-header">
         <div><p>DIGITAL EMPLOYEE</p><h2 ref={headingRef} tabIndex={-1}>数字员工管理</h2><span>员工只能在当前 Base 的已选表、视图和成员范围内被安全使用。</span></div>
         <button type="button" aria-label="关闭数字员工管理" onClick={onClose}>×</button>
@@ -183,6 +183,6 @@ export function DigitalEmployeeManagementWorkbench({
           </section>
         </aside>
       </div>
-    </aside>
+    </section>
   </div>
 }

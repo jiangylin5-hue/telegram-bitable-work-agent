@@ -18,6 +18,7 @@ test('renders only safe draft fields and submits a versioned terminal action', a
   expect(screen.getByLabelText('数字员工目录')).toBeVisible()
   expect(screen.getByLabelText('当前上下文')).toBeVisible()
   expect(screen.getByLabelText('草稿确认')).toBeVisible()
+  expect(screen.getByLabelText('草稿变更预览')).toHaveTextContent('标题')
   expect(screen.getByText('标题')).toBeInTheDocument()
   expect(screen.queryByText('private-trace')).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: '确认变更' }))

@@ -51,7 +51,7 @@ export function TeamBotWorkbench({
 
   return (
     <div className="assistant-context-backdrop" role="presentation">
-      <aside className="assistant-context-workbench team-bot-workbench" role="dialog" aria-label="团队 Bot" aria-modal="true">
+      <section className="assistant-context-workbench team-bot-workbench" aria-label="团队 Bot" data-testid="team-bot-workbench" data-workbench-layout="three-pane">
         <header className="assistant-context-header">
           <div>
             <p>TEAM BOT</p>
@@ -109,14 +109,8 @@ export function TeamBotWorkbench({
                   )}
                 </>
               )}
-            </section>
-
-            <section className="assistant-context-section assistant-context-summary-section" aria-label="团队摘要与审计">
-              <header>
-                <p>REVIEW</p>
-                <h3>团队摘要与审计</h3>
-              </header>
-              {!selectedView ? <p>摘要前会重新验证团队助手、已保存视图及当前访问权限。</p> : (
+              {selectedView ? <section className="team-bot-thread" aria-label="团队对话记录">
+                <header><p>CONVERSATION</p><h4>当前对话</h4></header>
                 <div className="assistant-context-invocation">
                   <p>当前视图：{selectedView.name}</p>
                   <label>
@@ -125,19 +119,28 @@ export function TeamBotWorkbench({
                   </label>
                   <button type="button" disabled={loading || submitting} onClick={() => void summarize()}>{submitting ? '处理中…' : '生成团队摘要'}</button>
                 </div>
-              )}
-              {summary ? (
-                <div className="assistant-context-summary team-bot-summary">
-                  <p>{summary.answer}</p>
-                  {summary.knowledgeWindowTruncated ? <p className="team-bot-truncation">仅展示前 100 条当前可访问记录的摘要。</p> : null}
-                  {summary.citations.length > 0 ? <ul>{summary.citations.map((citation) => <li key={citation.recordId}><code>{citation.recordId}</code></li>)}</ul> : null}
-                  <small>审计回执：{summary.auditEventId}</small>
-                </div>
-              ) : null}
-              {selectedView ? <button type="button" className="assistant-context-open-base" onClick={onOpenBase}>打开 Base 继续处理</button> : null}
+                {summary ? (
+                  <div className="assistant-context-summary team-bot-summary">
+                    <p>{summary.answer}</p>
+                    {summary.knowledgeWindowTruncated ? <p className="team-bot-truncation">仅展示前 100 条当前可访问记录的摘要。</p> : null}
+                  </div>
+                ) : null}
+              </section> : null}
+            </section>
+
+            <section className="assistant-context-section assistant-context-summary-section" aria-label="团队摘要与审计">
+              <header>
+                <p>REVIEW</p>
+                <h3>团队摘要与审计</h3>
+              </header>
+              {!selectedView ? <p>摘要前会重新验证团队助手、已保存视图及当前访问权限。</p> : <>
+                <dl className="team-bot-review-list"><div><dt>当前视图</dt><dd>{selectedView.name}</dd></div><div><dt>安全范围</dt><dd>仅当前成员已授权记录</dd></div>{summary ? <><div><dt>来源记录</dt><dd>{summary.citations.length} 条</dd></div><div><dt>审计回执</dt><dd>{summary.auditEventId}</dd></div></> : null}</dl>
+                {summary?.citations.length ? <ul className="team-bot-citations">{summary.citations.map((citation) => <li key={citation.recordId}><code>{citation.recordId}</code></li>)}</ul> : null}
+                <button type="button" className="assistant-context-open-base" onClick={onOpenBase}>打开 Base 继续处理</button>
+              </>}
             </section>
         </div>
-      </aside>
+      </section>
     </div>
   )
 }

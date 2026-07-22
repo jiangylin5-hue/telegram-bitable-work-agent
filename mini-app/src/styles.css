@@ -783,6 +783,24 @@ select:focus-visible {
   }
 }
 
+.visual-fixture-switcher {
+  position: fixed;
+  z-index: 30;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 3px;
+  opacity: .02;
+}
+
+.visual-fixture-switcher button {
+  border: 0;
+  background: #000;
+  color: #fff;
+  padding: 3px 5px;
+  font-size: 10px;
+}
+
 @media (max-width: 560px) {
   .page-toolbar {
     align-items: center;
@@ -834,5 +852,409 @@ select:focus-visible {
 
   .view-tools .create-record-button {
     order: -1;
+  }
+}
+
+/* Stage07 final rebuild: operational density without invented business data. */
+.queue-row {
+  min-height: 72px;
+  align-items: start;
+  padding: 11px 0;
+}
+
+.queue-row > .row-check,
+.queue-row > .record-icon,
+.queue-row > .queue-status,
+.queue-row > .row-link {
+  margin-top: 7px;
+}
+
+.queue-row-main {
+  gap: 4px;
+}
+
+.queue-row-main strong {
+  color: var(--text-primary);
+  font-weight: 620;
+}
+
+.queue-base-link {
+  width: fit-content;
+  border: 0;
+  background: transparent;
+  color: var(--accent-azure);
+  padding: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.queue-base-link:hover {
+  text-decoration: underline;
+}
+
+.queue-base-unavailable {
+  color: var(--text-muted) !important;
+  font-size: 11px !important;
+}
+
+.base-workbench-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 252px;
+  min-height: calc(100dvh - 162px);
+}
+
+.base-workbench-main {
+  min-width: 0;
+}
+
+.base-workbench-context {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  border-left: 1px solid var(--line-subtle);
+  background: #fbfcfe;
+  padding: 24px 18px;
+}
+
+.base-workbench-context header p {
+  margin: 0 0 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+
+.base-workbench-context h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.base-workbench-context dl {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid var(--line-subtle);
+}
+
+.base-workbench-context dl div {
+  display: grid;
+  gap: 4px;
+  border-bottom: 1px solid var(--line-subtle);
+  padding: 10px 0;
+}
+
+.base-workbench-context dt {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.base-workbench-context dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.base-workbench-context > p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+/* Conversation Desk and Digital Employee Workbench use the approved full-canvas desktop grammar. */
+.assistant-context-backdrop,
+.draft-hub-backdrop,
+.digital-employee-management-backdrop {
+  inset: 0 0 0 72px;
+  display: block;
+  overflow: hidden;
+  background: var(--surface-canvas);
+  padding: 0;
+}
+
+.assistant-context-workbench,
+.draft-hub,
+.digital-employee-management-workbench {
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 24px 30px 28px;
+}
+
+.assistant-context-header,
+.draft-hub-header,
+.digital-employee-management-header {
+  min-height: 58px;
+  align-items: flex-start;
+}
+
+.assistant-context-columns,
+.draft-hub-columns,
+.digital-employee-management-columns {
+  min-height: calc(100dvh - 142px);
+  height: calc(100dvh - 142px);
+  margin-top: 18px;
+}
+
+.assistant-context-section,
+.draft-hub-section,
+.digital-employee-management-section,
+.digital-employee-management-review {
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+
+.assistant-context-section:first-child,
+.draft-hub-section:first-child,
+.digital-employee-management-section:first-child {
+  padding-left: 0;
+}
+
+.assistant-context-contact-list button,
+.assistant-context-view-list button,
+.draft-hub-contact-select,
+.digital-employee-management-directory button {
+  min-height: 58px;
+  padding: 11px 12px;
+}
+
+.assistant-context-invocation textarea,
+.draft-hub-invocation textarea {
+  min-height: 118px;
+}
+
+.team-bot-thread {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+  border-top: 1px solid var(--line-subtle);
+  padding-top: 16px;
+}
+
+.team-bot-thread header p {
+  margin: 0 0 3px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+
+.team-bot-thread h4 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.team-bot-thread .assistant-context-summary {
+  margin-top: 0;
+  background: #f8fbff;
+}
+
+.team-bot-review-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid var(--line-subtle);
+}
+
+.team-bot-review-list div {
+  display: grid;
+  gap: 4px;
+  border-bottom: 1px solid var(--line-subtle);
+  padding: 10px 0;
+}
+
+.team-bot-review-list dt {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.team-bot-review-list dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.team-bot-citations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.team-bot-citations code {
+  color: var(--accent-azure);
+  font-size: 11px;
+}
+
+.draft-hub-thread {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--line-subtle);
+  padding-top: 16px;
+}
+
+.draft-hub-thread header p {
+  margin: 0 0 3px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+
+.draft-hub-thread h4 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.draft-hub-thread header span {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.draft-hub-thread .draft-hub-diff {
+  gap: 0;
+  border-top: 1px solid var(--line-subtle);
+}
+
+.draft-hub-thread .draft-hub-diff div {
+  border: 0;
+  border-bottom: 1px solid var(--line-subtle);
+  border-radius: 0;
+  background: transparent;
+  padding: 12px 2px;
+}
+
+.draft-hub-review-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid var(--line-subtle);
+}
+
+.draft-hub-review-list div {
+  display: grid;
+  gap: 4px;
+  border-bottom: 1px solid var(--line-subtle);
+  padding: 10px 0;
+}
+
+.draft-hub-review-list dt {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.draft-hub-review-list dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.assistant-context-invocation button,
+.assistant-context-open-base,
+.draft-hub-actions button,
+.digital-employee-management-actions button,
+.digital-employee-management-primary,
+.digital-employee-management-reload {
+  min-height: 36px;
+}
+
+@media (max-width: 1080px) and (min-width: 901px) {
+  .assistant-context-workbench,
+  .draft-hub,
+  .digital-employee-management-workbench {
+    height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .assistant-context-columns,
+  .draft-hub-columns,
+  .digital-employee-management-columns {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 0;
+  }
+
+  .assistant-context-section,
+  .draft-hub-section,
+  .digital-employee-management-section,
+  .digital-employee-management-review {
+    overflow: visible;
+  }
+
+  .assistant-context-section + .assistant-context-section,
+  .draft-hub-section + .draft-hub-section,
+  .digital-employee-management-section + .digital-employee-management-section,
+  .digital-employee-management-review {
+    border-top: 1px solid var(--line-subtle);
+    border-left: 0;
+    margin-top: 16px;
+    padding-top: 16px;
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .queue-row {
+    min-height: 66px;
+    padding: 8px 0;
+  }
+
+  .base-workbench-body {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .base-workbench-context {
+    border-top: 1px solid var(--line-subtle);
+    border-left: 0;
+    padding: 18px 16px 96px;
+  }
+
+  .assistant-context-backdrop,
+  .draft-hub-backdrop,
+  .digital-employee-management-backdrop {
+    inset: 0;
+    overflow-y: auto;
+  }
+
+  .assistant-context-workbench,
+  .draft-hub,
+  .digital-employee-management-workbench {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+    padding: 18px 16px calc(88px + env(safe-area-inset-bottom));
+  }
+
+  .assistant-context-columns,
+  .draft-hub-columns,
+  .digital-employee-management-columns {
+    height: auto;
+    min-height: 0;
+  }
+
+  .assistant-context-section,
+  .draft-hub-section,
+  .digital-employee-management-section,
+  .digital-employee-management-review {
+    overflow: visible;
   }
 }

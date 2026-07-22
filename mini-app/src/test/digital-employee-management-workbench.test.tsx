@@ -44,7 +44,7 @@ function renderWorkbench(detail = draft, overrides: Partial<ComponentProps<typeo
 test('renders only bounded employee management controls and filters views by selected table', () => {
   renderWorkbench()
 
-  expect(screen.getByRole('dialog', { name: '数字员工管理' })).toBeInTheDocument()
+  expect(screen.getByRole('region', { name: '数字员工管理' })).toBeInTheDocument()
   expect(screen.getByLabelText('员工名称')).toBeInTheDocument()
   expect(screen.getByLabelText('员工说明')).toBeInTheDocument()
   expect(screen.getByLabelText('Telegram 别名')).toBeInTheDocument()

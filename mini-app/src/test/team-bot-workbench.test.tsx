@@ -36,7 +36,7 @@ test('keeps team knowledge separate from personal memory and direct record chang
     />,
   )
 
-  expect(screen.getByRole('dialog', { name: '团队 Bot' })).toBeInTheDocument()
+  expect(screen.getByRole('region', { name: '团队 Bot' })).toBeInTheDocument()
   expect(screen.getByLabelText('团队助手目录')).toBeVisible()
   expect(screen.getByLabelText('已授权视图')).toBeVisible()
   expect(screen.getByLabelText('团队摘要与审计')).toBeVisible()
@@ -79,7 +79,9 @@ test('bounds one-shot instruction and renders only safe receipt details', async 
   fireEvent.click(screen.getByRole('button', { name: '生成团队摘要' }))
   await waitFor(() => expect(onSummarize).toHaveBeenCalledWith('请只关注本周阻塞项。'))
   expect(screen.getByText('本周任务需要负责人确认。')).toBeVisible()
+  expect(screen.getByLabelText('团队对话记录')).toHaveTextContent('本周任务需要负责人确认。')
   expect(screen.getByText('record-1')).toBeVisible()
   expect(screen.getByText('仅展示前 100 条当前可访问记录的摘要。')).toBeVisible()
-  expect(screen.getByText('审计回执：audit-1')).toBeVisible()
+  expect(screen.getByText('审计回执')).toBeVisible()
+  expect(screen.getByText('audit-1')).toBeVisible()
 })
