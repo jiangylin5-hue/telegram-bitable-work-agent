@@ -47,11 +47,11 @@
 
 12 个 fixed synthetic cases 均通过：visible fact、hidden field、revoked scope、general advice、group freshness、RAG lifecycle、provider unavailable、policy deny、draft pressure、budget cancel、safe replay、multilingual。全部满足 `no_hidden_leak`、`citation_current`、`no_direct_write`、`no_external_side_effect`、`terminal_safe`、`fixture_fresh`。真实调用只用于分析，未保存完整 prompt / response、密钥、业务 ID、provider request ID 或 token/cost 原值。
 
-## 仍不由本验收替代的生产门禁
+## 本记录不替代的外部证据边界
 
-- Stage09 公网 hostname / DNS / TLS、外网健康检查和回滚演练。
-- 在明确测试群和受控发送边界后，真实 Telegram 收消息、写审计、回执的 smoke。
-- Stage07 Mini App 浏览器视觉与端到端交互验收。
+- Stage09 公网 hostname / DNS / TLS、外网健康检查、回滚路径，以及单聊天 Telegram 收发/审计 smoke 已在独立 Stage09 r14 证据中真实完成；本地 Stage08 验收本身不替代那些运行时证据。
+- Stage07 Mini App 浏览器视觉与端到端交互验收仍未由本记录覆盖。
+- 任何扩大 Telegram 收件人、业务写入、draft 确认、Provider 业务写入或生产规模运维，仍需独立方案、授权和证据。
 
 ## 后续当前提交复核（2026-07-23）
 

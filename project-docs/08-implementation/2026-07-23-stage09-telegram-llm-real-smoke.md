@@ -2,9 +2,9 @@
 
 ## Status
 
-- Scope: r12 runtime release 后的 Telegram webhook、单一已验证 chat 的真实测试发送、OpenRouter 真实 LLM 多 case 评测。
+- Scope: r14 runtime release 后的 Telegram webhook、单一已验证 chat 的真实测试发送、OpenRouter 真实 LLM 多 case 评测。
 - Authorization: 用户已明确允许 Telegram、LLM 与外部写入；不进行群发、Provider 写入、资金操作或未确认的业务写入。
-- Preconditions: r11 公网 HTTPS `/health` 已为 200；本机 `.local/stage05-real-workflow.env` 具有 Telegram bot、webhook secret 与 OpenRouter 配置。服务器当前仍为 r11 baseline，必须先通过 sealed r12 release 取得受控 profile validator。
+- Preconditions: r14 公网 HTTPS `/health` 已为 200；本机 `.local/stage05-real-workflow.env` 具有 Telegram bot、webhook secret 与 OpenRouter 配置。r14 的受控 profile validator 已实际运行。
 
 ## 运行时最小变更
 
@@ -40,7 +40,10 @@
 
 ## 2026-07-23 已执行状态
 
-- r14 已通过 sealed release、systemd、loopback 与外部 HTTPS 健康检查；受控真实 LLM profile 为 active，Telegram 保持 `dry_run`。
+- r14 已通过 sealed release、systemd、loopback 与外部 HTTPS 健康检查；受控真实 LLM profile 为 active。Telegram 初始为 `dry_run`，只在收到用户唯一绑定消息后切换为单聊天 `restricted_test`。
 - 实际运行 Stage08 12 case 真实 Provider 评测：12/12 通过、9 个 Provider 调用完成、0 timeout；所有安全 gate 均通过，未产生 Telegram、Provider 业务写入、draft 确认或完整 prompt/response 持久化。
 - 已实际调用 Telegram `getMe`、`getWebhookInfo` 与 `setWebhook`。新的 webhook 指向 Stage09 endpoint、无 API error、pending update 为 0；这替换了此前非 Stage09 的 bot webhook。
-- 当前 Telegram receive/send allowlist 均为空，尚无真实 outgoing message。需要用户在 bot 私聊发送一次唯一 nonce 后，系统才可从 webhook 取得事实 chat ID，写入精确双 allowlist 并开展受限真实回包。
+- 用户已发送唯一 nonce，webhook 已将其持久化为事实 chat/user/message 记录。系统没有在文档、日志或本记录中保留 chat ID、用户 ID 或原文；只从该事实记录得到单个测试目标。
+- 原子 runtime 切换只写入该单一目标到 `TELEGRAM_ALLOWED_CHAT_IDS` 与 `TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS`，两者精确相同，设置 `TELEGRAM_SEND_MODE=restricted_test` 并同步既有 bot token。native isolation validator、API/worker/outbox bridge active 和 loopback health 均通过；失败路径会恢复 runtime 备份。
+- 实际执行一条明确标识为测试的 bot 回执，严格经过 `POST /telegram/send-requests`（`pending_confirmation`）→ `POST .../confirm`（`confirmed`）→ outbox bridge/worker。数据库最终证据为 request=`sent`、error=`none`、outbox=`processed`、attempts=`0`，并有 `telegram.test_send.requested`、`telegram.test_send.confirmed`、`telegram.test_send.sent` 三个 audit event。
+- 本轮不做群发、第二个收件人、业务表写入、draft 确认、Provider 业务写入、原文/prompt/response/secret 留存；Stage07 UI 仍为独立验收项。

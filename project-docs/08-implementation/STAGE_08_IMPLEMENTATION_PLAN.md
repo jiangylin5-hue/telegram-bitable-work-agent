@@ -2,7 +2,7 @@
 
 ## Status
 
-- Current Progress Update (2026-07-23): A–F 当前提交复核新增 `796 passed in 47.68s` 的 Unit/API 实际执行证据，且当前 `backend/` 与该轮前的 Stage08 验收代码一致。后续生产就绪动作已在 Stage09 r14 完成原生运行、公开 HTTPS health 与受控真实 OpenRouter；真实 Telegram 仍严格停在“webhook 已设定、未收到绑定消息”的门槛，未写白名单、未切换 `restricted_test`、未发送回执。下一步只是在获得实际测试 chat ID 后完成该受控收发闭环；Stage07 UI 仍独立验收。详见 `evidence/stage08-final-current-state-audit-2026-07-23.md`、`evidence/stage09-r14-real-runtime-and-provider-2026-07-23.md`。
+- Current Progress Update (2026-07-23): A–F 当前提交复核新增 `796 passed in 47.68s` 的 Unit/API 实际执行证据，且当前 `backend/` 与该轮前的 Stage08 验收代码一致。后续生产就绪动作已在 Stage09 r14 完成原生运行、公开 HTTPS health、受控真实 OpenRouter 与 Telegram 单聊天收发闭环：绑定消息提供事实 chat ID，双 allowlist 精确相同，`restricted_test` 只经 send-request → confirm → outbox bridge 投递一条测试回执；数据库证明 `sent`、`processed` 和三类审计事件均存在。未扩大收件人、未写业务表、未确认 draft 或调用 Provider 业务写入。Stage07 UI 仍独立验收。详见 `evidence/stage08-final-current-state-audit-2026-07-23.md`、`evidence/stage09-r14-real-runtime-and-provider-2026-07-23.md`。
 
 - Current Progress Update (2026-07-23)：Stage08 A–F 已完成一次新鲜、实际执行的全量验收复跑：`796 passed in 46.80s` Unit/API、7 个真实 disposable PostgreSQL/pgvector integration 模块共 `79 passed`，以及真实 OpenRouter 12-case `12/12 passed`、0 timeout、9/9 invocation/completion。逐项 Requirement ID 映射和命令记录见 `evidence/stage08-final-current-state-audit-2026-07-23.md`；下一阶段仍为独立的生产就绪/部署，不由此自动替代 DNS/TLS、Telegram controlled smoke 或 Stage07 UI 验收。
 

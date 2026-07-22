@@ -2,6 +2,8 @@
 
 ## Status
 
+- Current Progress Update (2026-07-23, r14 controlled Telegram smoke): 用户的唯一绑定 nonce 已真实经 Stage09 webhook 持久化；系统只将该事实 chat 写入完全相同的 receive/send allowlist，切换为 `restricted_test` 后重启 API、worker、outbox bridge 并通过 validator/health。实际 bot 回执严格经 send-request → confirm → outbox bridge/worker，最终 request=`sent`、outbox=`processed`、三类 test-send audit event 均存在。未扩大名单、未群发、未写业务表或确认 draft。完整脱敏证据见 `evidence/stage09-r14-real-runtime-and-provider-2026-07-23.md` 与 `2026-07-23-stage09-telegram-llm-real-smoke.md`；Stage07 UI 仍是独立验收项。
+
 - Current Progress Update (2026-07-23, r14 real release / OpenRouter dry-run): 已真实激活 `stage09-p1-20260723-r14`，`current` 与 `current-venv` 均指向 r14；API、worker、outbox、Nginx 为 active，服务器回环和外部 HTTPS `/health` 均为 200。r12/r13 封装预检分别暴露 CRLF 非 shell 资产和 Git executable-bit 缺失；r14 已以密封包字节检查、服务器 release/service/data asset 校验、固定迁移和有界就绪等待通过，失败切换均自动回滚到 r11，未造成中断。真实 OpenRouter dry-run 已激活：12 个 Stage08 多 case 全部通过，9 个 Provider 调用完成、0 timeout；Telegram 仍为 `dry_run` 且名单为空。Bot webhook 已真实切换至 Stage09 HTTPS endpoint 并无 Telegram API 错误；尚未收到用户绑定消息，因此未启用 `restricted_test`、未发送 Telegram。完整脱敏证据见 `evidence/stage09-r14-real-runtime-and-provider-2026-07-23.md`。
 
 - Current Progress Update (2026-07-23, r12 controlled-runtime local-ready): 真实 LLM 与受限 Telegram 被 r11 runtime preflight 拒绝的原因已定位为运行时组合硬编码，而非服务或凭据错误。新的唯一 systemd `ExecStartPre` validator 已经本地 25 项 fixture、release-assets 与 public-ingress-assets 回归，且有独立复审：仅接受 baseline、真实 OpenRouter + Telegram dry-run、或精确匹配 chat allowlist 的 `restricted_test`；未知 Telegram allowlist、`real` 发送、Provider 启用、缺少 key/token、名单不一致与完整 prompt/response 保存均 fail closed。本条为 r14 发布前的 local-ready 记录，已由上方 r14 真实部署与 OpenRouter 证据取代。
