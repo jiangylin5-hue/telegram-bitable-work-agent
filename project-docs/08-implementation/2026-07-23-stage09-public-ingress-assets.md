@@ -18,6 +18,7 @@
 - 所有输出只可含状态、布尔值、artifact id 与 hostname；不得打印 token、runtime env、数据库 URL、Caddyfile 原文、bridge IP 或业务数据。
 - 真实公网、Caddy、Nginx、DNS、Telegram 写入不在本计划的本地实现阶段执行。
 - Git archive 中的脚本可保持仓库的 regular-file mode；服务器安装 release 时，必须在切换 `current` 前将 release tree 归属设为 `stage09-p1:stage09-p1`，并将 `deploy/stage09-native/scripts/*.sh` 设为 `750`，以满足 systemd 直接执行 `ExecStartPre` 的权限模型。
+- Caddy reload 后 TLS 证书可异步签发；activation 必须以有上限的 `/health` HTTPS 条件轮询等待证书就绪，超时仍触发原子回滚，不能以首次握手失败替代证书签发完成的验收。
 
 ---
 

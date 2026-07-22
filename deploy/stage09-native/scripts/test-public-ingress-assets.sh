@@ -68,6 +68,8 @@ assert_activator_contract() {
     grep -Fq 'caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile' "$activator" || fail activator-does-not-reload-caddy
     grep -Fq 'getent ahostsv4' "$activator" || fail activator-does-not-check-dns
     grep -Fq 'https://$hostname/health' "$activator" || fail activator-does-not-check-public-health
+    grep -Fq 'until curl --fail --silent --show-error --max-time 15 "https://$hostname/health"' "$activator" || fail activator-does-not-wait-for-tls
+    grep -Fq '[ "$attempt" -ge 12 ]' "$activator" || fail activator-does-not-bound-tls-wait
     grep -Fq 'rollback' "$activator" || fail activator-does-not-provide-rollback
     grep -Fq '[ "$status" -eq 0 ] && exit 0' "$activator" || fail activator-rolls-back-success
 

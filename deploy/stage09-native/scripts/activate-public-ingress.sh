@@ -82,7 +82,7 @@ rollback() {
 [ "$#" -eq 1 ] || fail
 hostname=$1
 [ "$(id -u)" -eq 0 ] || fail
-for utility in docker nginx systemctl getent curl mktemp cp mv grep awk wc readlink date; do
+for utility in docker nginx systemctl getent curl mktemp cp mv grep awk wc readlink date sleep; do
     command -v "$utility" >/dev/null 2>&1 || fail
 done
 
@@ -147,7 +147,14 @@ caddy_changed=1
 printf '\n%s\n' "$rendered_block" >> "$caddyfile_host_path"
 docker exec "$caddy_id" caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
 docker exec "$caddy_id" caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
-curl --fail --silent --show-error --max-time 15 "https://$hostname/health" >/dev/null
+attempt=0
+until curl --fail --silent --show-error --max-time 15 "https://$hostname/health" >/dev/null; do
+    attempt=$((attempt + 1))
+    if [ "$attempt" -ge 12 ]; then
+        fail
+    fi
+    sleep 5
+done
 
 mkdir -p "$ledger_dir"
 ledger_timestamp=$(date -u +%Y%m%dT%H%M%SZ)
