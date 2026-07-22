@@ -37,3 +37,24 @@ test('contains an installation failure for the parent to render as a safe messag
   fireEvent.click(screen.getByRole('button', { name: '安装模板 CRM' }))
   await waitFor(() => expect(onInstallError).toHaveBeenCalledOnce())
 })
+
+test('locks a conflicting template installation until the workbench is closed', async () => {
+  const onInstall = vi.fn().mockRejectedValue({ status: 409, detail: 'raw conflict body' })
+  render(<TemplateImportHub
+    templates={[{ id: 'template-1', name: 'CRM', category: 'crm', description: 'Customer operations', version: '1.0.0', status: 'published' }]}
+    loading={false}
+    error={null}
+    onRetry={vi.fn()}
+    onInstall={onInstall}
+    onClose={vi.fn()}
+  />)
+
+  const install = screen.getByRole('button', { name: '安装模板 CRM' })
+  fireEvent.click(install)
+
+  await waitFor(() => expect(install).toBeDisabled())
+  expect(screen.getByRole('alert')).toHaveTextContent('模板安装状态已变化，请关闭后重新打开。')
+  expect(screen.queryByText('raw conflict body')).not.toBeInTheDocument()
+  fireEvent.click(install)
+  expect(onInstall).toHaveBeenCalledOnce()
+})

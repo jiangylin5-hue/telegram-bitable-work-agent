@@ -2,7 +2,8 @@
 
 ## Status
 
-- Status: approved companion to TD006 Option A; implementation is in progress within this document's no-new-route/no-persistence boundary.
+- Status: approved companion to TD006 Option A; bounded implementation exists within this document's no-new-route/no-persistence boundary, but the requirement-ID final evidence table remains open.
+- Strict audit disposition: [Stage07 Final Audit Report](STAGE_07_FINAL_AUDIT_REPORT.md) requires an explicit TD006 requirement-to-code/test/evidence mapping before this BDD can be accepted. No new route, persistence, permission or external action is authorized by that closure work.
 - Scope: bind one already-authorized current Base Canvas to fixed S5 invocation intents.
 
 ## BDD Scenarios

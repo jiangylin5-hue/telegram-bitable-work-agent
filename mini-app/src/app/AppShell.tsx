@@ -20,9 +20,9 @@ export function AppShell({ workspace, workspaces, onWorkspaceChange, activeRoute
   ].filter((item): item is ManagementItem => item !== null)
 
   return <div className="app-shell">
-    <aside className="desktop-sidebar" aria-label="主导航">
+    <aside className="desktop-sidebar" aria-label="主导航" data-visual-system="stage07-workbench">
       <div className="brand-mark" aria-label="Workspace"><span /></div>
-      <nav className="primary-nav">
+      <nav className="primary-nav" data-visual-system="stage07-workbench">
         {primaryItems.map(({ label, icon: Icon, route }) => route
           ? <button className={activeRoute === route ? 'nav-item active' : 'nav-item'} type="button" aria-current={activeRoute === route ? 'page' : undefined} onClick={() => onNavigate(route)} key={label}><Icon aria-hidden="true" size={18} strokeWidth={1.8} /><span>{label}</span></button>
           : <a className="nav-item" href="#home" key={label}><Icon aria-hidden="true" size={18} strokeWidth={1.8} /><span>{label}</span></a>)}

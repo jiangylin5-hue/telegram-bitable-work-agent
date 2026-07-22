@@ -5,6 +5,7 @@
 - Document status: active technical decision record
 - Scope: 技术选型、替代方案、确认状态和变更规则
 - Current Progress: 2026-07-10 Added Stage06 platform-pivot decision and backend-readiness evidence: the active product is a generic Feishu-like multidimensional table, no-code workspace and table-bound digital employee platform. Core records move toward typed field metadata plus JSONB values; advertising-agency workflows become templates/samples, not platform core. Real OpenRouter summarize/draft smoke, local PostgreSQL migration smoke and real Telegram backend entry smoke have evidence for the current non-UI backend pass.
+- Current Progress Update: 2026-07-22 用户确认 Stage09 不新增 Docker 部署；P1/P2 改用原生 Ubuntu `systemd` 服务与服务器本地 PostgreSQL/Redis，保留既有 Docker Caddy 仅作为未迁移 Stage03 的历史 HTTPS ingress，不能替换或重启它。
 - Current Progress Update: 2026-07-04 用户确认方案 A、OpenRouter、Agent 查库统计、人工确认后受控执行模型，以及 Stage 02 开发范围和 mock/sandbox 策略。
 
 ## TDR-001 Backend Language
@@ -209,3 +210,42 @@
 - Rationale:
   - The user explicitly accepted local PostgreSQL for the fourth unresolved item.
   - The user explicitly required true LLM calls for the fifth unresolved item.
+
+## TDR-016 Stage08 E3 Safe Execution Adapter
+
+- Status: accepted — user confirmed on 2026-07-22.
+- Decision: Stage08 E3 may use a private, default-off safe-execution adapter around the existing ticket, Tool Gateway and record-change-draft services. It adds an internal transaction/savepoint boundary, common current-state locks, hash-only trace replay and a safe audit mode; it does not add a public API, schema migration, direct record write or confirmation capability.
+- Privacy rule: E3 `AgentRun`, `OpsAuditEvent`, tool summary, outbox/log/API-safe projection must contain only status/action/count/code/hash/latency/presence. They must not contain query, answer, C3/D4 material, field key/value, record/draft/ticket UUID or provider response. Business-table primary keys and foreign keys remain normal PostgreSQL state and are not audit payloads.
+- Draft intent rule: the process-local sealed intent may carry exactly one JSON-safe proposed field/value, but it is revalidated against the current record/table/field/actor/employee/source scope under the transaction boundary and never serialized.
+- Consistency rule: reject/cancel/timeout/provider-shape/Gateway failure rolls back the E3 savepoint so no ticket, idempotency reservation, draft or internal audit orphan remains. Same idempotency key revalidates current scope and replays the original safe outcome; different keys do not infer identity from a record-wide pending-draft count.
+- Reference: `project-docs/08-implementation/decisions/STAGE_08_E3_SAFE_EXECUTION_ADAPTER_DECISION.md`.
+
+- Terminal mapping update (2026-07-22): user confirmed a `degraded` E1 terminal status only for unavailable analysis providers. Invalid/forged provider output remains `failed`; no write-capable action is allowed from `degraded`.
+
+## TDR-017 Stage09 Native Server Deployment And Local Database
+
+- Status: accepted — user confirmed on 2026-07-22.
+- Decision: Stage09 P1/P2 不创建新的 Docker Compose、容器或 Docker 数据卷。新 Stage09 服务使用专用 Linux 用户、Python virtualenv 和 `systemd` 运行；PostgreSQL、Redis 与 pgvector 使用目标 Ubuntu 服务器上的原生服务与本机 socket/loopback。当前历史 Stage03 Docker/Caddy 保持运行且不被 Stage09 替换、重启或迁移。
+- Ingress transition: 在 Stage09 还与历史 Stage03 共用该服务器时，既有 Caddy 仅可在已授权的独立 hostname 下新增一个反向代理 host；它把流量转给本机受限端口的原生 Stage09 Web/API。它不是 Stage09 的新 Docker 依赖，也不能改动 Stage03 既有 host、端口、容器、数据库或 Redis。完全移除现有 Docker ingress 是一项独立迁移，不与 P1 合并。
+- Database decision: P1/P2 默认使用服务器本地 PostgreSQL（匹配的原生 pgvector extension）和本地 Redis，不购买托管数据库。数据库和 Redis 不对公网监听；应用通过 Unix socket 或 `127.0.0.1` 连接。P3 前必须具备异机加密备份、定期恢复演练、磁盘/连接/复制或恢复告警。达到任一触发条件后再评估托管 PostgreSQL：多节点或高可用目标、业务数据不能接受单机/单可用区故障、恢复目标需要小于当前实测恢复时间、运维无法稳定完成备份恢复，或数据库负载超出单机容量/SLO。
+- Redis account boundary: P1 Redis 使用独立 `stage09-redis:stage09-redis-socket`，固定为私有 Unix socket；应用 `stage09-p1` 只作为 socket 补充组成员，不拥有 Redis data dir，Redis unit 不读取 application runtime env。
+- Rationale:
+  - 当前服务器仍承载历史 Stage03 Docker 服务；在同一个变更窗口内同时迁移旧 ingress 和上线 Stage09 会扩大故障域。
+  - P1/P2 是空数据、受控验证和有限真实 smoke，服务器本地 PostgreSQL 的成本、延迟和运维复杂度最低。
+  - pgvector 是 PostgreSQL 扩展，可随匹配 PostgreSQL 版本原生安装并在每个新库中显式 `CREATE EXTENSION vector`；不需要先采购外部向量数据库。
+  - 服务器本地数据库不是长期高可用方案，因此用异机备份与恢复演练作为扩展/采购前的硬门。
+- Guardrails:
+  - 不复用、升级、读取或迁移 Stage03 Docker PostgreSQL、Redis、volume、env 或网络。
+  - P1 worker/outbox unit 仅允许各自在唯一 `ExecStart` 行精确使用
+    `app.workers.stage03_runtime` 或
+    `app.workers.stage03_outbox_bridge_runtime`。这是保留的 Python **代码兼容名**，
+    不是 Stage03 操作依赖；它们只能使用 N1 已验证的 P1 runtime 和 P1 原生
+    PostgreSQL/Redis，不能连接、读取、迁移或复用 Stage03 Docker 资源。除此两个
+    精确入口外拒绝所有 `stage03` 文本，并拒绝所有 Stage03 目录、systemd service、
+    Docker service/container/network/volume/env 变量以及 Stage07 标记。
+  - 不创建 `deploy/stage09-p1/compose.yml`；此前仅处于本地计划状态的 Docker P1 资产未落地，已明确废止。
+  - P1 全程保持 `TELEGRAM_SEND_MODE=dry_run`、`LLM_ENABLED=false`、`AGENT_WORKFLOW_MODE=fake`、`PROVIDER_MODE=disabled`，所有 Telegram allowlist 为空。
+  - 不因本决定自动授权远程安装、数据库初始化、Caddy 改动、迁移或 Telegram 写入；这些仍按 Stage09 分层门禁逐项执行。
+  - 无秘密 Nginx fixture 在缺少本地 Nginx binary 时必须报告 `SKIPPED`，不得声称
+    `nginx -t` 已通过；目标服务器的真实 `nginx -t` 仍由 P0a/P1-B 环境证据门承担。
+- Reference: `project-docs/08-implementation/STAGE_09_NATIVE_SERVER_DEPLOYMENT_PLAN.md`.

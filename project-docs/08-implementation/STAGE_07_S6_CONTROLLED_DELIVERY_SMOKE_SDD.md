@@ -2,7 +2,7 @@
 
 ## Status and Invariants
 
-- Status: TD008 Option A is `partial-local` as of 2026-07-13; the code/migration path exists and no external operation is authorized or performed.
+- Status: TD008 Option A is `partial-local` as a product package; the code/migration path exists. Bounded isolated external delivery/manual-smoke evidence was separately authorized, performed once per request and cleaned. No further external operation is authorized merely to repeat acceptance evidence.
 - Scope: fixed closed-reference delivery request, explicit confirmation, one-attempt Worker dispatch and real Mini App smoke.
 - Invariant: raw token/full URL exists only between `mint_telegram_deep_link` return and the single Bot client call in one Worker execution frame.
 - Invariant: only one explicitly allowlisted private test chat is configured for the running non-production smoke environment.
@@ -13,7 +13,7 @@
 - The trusted Python command derives subject/chat from the active binding, rechecks target authority at create/confirm/dispatch and prevents the historical generic confirmation service from routing this purpose as a text send.
 - The Worker commits `dispatch_reserved` before it mints or calls the typed Bot client; fake-client PostgreSQL cases prove one normal send, definite rejection, transport uncertainty, sequential replay and a two-session Worker collision. The collision makes at most one Bot call, ends `delivery_unknown` and revokes the minted pointer rather than retrying.
 - There is no Mini App delivery/mint endpoint or UI. The local configuration helper requires `restricted_test`, one allowlist value, a valid server-owned Bot username and a runtime Bot token before the Worker registers the event handler.
-- Local matrix is complete: direct Service/Worker/typed-client inventory has no logger sink, while persisted exception paths retain fixed codes only. Real configuration/send/smoke is not attempted.
+- Local matrix is complete: direct Service/Worker/typed-client inventory has no logger sink, while persisted exception paths retain fixed codes only. Real configuration/send/smoke is retained as bounded historical evidence; it must not be retried automatically or reclassified as whole-Stage07 completion.
 
 ## Architecture
 

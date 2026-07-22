@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Mapping
+from typing import Any, Literal, Mapping
 
 from pydantic import ValidationError
 
@@ -27,6 +27,9 @@ class ParsedTelegramUpdate:
     username: str | None
     message_type: str
     received_at: datetime
+    update_kind: Literal["new", "edited"]
+    chat_type: str
+    edited_at: datetime | None = None
     text: str | None = None
     caption: str | None = None
     text_preview: str | None = None
@@ -49,7 +52,12 @@ def parse_telegram_update(payload: Mapping[str, Any]) -> ParsedTelegramUpdate:
     except ValidationError as exc:
         raise TelegramUpdateParseError("telegram_update_invalid") from exc
 
-    message = update.message
+    update_kind: Literal["new", "edited"] = (
+        "new" if update.message is not None else "edited"
+    )
+    message = update.message or update.edited_message
+    if message is None:  # defensive guard; schema validation enforces the XOR above
+        raise TelegramUpdateParseError("telegram_update_invalid")
     message_type = _message_type(message)
     file_metadata = _file_metadata(message_type, message.photo, message.document)
     preview_source = message.text if message.text is not None else message.caption
@@ -63,9 +71,18 @@ def parse_telegram_update(payload: Mapping[str, Any]) -> ParsedTelegramUpdate:
         username=None if from_user is None else from_user.username,
         message_type=message_type,
         received_at=datetime.fromtimestamp(message.date, timezone.utc),
+        update_kind=update_kind,
+        chat_type=message.chat.type,
+        edited_at=(
+            None
+            if message.edit_date is None
+            else datetime.fromtimestamp(message.edit_date, timezone.utc)
+        ),
         text=message.text,
         caption=message.caption,
-        text_preview=_text_preview(preview_source),
+        text_preview=(
+            _text_preview(preview_source) if update_kind == "new" else None
+        ),
         file_metadata=file_metadata,
     )
 

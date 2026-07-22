@@ -4,7 +4,7 @@
 
 - Document status: approved design, awaiting written-spec review
 - Scope: React/Vite Telegram Mini App and desktop-browser UI design for the generic workspace, Bitable and digital-employee platform
-- Current Progress: 2026-07-10 user-approved visual direction is active and its three original reference images are retained in the Stage07 visual manifest. The approved F1 independent Field Builder design now defines its safe API, visible field types and verification boundary; implementation-plan work remains next. A bounded Package 1/2 implementation uses the approved light visual system and read-only contract extensions; its exact evidence and remaining work are tracked by `STAGE_07_REQUIREMENT_TRACEABILITY_AUDIT.md`. No unapproved Package 4 schema, API or permission change has started.
+- Current Progress: 2026-07-16 the user confirmed that the whole Mini App must converge on the three retained desktop references (`Work Queue Atlas`, `Workspace Ledger` and `Conversation Desk`) and requested one additional original Digital Employee workbench reference before the visual rebuild. The new reference is not yet available because the local image-generation fallback has no configured `OPENAI_API_KEY`; no current screen may claim visual acceptance until its matched target is available and browser-compared. The documented rebuild remains frontend-only: existing Stage07 schema, API contracts, permission semantics and external-action boundaries are unchanged.
 
 ## Purpose
 

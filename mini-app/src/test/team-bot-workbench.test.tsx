@@ -37,6 +37,9 @@ test('keeps team knowledge separate from personal memory and direct record chang
   )
 
   expect(screen.getByRole('dialog', { name: '团队 Bot' })).toBeInTheDocument()
+  expect(screen.getByLabelText('团队助手目录')).toBeVisible()
+  expect(screen.getByLabelText('已授权视图')).toBeVisible()
+  expect(screen.getByLabelText('团队摘要与审计')).toBeVisible()
   expect(screen.getByText('仅汇总当前成员可访问的团队视图；不会保存个人对话或记忆。')).toBeVisible()
   expect(screen.getByRole('button', { name: '打开 Base 继续处理' })).toBeEnabled()
   expect(screen.queryByRole('button', { name: /创建草稿|直接写入|记录选择/ })).not.toBeInTheDocument()
@@ -80,4 +83,3 @@ test('bounds one-shot instruction and renders only safe receipt details', async 
   expect(screen.getByText('仅展示前 100 条当前可访问记录的摘要。')).toBeVisible()
   expect(screen.getByText('审计回执：audit-1')).toBeVisible()
 })
-

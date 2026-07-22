@@ -1,0 +1,131 @@
+# Stage09：原生服务器部署与本地数据库实施计划
+
+## Status
+
+- Document status：active — 2026-07-22 用户确认，替代 Stage09 中所有“新建 Docker Compose/容器/卷”的 P1 实施路径。
+- Scope：Ubuntu 原生 `systemd` 服务、服务器本地 PostgreSQL + pgvector、原生 Redis、原生 Nginx 静态/反向代理，以及与历史 Caddy 的最小 HTTPS ingress 衔接。
+- Out of scope：迁移或替换历史 Stage03 Docker 服务；将 PostgreSQL/Redis 暴露公网；真实 Telegram/Provider 调用；Stage07 Browser/UI 验收；购买或迁移到托管数据库。
+- Current Progress：P0 与 P0a 只读盘点完成；P1-A 的 N1 runtime preflight、N2 原生 application/Nginx、经 N3 remediation 收敛的数据面离线资产，以及 N4A release manifest/固定 revision 离线迁移验证均为 local-ready only。P0a 证实原生 PostgreSQL/pgvector/Redis 尚未安装，80/443 被无容器的历史 `docker-proxy` 占用；任何远程写入与真实服务启动尚未开始。
+
+## 0. P1-B 实施状态（2026-07-22）
+
+本节取代 Status 中仍称为 `local-ready only` 的历史进度表述：原生 PostgreSQL 16 + pgvector、原生 Redis、隔离 runtime、独立数据库、r2 release、固定 revision 真实迁移及 API/worker/outbox 回环服务均已在服务器完成。完整脱敏证据见 `evidence/stage09-p1-native-loopback-deployment.md`。
+
+当前唯一的上线主阻塞是公网 HTTPS ingress：遗留 `docker-proxy` 仍占用 80/443，且尚无新的专属 hostname/DNS。本轮继续保持 Docker、Stage03、Nginx 与 Caddy 不变；P1 现处于“服务器本机运行、等待独立公网入口”状态。
+
+## 1. 决策与部署形态
+
+Stage09 的新服务不使用 Docker。它们以一个受限的 `stage09-p1` Linux 账户运行，应用二进制和虚拟环境位于专用目录，运行时配置由 root 写入仅该账户可读的位置。历史 `telegram-bitable-stage03` Docker 项目继续运行且不发生变更。
+
+```text
+new hostname
+  -> existing legacy Caddy (only one newly authorized host block)
+  -> native Nginx on a non-public internal port
+       -> static Mini App files
+       -> native Uvicorn API on loopback / Unix socket
+            -> native PostgreSQL + pgvector (local only)
+            -> native Redis (local only)
+       -> native systemd worker / outbox bridge
+```
+
+这里保留“既有 Caddy”并不等于新建 Docker 部署：它是未迁移 Stage03 的存量 HTTPS 入口。P1 只允许为一个独立 hostname 添加经验证的 route；不允许重启、升级、替换或改写任何 Stage03 host。等 Stage03 有独立迁移计划时，才可整体去除该遗留 Docker ingress。
+
+## 2. P1-A：本地可审阅的原生部署资产
+
+P1-A 先在仓库中建立下列文件，全部是模板、脚本或 unit 文件；它们不含真实 hostname、token、数据库 URL、密码、chat ID 或 webhook secret：
+
+| 资产 | 责任 |
+| --- | --- |
+| `deploy/stage09-native/systemd/stage09-p1-api.service` | 以受限账户运行 `uvicorn app.main:app`；仅监听 loopback 或 Unix socket；读取固定 release 与受保护 runtime env。 |
+| `deploy/stage09-native/systemd/stage09-p1-worker.service` | 以同一受限账户运行现有 worker entry，不开放端口。 |
+| `deploy/stage09-native/systemd/stage09-p1-outbox-bridge.service` | 以同一受限账户运行现有 outbox bridge，不开放端口。 |
+| `deploy/stage09-native/nginx/stage09-p1.conf.template` | 静态资源和同源 API 反代；不监听 80/443，只由 P0a 确认的内部端口提供给历史 Caddy。 |
+| `deploy/stage09-native/postgresql/stage09-p1-bootstrap.sql` | 仅创建独立 role/database、强制本地连接和 `vector` extension 的参数化模板；启动前拒绝缺失或空的目标机密码输入，绝不引用 Stage03 库。 |
+| `deploy/stage09-native/redis/redis-stage09-p1.conf` | 仅 loopback/Unix socket、独立 data dir、AOF、受限权限。 |
+| `deploy/stage09-native/runtime/runtime.env.example` | key-name contract 与 P1 安全默认值；真实文件是服务器上的 `/etc/stage09-p1/runtime.env`。 |
+| `deploy/stage09-native/scripts/*` | key-presence、unit/端口/文件权限、PostgreSQL/Redis isolation 与 release manifest 检查；所有输出只记录布尔值、枚举、版本和状态码。 |
+
+代码兼容边界：P1 的 `stage09-p1-worker.service` 和
+`stage09-p1-outbox-bridge.service` 仅可在各自的唯一 `ExecStart` 行精确使用
+`app.workers.stage03_runtime` 与 `app.workers.stage03_outbox_bridge_runtime`。
+这两个历史 Python 模块名是受审计的**代码兼容名**，不是 Stage03 Docker、
+systemd、数据库、Redis、网络或运行时依赖。它们在 P1 中只能读取 N1 已验证的
+P1 runtime，并连接 P1 原生数据库和 Redis；不得连接、读取、迁移或复用任何
+Stage03 Docker 资源。除此两个精确入口外，unit 不得出现任何 `stage03` 文本，
+也不得出现 Stage03 目录、systemd service、Docker service/container/network/
+volume/env 变量；所有 `stage07`、Docker/Compose/container/volume 标记仍须拒绝。
+
+P1-A 交付必须有：`shellcheck` 或 `sh -n`、systemd unit 静态校验、Nginx `-t` 的无秘密 fixture、Alembic `upgrade 20260720_0032 --sql` 离线输出，以及明确定义的 release checksum。它只是 `local-ready`，不是已部署。
+仓库的无秘密 Nginx fixture 可以在本机缺少 Nginx binary 时明确标记为
+`SKIPPED`；它不能伪造或替代成功证据。目标服务器的 `nginx -t` 仍是 P0a 后、
+P1-B 写入前的环境证据门。
+
+## 3. 固定目录、账户和权限
+
+| 项目 | 固定值/规则 |
+| --- | --- |
+| 应用运行账户 | `stage09-p1`，shell 为不可交互或受限；不得复用 `ubuntu`、PostgreSQL 或 Redis 系统账户。 |
+| Redis 账户与 socket 组 | Redis 仅以 `stage09-redis:stage09-redis-socket` 运行；P1-B 只将 `stage09-p1` 加入 `stage09-redis-socket` 补充组，以访问 P1 Unix socket。 |
+| Release 根目录 | `/opt/stage09-p1/releases/<artifact-id>`；`current` 仅指向一个经审阅的不可变 release。 |
+| Python venv | `/opt/stage09-p1/venv/<artifact-id>`，不在历史项目目录复用虚拟环境。 |
+| 运行时配置 | `/etc/stage09-p1/runtime.env`，目录 `0750 root:stage09-p1`，文件 `0640 root:stage09-p1`；不写入仓库、shell history、unit 正文或日志。 |
+| 静态文件 | `/var/www/stage09-p1/<artifact-id>`，由 Nginx 只读；不含浏览器秘密。 |
+| 日志 | journald 单元日志 + `/var/log/stage09-p1/` 的脱敏应用日志；不得记录原始 prompt、回复、消息正文、token、URL 或业务记录值。 |
+
+应用 `systemd` unit 至少使用 `User=stage09-p1`、`Group=stage09-p1`、`NoNewPrivileges=true`、`PrivateTmp=true`、明确 `WorkingDirectory`、`EnvironmentFile=/etc/stage09-p1/runtime.env` 和 restart/backoff。Redis unit 使用独立 `stage09-redis:stage09-redis-socket`，不读取 application runtime env、也不执行 application preflight；Redis data dir 只归 Redis 账户所有，应用账户不可读。 
+
+P1 固定 `APP_ENV=staging`，因此 `TELEGRAM_WEBHOOK_SECRET` 是应用启动所需的 runtime key，必须存在且只能在目标机的 `/etc/stage09-p1/runtime.env` 中设置。它是随机的、仅用于本地 webhook 校验的 nonce；不是 Bot token，不会启用 Telegram，也不会写入任何外部系统。预检只检查其 presence，绝不回显或记录其值。
+
+## 4. 本地 PostgreSQL、pgvector 与 Redis
+
+### 4.1 PostgreSQL
+
+- 使用服务器原生 PostgreSQL 16 和与其**相同主版本**匹配的 pgvector 包/扩展；安装后在 P1 的新数据库内执行一次 `CREATE EXTENSION vector`。
+- 新角色、新数据库与新 schema 仅使用 `stage09_p1` 命名；不能连接、读取、备份、迁移、downgrade 或复制 Stage03 PostgreSQL。
+- PostgreSQL 监听 Unix socket 或 `127.0.0.1`，`pg_hba.conf` 只允许 `stage09-p1` 服务账户和本机受控运维入口。禁止 `0.0.0.0`、安全组放通或公网端口。
+- 实际迁移固定到唯一 revision `20260720_0032`。先离线 SQL，再对新空库执行 upgrade；须验证唯一 Alembic head、`vector` extension 和 Stage08 索引。不得用未记录的 `head` 或 `latest` 代替。
+
+### 4.2 Redis
+
+- 使用一个独立原生 Redis 配置，固定 `port 0`，仅提供 `/run/stage09-p1/redis.sock` Unix socket，data dir 为 `/var/lib/redis-stage09-p1`，启用 AOF。
+- P1-B 创建 `stage09-redis:stage09-redis-socket`，仅将应用账户 `stage09-p1` 加入该 socket 补充组；Redis 进程不读取 `/etc/stage09-p1/runtime.env`，worker/outbox 仅通过固定 socket URL 连接 P1 Redis。socket/port、data dir 不得与 Stage03 Docker Redis 共享。
+
+### 4.3 备份与购买托管库的界线
+
+P1/P2 是空数据或受控 smoke，优先本机数据库，暂不采购托管数据库。P3 前必须完成：
+
+1. 加密的异机 PostgreSQL base backup/WAL 或等效连续备份；
+2. 每日逻辑备份作为额外恢复路径；
+3. 至少一次对隔离恢复目标的恢复演练，记录 RPO/RTO；
+4. 磁盘、连接数、慢查询、备份新鲜度、恢复失败和 Redis 持久化告警。
+
+若需要多节点/跨可用区高可用、单机故障不能接受、实测 RTO/RPO 不满足业务、持续备份与恢复无法由团队稳定运行，或单机数据库已达容量/性能 SLO，则将 PostgreSQL 迁移到托管实例。pgvector 保持与 PostgreSQL 同库，不额外购买向量数据库。
+
+## 5. P0a：不写入的原生部署前置盘点
+
+P1-B 前先做一次只读 P0a，不读取 secret 值或业务数据：
+
+1. 检查可用的 PostgreSQL 16/pgvector 安装源、Redis、Python 3.12+、Nginx、systemd、磁盘、时钟与防火墙状态。
+2. 查找历史 Docker Caddy 所在 bridge network 及其到宿主机内部端口的**已验证**连通方式；不得猜测 `host.docker.internal`、bridge gateway 或公网 IP。
+3. 查明可用的非公开内部端口/Unix socket，并确认 Nginx 对外暴露仅允许来自已验证的遗留 Caddy route；80/443 继续仅由历史 Caddy 占用。
+4. 确认新的 hostname 已由用户提供、DNS 指向目标服务器；只在受保护的服务器临时文件中处理 hostname，证据不记录实际值。
+5. 记录备份位置的 presence、异机目标可用性和 rollback owner；不能获取值或列出凭据。
+
+任何 P0a 条目失败，P1-B 标为 `blocked`，不安装包、不创建账户、不初始化数据库、不写 unit、不改 Nginx/Caddy。
+
+## 6. P1-B：受控原生部署顺序
+
+获得当次服务器、hostname、固定 artifact、维护窗口和可写资源的明确授权后，严格按以下顺序执行：
+
+1. **封存 artifact**：校验 commit、release checksum、Alembic 固定目标 `20260720_0032` 和 P1-A 预检；不在服务器执行 `git pull`，不改历史 Stage03 checkout。
+2. **创建原生隔离面**：创建 `stage09-p1` 账户、目录、runtime env 及权限；运行 key-presence validator。P1 安全值必须是 `TELEGRAM_SEND_MODE=dry_run`、`LLM_ENABLED=false`、`AGENT_WORKFLOW_MODE=fake`、`PROVIDER_MODE=disabled`、`AGENT_SAVE_FULL_PROMPT=false`、`AGENT_SAVE_FULL_RESPONSE=false`，所有 Telegram allowlist 为空。
+3. **初始化数据面**：安装匹配版本的 PostgreSQL/pgvector 与 Redis；创建新的 `stage09_p1` 数据库/角色、`stage09-redis:stage09-redis-socket` 与 Redis data dir，只将 `stage09-p1` 加入 socket 补充组。Redis unit 不接收 application runtime env，应用账户不读取 Redis data dir。先离线 migration SQL，再执行 `alembic upgrade 20260720_0032`；只检查 P1 schema/extension，不查询业务行。
+4. **启动原生应用**：安装 release venv，启用 API、worker、outbox systemd units；检查 unit active、API 内部健康、Redis ping、PostgreSQL head 和 extension。不得触发 Telegram webhook、Provider、draft 确认或业务 API 写入。
+5. **启动 Nginx 并衔接 HTTPS**：先用候选配置 `nginx -t`；Nginx 仅提供已验证的内部入口。随后仅为独立 hostname 在历史 Caddy 加一个 host block，先 `caddy validate`、备份、append、reload；再次读取 Stage03 原 host 健康。不得改其容器、端口、镜像或其他 host。
+6. **观察和回滚证据**：在明确 UTC 窗口观察 unit restart、5xx、DB/Redis 连接、磁盘、队列、dry-run、Provider invocation 和 Stage03 健康。每一步写入脱敏 ledger：状态、UTC、artifact id、revision、写入范围、退出码、rollback readiness；不保存 hostname、secret、业务数据或 raw log。
+
+## 7. 回滚
+
+回滚优先级为：移除单一 P1 Caddy host → reload 并验证 Stage03 → 停止/disable P1 systemd units → 关闭 P1 Nginx → 删除 P1 release/runtime 文件 → 仅在确认空数据时删除 P1 本地数据库、role、Redis data dir。不得重启、缩容、迁移或回滚 Stage03 Docker 服务、数据或 Caddy 其他 host。
+
+P1 只有在以下条件同时满足时才可标记完成：固定 artifact 与唯一 revision 已证实；新本地 PostgreSQL 的 `vector` 和 schema/索引正确；所有运行服务持续 dry-run/LLM-off/provider-disabled/empty allowlist；内部 API、静态站与独立 HTTPS 可用；Stage03 不受影响；观察窗口无禁止副作用；并存在经过实际验证的回滚路径。P1 成功不自动启用 P2，也不代替 Stage07 Browser/UI 验收。

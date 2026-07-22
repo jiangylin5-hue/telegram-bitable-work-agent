@@ -1,0 +1,12 @@
+{{STAGE07_ACCEPTANCE_DOMAIN}} {
+    encode zstd gzip
+
+    @static path / /index.html /assets/* /favicon.ico
+    handle @static {
+        reverse_proxy stage07-web:80
+    }
+
+    handle {
+        reverse_proxy stage07-api:8000
+    }
+}

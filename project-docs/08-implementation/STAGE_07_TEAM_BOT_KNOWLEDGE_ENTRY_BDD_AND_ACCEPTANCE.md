@@ -2,7 +2,8 @@
 
 ## Status
 
-- Status: TD011 is partial-local after backend/frontend delivery and proportional evidence reconciliation on 2026-07-14. See evidence/stage07-s5-team-bot-knowledge.md; browser, real provider, Telegram, staging, production and whole-Stage07 acceptance remain open.
+- Status: TD011 is partial-local after backend/frontend delivery and proportional evidence reconciliation on 2026-07-14. The shared real OpenRouter matrix and Telegram inbound-entry smoke now have sanitized evidence; exact non-empty Team Bot UI-to-provider, controlled delivery, Mini App identity/deep-link, staging, production and whole-Stage07 acceptance remain open.
+- Strict audit disposition: a Browser fixture observation and separate API-route -> provider smoke must remain separate. The literal non-empty Mini App UI -> provider path is open unless newly authorized or explicitly removed by a user-approved BDD revision. See [Stage07 Final Audit Report](STAGE_07_FINAL_AUDIT_REPORT.md).
 - Scope: S5.3 Team Bot entry, one selected saved-view knowledge window and one-shot safe summary only.
 
 ## BDD Scenarios
@@ -107,12 +108,12 @@ Then no knowledge-source table, vector query, file/URL ingestion, memory/thread 
 
 | BDD IDs | Local status | Evidence | Remaining gate |
 | --- | --- | --- | --- |
-| TBK-A01 | implemented-local | contact route/DTO tests and disposable PostgreSQL contact projection | lifecycle/grant-change observation |
-| TBK-A02 | partial-local | separate Home entry/workbench and team-bot protected-query subtree tests | user-controlled desktop/mobile visual review |
-| TBK-A03 | implemented-local | current Base/table/view/saved-view intersection service and safe context routes | revoke/grant PostgreSQL matrix |
-| TBK-A04--A05 | partial-local | command-time selected-view reread, closed request models and <=600 bound | paused/revoked/cross-Base command matrix |
-| TBK-A06--A07 | implemented-local | captured 101/100 window, citation guard, empty/no-provider audit and truncation tests | configured-provider/UI observation |
-| TBK-A08--A09 | partial-local | same-key replay, safe receipt/parser, scoped cleanup and request generations | changed-key conflict and delayed-error replacement matrix |
+| TBK-A01 | implemented-local | contact route/DTO tests and disposable PostgreSQL contact projection | real external lifecycle/grant change remains outside local evidence |
+| TBK-A02 | implemented-local | separate Home entry/workbench and Team Bot protected-query subtree tests; 2026-07-14 Codex in-app-Browser observed the Team Bot workbench at desktop and narrow width | user-controlled whole-product visual review remains open |
+| TBK-A03 | implemented-local | current Base/table/view/saved-view intersection service and safe context routes; ungranted-member failure is covered before provider call | real external revocation observation remains outside local evidence |
+| TBK-A04--A05 | implemented-local | command-time selected-view reread, closed request models and <=600 bound; paused, ungranted and cross-Base command matrices fail before provider call | exact non-empty Team Bot UI-to-provider observation remains open |
+| TBK-A06--A07 | implemented-local | captured 101/100 window, citation guard, empty/no-provider audit and truncation tests; real local FastAPI/PostgreSQL UI flow observed the empty-context audit receipt; the shared five-case real provider matrix passes | configured Team Bot UI output is not claimed |
+| TBK-A08--A09 | implemented-local | same-key replay, changed-key conflict, safe receipt/parser, scoped cleanup and delayed `409`/`422` input-preserving replacement coverage | real provider and broader visual/retry UX review remain open |
 | TBK-A10--A11 | implemented-local | source inventory confirms no direct write, RAG/memory/files/Telegram/model/migration expansion | later product-boundary review |
 
 Focused backend result: 23 passed; disposable local PostgreSQL result: 1 passed; full Mini App: 60 files / 221 tests; production build passed. These are local-only results.
@@ -122,3 +123,13 @@ Focused backend result: 23 passed; disposable local PostgreSQL result: 1 passed;
 - durable knowledge source management, file/URL ingestion, embeddings/vector retrieval and cross-Base discovery;
 - personal/team memory, chat history and retention/deletion controls;
 - real OpenRouter and Telegram smoke, staging/production and Stage07 final acceptance.
+
+## 2026-07-14 Final Local Closure Update
+
+The focused Team Bot service suite reports `6 passed`; the dedicated Team Bot PostgreSQL suite reports `1 passed`; the full Mini App suite reports `60 files / 221 tests`; the production build passes. The complete backend regression reports `627 passed, 17 skipped`, where the skips are historical Stage02 online PostgreSQL smoke without `STAGE02_ONLINE_DATABASE_URL`.
+
+The in-app-Browser observation used only synthetic local data and a real local FastAPI/PostgreSQL/Vite stack. It verified a Team Bot empty-context summary and rendered opaque audit receipt at desktop and 390px narrow viewport, with no observed console errors or warnings. It does not assert a successful provider invocation.
+
+With `STAGE06_ENV_FILE` pointed at the existing ignored local env file, `stage06_live_openrouter_smoke.py` passed all five documented real cases through `openrouter/auto`: `summarize_basic`, `hidden_field_guard`, `citations_required`, `draft_update_status` and `unsafe_commit_refusal`. Its evidence confirms no pre-confirmation record change and no raw prompt/response persistence. This is real provider proof, not a claim that the Team Bot non-empty-context UI route itself has called the provider.
+
+`stage06_telegram_entry_smoke.py` first observed a safe read-only `409 Conflict` because an active webhook or other polling consumer owned updates. After the existing secret was synchronized and the user approved a temporary switch, the smoke received one matching private test mention, resolved `summarize` with one record and restored the webhook with no outbound send. This inbound proof does not make Team Bot a Telegram surface or accept controlled delivery / Mini App external routes. See [final local closure evidence](evidence/stage07-final-acceptance-closure.md).

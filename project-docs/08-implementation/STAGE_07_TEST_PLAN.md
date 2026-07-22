@@ -4,6 +4,7 @@
 
 - Document status: active verification matrix
 - Scope: unit, integration, contract, visual and manual Mini App evidence
+- Current Progress: fresh 2026-07-15 full regression is backend `651 passed, 18 skipped` and Mini App `63 files / 227 passed`; current migration head is `20260713_0027`. The focused real-local-PostgreSQL Team Bot, TD005 runtime-failure and TD009 scope-revocation commands are recorded in [Final Closure Validation](evidence/stage07-final-closure-validation-2026-07-15.md). This is not a whole-stage acceptance decision. [Stage07 Final Audit Report](STAGE_07_FINAL_AUDIT_REPORT.md) retains the missing requirement-ID Browser, PostgreSQL, role/failure and literal provider-path matrices.
 
 ## 1. Test Layers
 

@@ -4,7 +4,8 @@
 
 - Document status: active Stage07 delivery roadmap
 - Purpose: organize Stage07 as coherent substages rather than individual UI/API fragments
-- Current completed local substage: S5.3 / TD011 is `partial-local` after its approved Team Bot knowledge package was implemented and proportionally verified on 2026-07-14. It remains a bounded Home summary flow over existing employees and saved views; durable knowledge sources, vector retrieval, memory, files, Telegram and direct writes remain deferred. User-controlled visual review, real provider evidence and whole-Stage07 acceptance remain open.
+- Current completed local substage: S5.3 / TD011 is `partial-local` after its approved Team Bot knowledge package was implemented and proportionally verified. It remains a bounded Home summary flow over existing employees and saved views; durable knowledge sources, vector retrieval, memory, files, Telegram and direct writes remain deferred. The R2 safe-route non-empty real OpenRouter smoke is now recorded; user-controlled visual review and whole-Stage07 acceptance remain open.
+- Current execution substage: R1 is active. R0 completed its original-contract inventory and reclassified every approved row into implementation, evidence, document-correction, contract-gated or explicit-defer work. R1/R2/R3 execute only the compatible original scope; R0 itself authorized no new contract or external action.
 
 ## Delivery Rule
 
@@ -28,10 +29,11 @@ No local implementation is Telegram, staging, production or Stage07 completion e
 | S3 | Governance Readback | safe paged member directory and Base audit timeline | implemented-local; Browser external evidence pending | Technical Decision 003 |
 | S4 | Governance Write | bounded member-role, field-policy and existing V1 view-grant operations | implemented-local; command/lifecycle matrix is covered, Browser negative evidence partial | Technical Decision 004 |
 | S5 | Draft and Digital Employee Hub | field-filtered draft review, contacts and assistant surface | partial-local; provider/Browser/acceptance evidence pending | approved Technical Decision 005 Option A and TD006 Option A |
-| S6 | Telegram identity, deep link and final acceptance | verified identity/deep link, bounded external smoke and final safety/visual matrix | S6.1 `partial-local`: implementation, focused backend/Mini App tests, PostgreSQL and synthetic 1440/1280/430/390 Browser recovery/Record evidence exist. TD008 Option A S6.2 is `partial-local`: closed extension, fixed client, reserve-before-send Worker, migration replay, terminal-state, confirmation-denial, two-session collision and logger-inventory evidence exist; only real external evidence is pending | TD007 Option A; TD008 local code is implemented, external operation later requires per-environment authority |
+| S6 | Telegram identity, deep link and final acceptance | verified identity/deep link, bounded external smoke and final safety/visual matrix | S6.1/TD008 remain `partial-local` as product packages, but their bounded isolated non-production external evidence is complete: two separately approved one-attempt deliveries, official bridge correction, signed resolver/Base reread and cleanup with Stage03 preserved. Final selected visual matrix and Stage07 exit remain open. | TD007/TD008 authority was limited to the observed isolated test path; no production or broad delivery authority follows. |
 | S5.1 | Home personal-assistant context discovery | contact-to-permitted-view selection, selected-view re-read and fixed summary reuse from Home | partial-local: two safe reads, protected Mini App flow, `17` focused backend tests, full Mini App `51 files / 204 tests` and production build; no TD009 PostgreSQL/browser/manual acceptance | TD009 Option B; no migration, new permission action, lifecycle, memory, knowledge, record picker or external operation |
 | S5.2 | Digital employee management and work scope | manager-created Base-bound employee, fixed scope/action configuration, optional assigned-member eligibility and pause/resume lifecycle | `implemented-local`: migration, service/API, existing-consumer eligibility gate, strict protected Mini App workbench, focused backend `35 passed`, PostgreSQL migration `3 passed, 3 deselected`, full Mini App `56 files / 215 tests` and build pass | TD010 Option A; no new RBAC action, multi-Base scope, memory/knowledge, record picker, Telegram/provider/external action or persistent browser state |
 | S5.3 | Team Bot entry and view knowledge | shared Home Team Bot, selected employee-scoped saved view, bounded one-shot summary and Base handoff | `partial-local`: safe routes/service/window/audit replay, isolated workbench and evidence (`23` focused backend, PostgreSQL `1`, Mini App `60 files / 221 tests`, build) | reuse TD010/TD005/TD009; no schema/index/action/dependency, RAG/memory/files/record picker/Telegram/direct write; visual/provider/external acceptance open |
+| R0 | Product alignment and acceptance reset | one truthful matrix that maps every Stage07 row to the confirmed customer/project/task operating scenario and R1/R2/R3 ownership | `completed`; R1 now executes against its inventory | no code/schema/API/permission/external action; original scope is preserved |
 
 ## S3 Governance Readback
 
@@ -168,7 +170,7 @@ TD005 Option A is approved for S5 implementation. It authorizes only the two dra
 
 ### S6.2 External Evidence Gate
 
-- [TD008](STAGE_07_TECHNICAL_DECISION_008_S6_CONTROLLED_DELIVERY_AND_SMOKE.md), its design/BDD/SDD/work-surface/index and the approved [implementation plan](../../docs/superpowers/plans/2026-07-13-stage07-s6-controlled-delivery-smoke-implementation.md) now deliver one `restricted_test` Worker-side opaque mint/send path locally. No Bot setup or external evidence exists.
+- [TD008](STAGE_07_TECHNICAL_DECISION_008_S6_CONTROLLED_DELIVERY_AND_SMOKE.md), its design/BDD/SDD/work-surface/index and the approved [implementation plan](../../docs/superpowers/plans/2026-07-13-stage07-s6-controlled-delivery-smoke-implementation.md) delivered the `restricted_test` Worker-side opaque mint/send path locally and two separately approved bounded non-production real requests. The first exposed the missing official bridge; the second completed the signed resolver/Base reread path. The isolated environment is now removed.
 - A human with appropriate authority configures a non-production Bot, Main Mini App URL, webhook secret and one allowlisted private test chat/user.
 - TD008 Option A and its implementation plan are approved for local code. The controlled workflow reuses existing `restricted_test` policy and cannot broaden to group/broadcast send.
 - Real Telegram proof and deep-link smoke are recorded with sanitized evidence only. Failure to obtain that authority leaves S6.2 and final Stage07 acceptance unproven; it does not block S6.1 local implementation.
@@ -186,3 +188,9 @@ Each substage report must contain:
 - Explicit non-goals.
 - Exact acceptance commands and UI observation.
 - Remaining risk and external evidence gap.
+
+## 2026-07-15 R0-R3 Delivery Audit Correction
+
+R0 product alignment/inventory is complete. R1/R2/R3 collected substantial implementation and cleanup evidence, but they are not a completed Stage07 baseline: [Stage07 Final Audit Report](STAGE_07_FINAL_AUDIT_REPORT.md) retains compatible original acceptance gaps across V1, Template Import, governance, draft/context, TD009, TD010 and TD011.
+
+The immediate next coherent substage is `Stage07 acceptance-evidence closure`, not a new business feature. Customer-group/project binding, structured internal Bot task creation, customer message intake, controlled notifications and production rollout still require separate technical decisions after this Stage07 acceptance work.

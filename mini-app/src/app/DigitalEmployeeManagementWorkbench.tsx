@@ -32,6 +32,10 @@ function fixedError(error: unknown): string {
   return '暂时无法提交数字员工配置，请稍后重试。'
 }
 
+function sameIds(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((item, index) => item === right[index])
+}
+
 export function DigitalEmployeeManagementWorkbench({
   context,
   directory,
@@ -85,7 +89,17 @@ export function DigitalEmployeeManagementWorkbench({
     && viewIds.every((viewId) => availableViews.some((view) => view.id === viewId))
     && actions.includes('summarize')
     && (accessMode === 'workspace' || memberIds.length > 0)
-  const canActivate = editable && Boolean(name.trim() && description.trim() && safeScope) && pending === null
+  const hasUnsavedConfiguration = Boolean(detail) && (
+    name.trim() !== detail?.name
+    || description.trim() !== detail?.description
+    || (telegramAlias.trim() || null) !== detail?.telegramAlias
+    || !sameIds(tableIds, detail?.accessibleTableIds ?? [])
+    || !sameIds(viewIds, detail?.accessibleViewIds ?? [])
+    || !sameIds(actions, detail?.allowedActions ?? [])
+    || accessMode !== detail?.accessMode
+    || !sameIds(memberIds, detail?.memberIds ?? [])
+  )
+  const canActivate = editable && Boolean(name.trim() && description.trim() && safeScope) && !hasUnsavedConfiguration && pending === null
   const canCreate = !detail && Boolean(name.trim() && description.trim()) && pending === null
 
   function toggleId(current: string[], id: string): string[] {
@@ -148,9 +162,26 @@ export function DigitalEmployeeManagementWorkbench({
             <fieldset disabled={active || pending !== null}><legend>表与视图范围</legend><div className="digital-employee-management-checklist">{(context?.tables ?? []).map((table) => <label key={table.id}><input aria-label={`范围表 ${table.name}`} type="checkbox" checked={tableIds.includes(table.id)} onChange={() => toggleTable(table.id)} />{table.name}</label>)}</div>{availableViews.length ? <div className="digital-employee-management-checklist">{availableViews.map((view) => <label key={view.id}><input aria-label={`范围视图 ${view.name}`} type="checkbox" checked={viewIds.includes(view.id)} onChange={() => setViewIds((current) => toggleId(current, view.id))} />{view.name}</label>)}</div> : <p>先选择可用数据表，再选择视图。</p>}</fieldset>
             <fieldset disabled={active || pending !== null}><legend>固定意图</legend><label><input aria-label="允许摘要" type="checkbox" checked={actions.includes('summarize')} onChange={() => setActions((current) => toggleId(current, 'summarize') as ManagedEmployeeDetail['allowedActions'])} />允许摘要</label><label><input aria-label="允许创建草稿" type="checkbox" checked={actions.includes('draft_update')} onChange={() => setActions((current) => toggleId(current, 'draft_update') as ManagedEmployeeDetail['allowedActions'])} />允许创建草稿</label></fieldset>
             <fieldset disabled={active || pending !== null}><legend>访问范围</legend><label><input aria-label="访问范围 workspace" type="radio" name="employee-access-mode" checked={accessMode === 'workspace'} onChange={() => setAccessMode('workspace')} />工作区内已授权成员</label><label><input aria-label="访问范围 assigned" type="radio" name="employee-access-mode" checked={accessMode === 'assigned'} onChange={() => setAccessMode('assigned')} />仅已分配成员</label>{accessMode === 'assigned' ? <div className="digital-employee-management-checklist">{(context?.members ?? []).map((member) => <label key={member.id}><input aria-label={`可用成员 ${member.label}`} type="checkbox" checked={memberIds.includes(member.id)} onChange={() => setMemberIds((current) => toggleId(current, member.id))} />{member.label} · {member.role}</label>)}</div> : null}</fieldset>
+            {!active && hasUnsavedConfiguration ? <p className="digital-employee-management-hint" role="status">请先保存当前配置和成员，然后激活员工。</p> : null}
             <div className="digital-employee-management-actions">{active ? <button type="button" disabled={pending !== null} onClick={() => { void run('pause', () => onPause(detail.id, detail.version)) }}>暂停员工</button> : <><button type="button" disabled={pending !== null} onClick={() => { void run('save', () => onUpdate(detail.id, { name: name.trim(), description: description.trim(), telegramAlias: telegramAlias.trim() || null, accessibleTableIds: tableIds, accessibleViewIds: viewIds, allowedActions: actions, accessMode }, detail.version)) }}>保存配置</button><button type="button" disabled={pending !== null} onClick={() => { void run('grants', () => onReplaceGrants(detail.id, memberIds, detail.version)) }}>替换成员</button><button type="button" className="digital-employee-management-primary" disabled={!canActivate} onClick={() => { void run('activate', () => onActivate(detail.id, detail.version)) }}>激活员工</button></>}</div>
           </>}
         </section>
+        <aside className="digital-employee-management-review" aria-label="运行状态与审计">
+          <header><p>REVIEW</p><h3>运行状态</h3></header>
+          <dl className="digital-employee-management-status-list">
+            <div><dt>当前生命周期</dt><dd>{detail?.status ?? '未创建'}</dd></div>
+            <div><dt>授权范围</dt><dd>{detail ? `${detail.tableCount} 张表 · ${detail.viewCount} 个视图` : '创建后读取'}</dd></div>
+            <div><dt>成员可用性</dt><dd>{detail?.accessMode === 'assigned' ? `${detail.memberCount} 位已分配成员` : '工作区内已授权成员'}</dd></div>
+          </dl>
+          <section className="digital-employee-management-review-section" aria-label="确认约束">
+            <h4>确认约束</h4>
+            <p>员工只能创建受控草稿；记录写入仍须由有权限的用户在当前上下文确认。</p>
+          </section>
+          <section className="digital-employee-management-review-section" aria-label="审计说明">
+            <h4>审计说明</h4>
+            <p>生命周期、范围和成员变更由服务器记录。此页面不会展示运行时配置、提示词、模型或记忆数据。</p>
+          </section>
+        </aside>
       </div>
     </aside>
   </div>

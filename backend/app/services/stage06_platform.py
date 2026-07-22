@@ -1,13 +1,15 @@
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from functools import cmp_to_key
-from typing import Any, Iterable, Protocol
+from typing import Any, Iterable, Iterator, Protocol
 from uuid import UUID, uuid4
 
-from sqlalchemy import and_, delete, or_, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.agent import AgentRun
 from app.models.audit import OpsAuditEvent
+from app.models.outbox import OutboxEvent
 from app.models.stage06_platform import (
     BitableBase,
     PlatformField,
@@ -32,6 +34,19 @@ from app.models.stage06_templates import (
     TemplateInstallation,
 )
 from app.models.stage06_hardening import Stage06IdempotencyRecord
+from app.models.stage08_runtime import Stage08ExecutionTicket
+from app.models.stage08_memory import (
+    Stage08MemoryExtractionCandidate,
+    Stage08MemoryItem,
+)
+from app.models.stage08_group_context import (
+    Stage08GroupBusinessContextBinding,
+    Stage08GroupMessageProjection,
+)
+from app.models.stage08_knowledge import (
+    Stage08KnowledgeChunk,
+    Stage08KnowledgeSource,
+)
 from app.models.stage07_telegram import (
     Stage07TelegramDeepLink,
     Stage07TelegramDeepLinkDelivery,
@@ -150,6 +165,37 @@ _V1_SORTABLE_FIELD_TYPES = frozenset(
 _V1_GROUPABLE_FIELD_TYPES = frozenset({"status", "single_select", "user"})
 
 
+@contextmanager
+def stage08_e3_safe_execution_boundary(
+    uow: "Stage06PlatformUnitOfWork",
+) -> Iterator[None]:
+    """Rollback only E3 side effects while preserving the caller's transaction."""
+
+    if isinstance(uow, InMemoryStage06PlatformUnitOfWork):
+        tracked_lists = (
+            "execution_tickets",
+            "idempotency_records",
+            "record_change_drafts",
+            "agent_runs",
+            "audit_events",
+            "outbox_events",
+            "notification_requests",
+        )
+        lengths = {name: len(getattr(uow, name)) for name in tracked_lists}
+        try:
+            yield
+        except BaseException:
+            for name, length in lengths.items():
+                del getattr(uow, name)[length:]
+            raise
+        return
+    if isinstance(uow, SqlAlchemyStage06PlatformUnitOfWork):
+        with uow.session.begin_nested():
+            yield
+        return
+    raise TypeError("stage08_safe_execution_uow_unsupported")
+
+
 class PlatformValidationError(ValueError):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
@@ -212,6 +258,12 @@ class Stage06PlatformUnitOfWork(Protocol):
     def get_workspace(self, workspace_id: UUID) -> Workspace | None:
         pass
 
+    def lock_workspace_for_stage08_execution(
+        self,
+        workspace_id: UUID,
+    ) -> Workspace | None:
+        pass
+
     def list_workspace_members(self, workspace_id: UUID) -> list[WorkspaceMember]:
         pass
 
@@ -242,6 +294,12 @@ class Stage06PlatformUnitOfWork(Protocol):
     def get_table(self, table_id: UUID) -> PlatformTable | None:
         pass
 
+    def lock_table_for_stage08_execution(
+        self,
+        table_id: UUID,
+    ) -> PlatformTable | None:
+        pass
+
     def lock_table_for_schema_mutation(self, table_id: UUID) -> PlatformTable | None:
         pass
 
@@ -264,6 +322,12 @@ class Stage06PlatformUnitOfWork(Protocol):
         pass
 
     def get_record(self, record_id: UUID) -> PlatformRecord | None:
+        pass
+
+    def lock_record_for_stage08_execution(
+        self,
+        record_id: UUID,
+    ) -> PlatformRecord | None:
         pass
 
     def list_records(self, table_id: UUID) -> list[PlatformRecord]:
@@ -334,6 +398,190 @@ class Stage06PlatformUnitOfWork(Protocol):
     def get_digital_employee(self, employee_id: UUID) -> DigitalEmployee | None:
         pass
 
+    def add_execution_ticket(self, ticket: Stage08ExecutionTicket) -> None:
+        pass
+
+    def get_execution_ticket(
+        self,
+        ticket_id: UUID,
+    ) -> Stage08ExecutionTicket | None:
+        pass
+
+    def lock_execution_ticket_for_transition(
+        self,
+        ticket_id: UUID,
+    ) -> Stage08ExecutionTicket | None:
+        pass
+
+    def get_execution_ticket_by_trace(
+        self,
+        workspace_id: UUID,
+        trace_id: str,
+    ) -> Stage08ExecutionTicket | None:
+        pass
+
+    def add_memory_item(self, item: Stage08MemoryItem) -> None:
+        pass
+
+    def get_memory_item(self, item_id: UUID) -> Stage08MemoryItem | None:
+        pass
+
+    def lock_memory_item_for_lifecycle(
+        self,
+        item_id: UUID,
+    ) -> Stage08MemoryItem | None:
+        pass
+
+    def list_memory_items(self, workspace_id: UUID) -> list[Stage08MemoryItem]:
+        pass
+
+    def add_knowledge_source(self, source: Stage08KnowledgeSource) -> None:
+        pass
+
+    def get_knowledge_source(
+        self,
+        source_id: UUID,
+    ) -> Stage08KnowledgeSource | None:
+        pass
+
+    def lock_knowledge_source_for_lifecycle(
+        self,
+        source_id: UUID,
+    ) -> Stage08KnowledgeSource | None:
+        pass
+
+    def list_knowledge_sources(
+        self,
+        workspace_id: UUID,
+    ) -> list[Stage08KnowledgeSource]:
+        pass
+
+    def add_knowledge_chunk(self, chunk: Stage08KnowledgeChunk) -> None:
+        pass
+
+    def list_knowledge_chunks(
+        self,
+        source_id: UUID,
+        source_version: int,
+    ) -> list[Stage08KnowledgeChunk]:
+        pass
+
+    def add_memory_extraction_candidate(
+        self,
+        candidate: Stage08MemoryExtractionCandidate,
+    ) -> None:
+        pass
+
+    def get_memory_extraction_candidate(
+        self,
+        candidate_id: UUID,
+    ) -> Stage08MemoryExtractionCandidate | None:
+        pass
+
+    def lock_memory_extraction_candidate_for_lifecycle(
+        self,
+        candidate_id: UUID,
+    ) -> Stage08MemoryExtractionCandidate | None:
+        pass
+
+    def list_memory_extraction_candidates(
+        self,
+        workspace_id: UUID,
+    ) -> list[Stage08MemoryExtractionCandidate]:
+        pass
+
+    def add_group_business_context_binding(
+        self,
+        binding: Stage08GroupBusinessContextBinding,
+    ) -> None:
+        pass
+
+    def get_group_business_context_binding(
+        self,
+        binding_id: UUID,
+    ) -> Stage08GroupBusinessContextBinding | None:
+        pass
+
+    def lock_group_business_context_binding_for_lifecycle(
+        self,
+        binding_id: UUID,
+    ) -> Stage08GroupBusinessContextBinding | None:
+        pass
+
+    def list_group_business_context_bindings(
+        self,
+        telegram_binding_id: UUID,
+    ) -> list[Stage08GroupBusinessContextBinding]:
+        pass
+
+    def add_group_message_projection(
+        self,
+        projection: Stage08GroupMessageProjection,
+    ) -> None:
+        pass
+
+    def get_group_message_projection(
+        self,
+        projection_id: UUID,
+    ) -> Stage08GroupMessageProjection | None:
+        pass
+
+    def get_eligible_group_message_projection_for_materialization(
+        self,
+        projection_id: UUID,
+        business_context_binding_id: UUID,
+        *,
+        now,
+        event_cutoff,
+    ) -> Stage08GroupMessageProjection | None:
+        pass
+
+    def lock_group_message_projection_for_lifecycle(
+        self,
+        projection_id: UUID,
+    ) -> Stage08GroupMessageProjection | None:
+        pass
+
+    def list_active_group_message_projections(
+        self,
+        business_context_binding_id: UUID,
+        *,
+        now,
+    ) -> list[Stage08GroupMessageProjection]:
+        pass
+
+    def list_eligible_group_message_projections_for_window(
+        self,
+        business_context_binding_id: UUID,
+        *,
+        now,
+        event_cutoff,
+        limit: int,
+    ) -> list[Stage08GroupMessageProjection]:
+        pass
+
+    def count_group_message_projection_window_omissions(
+        self,
+        business_context_binding_id: UUID,
+        *,
+        now,
+        event_cutoff,
+        eligible_limit: int,
+    ) -> tuple[int, int]:
+        pass
+
+    def lock_expired_active_group_message_projections(
+        self,
+        *,
+        now,
+        event_cutoff,
+        limit: int,
+    ) -> list[Stage08GroupMessageProjection]:
+        pass
+
+    def purge_group_message_projection(self, projection_id: UUID) -> bool:
+        pass
+
     def lock_digital_employee_for_management(
         self,
         employee_id: UUID,
@@ -355,6 +603,12 @@ class Stage06PlatformUnitOfWork(Protocol):
     ) -> list[DigitalEmployeeMemberGrant]:
         pass
 
+    def lock_digital_employee_member_grants_for_stage08_execution(
+        self,
+        employee_id: UUID,
+    ) -> list[DigitalEmployeeMemberGrant]:
+        pass
+
     def replace_digital_employee_member_grants(
         self,
         employee_id: UUID,
@@ -365,7 +619,25 @@ class Stage06PlatformUnitOfWork(Protocol):
     def add_record_change_draft(self, draft: RecordChangeDraft) -> None:
         pass
 
+    def add_outbox_event(self, event: OutboxEvent) -> None:
+        pass
+
+    def get_outbox_event(self, event_id: UUID) -> OutboxEvent | None:
+        pass
+
+    def get_outbox_event_by_idempotency_key(
+        self,
+        idempotency_key: str,
+    ) -> OutboxEvent | None:
+        pass
+
     def get_record_change_draft(self, draft_id: UUID) -> RecordChangeDraft | None:
+        pass
+
+    def get_pending_record_change_draft_by_trace(
+        self,
+        trace_id: str,
+    ) -> RecordChangeDraft | None:
         pass
 
     def lock_record_change_draft_for_transition(
@@ -407,6 +679,12 @@ class Stage06PlatformUnitOfWork(Protocol):
         pass
 
     def list_telegram_bindings(self) -> list[Stage06TelegramBinding]:
+        pass
+
+    def lock_telegram_binding_for_stage08_execution(
+        self,
+        binding_id: UUID,
+    ) -> Stage06TelegramBinding | None:
         pass
 
     def add_telegram_deep_link(self, link: Stage07TelegramDeepLink) -> None:
@@ -475,10 +753,24 @@ class InMemoryStage06PlatformUnitOfWork:
     template_installations: list[TemplateInstallation] = field(default_factory=list)
     import_jobs: list[ImportJob] = field(default_factory=list)
     digital_employees: list[DigitalEmployee] = field(default_factory=list)
+    execution_tickets: list[Stage08ExecutionTicket] = field(default_factory=list)
+    memory_items: list[Stage08MemoryItem] = field(default_factory=list)
+    knowledge_sources: list[Stage08KnowledgeSource] = field(default_factory=list)
+    knowledge_chunks: list[Stage08KnowledgeChunk] = field(default_factory=list)
+    memory_extraction_candidates: list[Stage08MemoryExtractionCandidate] = field(
+        default_factory=list
+    )
+    group_business_context_bindings: list[
+        Stage08GroupBusinessContextBinding
+    ] = field(default_factory=list)
+    group_message_projections: list[Stage08GroupMessageProjection] = field(
+        default_factory=list
+    )
     digital_employee_member_grants: list[DigitalEmployeeMemberGrant] = field(
         default_factory=list
     )
     record_change_drafts: list[RecordChangeDraft] = field(default_factory=list)
+    outbox_events: list[OutboxEvent] = field(default_factory=list)
     notification_requests: list[NotificationRequest] = field(default_factory=list)
     agent_runs: list[AgentRun] = field(default_factory=list)
     telegram_bindings: list[Stage06TelegramBinding] = field(default_factory=list)
@@ -501,6 +793,12 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def get_workspace(self, workspace_id: UUID) -> Workspace | None:
         return _find_by_id(self.workspaces, workspace_id)
+
+    def lock_workspace_for_stage08_execution(
+        self,
+        workspace_id: UUID,
+    ) -> Workspace | None:
+        return self.get_workspace(workspace_id)
 
     def list_workspace_members(self, workspace_id: UUID) -> list[WorkspaceMember]:
         return [
@@ -536,6 +834,12 @@ class InMemoryStage06PlatformUnitOfWork:
     def get_table(self, table_id: UUID) -> PlatformTable | None:
         return _find_by_id(self.tables, table_id)
 
+    def lock_table_for_stage08_execution(
+        self,
+        table_id: UUID,
+    ) -> PlatformTable | None:
+        return self.get_table(table_id)
+
     def lock_table_for_schema_mutation(self, table_id: UUID) -> PlatformTable | None:
         return self.get_table(table_id)
 
@@ -562,6 +866,12 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def get_record(self, record_id: UUID) -> PlatformRecord | None:
         return _find_by_id(self.records, record_id)
+
+    def lock_record_for_stage08_execution(
+        self,
+        record_id: UUID,
+    ) -> PlatformRecord | None:
+        return self.get_record(record_id)
 
     def list_records(self, table_id: UUID) -> list[PlatformRecord]:
         return [record for record in self.records if record.table_id == table_id]
@@ -655,6 +965,318 @@ class InMemoryStage06PlatformUnitOfWork:
     def get_digital_employee(self, employee_id: UUID) -> DigitalEmployee | None:
         return _find_by_id(self.digital_employees, employee_id)
 
+    def add_execution_ticket(self, ticket: Stage08ExecutionTicket) -> None:
+        self.execution_tickets.append(ticket)
+
+    def get_execution_ticket(
+        self,
+        ticket_id: UUID,
+    ) -> Stage08ExecutionTicket | None:
+        return _find_by_id(self.execution_tickets, ticket_id)
+
+    def lock_execution_ticket_for_transition(
+        self,
+        ticket_id: UUID,
+    ) -> Stage08ExecutionTicket | None:
+        return self.get_execution_ticket(ticket_id)
+
+    def get_execution_ticket_by_trace(
+        self,
+        workspace_id: UUID,
+        trace_id: str,
+    ) -> Stage08ExecutionTicket | None:
+        return next(
+            (
+                ticket
+                for ticket in self.execution_tickets
+                if ticket.workspace_id == workspace_id and ticket.trace_id == trace_id
+            ),
+            None,
+        )
+
+    def add_memory_item(self, item: Stage08MemoryItem) -> None:
+        self.memory_items.append(item)
+
+    def get_memory_item(self, item_id: UUID) -> Stage08MemoryItem | None:
+        return _find_by_id(self.memory_items, item_id)
+
+    def lock_memory_item_for_lifecycle(
+        self,
+        item_id: UUID,
+    ) -> Stage08MemoryItem | None:
+        return self.get_memory_item(item_id)
+
+    def list_memory_items(self, workspace_id: UUID) -> list[Stage08MemoryItem]:
+        return sorted(
+            (
+                item
+                for item in self.memory_items
+                if item.workspace_id == workspace_id
+            ),
+            key=lambda item: (item.created_at, item.id),
+            reverse=True,
+        )
+
+    def add_knowledge_source(self, source: Stage08KnowledgeSource) -> None:
+        self.knowledge_sources.append(source)
+
+    def get_knowledge_source(
+        self,
+        source_id: UUID,
+    ) -> Stage08KnowledgeSource | None:
+        return _find_by_id(self.knowledge_sources, source_id)
+
+    def lock_knowledge_source_for_lifecycle(
+        self,
+        source_id: UUID,
+    ) -> Stage08KnowledgeSource | None:
+        return self.get_knowledge_source(source_id)
+
+    def list_knowledge_sources(
+        self,
+        workspace_id: UUID,
+    ) -> list[Stage08KnowledgeSource]:
+        return sorted(
+            (
+                source
+                for source in self.knowledge_sources
+                if source.workspace_id == workspace_id
+            ),
+            key=lambda source: (
+                source.source_type,
+                source.logical_source_fingerprint,
+                source.content_version,
+                source.id,
+            ),
+        )
+
+    def add_knowledge_chunk(self, chunk: Stage08KnowledgeChunk) -> None:
+        self.knowledge_chunks.append(chunk)
+
+    def list_knowledge_chunks(
+        self,
+        source_id: UUID,
+        source_version: int,
+    ) -> list[Stage08KnowledgeChunk]:
+        return sorted(
+            (
+                chunk
+                for chunk in self.knowledge_chunks
+                if chunk.source_id == source_id
+                and chunk.source_version == source_version
+            ),
+            key=lambda chunk: (chunk.ordinal, chunk.id),
+        )
+
+    def add_memory_extraction_candidate(
+        self,
+        candidate: Stage08MemoryExtractionCandidate,
+    ) -> None:
+        self.memory_extraction_candidates.append(candidate)
+
+    def get_memory_extraction_candidate(
+        self,
+        candidate_id: UUID,
+    ) -> Stage08MemoryExtractionCandidate | None:
+        return _find_by_id(self.memory_extraction_candidates, candidate_id)
+
+    def lock_memory_extraction_candidate_for_lifecycle(
+        self,
+        candidate_id: UUID,
+    ) -> Stage08MemoryExtractionCandidate | None:
+        return self.get_memory_extraction_candidate(candidate_id)
+
+    def list_memory_extraction_candidates(
+        self,
+        workspace_id: UUID,
+    ) -> list[Stage08MemoryExtractionCandidate]:
+        return sorted(
+            (
+                candidate
+                for candidate in self.memory_extraction_candidates
+                if candidate.workspace_id == workspace_id
+            ),
+            key=lambda candidate: (candidate.created_at, candidate.id),
+            reverse=True,
+        )
+
+    def add_group_business_context_binding(
+        self,
+        binding: Stage08GroupBusinessContextBinding,
+    ) -> None:
+        self.group_business_context_bindings.append(binding)
+
+    def get_group_business_context_binding(
+        self,
+        binding_id: UUID,
+    ) -> Stage08GroupBusinessContextBinding | None:
+        return _find_by_id(self.group_business_context_bindings, binding_id)
+
+    def lock_group_business_context_binding_for_lifecycle(
+        self,
+        binding_id: UUID,
+    ) -> Stage08GroupBusinessContextBinding | None:
+        return self.get_group_business_context_binding(binding_id)
+
+    def list_group_business_context_bindings(
+        self,
+        telegram_binding_id: UUID,
+    ) -> list[Stage08GroupBusinessContextBinding]:
+        return sorted(
+            (
+                binding
+                for binding in self.group_business_context_bindings
+                if binding.telegram_binding_id == telegram_binding_id
+            ),
+            key=lambda binding: (binding.mapping_version, binding.id),
+            reverse=True,
+        )
+
+    def add_group_message_projection(
+        self,
+        projection: Stage08GroupMessageProjection,
+    ) -> None:
+        self.group_message_projections.append(projection)
+
+    def get_group_message_projection(
+        self,
+        projection_id: UUID,
+    ) -> Stage08GroupMessageProjection | None:
+        return _find_by_id(self.group_message_projections, projection_id)
+
+    def get_eligible_group_message_projection_for_materialization(
+        self,
+        projection_id: UUID,
+        business_context_binding_id: UUID,
+        *,
+        now,
+        event_cutoff,
+    ) -> Stage08GroupMessageProjection | None:
+        return next(
+            (
+                projection
+                for projection in self.group_message_projections
+                if projection.id == projection_id
+                and projection.business_context_binding_id
+                == business_context_binding_id
+                and projection.source_chat_type in {"group", "supergroup"}
+                and projection.lifecycle_status == "active"
+                and bool(projection.content_fragment)
+                and projection.retention_expires_at > now
+                and projection.event_at > event_cutoff
+            ),
+            None,
+        )
+
+    def lock_group_message_projection_for_lifecycle(
+        self,
+        projection_id: UUID,
+    ) -> Stage08GroupMessageProjection | None:
+        return self.get_group_message_projection(projection_id)
+
+    def list_active_group_message_projections(
+        self,
+        business_context_binding_id: UUID,
+        *,
+        now,
+    ) -> list[Stage08GroupMessageProjection]:
+        return sorted(
+            (
+                projection
+                for projection in self.group_message_projections
+                if projection.business_context_binding_id
+                == business_context_binding_id
+                and projection.lifecycle_status == "active"
+                and projection.source_chat_type in {"group", "supergroup"}
+                and projection.retention_expires_at > now
+                and bool(projection.content_fragment)
+            ),
+            key=lambda projection: (projection.event_at, projection.id),
+            reverse=True,
+        )
+
+    def list_eligible_group_message_projections_for_window(
+        self,
+        business_context_binding_id: UUID,
+        *,
+        now,
+        event_cutoff,
+        limit: int,
+    ) -> list[Stage08GroupMessageProjection]:
+        return sorted(
+            (
+                projection
+                for projection in self.group_message_projections
+                if projection.business_context_binding_id
+                == business_context_binding_id
+                and projection.lifecycle_status == "active"
+                and bool(projection.content_fragment)
+                and projection.source_chat_type in {"group", "supergroup"}
+                and projection.retention_expires_at > now
+                and projection.event_at > event_cutoff
+            ),
+            key=lambda projection: (projection.event_at, projection.id),
+            reverse=True,
+        )[:limit]
+
+    def count_group_message_projection_window_omissions(
+        self,
+        business_context_binding_id: UUID,
+        *,
+        now,
+        event_cutoff,
+        eligible_limit: int,
+    ) -> tuple[int, int]:
+        candidates = [
+            projection
+            for projection in self.group_message_projections
+            if projection.business_context_binding_id
+            == business_context_binding_id
+            and projection.lifecycle_status == "active"
+            and bool(projection.content_fragment)
+            and projection.source_chat_type in {"group", "supergroup"}
+        ]
+        expired = sum(
+            projection.retention_expires_at <= now
+            or projection.event_at <= event_cutoff
+            for projection in candidates
+        )
+        eligible = sum(
+            projection.retention_expires_at > now
+            and projection.event_at > event_cutoff
+            for projection in candidates
+        )
+        return expired, max(eligible - eligible_limit, 0)
+
+    def lock_expired_active_group_message_projections(
+        self,
+        *,
+        now,
+        event_cutoff,
+        limit: int,
+    ) -> list[Stage08GroupMessageProjection]:
+        return sorted(
+            (
+                projection
+                for projection in self.group_message_projections
+                if projection.lifecycle_status == "active"
+                and bool(projection.content_fragment)
+                and (
+                    projection.retention_expires_at <= now
+                    or projection.event_at <= event_cutoff
+                )
+            ),
+            key=lambda projection: (projection.retention_expires_at, projection.id),
+        )[:limit]
+
+    def purge_group_message_projection(self, projection_id: UUID) -> bool:
+        projection = self.lock_group_message_projection_for_lifecycle(projection_id)
+        if projection is None:
+            return False
+        projection.content_fragment = ""
+        projection.lifecycle_status = "purged"
+        return True
+
     def lock_digital_employee_for_management(
         self,
         employee_id: UUID,
@@ -680,6 +1302,12 @@ class InMemoryStage06PlatformUnitOfWork:
             if grant.employee_id == employee_id
         ]
 
+    def lock_digital_employee_member_grants_for_stage08_execution(
+        self,
+        employee_id: UUID,
+    ) -> list[DigitalEmployeeMemberGrant]:
+        return self.list_digital_employee_member_grants(employee_id)
+
     def replace_digital_employee_member_grants(
         self,
         employee_id: UUID,
@@ -695,8 +1323,38 @@ class InMemoryStage06PlatformUnitOfWork:
     def add_record_change_draft(self, draft: RecordChangeDraft) -> None:
         self.record_change_drafts.append(draft)
 
+    def add_outbox_event(self, event: OutboxEvent) -> None:
+        self.outbox_events.append(event)
+
+    def get_outbox_event(self, event_id: UUID) -> OutboxEvent | None:
+        return _find_by_id(self.outbox_events, event_id)
+
+    def get_outbox_event_by_idempotency_key(
+        self,
+        idempotency_key: str,
+    ) -> OutboxEvent | None:
+        return next(
+            (
+                event
+                for event in self.outbox_events
+                if event.idempotency_key == idempotency_key
+            ),
+            None,
+        )
+
     def get_record_change_draft(self, draft_id: UUID) -> RecordChangeDraft | None:
         return _find_by_id(self.record_change_drafts, draft_id)
+
+    def get_pending_record_change_draft_by_trace(
+        self,
+        trace_id: str,
+    ) -> RecordChangeDraft | None:
+        matches = [
+            draft
+            for draft in self.record_change_drafts
+            if draft.trace_id == trace_id and draft.status == "pending_confirmation"
+        ]
+        return matches[0] if len(matches) == 1 else None
 
     def lock_record_change_draft_for_transition(
         self, draft_id: UUID
@@ -760,6 +1418,12 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def list_telegram_bindings(self) -> list[Stage06TelegramBinding]:
         return list(self.telegram_bindings)
+
+    def lock_telegram_binding_for_stage08_execution(
+        self,
+        binding_id: UUID,
+    ) -> Stage06TelegramBinding | None:
+        return _find_by_id(self.telegram_bindings, binding_id)
 
     def add_telegram_deep_link(self, link: Stage07TelegramDeepLink) -> None:
         self.telegram_deep_links.append(link)
@@ -859,6 +1523,16 @@ class SqlAlchemyStage06PlatformUnitOfWork:
     def get_workspace(self, workspace_id: UUID) -> Workspace | None:
         return self.session.get(Workspace, workspace_id)
 
+    def lock_workspace_for_stage08_execution(
+        self,
+        workspace_id: UUID,
+    ) -> Workspace | None:
+        return self.session.scalar(
+            select(Workspace)
+            .where(Workspace.id == workspace_id)
+            .with_for_update()
+        )
+
     def list_workspace_members(self, workspace_id: UUID) -> list[WorkspaceMember]:
         return list(
             self.session.scalars(
@@ -909,6 +1583,16 @@ class SqlAlchemyStage06PlatformUnitOfWork:
     def get_table(self, table_id: UUID) -> PlatformTable | None:
         return self.session.get(PlatformTable, table_id)
 
+    def lock_table_for_stage08_execution(
+        self,
+        table_id: UUID,
+    ) -> PlatformTable | None:
+        return self.session.scalar(
+            select(PlatformTable)
+            .where(PlatformTable.id == table_id)
+            .with_for_update()
+        )
+
     def lock_table_for_schema_mutation(self, table_id: UUID) -> PlatformTable | None:
         return self.session.scalar(
             select(PlatformTable)
@@ -950,6 +1634,16 @@ class SqlAlchemyStage06PlatformUnitOfWork:
 
     def get_record(self, record_id: UUID) -> PlatformRecord | None:
         return self.session.get(PlatformRecord, record_id)
+
+    def lock_record_for_stage08_execution(
+        self,
+        record_id: UUID,
+    ) -> PlatformRecord | None:
+        return self.session.scalar(
+            select(PlatformRecord)
+            .where(PlatformRecord.id == record_id)
+            .with_for_update()
+        )
 
     def list_records(self, table_id: UUID) -> list[PlatformRecord]:
         return list(
@@ -1069,6 +1763,378 @@ class SqlAlchemyStage06PlatformUnitOfWork:
     def get_digital_employee(self, employee_id: UUID) -> DigitalEmployee | None:
         return self.session.get(DigitalEmployee, employee_id)
 
+    def add_execution_ticket(self, ticket: Stage08ExecutionTicket) -> None:
+        self.session.add(ticket)
+
+    def get_execution_ticket(
+        self,
+        ticket_id: UUID,
+    ) -> Stage08ExecutionTicket | None:
+        return self.session.get(Stage08ExecutionTicket, ticket_id)
+
+    def lock_execution_ticket_for_transition(
+        self,
+        ticket_id: UUID,
+    ) -> Stage08ExecutionTicket | None:
+        return self.session.scalar(
+            select(Stage08ExecutionTicket)
+            .where(Stage08ExecutionTicket.id == ticket_id)
+            .with_for_update()
+        )
+
+    def get_execution_ticket_by_trace(
+        self,
+        workspace_id: UUID,
+        trace_id: str,
+    ) -> Stage08ExecutionTicket | None:
+        return self.session.scalar(
+            select(Stage08ExecutionTicket).where(
+                Stage08ExecutionTicket.workspace_id == workspace_id,
+                Stage08ExecutionTicket.trace_id == trace_id,
+            )
+        )
+
+    def add_memory_item(self, item: Stage08MemoryItem) -> None:
+        self.session.add(item)
+
+    def get_memory_item(self, item_id: UUID) -> Stage08MemoryItem | None:
+        return self.session.get(Stage08MemoryItem, item_id)
+
+    def lock_memory_item_for_lifecycle(
+        self,
+        item_id: UUID,
+    ) -> Stage08MemoryItem | None:
+        return self.session.scalar(
+            select(Stage08MemoryItem)
+            .where(Stage08MemoryItem.id == item_id)
+            .with_for_update()
+        )
+
+    def list_memory_items(self, workspace_id: UUID) -> list[Stage08MemoryItem]:
+        return list(
+            self.session.scalars(
+                select(Stage08MemoryItem)
+                .where(Stage08MemoryItem.workspace_id == workspace_id)
+                .order_by(
+                    Stage08MemoryItem.created_at.desc(),
+                    Stage08MemoryItem.id.desc(),
+                )
+            )
+        )
+
+    def add_knowledge_source(self, source: Stage08KnowledgeSource) -> None:
+        self.session.add(source)
+
+    def get_knowledge_source(
+        self,
+        source_id: UUID,
+    ) -> Stage08KnowledgeSource | None:
+        return self.session.get(Stage08KnowledgeSource, source_id)
+
+    def lock_knowledge_source_for_lifecycle(
+        self,
+        source_id: UUID,
+    ) -> Stage08KnowledgeSource | None:
+        return self.session.scalar(
+            select(Stage08KnowledgeSource)
+            .where(Stage08KnowledgeSource.id == source_id)
+            .with_for_update()
+        )
+
+    def list_knowledge_sources(
+        self,
+        workspace_id: UUID,
+    ) -> list[Stage08KnowledgeSource]:
+        return list(
+            self.session.scalars(
+                select(Stage08KnowledgeSource)
+                .where(Stage08KnowledgeSource.workspace_id == workspace_id)
+                .order_by(
+                    Stage08KnowledgeSource.source_type,
+                    Stage08KnowledgeSource.logical_source_fingerprint,
+                    Stage08KnowledgeSource.content_version,
+                    Stage08KnowledgeSource.id,
+                )
+            )
+        )
+
+    def add_knowledge_chunk(self, chunk: Stage08KnowledgeChunk) -> None:
+        self.session.add(chunk)
+
+    def list_knowledge_chunks(
+        self,
+        source_id: UUID,
+        source_version: int,
+    ) -> list[Stage08KnowledgeChunk]:
+        return list(
+            self.session.scalars(
+                select(Stage08KnowledgeChunk)
+                .where(
+                    Stage08KnowledgeChunk.source_id == source_id,
+                    Stage08KnowledgeChunk.source_version == source_version,
+                )
+                .order_by(
+                    Stage08KnowledgeChunk.ordinal,
+                    Stage08KnowledgeChunk.id,
+                )
+            )
+        )
+
+    def add_memory_extraction_candidate(
+        self,
+        candidate: Stage08MemoryExtractionCandidate,
+    ) -> None:
+        self.session.add(candidate)
+
+    def get_memory_extraction_candidate(
+        self,
+        candidate_id: UUID,
+    ) -> Stage08MemoryExtractionCandidate | None:
+        return self.session.get(Stage08MemoryExtractionCandidate, candidate_id)
+
+    def lock_memory_extraction_candidate_for_lifecycle(
+        self,
+        candidate_id: UUID,
+    ) -> Stage08MemoryExtractionCandidate | None:
+        return self.session.scalar(
+            select(Stage08MemoryExtractionCandidate)
+            .where(Stage08MemoryExtractionCandidate.id == candidate_id)
+            .with_for_update()
+        )
+
+    def list_memory_extraction_candidates(
+        self,
+        workspace_id: UUID,
+    ) -> list[Stage08MemoryExtractionCandidate]:
+        return list(
+            self.session.scalars(
+                select(Stage08MemoryExtractionCandidate)
+                .where(Stage08MemoryExtractionCandidate.workspace_id == workspace_id)
+                .order_by(
+                    Stage08MemoryExtractionCandidate.created_at.desc(),
+                    Stage08MemoryExtractionCandidate.id.desc(),
+                )
+            )
+        )
+
+    def add_group_business_context_binding(
+        self,
+        binding: Stage08GroupBusinessContextBinding,
+    ) -> None:
+        self.session.add(binding)
+
+    def get_group_business_context_binding(
+        self,
+        binding_id: UUID,
+    ) -> Stage08GroupBusinessContextBinding | None:
+        return self.session.get(Stage08GroupBusinessContextBinding, binding_id)
+
+    def lock_group_business_context_binding_for_lifecycle(
+        self,
+        binding_id: UUID,
+    ) -> Stage08GroupBusinessContextBinding | None:
+        return self.session.scalar(
+            select(Stage08GroupBusinessContextBinding)
+            .where(Stage08GroupBusinessContextBinding.id == binding_id)
+            .with_for_update()
+        )
+
+    def list_group_business_context_bindings(
+        self,
+        telegram_binding_id: UUID,
+    ) -> list[Stage08GroupBusinessContextBinding]:
+        return list(
+            self.session.scalars(
+                select(Stage08GroupBusinessContextBinding)
+                .where(
+                    Stage08GroupBusinessContextBinding.telegram_binding_id
+                    == telegram_binding_id
+                )
+                .order_by(
+                    Stage08GroupBusinessContextBinding.mapping_version.desc(),
+                    Stage08GroupBusinessContextBinding.id.desc(),
+                )
+            )
+        )
+
+    def add_group_message_projection(
+        self,
+        projection: Stage08GroupMessageProjection,
+    ) -> None:
+        self.session.add(projection)
+
+    def get_group_message_projection(
+        self,
+        projection_id: UUID,
+    ) -> Stage08GroupMessageProjection | None:
+        return self.session.get(Stage08GroupMessageProjection, projection_id)
+
+    def get_eligible_group_message_projection_for_materialization(
+        self,
+        projection_id: UUID,
+        business_context_binding_id: UUID,
+        *,
+        now,
+        event_cutoff,
+    ) -> Stage08GroupMessageProjection | None:
+        return self.session.scalar(
+            select(Stage08GroupMessageProjection)
+            .where(
+                Stage08GroupMessageProjection.id == projection_id,
+                Stage08GroupMessageProjection.business_context_binding_id
+                == business_context_binding_id,
+                Stage08GroupMessageProjection.source_chat_type.in_(
+                    ("group", "supergroup")
+                ),
+                Stage08GroupMessageProjection.lifecycle_status == "active",
+                Stage08GroupMessageProjection.content_fragment != "",
+                Stage08GroupMessageProjection.retention_expires_at > now,
+                Stage08GroupMessageProjection.event_at > event_cutoff,
+            )
+            .limit(1)
+            .with_for_update(read=True)
+        )
+
+    def lock_group_message_projection_for_lifecycle(
+        self,
+        projection_id: UUID,
+    ) -> Stage08GroupMessageProjection | None:
+        return self.session.scalar(
+            select(Stage08GroupMessageProjection)
+            .where(Stage08GroupMessageProjection.id == projection_id)
+            .with_for_update()
+        )
+
+    def list_active_group_message_projections(
+        self,
+        business_context_binding_id: UUID,
+        *,
+        now,
+    ) -> list[Stage08GroupMessageProjection]:
+        return list(
+            self.session.scalars(
+                select(Stage08GroupMessageProjection)
+                .where(
+                    Stage08GroupMessageProjection.business_context_binding_id
+                    == business_context_binding_id,
+                    Stage08GroupMessageProjection.lifecycle_status == "active",
+                    Stage08GroupMessageProjection.source_chat_type.in_(
+                        ("group", "supergroup")
+                    ),
+                    Stage08GroupMessageProjection.retention_expires_at > now,
+                    Stage08GroupMessageProjection.content_fragment != "",
+                )
+                .order_by(
+                    Stage08GroupMessageProjection.event_at.desc(),
+                    Stage08GroupMessageProjection.id.desc(),
+                )
+            )
+        )
+
+    def list_eligible_group_message_projections_for_window(
+        self,
+        business_context_binding_id: UUID,
+        *,
+        now,
+        event_cutoff,
+        limit: int,
+    ) -> list[Stage08GroupMessageProjection]:
+        return list(
+            self.session.scalars(
+                select(Stage08GroupMessageProjection)
+                .where(
+                    Stage08GroupMessageProjection.business_context_binding_id
+                    == business_context_binding_id,
+                    Stage08GroupMessageProjection.lifecycle_status == "active",
+                    Stage08GroupMessageProjection.content_fragment != "",
+                    Stage08GroupMessageProjection.source_chat_type.in_(
+                        ("group", "supergroup")
+                    ),
+                    Stage08GroupMessageProjection.retention_expires_at > now,
+                    Stage08GroupMessageProjection.event_at > event_cutoff,
+                )
+                .order_by(
+                    Stage08GroupMessageProjection.event_at.desc(),
+                    Stage08GroupMessageProjection.id.desc(),
+                )
+                .limit(limit)
+            )
+        )
+
+    def count_group_message_projection_window_omissions(
+        self,
+        business_context_binding_id: UUID,
+        *,
+        now,
+        event_cutoff,
+        eligible_limit: int,
+    ) -> tuple[int, int]:
+        common = (
+            Stage08GroupMessageProjection.business_context_binding_id
+            == business_context_binding_id,
+            Stage08GroupMessageProjection.lifecycle_status == "active",
+            Stage08GroupMessageProjection.content_fragment != "",
+            Stage08GroupMessageProjection.source_chat_type.in_(
+                ("group", "supergroup")
+            ),
+        )
+        expired = self.session.scalar(
+            select(func.count())
+            .select_from(Stage08GroupMessageProjection)
+            .where(
+                *common,
+                or_(
+                    Stage08GroupMessageProjection.retention_expires_at <= now,
+                    Stage08GroupMessageProjection.event_at <= event_cutoff,
+                ),
+            )
+        )
+        eligible = self.session.scalar(
+            select(func.count())
+            .select_from(Stage08GroupMessageProjection)
+            .where(
+                *common,
+                Stage08GroupMessageProjection.retention_expires_at > now,
+                Stage08GroupMessageProjection.event_at > event_cutoff,
+            )
+        )
+        return int(expired or 0), max(int(eligible or 0) - eligible_limit, 0)
+
+    def lock_expired_active_group_message_projections(
+        self,
+        *,
+        now,
+        event_cutoff,
+        limit: int,
+    ) -> list[Stage08GroupMessageProjection]:
+        return list(
+            self.session.scalars(
+                select(Stage08GroupMessageProjection)
+                .where(
+                    Stage08GroupMessageProjection.lifecycle_status == "active",
+                    Stage08GroupMessageProjection.content_fragment != "",
+                    or_(
+                        Stage08GroupMessageProjection.retention_expires_at <= now,
+                        Stage08GroupMessageProjection.event_at <= event_cutoff,
+                    ),
+                )
+                .order_by(
+                    Stage08GroupMessageProjection.retention_expires_at,
+                    Stage08GroupMessageProjection.id,
+                )
+                .limit(limit)
+                .with_for_update(skip_locked=True)
+            )
+        )
+
+    def purge_group_message_projection(self, projection_id: UUID) -> bool:
+        projection = self.lock_group_message_projection_for_lifecycle(projection_id)
+        if projection is None:
+            return False
+        projection.content_fragment = ""
+        projection.lifecycle_status = "purged"
+        return True
+
     def lock_digital_employee_for_management(
         self,
         employee_id: UUID,
@@ -1104,6 +2170,19 @@ class SqlAlchemyStage06PlatformUnitOfWork:
             )
         )
 
+    def lock_digital_employee_member_grants_for_stage08_execution(
+        self,
+        employee_id: UUID,
+    ) -> list[DigitalEmployeeMemberGrant]:
+        return list(
+            self.session.scalars(
+                select(DigitalEmployeeMemberGrant)
+                .where(DigitalEmployeeMemberGrant.employee_id == employee_id)
+                .order_by(DigitalEmployeeMemberGrant.id)
+                .with_for_update()
+            )
+        )
+
     def replace_digital_employee_member_grants(
         self,
         employee_id: UUID,
@@ -1119,8 +2198,36 @@ class SqlAlchemyStage06PlatformUnitOfWork:
     def add_record_change_draft(self, draft: RecordChangeDraft) -> None:
         self.session.add(draft)
 
+    def add_outbox_event(self, event: OutboxEvent) -> None:
+        self.session.add(event)
+
+    def get_outbox_event(self, event_id: UUID) -> OutboxEvent | None:
+        return self.session.get(OutboxEvent, event_id)
+
+    def get_outbox_event_by_idempotency_key(
+        self,
+        idempotency_key: str,
+    ) -> OutboxEvent | None:
+        return self.session.scalar(
+            select(OutboxEvent).where(OutboxEvent.idempotency_key == idempotency_key)
+        )
+
     def get_record_change_draft(self, draft_id: UUID) -> RecordChangeDraft | None:
         return self.session.get(RecordChangeDraft, draft_id)
+
+    def get_pending_record_change_draft_by_trace(
+        self,
+        trace_id: str,
+    ) -> RecordChangeDraft | None:
+        matches = list(
+            self.session.scalars(
+                select(RecordChangeDraft).where(
+                    RecordChangeDraft.trace_id == trace_id,
+                    RecordChangeDraft.status == "pending_confirmation",
+                )
+            )
+        )
+        return matches[0] if len(matches) == 1 else None
 
     def lock_record_change_draft_for_transition(
         self, draft_id: UUID
@@ -1196,6 +2303,16 @@ class SqlAlchemyStage06PlatformUnitOfWork:
 
     def list_telegram_bindings(self) -> list[Stage06TelegramBinding]:
         return list(self.session.scalars(select(Stage06TelegramBinding)))
+
+    def lock_telegram_binding_for_stage08_execution(
+        self,
+        binding_id: UUID,
+    ) -> Stage06TelegramBinding | None:
+        return self.session.scalar(
+            select(Stage06TelegramBinding)
+            .where(Stage06TelegramBinding.id == binding_id)
+            .with_for_update()
+        )
 
     def add_telegram_deep_link(self, link: Stage07TelegramDeepLink) -> None:
         self.session.add(link)

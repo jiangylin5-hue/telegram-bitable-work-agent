@@ -1,0 +1,2412 @@
+﻿# E3 review package (full current files because E1-E3 files are untracked in this shared worktree)
+
+## backend/app/services/stage08_collaboration.py
+diff --git a/backend/app/services/stage08_collaboration.py b/backend/app/services/stage08_collaboration.py
+new file mode 100644
+index 0000000..a3ef679
+--- /dev/null
++++ b/backend/app/services/stage08_collaboration.py
+@@ -0,0 +1,1002 @@
++from __future__ import annotations
++
++from dataclasses import dataclass
++from datetime import datetime
++import hashlib
++from typing import Final, Literal
++from uuid import UUID
++
++from pydantic import BaseModel, ConfigDict, Field, StrictInt
++
++from app.runtime.stage08_collaboration_contracts import (
++    CollaborationBudget,
++    CompressionOutcome,
++    ContextCompressor,
++    AnalysisProvider,
++    AnalysisProviderOutcome,
++    AnalysisDecision,
++    AssistantQuerySafeCitation,
++    AssistantQuerySafeView,
++    Stage08CollaborationContractFactory,
++    Stage08CollaborationState,
++    UnavailableAnalysisProvider,
++    UnavailableContextCompressor,
++    _command_snapshot,
++    _draft_intent_snapshot,
++    _read_outcome_snapshot,
++    _state_snapshot,
++    validate_analysis_decision,
++)
++from app.models.agent import AgentRun
++from app.runtime.stage08_contracts import (
++    ExecutionBudget,
++    ExecutionPlan,
++    ExecutionTicketState,
++    ToolInvocation,
++)
++from app.runtime.stage08_tool_gateway import Stage08ToolGateway
++from app.services.audit import record_audit_event
++from app.runtime.stage08_context_contracts import ContextBudget, ContextPlanningRequest
++from app.services.permissions import Actor
++from app.services.stage06_platform import (
++    PlatformValidationError,
++    Stage06PlatformUnitOfWork,
++)
++from app.services.stage08_context import build_context_plan
++from app.services.stage08_runtime import begin_execution_plan
++from app.services.stage08_context_composition import (
++    compose_stage08_context,
++    prepare_stage08_group_compression_material,
++    render_stage08_composite_context,
++    validate_stage08_group_compression_digest,
++)
++from app.services.stage08_retrieval_provider import (
++    PostgresRetrievalProvider,
++    Stage08RetrievalAuthorityFactory,
++)
++
++
++_READ_RESULT_ISSUER: Final[object] = object()
++_READ_RESULT_SEAL: Final[object] = object()
++_STRICT_SAFE_CONFIG = ConfigDict(extra="forbid", frozen=True, strict=True)
++
++
++class CollaborationReadSafeView(BaseModel):
++    """Count-only E2 result; no query, evidence, identifiers, or authority."""
++
++    model_config = _STRICT_SAFE_CONFIG
++
++    status: Literal["internal_evidence", "general_advice_only", "no_evidence", "degraded"]
++    read_child_count: StrictInt = Field(ge=0, le=3)
++    retrieval_citation_count: StrictInt = Field(ge=0, le=12)
++    group_status: Literal[
++        "not_requested",
++        "direct",
++        "compressed",
++        "compression_unavailable",
++        "unavailable",
++    ]
++    degradation_codes: tuple[
++        Literal[
++            "context_unavailable",
++            "retrieval_unavailable",
++            "compression_unavailable",
++            "no_evidence",
++        ],
++        ...,
++    ] = Field(max_length=4)
++
++
++@dataclass(frozen=True, slots=True)
++class _GroupScopeProof:
++    binding_id: UUID | None
++    mapping_id: UUID | None
++    mapping_version: int | None
++    customer_record_id: UUID | None
++    project_record_id: UUID | None
++
++
++@dataclass(frozen=True, slots=True)
++class _ReadResultSnapshot:
++    seal: object
++    state: Stage08CollaborationState
++    view: CollaborationReadSafeView
++
++
++class Stage08CollaborationReadResult:
++    __slots__ = ("_sealed_snapshot",)
++
++    def __new__(cls, issuer: object = None, snapshot: object = None):
++        if issuer is not _READ_RESULT_ISSUER:
++            raise TypeError("stage08_collaboration_read_result_private")
++        instance = object.__new__(cls)
++        object.__setattr__(instance, "_sealed_snapshot", snapshot)
++        return instance
++
++    def __init__(self, issuer: object = None, snapshot: object = None) -> None:
++        del issuer, snapshot
++
++    def __getattribute__(self, name: str):
++        if name in {"__class__", "safe_view", "__reduce__", "__reduce_ex__"}:
++            return object.__getattribute__(self, name)
++        raise AttributeError("stage08_collaboration_read_result_private")
++
++    def __repr__(self) -> str:
++        return "<Stage08CollaborationReadResult opaque>"
++
++    def __reduce_ex__(self, protocol: int):
++        del protocol
++        raise TypeError("stage08_collaboration_read_result_unavailable")
++
++    def safe_view(self) -> CollaborationReadSafeView:
++        snapshot = _read_result_snapshot(self)
++        return CollaborationReadSafeView.model_validate(
++            snapshot.view.model_dump(mode="python")
++        )
++
++
++@dataclass(frozen=True, slots=True)
++class Stage08CollaborationReadDependencies:
++    context_compressor: ContextCompressor = UnavailableContextCompressor()
++    retrieval_provider: PostgresRetrievalProvider = PostgresRetrievalProvider()
++
++
++@dataclass(frozen=True, slots=True)
++class Stage08CollaborationDependencies:
++    """E3's in-process ports; all external providers remain unavailable by default."""
++
++    read_dependencies: Stage08CollaborationReadDependencies = (
++        Stage08CollaborationReadDependencies()
++    )
++    analysis_provider: AnalysisProvider = UnavailableAnalysisProvider()
++    tool_gateway: Stage08ToolGateway = Stage08ToolGateway()
++
++
++def execute_collaboration_reads(
++    uow: Stage06PlatformUnitOfWork,
++    command: object,
++    actor: Actor,
++    deps: Stage08CollaborationReadDependencies = Stage08CollaborationReadDependencies(),
++    *,
++    now: datetime,
++) -> Stage08CollaborationReadResult:
++    """Perform E2's bounded C3/D4 reads without any persistence or provider call."""
++
++    snapshot = _command_snapshot(command)
++    if not _valid_actor(actor, snapshot.actor_user_id) or not _valid_dependencies(deps):
++        return _result_for_invalid_command(command)
++    try:
++        plan, group_scope_proof = _build_current_plan(uow, snapshot, actor)
++    except (PlatformValidationError, TypeError, ValueError, AttributeError):
++        return _result_for_invalid_command(command)
++
++    state = Stage08CollaborationContractFactory.transition(
++        Stage08CollaborationContractFactory.initial_state(command),
++        status="reading",
++    )
++    degradation_codes: list[str] = []
++    group_status = "not_requested"
++    retrieval_citation_count = 0
++    has_internal_material = False
++
++    composite = compose_stage08_context(uow, plan, actor=actor, now=now)
++    composite_view = composite.view()
++    composite_text = render_stage08_composite_context(uow, composite, now=now)
++    if composite_view.status == "group_compression_pending":
++        group_status = "compression_unavailable"
++        pending = prepare_stage08_group_compression_material(uow, composite, now=now)
++        if pending is not None:
++            try:
++                compressor_input = Stage08CollaborationContractFactory.provider_input(
++                    Stage08CollaborationContractFactory.private_material(
++                        pending, kind="composite_context"
++                    )
++                )
++                compression = deps.context_compressor.compress(
++                    compressor_input,
++                    budget=CollaborationBudget(),
++                )
++                if type(compression) is not CompressionOutcome:
++                    raise TypeError("compression_outcome_invalid")
++                compression = CompressionOutcome.model_validate(
++                    compression.model_dump(mode="python")
++                )
++                accepted_compression = (
++                    compression.status == "available"
++                    and compression.digest is not None
++                    and validate_stage08_group_compression_digest(
++                        uow, pending, digest=compression.digest, now=now
++                    )
++                )
++            except Exception:
++                compression = None
++                accepted_compression = False
++            if accepted_compression and compression is not None:
++                state = Stage08CollaborationContractFactory.record_compressed_digest(
++                    state, compression.digest
++                )
++                group_status = "compressed"
++                combined = Stage08CollaborationContractFactory.private_material(
++                    (composite_text or "", compression.digest),
++                    kind="analysis_material",
++                )
++                state = Stage08CollaborationContractFactory.record_read_outcome(
++                    state,
++                    Stage08CollaborationContractFactory.read_outcome(
++                        branch="composite_context",
++                        status="available",
++                        reason_code="none",
++                        material=combined,
++                    ),
++                )
++                has_internal_material = True
++            else:
++                degradation_codes.append("compression_unavailable")
++                state = Stage08CollaborationContractFactory.record_read_outcome(
++                    state,
++                    Stage08CollaborationContractFactory.read_outcome(
++                        branch="composite_context",
++                        status="degraded",
++                        reason_code="compression_unavailable",
++                        material=(
++                            None
++                            if not composite_text
++                            else Stage08CollaborationContractFactory.private_material(
++                                composite_text, kind="composite_context"
++                            )
++                        ),
++                    ),
++                )
++                has_internal_material = bool(composite_text)
++        else:
++            degradation_codes.append("compression_unavailable")
++            state = Stage08CollaborationContractFactory.record_read_outcome(
++                state,
++                Stage08CollaborationContractFactory.read_outcome(
++                    branch="composite_context",
++                    status="degraded",
++                    reason_code="compression_unavailable",
++                    material=None,
++                ),
++            )
++    elif composite_text:
++        group_status = "direct" if composite_view.group_status != "group_context_unavailable" else "unavailable"
++        state = Stage08CollaborationContractFactory.record_read_outcome(
++            state,
++            Stage08CollaborationContractFactory.read_outcome(
++                branch="composite_context",
++                status="available",
++                reason_code="none",
++                material=Stage08CollaborationContractFactory.private_material(
++                    composite_text, kind="composite_context"
++                ),
++            ),
++        )
++        has_internal_material = composite_view.status == "internal_evidence"
++    else:
++        group_status = "unavailable"
++        degradation_codes.append("context_unavailable")
++        state = Stage08CollaborationContractFactory.record_read_outcome(
++            state,
++            Stage08CollaborationContractFactory.read_outcome(
++                branch="composite_context",
++                status="unavailable",
++                reason_code="context_unavailable",
++                material=None,
++            ),
++        )
++
++    evidence = None
++    safe_retrieval = None
++    retrieval_skipped_for_general_advice = snapshot.intent == "general_advice"
++    if not retrieval_skipped_for_general_advice:
++        try:
++            if not _group_scope_proof_is_current(
++                uow, snapshot, actor, group_scope_proof
++            ):
++                raise PlatformValidationError(
++                    "stage08_collaboration_group_scope_changed",
++                    "stage08_collaboration_group_scope_changed",
++                )
++            authority = Stage08RetrievalAuthorityFactory.build(
++                uow,
++                actor=actor,
++                workspace_id=snapshot.workspace_id,
++                employee_id=snapshot.employee_id,
++                customer_record_id=plan.business_scope.customer_record_id,
++                project_record_id=plan.business_scope.project_record_id,
++            )
++            result = deps.retrieval_provider.search(
++                uow,
++                authority,
++                query=snapshot.query,
++                limit=12,
++                now=now,
++            )
++            evidence = deps.retrieval_provider.render_private_evidence(
++                uow, result, now=now
++            )
++            safe_retrieval = deps.retrieval_provider.safe_view(uow, result, now=now)
++            retrieval_citation_count = safe_retrieval.result_count
++        except Exception:
++            evidence = None
++            safe_retrieval = None
++            retrieval_citation_count = 0
++    if retrieval_skipped_for_general_advice:
++        state = Stage08CollaborationContractFactory.record_read_outcome(
++            state,
++            Stage08CollaborationContractFactory.read_outcome(
++                branch="retrieval",
++                status="degraded",
++                reason_code="no_evidence",
++                material=None,
++            ),
++        )
++    elif evidence is not None:
++        state = Stage08CollaborationContractFactory.record_read_outcome(
++            state,
++            Stage08CollaborationContractFactory.read_outcome(
++                branch="retrieval",
++                status="available",
++                reason_code="none",
++                material=Stage08CollaborationContractFactory.private_material(
++                    evidence, kind="retrieval_evidence"
++                ),
++            ),
++        )
++        has_internal_material = True
++    else:
++        retrieval_status = (
++            "unavailable"
++            if safe_retrieval is None
++            or safe_retrieval.status in {"unavailable", "failed"}
++            else "degraded"
++        )
++        reason_code = "retrieval_unavailable" if retrieval_status == "unavailable" else "no_evidence"
++        degradation_codes.append(reason_code)
++        state = Stage08CollaborationContractFactory.record_read_outcome(
++            state,
++            Stage08CollaborationContractFactory.read_outcome(
++                branch="retrieval",
++                status=retrieval_status,
++                reason_code=reason_code,
++                material=None,
++            ),
++        )
++
++    if not has_internal_material and snapshot.intent == "general_advice":
++        state = Stage08CollaborationContractFactory.record_read_outcome(
++            state,
++            Stage08CollaborationContractFactory.read_outcome(
++                branch="general_advice",
++                status="available",
++                reason_code="none",
++                material=Stage08CollaborationContractFactory.private_material(
++                    "general_advice", kind="general_advice"
++                ),
++            ),
++        )
++        status = "general_advice_only"
++    else:
++        status = (
++            "internal_evidence"
++            if has_internal_material
++            else "degraded"
++            if degradation_codes
++            else "no_evidence"
++        )
++    if not has_internal_material and status != "general_advice_only" and not degradation_codes:
++        degradation_codes.append("no_evidence")
++    view = CollaborationReadSafeView(
++        status=status,
++        read_child_count=Stage08CollaborationContractFactory.read_outcome_count(state),
++        retrieval_citation_count=retrieval_citation_count,
++        group_status=group_status,
++        degradation_codes=tuple(dict.fromkeys(degradation_codes)),
++    )
++    return Stage08CollaborationReadResult(
++        _READ_RESULT_ISSUER,
++        _ReadResultSnapshot(seal=_READ_RESULT_SEAL, state=state, view=view),
++    )
++
++
++def run_stage08_collaboration(
++    uow: Stage06PlatformUnitOfWork,
++    command: object,
++    actor: Actor,
++    deps: Stage08CollaborationDependencies = Stage08CollaborationDependencies(),
++    *,
++    now: datetime,
++) -> AssistantQuerySafeView:
++    """Run the bounded E3 graph without persisting any private read material."""
++
++    started_at = now
++    trace_hash = _trace_hash(command)
++    try:
++        if not _valid_collaboration_dependencies(deps):
++            raise TypeError("collaboration_dependencies_invalid")
++        from app.agents.stage08_collaboration import (
++            Stage08CollaborationNodes,
++            build_stage08_collaboration_graph,
++        )
++
++        read_result: Stage08CollaborationReadResult | None = None
++
++        def plan_request(state: Stage08CollaborationState) -> Stage08CollaborationState:
++            return Stage08CollaborationContractFactory.transition(state, status="planning")
++
++        def unchanged(state: Stage08CollaborationState) -> Stage08CollaborationState:
++            return state
++
++        def fan_in(state: Stage08CollaborationState) -> Stage08CollaborationState:
++            nonlocal read_result
++            read_result = execute_collaboration_reads(
++                uow,
++                command,
++                actor,
++                deps.read_dependencies,
++                now=now,
++            )
++            return _read_result_snapshot(read_result).state
++
++        def analyse(state: Stage08CollaborationState) -> Stage08CollaborationState:
++            return _analyse_state(state, command, deps.analysis_provider)
++
++        def policy_gate(state: Stage08CollaborationState) -> Stage08CollaborationState:
++            return _policy_gate_state(uow, state, actor)
++
++        def materialize_draft(state: Stage08CollaborationState) -> Stage08CollaborationState:
++            return _materialize_draft_state(
++                uow,
++                state,
++                actor,
++                deps.tool_gateway,
++                trace_hash=trace_hash,
++            )
++
++        def finalize(state: Stage08CollaborationState) -> Stage08CollaborationState:
++            return _finalize_state(state, read_result)
++
++        graph = build_stage08_collaboration_graph(
++            Stage08CollaborationNodes(
++                plan_request=plan_request,
++                read_composite_context=unchanged,
++                read_retrieval=unchanged,
++                mark_general_advice=unchanged,
++                fan_in=fan_in,
++                compress_group_context=unchanged,
++                analyse=analyse,
++                policy_gate=policy_gate,
++                materialize_draft=materialize_draft,
++                finalize=finalize,
++            )
++        )
++        state = graph.invoke(Stage08CollaborationContractFactory.initial_state(command))
++        view = _state_snapshot(state).safe_view
++        if view is None:
++            raise RuntimeError("collaboration_safe_view_missing")
++    except Exception:
++        view = AssistantQuerySafeView(
++            status="failed",
++            answer=None,
++            citations=(),
++            degradation_codes=("internal_failure",),
++            draft_id=None,
++        )
++    _record_terminal_run(
++        uow,
++        command=command,
++        view=view,
++        started_at=started_at,
++        trace_hash=trace_hash,
++    )
++    return view
++
++
++def _analyse_state(
++    state: Stage08CollaborationState,
++    command: object,
++    provider: AnalysisProvider,
++) -> Stage08CollaborationState:
++    state = Stage08CollaborationContractFactory.transition(state, status="analysing")
++    snapshot = _state_snapshot(state)
++    material = Stage08CollaborationContractFactory.private_material(
++        tuple(
++            _read_outcome_snapshot(outcome).material
++            for outcome in snapshot.read_outcomes
++            if _read_outcome_snapshot(outcome).material is not None
++        ),
++        kind="analysis_material",
++    )
++    try:
++        outcome = provider.analyse(
++            Stage08CollaborationContractFactory.provider_input(material),
++            command,
++            budget=snapshot.budget,
++        )
++        if (
++            type(outcome) is not AnalysisProviderOutcome
++            or set(object.__getattribute__(outcome, "__dict__"))
++            != set(AnalysisProviderOutcome.model_fields)
++        ):
++            raise TypeError("analysis_outcome_invalid")
++        if outcome.status != "available" or outcome.decision is None:
++            return Stage08CollaborationContractFactory.transition(state, status="failed")
++        if outcome.reason_code != "none":
++            raise ValueError("analysis_outcome_invalid")
++        decision = validate_analysis_decision(outcome.decision)
++        if not _decision_citations_are_current(decision, state):
++            return Stage08CollaborationContractFactory.transition(state, status="denied")
++        return Stage08CollaborationContractFactory.record_analysis(state, decision)
++    except Exception:
++        return Stage08CollaborationContractFactory.transition(state, status="failed")
++
++
++def _policy_gate_state(
++    uow: Stage06PlatformUnitOfWork,
++    state: Stage08CollaborationState,
++    actor: Actor,
++) -> Stage08CollaborationState:
++    if Stage08CollaborationContractFactory.terminal_status(state) is not None:
++        return state
++    state = Stage08CollaborationContractFactory.transition(state, status="policy_check")
++    snapshot = _state_snapshot(state)
++    command_carrier = snapshot.command
++    command = _command_snapshot(command_carrier)
++    decision = snapshot.analysis_decision
++    if decision is None:
++        return Stage08CollaborationContractFactory.transition(state, status="failed")
++    if command.requested_action == "draft_update":
++        if decision.action != "draft_update" or decision.draft_intent is None:
++            return Stage08CollaborationContractFactory.transition(state, status="denied")
++        if not _draft_scope_is_current(uow, command_carrier, actor):
++            return Stage08CollaborationContractFactory.transition(state, status="denied")
++        return Stage08CollaborationContractFactory.record_policy_result(
++            state, draft_allowed=True
++        )
++    if decision.action == "draft_update":
++        return Stage08CollaborationContractFactory.transition(state, status="denied")
++    return Stage08CollaborationContractFactory.record_policy_result(state, draft_allowed=False)
++
++
++def _materialize_draft_state(
++    uow: Stage06PlatformUnitOfWork,
++    state: Stage08CollaborationState,
++    actor: Actor,
++    gateway: Stage08ToolGateway,
++    *,
++    trace_hash: str,
++) -> Stage08CollaborationState:
++    snapshot = _state_snapshot(state)
++    command_carrier = snapshot.command
++    command = _command_snapshot(command_carrier)
++    decision = snapshot.analysis_decision
++    if decision is None or decision.draft_intent is None or not _draft_scope_is_current(uow, command_carrier, actor):
++        return Stage08CollaborationContractFactory.transition(state, status="denied")
++    # Reading the opaque intent proves it is factory-issued. No text from it is
++    # copied into a business field or persisted; the existing draft remains a
++    # confirmation-only proposal with no direct record mutation.
++    _draft_intent_snapshot(decision.draft_intent)
++    plan = ExecutionPlan(
++        ticket_id="stage08-collaboration",
++        workspace_id=str(command.workspace_id),
++        employee_id=str(command.employee_id),
++        actor=f"user:{command.actor_user_id}",
++        action="record_change_draft.create",
++        trace_id=trace_hash,
++        idempotency_key=command.idempotency_key,
++        state=ExecutionTicketState.planned,
++        budget=ExecutionBudget(
++            max_tool_calls=1,
++            max_wall_time_ms=30_000,
++            max_graph_depth=3,
++            max_retries=0,
++            max_retrieval_chunks=0,
++        ),
++        invocations=[
++            ToolInvocation(
++                tool_name="record_change_draft.create",
++                input={"record_id": str(command.target_record_id), "proposed_values": {}},
++            )
++        ],
++    )
++    try:
++        ticket = begin_execution_plan(uow, plan)
++        ticket = gateway.execute_plan(uow, ticket, plan.invocations)
++        if ticket.status != ExecutionTicketState.succeeded.value:
++            return Stage08CollaborationContractFactory.transition(state, status="denied")
++        draft_ids = [
++            draft.id
++            for draft in getattr(uow, "record_change_drafts", ())
++            if draft.record_id == command.target_record_id
++            and draft.status == "pending_confirmation"
++        ]
++        if len(draft_ids) != 1:
++            return Stage08CollaborationContractFactory.transition(state, status="failed")
++        # The ticket is an existing persistence boundary, but its gateway result
++        # must not retain entity UUIDs in a collaboration run summary.
++        ticket.tool_summary = [
++            {
++                "tool_name": "record_change_draft.create",
++                "status": "succeeded",
++                "entity_refs": [],
++                "visible_field_keys": [],
++                "counts": {"draft_count": 1, "confirmation_required": 1},
++                "error_code": None,
++            }
++        ]
++        safe = AssistantQuerySafeView(
++            status="draft_pending",
++            answer=None,
++            citations=_safe_citations(snapshot.analysis_decision, state),
++            degradation_codes=(),
++            draft_id=draft_ids[0],
++        )
++        return Stage08CollaborationContractFactory.record_safe_view(
++            Stage08CollaborationContractFactory.transition(state, status="draft_pending"),
++            safe,
++        )
++    except Exception:
++        return Stage08CollaborationContractFactory.transition(state, status="failed")
++
++
++def _finalize_state(
++    state: Stage08CollaborationState,
++    read_result: Stage08CollaborationReadResult | None,
++) -> Stage08CollaborationState:
++    snapshot = _state_snapshot(state)
++    if snapshot.safe_view is not None:
++        return state
++    terminal = snapshot.status
++    decision = snapshot.analysis_decision
++    if terminal == "denied":
++        view = AssistantQuerySafeView(status="denied", answer=None, citations=(), degradation_codes=("policy_denied",))
++    elif terminal in {"failed", "timed_out", "cancelled"}:
++        code = "analysis_unavailable" if terminal == "failed" else terminal
++        view = AssistantQuerySafeView(status="failed" if terminal == "failed" else terminal, answer=None, citations=(), degradation_codes=(code,))
++    elif decision is None:
++        view = AssistantQuerySafeView(status="failed", answer=None, citations=(), degradation_codes=("analysis_unavailable",))
++        state = Stage08CollaborationContractFactory.transition(state, status="failed")
++    else:
++        view = AssistantQuerySafeView(
++            status="completed",
++            answer=decision.answer,
++            citations=_safe_citations(decision, state),
++            degradation_codes=(),
++        )
++        state = Stage08CollaborationContractFactory.transition(state, status="completed")
++    del read_result
++    return Stage08CollaborationContractFactory.record_safe_view(state, view)
++
++
++def _decision_citations_are_current(
++    decision: AnalysisDecision,
++    state: Stage08CollaborationState,
++) -> bool:
++    return set(decision.citation_ordinals).issubset(
++        {citation.ordinal for citation in _safe_citations(decision, state)}
++    )
++
++
++def _safe_citations(
++    decision: AnalysisDecision | None,
++    state: Stage08CollaborationState,
++) -> tuple[AssistantQuerySafeCitation, ...]:
++    if decision is None:
++        return ()
++    snapshot = _state_snapshot(state)
++    labels: list[str] = []
++    for outcome in snapshot.read_outcomes:
++        read = _read_outcome_snapshot(outcome)
++        if read.status != "available" or read.material is None:
++            continue
++        if read.branch == "general_advice":
++            labels.append("general_advice")
++        elif read.branch == "composite_context":
++            labels.append("analysis_from_current_material")
++        elif read.branch == "retrieval":
++            # E2 exposes only a count, never the per-item evidence identity.
++            # One aggregate safe ordinal is therefore the strictest valid label.
++            labels.append("retrieved_material")
++    available = {
++        index: label for index, label in enumerate(labels[:12], start=1)
++    }
++    return tuple(
++        AssistantQuerySafeCitation(ordinal=ordinal, label=available[ordinal])
++        for ordinal in decision.citation_ordinals
++        if ordinal in available
++    )
++
++
++def _draft_scope_is_current(
++    uow: Stage06PlatformUnitOfWork,
++    command: object,
++    actor: Actor,
++) -> bool:
++    try:
++        snapshot = _command_snapshot(command)
++        if not _valid_actor(actor, snapshot.actor_user_id):
++            return False
++        members = [
++            member
++            for member in uow.list_workspace_members(snapshot.workspace_id)
++            if member.user_id == actor.actor_id and member.status == "active"
++        ]
++        employee = uow.get_digital_employee(snapshot.employee_id)
++        record = uow.get_record(snapshot.target_record_id)
++        table = uow.get_table(record.table_id) if record is not None else None
++        if (
++            len(members) != 1
++            or employee is None
++            or employee.status != "active"
++            or employee.workspace_id != snapshot.workspace_id
++            or "draft_update" not in set(employee.allowed_actions)
++            or record is None
++            or table is None
++            or str(table.id) not in set(employee.accessible_tables)
++        ):
++            return False
++        # Rebuilds current C1/C2/C3/D4 scope before ticket creation. A revoked
++        # member, binding, mapping, source or target scope therefore fails closed.
++        _build_current_plan(uow, snapshot, actor)
++        return True
++    except (PlatformValidationError, TypeError, ValueError, AttributeError):
++        return False
++
++
++def _trace_hash(command: object) -> str:
++    try:
++        snapshot = _command_snapshot(command)
++        payload = "\x1f".join(
++            (
++                str(snapshot.workspace_id),
++                str(snapshot.employee_id),
++                snapshot.actor_user_id,
++                snapshot.idempotency_key,
++                snapshot.query,
++            )
++        )
++    except (TypeError, AttributeError):
++        payload = "invalid"
++    return "stage08:collaboration:" + hashlib.sha256(
++        payload.encode("utf-8")
++    ).hexdigest()[:32]
++
++
++def _record_terminal_run(
++    uow: Stage06PlatformUnitOfWork,
++    *,
++    command: object,
++    view: AssistantQuerySafeView,
++    started_at: datetime,
++    trace_hash: str,
++) -> None:
++    try:
++        command_snapshot = _command_snapshot(command)
++        action = command_snapshot.requested_action
++        actor_id = command_snapshot.actor_user_id
++    except (TypeError, AttributeError):
++        action = "invalid"
++        actor_id = "unknown"
++    safe_summary = {
++        "graph": "stage08_collaboration_e3",
++        "status": view.status,
++        "citation_count": len(view.citations),
++        "degradation_count": len(view.degradation_codes),
++        "action": action,
++        "ticket_present": int(view.status == "draft_pending"),
++        "draft_present": int(view.draft_id is not None),
++        "trace_hash": trace_hash,
++        "latency_ms": 0,
++    }
++    uow.add_agent_run(
++        AgentRun(
++            agent_name="stage08_collaboration",
++            graph_name="stage08_collaboration_e3",
++            model_provider="controlled",
++            model_name="analysis_provider_port",
++            prompt_version="stage08-e3",
++            input_summary={"graph": "stage08_collaboration_e3", "action": action},
++            output_summary=safe_summary,
++            tool_calls=[{"name": "policy_gate", "status": view.status}],
++            status=view.status,
++            trace_id=trace_hash,
++            started_at=started_at,
++            completed_at=started_at,
++            usage_summary={"provider_calls": 0},
++            cost_summary={"provider_cost": 0},
++            latency_ms=0,
++            created_entity_refs=[],
++            redaction_policy="stage08_e3_whitelist",
++        )
++    )
++    record_audit_event(
++        getattr(uow, "session", uow),
++        trace_id=trace_hash,
++        actor_type="user",
++        actor_id=actor_id,
++        event_type="stage08.collaboration_terminal",
++        entity_type="stage08_collaboration",
++        after_state=safe_summary,
++        permission_snapshot={"actor_type": "user"},
++    )
++
++
++def _valid_collaboration_dependencies(value: object) -> bool:
++    return (
++        type(value) is Stage08CollaborationDependencies
++        and _valid_dependencies(value.read_dependencies)
++        and hasattr(value.analysis_provider, "analyse")
++        and isinstance(value.tool_gateway, Stage08ToolGateway)
++    )
++
++
++def _build_current_plan(
++    uow: Stage06PlatformUnitOfWork,
++    snapshot: object,
++    actor: Actor,
++):
++    employee = uow.get_digital_employee(snapshot.employee_id)
++    if employee is None or employee.workspace_id != snapshot.workspace_id:
++        raise PlatformValidationError("context_authority_denied", "context_authority_denied")
++    views = tuple(sorted(UUID(value) for value in employee.accessible_views))[:3]
++    if snapshot.intent == "general_advice":
++        views = ()
++        customer_id = None
++        project_id = None
++        group_scope_proof = _GroupScopeProof(
++            binding_id=None,
++            mapping_id=None,
++            mapping_version=None,
++            customer_record_id=None,
++            project_record_id=None,
++        )
++    else:
++        customer_id, project_id, group_scope_proof = _derive_business_scope_ids(
++            uow, snapshot, actor
++        )
++    plan = build_context_plan(
++        uow,
++        ContextPlanningRequest(
++            workspace_id=snapshot.workspace_id,
++            employee_id=snapshot.employee_id,
++            intent=snapshot.intent,
++            view_ids=views if snapshot.intent in {"business_fact", "mixed"} else (),
++            customer_record_id=customer_id,
++            project_record_id=project_id,
++            allow_general_advice=snapshot.intent == "general_advice",
++            budget=ContextBudget(
++                max_table_records=20,
++                max_memory_items=12,
++                max_evidence_items=24,
++                max_item_chars=2000,
++                max_total_chars=12000,
++            ),
++        ),
++        actor=actor,
++    )
++    return plan, group_scope_proof
++
++
++def _derive_business_scope_ids(
++    uow: Stage06PlatformUnitOfWork,
++    snapshot: object,
++    actor: Actor,
++) -> tuple[UUID | None, UUID | None, _GroupScopeProof]:
++    members = [
++        member
++        for member in uow.list_workspace_members(snapshot.workspace_id)
++        if member.user_id == actor.actor_id and member.status == "active"
++    ]
++    if len(members) == 1:
++        bindings = [
++            binding
++            for binding in uow.list_telegram_bindings()
++            if binding.workspace_id == snapshot.workspace_id
++            and binding.workspace_member_id == members[0].id
++            and binding.status == "active"
++            and binding.binding_type == "chat_user"
++        ]
++        if len(bindings) == 1:
++            mappings = [
++                mapping
++                for mapping in uow.list_group_business_context_bindings(bindings[0].id)
++                if mapping.workspace_id == snapshot.workspace_id and mapping.status == "active"
++            ]
++            if len(mappings) == 1 and snapshot.target_record_id in {
++                None,
++                mappings[0].customer_record_id,
++                mappings[0].project_record_id,
++            }:
++                mapping = mappings[0]
++                return (
++                    mapping.customer_record_id,
++                    mapping.project_record_id,
++                    _GroupScopeProof(
++                        binding_id=bindings[0].id,
++                        mapping_id=mapping.id,
++                        mapping_version=mapping.mapping_version,
++                        customer_record_id=mapping.customer_record_id,
++                        project_record_id=mapping.project_record_id,
++                    ),
++                )
++    if snapshot.target_record_id is not None:
++        raise PlatformValidationError(
++            "stage08_collaboration_target_scope_denied",
++            "stage08_collaboration_target_scope_denied",
++        )
++    return None, None, _GroupScopeProof(
++        binding_id=None,
++        mapping_id=None,
++        mapping_version=None,
++        customer_record_id=None,
++        project_record_id=None,
++    )
++
++
++def _group_scope_proof_is_current(
++    uow: Stage06PlatformUnitOfWork,
++    snapshot: object,
++    actor: Actor,
++    proof: _GroupScopeProof,
++) -> bool:
++    try:
++        _, _, current = _derive_business_scope_ids(uow, snapshot, actor)
++    except (PlatformValidationError, TypeError, ValueError, AttributeError):
++        return False
++    return current == proof
++
++
++def _valid_actor(actor: object, actor_user_id: str) -> bool:
++    return (
++        type(actor) is Actor
++        and actor.actor_type == "user"
++        and actor.actor_id == actor_user_id
++        and type(actor.role) is str
++    )
++
++
++def _valid_dependencies(value: object) -> bool:
++    return (
++        type(value) is Stage08CollaborationReadDependencies
++        and hasattr(value.context_compressor, "compress")
++        and isinstance(value.retrieval_provider, PostgresRetrievalProvider)
++    )
++
++
++def _result_for_invalid_command(command: object) -> Stage08CollaborationReadResult:
++    state = Stage08CollaborationContractFactory.initial_state(command)
++    view = CollaborationReadSafeView(
++        status="degraded",
++        read_child_count=0,
++        retrieval_citation_count=0,
++        group_status="unavailable",
++        degradation_codes=("context_unavailable",),
++    )
++    return Stage08CollaborationReadResult(
++        _READ_RESULT_ISSUER,
++        _ReadResultSnapshot(seal=_READ_RESULT_SEAL, state=state, view=view),
++    )
++
++
++def _read_result_snapshot(value: object) -> _ReadResultSnapshot:
++    if type(value) is not Stage08CollaborationReadResult:
++        raise TypeError("stage08_collaboration_read_result_private")
++    snapshot = object.__getattribute__(value, "_sealed_snapshot")
++    if (
++        type(snapshot) is not _ReadResultSnapshot
++        or snapshot.seal is not _READ_RESULT_SEAL
++    ):
++        raise TypeError("stage08_collaboration_read_result_private")
++    _state_snapshot(snapshot.state)
++    return snapshot
++
++
++__all__ = [
++    "CollaborationReadSafeView",
++    "Stage08CollaborationDependencies",
++    "Stage08CollaborationReadDependencies",
++    "Stage08CollaborationReadResult",
++    "execute_collaboration_reads",
++    "run_stage08_collaboration",
++]
+
+## backend/app/agents/stage08_collaboration.py
+diff --git a/backend/app/agents/stage08_collaboration.py b/backend/app/agents/stage08_collaboration.py
+new file mode 100644
+index 0000000..a545d2d
+--- /dev/null
++++ b/backend/app/agents/stage08_collaboration.py
+@@ -0,0 +1,390 @@
++from __future__ import annotations
++
++from collections.abc import Callable
++from dataclasses import dataclass, replace
++from typing import Annotated, Any, Final
++
++from langgraph.graph import END, StateGraph
++
++from app.runtime.stage08_collaboration_contracts import (
++    Stage08CollaborationContractFactory,
++    Stage08CollaborationState,
++    _read_outcome_snapshot,
++    _state,
++    _state_snapshot,
++)
++
++
++Stage08CollaborationNode = Callable[
++    [Stage08CollaborationState], Stage08CollaborationState
++]
++
++_READ_NODES: Final[tuple[str, ...]] = (
++    "read_composite_context",
++    "read_retrieval",
++    "mark_general_advice",
++)
++_STATUS_ORDER: Final[dict[str, int]] = {
++    "queued": 0,
++    "planning": 1,
++    "reading": 2,
++    "analysing": 3,
++    "policy_check": 4,
++    "completed": 5,
++    "draft_pending": 5,
++    "denied": 5,
++    "failed": 5,
++    "cancelled": 5,
++    "timed_out": 5,
++}
++_TERMINAL_PRECEDENCE: Final[dict[str, int]] = {
++    "cancelled": 6,
++    "timed_out": 5,
++    "denied": 4,
++    "failed": 3,
++    "draft_pending": 2,
++    "completed": 1,
++}
++_SEQUENTIAL_UPDATE_ISSUER: Final[object] = object()
++_SEQUENTIAL_UPDATE_SEAL: Final[object] = object()
++
++
++class _Stage08GraphRoot:
++    """LangGraph-only empty root seed; it never reaches an injected node."""
++
++    __slots__ = ()
++
++    def __repr__(self) -> str:
++        return "<_Stage08GraphRoot private>"
++
++
++@dataclass(frozen=True, slots=True)
++class _SequentialStateUpdateSnapshot:
++    seal: object
++    parent: Stage08CollaborationState
++    result: Stage08CollaborationState
++
++
++class _SequentialStateUpdate:
++    """Process-local anti-misuse marker for one exact node transition."""
++
++    __slots__ = ("_sealed_snapshot",)
++
++    def __new__(
++        cls,
++        issuer: object = None,
++        snapshot: object = None,
++        **kwargs: object,
++    ):
++        del kwargs
++        if cls is not _SequentialStateUpdate or issuer is not _SEQUENTIAL_UPDATE_ISSUER:
++            raise TypeError("collaboration_sequential_update_unavailable")
++        instance = object.__new__(cls)
++        object.__setattr__(instance, "_sealed_snapshot", snapshot)
++        return instance
++
++    def __init__(
++        self,
++        issuer: object = None,
++        snapshot: object = None,
++        **kwargs: object,
++    ) -> None:
++        del issuer, snapshot, kwargs
++
++    def __getattribute__(self, name: str):
++        if name == "__class__":
++            return _SequentialStateUpdate
++        if name in {"__reduce__", "__reduce_ex__"}:
++            return object.__getattribute__(self, name)
++        raise AttributeError("collaboration_sequential_update_unavailable")
++
++    def __setattr__(self, name: str, value: object) -> None:
++        del name, value
++        raise AttributeError("collaboration_sequential_update_unavailable")
++
++    def __repr__(self) -> str:
++        return "<_SequentialStateUpdate opaque>"
++
++    def __reduce_ex__(self, protocol: int):
++        del protocol
++        raise TypeError("collaboration_sequential_update_unavailable")
++
++
++@dataclass(frozen=True, slots=True)
++class Stage08CollaborationNodes:
++    plan_request: Stage08CollaborationNode
++    read_composite_context: Stage08CollaborationNode
++    read_retrieval: Stage08CollaborationNode
++    mark_general_advice: Stage08CollaborationNode
++    fan_in: Stage08CollaborationNode
++    compress_group_context: Stage08CollaborationNode
++    analyse: Stage08CollaborationNode
++    policy_gate: Stage08CollaborationNode
++    materialize_draft: Stage08CollaborationNode
++    finalize: Stage08CollaborationNode
++
++    def __post_init__(self) -> None:
++        for name in self.__slots__:
++            if not callable(getattr(self, name)):
++                raise TypeError("collaboration_node_not_callable")
++
++
++def build_stage08_collaboration_graph(nodes: Stage08CollaborationNodes) -> Any:
++    if type(nodes) is not Stage08CollaborationNodes:
++        raise TypeError("collaboration_nodes_invalid")
++
++    # LangGraph 1.0 draws a root schema by calling its value type with no
++    # arguments. This private empty seed supports that introspection while every
++    # runtime node wrapper below still accepts only the sealed state carrier.
++    graph = StateGraph(Annotated[_Stage08GraphRoot, _merge_collaboration_state])
++    graph.add_node("plan_request", _sealed_node(nodes.plan_request))
++    graph.add_node(
++        "read_composite_context",
++        _sealed_node(nodes.read_composite_context),
++    )
++    graph.add_node("read_retrieval", _sealed_node(nodes.read_retrieval))
++    graph.add_node(
++        "mark_general_advice",
++        _sealed_node(nodes.mark_general_advice),
++    )
++    graph.add_node("fan_in", _sealed_node(nodes.fan_in))
++    graph.add_node(
++        "compress_group_context",
++        _sealed_node(nodes.compress_group_context),
++    )
++    graph.add_node("analyse", _sealed_node(nodes.analyse))
++    graph.add_node("policy_gate", _sealed_node(nodes.policy_gate))
++    graph.add_node(
++        "materialize_draft",
++        _sealed_node(nodes.materialize_draft),
++    )
++    graph.add_node("finalize", _sealed_node(nodes.finalize))
++
++    graph.set_entry_point("plan_request")
++    graph.add_conditional_edges(
++        "plan_request",
++        _route_after_plan,
++        {
++            "read_composite_context": "read_composite_context",
++            "read_retrieval": "read_retrieval",
++            "mark_general_advice": "mark_general_advice",
++            "finalize": "finalize",
++        },
++    )
++    graph.add_edge(list(_READ_NODES), "fan_in")
++    graph.add_conditional_edges(
++        "fan_in",
++        _route_or_finalize("compress_group_context"),
++        {
++            "compress_group_context": "compress_group_context",
++            "finalize": "finalize",
++        },
++    )
++    graph.add_conditional_edges(
++        "compress_group_context",
++        _route_or_finalize("analyse"),
++        {"analyse": "analyse", "finalize": "finalize"},
++    )
++    graph.add_conditional_edges(
++        "analyse",
++        _route_or_finalize("policy_gate"),
++        {"policy_gate": "policy_gate", "finalize": "finalize"},
++    )
++    graph.add_conditional_edges(
++        "policy_gate",
++        _route_after_policy,
++        {
++            "materialize_draft": "materialize_draft",
++            "finalize": "finalize",
++        },
++    )
++    graph.add_edge("materialize_draft", "finalize")
++    graph.add_edge("finalize", END)
++    return graph.compile(checkpointer=None)
++
++
++def _sealed_node(node: Stage08CollaborationNode) -> Stage08CollaborationNode:
++    def run(state: Stage08CollaborationState) -> object:
++        _state_snapshot(state)
++        result = node(state)
++        _state_snapshot(result)
++        return _sequential_state_update(parent=state, result=result)
++
++    return run  # type: ignore[return-value]
++
++
++def _route_after_plan(state: Stage08CollaborationState) -> list[str] | str:
++    if Stage08CollaborationContractFactory.terminal_status(state) is not None:
++        return "finalize"
++    return list(_READ_NODES)
++
++
++def _route_or_finalize(next_node: str) -> Callable[[Stage08CollaborationState], str]:
++    def route(state: Stage08CollaborationState) -> str:
++        if Stage08CollaborationContractFactory.terminal_status(state) is not None:
++            return "finalize"
++        return next_node
++
++    return route
++
++
++def _route_after_policy(state: Stage08CollaborationState) -> str:
++    if Stage08CollaborationContractFactory.terminal_status(state) is not None:
++        return "finalize"
++    if Stage08CollaborationContractFactory.policy_allows_draft(state):
++        return "materialize_draft"
++    return "finalize"
++
++
++def _merge_collaboration_state(
++    left: object,
++    right: object,
++) -> object:
++    # BinaryOperatorAggregate initializes the root with this empty seed. It is
++    # never exposed to a node and may only seed the first channel value.
++    if type(left) is _Stage08GraphRoot:
++        return right
++    if type(right) is _Stage08GraphRoot:
++        return left
++    if type(right) is _SequentialStateUpdate:
++        update = _sequential_state_update_snapshot(right)
++        if left is update.parent:
++            return update.result
++        right = update.result
++    left_snapshot = _state_snapshot(left)
++    right_snapshot = _state_snapshot(right)
++    if left_snapshot.command is not right_snapshot.command:
++        raise ValueError("collaboration_parallel_command_mismatch")
++    if left is right and not left_snapshot.read_outcomes:
++        return left
++
++    if left_snapshot.policy_draft_allowed != right_snapshot.policy_draft_allowed:
++        raise ValueError("collaboration_parallel_policy_conflict")
++
++    _require_compatible_optional(
++        left_snapshot.compressed_digest,
++        right_snapshot.compressed_digest,
++        error_code="collaboration_parallel_digest_conflict",
++    )
++    _require_compatible_optional(
++        left_snapshot.analysis_decision,
++        right_snapshot.analysis_decision,
++        error_code="collaboration_parallel_analysis_conflict",
++    )
++    _require_compatible_optional(
++        left_snapshot.safe_view,
++        right_snapshot.safe_view,
++        error_code="collaboration_parallel_safe_view_conflict",
++    )
++
++    left_terminal = left_snapshot.status in _TERMINAL_PRECEDENCE
++    right_terminal = right_snapshot.status in _TERMINAL_PRECEDENCE
++    if left_terminal or right_terminal:
++        if left_snapshot.status != right_snapshot.status:
++            raise ValueError("collaboration_parallel_terminal_conflict")
++        selected = left_snapshot
++    else:
++        selected = max(
++            (left_snapshot, right_snapshot),
++            key=lambda snapshot: _STATUS_ORDER[snapshot.status],
++        )
++    outcomes: dict[str, object] = {}
++    for outcome in (*left_snapshot.read_outcomes, *right_snapshot.read_outcomes):
++        branch = _read_outcome_snapshot(outcome).branch
++        previous = outcomes.get(branch)
++        if previous is not None:
++            raise ValueError("collaboration_parallel_read_conflict")
++        outcomes[branch] = outcome
++    ordered_outcomes = tuple(
++        outcomes[branch]
++        for branch in ("composite_context", "retrieval", "general_advice")
++        if branch in outcomes
++    )
++    return _state(
++        replace(
++            selected,
++            read_outcomes=ordered_outcomes,
++            compressed_digest=(
++                right_snapshot.compressed_digest
++                if right_snapshot.compressed_digest is not None
++                else left_snapshot.compressed_digest
++            ),
++            analysis_decision=(
++                right_snapshot.analysis_decision
++                if right_snapshot.analysis_decision is not None
++                else left_snapshot.analysis_decision
++            ),
++            policy_draft_allowed=(
++                left_snapshot.policy_draft_allowed
++            ),
++            degradation_codes=tuple(
++                dict.fromkeys(
++                    (*left_snapshot.degradation_codes, *right_snapshot.degradation_codes)
++                )
++            ),
++            safe_view=(
++                right_snapshot.safe_view
++                if right_snapshot.safe_view is not None
++                else left_snapshot.safe_view
++            ),
++        )
++    )
++
++
++def _require_compatible_optional(
++    left: object | None,
++    right: object | None,
++    *,
++    error_code: str,
++) -> None:
++    if left is None or right is None or left is right:
++        return
++    try:
++        compatible = left == right
++    except Exception:
++        compatible = False
++    if compatible is not True:
++        raise ValueError(error_code)
++
++
++def _sequential_state_update(
++    *,
++    parent: Stage08CollaborationState,
++    result: Stage08CollaborationState,
++) -> _SequentialStateUpdate:
++    _state_snapshot(parent)
++    _state_snapshot(result)
++    return _SequentialStateUpdate(
++        _SEQUENTIAL_UPDATE_ISSUER,
++        _SequentialStateUpdateSnapshot(
++            seal=_SEQUENTIAL_UPDATE_SEAL,
++            parent=parent,
++            result=result,
++        ),
++    )
++
++
++def _sequential_state_update_snapshot(
++    value: object,
++) -> _SequentialStateUpdateSnapshot:
++    if type(value) is not _SequentialStateUpdate:
++        raise TypeError("collaboration_sequential_update_unavailable")
++    try:
++        snapshot = object.__getattribute__(value, "_sealed_snapshot")
++    except (AttributeError, TypeError):
++        raise TypeError("collaboration_sequential_update_unavailable") from None
++    if (
++        type(snapshot) is not _SequentialStateUpdateSnapshot
++        or snapshot.seal is not _SEQUENTIAL_UPDATE_SEAL
++    ):
++        raise TypeError("collaboration_sequential_update_unavailable")
++    _state_snapshot(snapshot.parent)
++    _state_snapshot(snapshot.result)
++    return snapshot
++
++
++__all__ = [
++    "Stage08CollaborationNode",
++    "Stage08CollaborationNodes",
++    "build_stage08_collaboration_graph",
++]
+
+## backend/tests/unit/test_stage08_collaboration_service.py
+diff --git a/backend/tests/unit/test_stage08_collaboration_service.py b/backend/tests/unit/test_stage08_collaboration_service.py
+new file mode 100644
+index 0000000..f9fc230
+--- /dev/null
++++ b/backend/tests/unit/test_stage08_collaboration_service.py
+@@ -0,0 +1,515 @@
++from __future__ import annotations
++
++from datetime import UTC, datetime, timedelta
++import json
++from types import SimpleNamespace
++from uuid import uuid4
++
++import pytest
++
++from app.models.stage06_platform import Stage06TelegramBinding
++from app.models.stage08_group_context import (
++    Stage08GroupBusinessContextBinding,
++    Stage08GroupMessageProjection,
++)
++from app.runtime.stage08_collaboration_contracts import (
++    CollaborationBudget,
++    CompressionOutcome,
++    Stage08CollaborationContractFactory,
++)
++from app.services.permissions import Actor
++from app.services.stage06_digital_employees import create_digital_employee
++from app.services.stage06_platform import (
++    InMemoryStage06PlatformUnitOfWork,
++    create_base,
++    create_field,
++    create_form_view,
++    create_record,
++    create_table,
++    create_workspace,
++)
++from app.services.stage08_collaboration import (
++    Stage08CollaborationReadDependencies,
++    execute_collaboration_reads,
++)
++import app.services.stage08_collaboration as collaboration
++from app.services.stage08_retrieval_provider import PostgresRetrievalProvider
++
++
++NOW = datetime(2026, 7, 22, 9, 0, tzinfo=UTC)
++
++
++def _fixture():
++    uow = InMemoryStage06PlatformUnitOfWork()
++    actor = Actor(actor_type="user", actor_id="e2-owner", role="owner")
++    workspace = create_workspace(uow, name="E2", owner_user_id=actor.actor_id, actor=actor)
++    member = uow.list_workspace_members(workspace.id)[0]
++    base = create_base(uow, workspace.id, name="CRM", actor=actor)
++    customers = create_table(uow, base.id, name="Customers", key="customers", actor=actor)
++    projects = create_table(uow, base.id, name="Projects", key="projects", actor=actor)
++    create_field(uow, customers.id, name="Name", key="name", field_type="text", actor=actor)
++    create_field(uow, projects.id, name="Title", key="title", field_type="text", actor=actor)
++    create_field(
++        uow,
++        projects.id,
++        name="Customer",
++        key="customer",
++        field_type="linked_record",
++        options={"target_table_id": str(customers.id)},
++        actor=actor,
++    )
++    customer = create_record(uow, customers.id, values={"name": "E2 Acme"}, actor=actor)
++    project = create_record(
++        uow,
++        projects.id,
++        values={"title": "E2 launch", "customer": [str(customer.id)]},
++        actor=actor,
++    )
++    view = create_form_view(
++        uow,
++        base.id,
++        projects.id,
++        name="Projects",
++        view_type="grid",
++        config={"fields": ["title", "customer"]},
++        actor=actor,
++    )
++    view.version = 1
++    employee = create_digital_employee(
++        uow,
++        base.id,
++        name="E2 employee",
++        description="controlled reads",
++        telegram_alias=None,
++        accessible_tables=[str(customers.id), str(projects.id)],
++        accessible_views=[str(view.id)],
++        allowed_actions=["query", "summarize"],
++        actor=actor,
++    )
++    binding = Stage06TelegramBinding(
++        id=uuid4(),
++        workspace_id=workspace.id,
++        workspace_member_id=member.id,
++        telegram_chat_id="-100802",
++        telegram_user_id="802",
++        binding_type="chat_user",
++        scope_policy={},
++        status="active",
++    )
++    uow.add_telegram_binding(binding)
++    mapping = Stage08GroupBusinessContextBinding(
++        id=uuid4(),
++        workspace_id=workspace.id,
++        telegram_binding_id=binding.id,
++        customer_record_id=customer.id,
++        project_record_id=project.id,
++        mapping_version=1,
++        status="active",
++    )
++    uow.add_group_business_context_binding(mapping)
++    return SimpleNamespace(
++        uow=uow,
++        actor=actor,
++        workspace=workspace,
++        employee=employee,
++        customer=customer,
++        project=project,
++        mapping=mapping,
++    )
++
++
++def _command(fixture, *, intent: str = "business_fact", target_record_id=None):
++    return Stage08CollaborationContractFactory.command(
++        workspace_id=fixture.workspace.id,
++        employee_id=fixture.employee.id,
++        actor_user_id=fixture.actor.actor_id,
++        intent=intent,
++        query="给出当前项目进展",
++        requested_action="read_only",
++        target_record_id=target_record_id,
++        idempotency_key="e2-read-1",
++    )
++
++
++def _projection(fixture, text: str, *, minutes_ago: int) -> None:
++    fixture.uow.add_group_message_projection(
++        Stage08GroupMessageProjection(
++            id=uuid4(),
++            source_message_id=uuid4(),
++            business_context_binding_id=fixture.mapping.id,
++            content_fragment=text,
++            content_version=1,
++            event_at=NOW - timedelta(minutes=minutes_ago),
++            edited_at=None,
++            retention_expires_at=NOW + timedelta(days=30),
++            lifecycle_status="active",
++            source_chat_type="group",
++        )
++    )
++
++
++def _side_effects(fixture) -> tuple[int, int, int, int, int]:
++    return (
++        len(fixture.uow.audit_events),
++        len(fixture.uow.outbox_events),
++        len(fixture.uow.agent_runs),
++        len(fixture.uow.record_change_drafts),
++        len(fixture.uow.notification_requests),
++    )
++
++
++def test_reads_are_bounded_safe_and_have_no_persistent_side_effects() -> None:
++    fixture = _fixture()
++    secret = "e2-direct-group-secret"
++    _projection(fixture, secret, minutes_ago=0)
++    before = _side_effects(fixture)
++
++    result = execute_collaboration_reads(
++        fixture.uow, _command(fixture), fixture.actor, now=NOW
++    )
++    safe = result.safe_view()
++
++    assert safe.status == "internal_evidence"
++    assert safe.read_child_count == 2
++    assert safe.group_status == "direct"
++    assert safe.retrieval_citation_count == 0
++    assert secret not in repr(result) + safe.model_dump_json()
++    with pytest.raises(TypeError):
++        json.dumps(result)
++    assert _side_effects(fixture) == before
++
++
++def test_pending_group_unavailable_compressor_keeps_only_safe_degradation() -> None:
++    fixture = _fixture()
++    secret = "e2-pending-group-secret"
++    for index in range(49):
++        marker = f"{secret}-{index:02d}-"
++        _projection(fixture, marker + ("x" * (500 - len(marker))), minutes_ago=index)
++
++    result = execute_collaboration_reads(
++        fixture.uow, _command(fixture), fixture.actor, now=NOW
++    )
++    safe = result.safe_view()
++
++    assert safe.read_child_count == 2
++    assert safe.group_status == "compression_unavailable"
++    assert "compression_unavailable" in safe.degradation_codes
++    assert secret not in repr(result) + safe.model_dump_json()
++
++
++def test_actor_mismatch_is_rejected_before_any_read_or_side_effect() -> None:
++    fixture = _fixture()
++    before = _side_effects(fixture)
++    different_actor = Actor(actor_type="user", actor_id="other-user", role="owner")
++
++    result = execute_collaboration_reads(
++        fixture.uow, _command(fixture), different_actor, now=NOW
++    )
++
++    assert result.safe_view().status == "degraded"
++    assert result.safe_view().read_child_count == 0
++    assert _side_effects(fixture) == before
++
++
++def test_general_advice_skips_d4_and_never_turns_into_unscoped_retrieval() -> None:
++    fixture = _fixture()
++    calls: list[str] = []
++
++    class RecordingRetrievalProvider(PostgresRetrievalProvider):
++        def search(self, *args, **kwargs):
++            del args, kwargs
++            calls.append("search")
++            raise AssertionError("general advice must not call D4")
++
++    result = execute_collaboration_reads(
++        fixture.uow,
++        _command(fixture, intent="general_advice"),
++        fixture.actor,
++        deps=Stage08CollaborationReadDependencies(
++            retrieval_provider=RecordingRetrievalProvider()
++        ),
++        now=NOW,
++    )
++
++    assert result.safe_view().status == "general_advice_only"
++    assert result.safe_view().read_child_count == 3
++    assert calls == []
++
++
++@pytest.mark.parametrize("mapping_change", ["revoked", "ambiguous", "binding_inactive"])
++def test_target_record_never_becomes_effective_scope_without_one_current_mapping(
++    mapping_change: str,
++) -> None:
++    fixture = _fixture()
++    if mapping_change == "revoked":
++        fixture.mapping.status = "revoked"
++    elif mapping_change == "ambiguous":
++        fixture.uow.add_group_business_context_binding(
++            Stage08GroupBusinessContextBinding(
++                id=uuid4(),
++                workspace_id=fixture.workspace.id,
++                telegram_binding_id=fixture.mapping.telegram_binding_id,
++                customer_record_id=fixture.customer.id,
++                project_record_id=fixture.project.id,
++                mapping_version=1,
++                status="active",
++            )
++        )
++    else:
++        fixture.uow.telegram_bindings[0].status = "inactive"
++
++    result = execute_collaboration_reads(
++        fixture.uow,
++        _command(fixture, target_record_id=fixture.project.id),
++        fixture.actor,
++        now=NOW,
++    )
++
++    assert result.safe_view().status == "degraded"
++    assert result.safe_view().read_child_count == 0
++
++
++@pytest.mark.parametrize("failure_at", ["search", "render", "safe_view"])
++def test_retrieval_branch_exception_is_redacted_and_keeps_c3_material(
++    failure_at: str,
++) -> None:
++    fixture = _fixture()
++    secret = f"e2-retrieval-{failure_at}-secret"
++    _projection(fixture, "valid group material", minutes_ago=0)
++
++    class FailingRetrievalProvider(PostgresRetrievalProvider):
++        def search(self, *args, **kwargs):
++            if failure_at == "search":
++                raise RuntimeError(secret)
++            return super().search(*args, **kwargs)
++
++        def render_private_evidence(self, *args, **kwargs):
++            if failure_at == "render":
++                raise RuntimeError(secret)
++            return super().render_private_evidence(*args, **kwargs)
++
++        def safe_view(self, *args, **kwargs):
++            if failure_at == "safe_view":
++                raise RuntimeError(secret)
++            return super().safe_view(*args, **kwargs)
++
++    before = _side_effects(fixture)
++    result = execute_collaboration_reads(
++        fixture.uow,
++        _command(fixture),
++        fixture.actor,
++        deps=Stage08CollaborationReadDependencies(
++            retrieval_provider=FailingRetrievalProvider()
++        ),
++        now=NOW,
++    )
++    safe = result.safe_view()
++
++    assert safe.status == "internal_evidence"
++    assert safe.read_child_count == 2
++    assert "retrieval_unavailable" in safe.degradation_codes
++    assert secret not in repr(result) + safe.model_dump_json()
++    assert _side_effects(fixture) == before
++
++
++def test_compression_revalidates_mapping_after_provider_returns_digest() -> None:
++    fixture = _fixture()
++    for index in range(49):
++        marker = f"revoke-after-plan-{index:02d}-"
++        _projection(fixture, marker + ("x" * (500 - len(marker))), minutes_ago=index)
++
++    class MappingMutatingCompressor:
++        def compress(self, material, *, budget: CollaborationBudget):
++            del material, budget
++            fixture.mapping.mapping_version += 1
++            return CompressionOutcome(
++                status="available",
++                reason_code="none",
++                digest=Stage08CollaborationContractFactory.compressed_digest(
++                    text="不应被接受的摘要"
++                ),
++            )
++
++    retrieval_calls: list[str] = []
++
++    class RecordingRetrievalProvider(PostgresRetrievalProvider):
++        def search(self, *args, **kwargs):
++            del args, kwargs
++            retrieval_calls.append("search")
++            raise AssertionError("D4 must not run after group mapping drift")
++
++    result = execute_collaboration_reads(
++        fixture.uow,
++        _command(fixture),
++        fixture.actor,
++        deps=Stage08CollaborationReadDependencies(
++            context_compressor=MappingMutatingCompressor(),
++            retrieval_provider=RecordingRetrievalProvider(),
++        ),
++        now=NOW,
++    )
++
++    assert result.safe_view().group_status == "compression_unavailable"
++    assert "compression_unavailable" in result.safe_view().degradation_codes
++    assert "retrieval_unavailable" in result.safe_view().degradation_codes
++    assert retrieval_calls == []
++
++
++@pytest.mark.parametrize("shape", ["object", "attribute_error", "invalid_digest"])
++def test_compressor_shape_or_digest_drift_is_only_a_safe_group_degradation(
++    shape: str,
++) -> None:
++    fixture = _fixture()
++    for index in range(49):
++        marker = f"compressor-shape-{index:02d}-"
++        _projection(fixture, marker + ("x" * (500 - len(marker))), minutes_ago=index)
++
++    class ShapeDriftCompressor:
++        def compress(self, material, *, budget: CollaborationBudget):
++            del material, budget
++            if shape == "object":
++                return object()
++            if shape == "attribute_error":
++                class Exploding:
++                    @property
++                    def status(self):
++                        raise AttributeError("shape-secret")
++
++                return Exploding()
++            return CompressionOutcome.model_construct(
++                status="available",
++                reason_code="none",
++                digest=object(),
++            )
++
++    result = execute_collaboration_reads(
++        fixture.uow,
++        _command(fixture),
++        fixture.actor,
++        deps=Stage08CollaborationReadDependencies(
++            context_compressor=ShapeDriftCompressor()
++        ),
++        now=NOW,
++    )
++
++    safe = result.safe_view()
++    assert safe.status == "internal_evidence"
++    assert safe.group_status == "compression_unavailable"
++    assert "compression_unavailable" in safe.degradation_codes
++    assert "shape-secret" not in repr(result) + safe.model_dump_json()
++
++
++def test_unknown_analysis_citation_is_denied_without_creating_a_draft() -> None:
++    fixture = _fixture()
++    fixture.employee.allowed_actions = ["query", "summarize", "draft_update"]
++    command = Stage08CollaborationContractFactory.command(
++        workspace_id=fixture.workspace.id,
++        employee_id=fixture.employee.id,
++        actor_user_id=fixture.actor.actor_id,
++        intent="business_fact",
++        query="create a controlled draft",
++        requested_action="draft_update",
++        target_record_id=fixture.project.id,
++        idempotency_key="e3-unknown-citation",
++    )
++
++    class UnknownCitationProvider:
++        def analyse(self, material, command, *, budget):
++            del material, command, budget
++            from app.runtime.stage08_collaboration_contracts import (
++                AnalysisDecision,
++                AnalysisProviderOutcome,
++            )
++
++            return AnalysisProviderOutcome(
++                status="available",
++                reason_code="none",
++                decision=AnalysisDecision(
++                    answer="A controlled proposal is ready.",
++                    citation_ordinals=(12,),
++                    action="draft_update",
++                    draft_intent=Stage08CollaborationContractFactory.draft_intent(
++                        summary="Create a confirmation draft"
++                    ),
++                ),
++            )
++
++    result = collaboration.run_stage08_collaboration(
++        fixture.uow,
++        command,
++        fixture.actor,
++        collaboration.Stage08CollaborationDependencies(
++            analysis_provider=UnknownCitationProvider()
++        ),
++        now=NOW,
++    )
++
++    assert result.status == "denied"
++    assert result.draft_id is None
++    assert fixture.uow.record_change_drafts == []
++
++
++def test_valid_draft_intent_uses_ticket_gateway_and_leaves_record_pending_confirmation() -> None:
++    fixture = _fixture()
++    fixture.employee.allowed_actions = ["query", "summarize", "draft_update"]
++    command = Stage08CollaborationContractFactory.command(
++        workspace_id=fixture.workspace.id,
++        employee_id=fixture.employee.id,
++        actor_user_id=fixture.actor.actor_id,
++        intent="business_fact",
++        query="create a controlled draft",
++        requested_action="draft_update",
++        target_record_id=fixture.project.id,
++        idempotency_key="e3-valid-draft",
++    )
++
++    class ValidDraftProvider:
++        def analyse(self, material, command, *, budget):
++            del material, command, budget
++            from app.runtime.stage08_collaboration_contracts import (
++                AnalysisDecision,
++                AnalysisProviderOutcome,
++            )
++
++            return AnalysisProviderOutcome(
++                status="available",
++                reason_code="none",
++                decision=AnalysisDecision(
++                    answer="A controlled proposal is ready.",
++                        citation_ordinals=(),
++                    action="draft_update",
++                    draft_intent=Stage08CollaborationContractFactory.draft_intent(
++                        summary="Create a confirmation draft"
++                    ),
++                ),
++                )
++
++    result = collaboration.run_stage08_collaboration(
++        fixture.uow,
++        command,
++        fixture.actor,
++        collaboration.Stage08CollaborationDependencies(
++            analysis_provider=ValidDraftProvider()
++        ),
++        now=NOW,
++    )
++
++    assert result.status == "draft_pending"
++    assert result.draft_id is not None
++    assert len(fixture.uow.record_change_drafts) == 1
++    assert fixture.uow.record_change_drafts[0].status == "pending_confirmation"
++    assert fixture.project.values == {"title": "E2 launch", "customer": [str(fixture.customer.id)]}
++    assert len(fixture.uow.execution_tickets) == 1
++    assert fixture.uow.execution_tickets[0].status == "succeeded"
++    terminal_text = json.dumps(
++        [
++            fixture.uow.agent_runs[-1].input_summary,
++            fixture.uow.agent_runs[-1].output_summary,
++            fixture.uow.agent_runs[-1].tool_calls,
++            fixture.uow.audit_events[-1].after_state,
++        ],
++        default=str,
++    )
++    assert "create a controlled draft" not in terminal_text
++    assert "A controlled proposal is ready." not in terminal_text
++    assert "Create a confirmation draft" not in terminal_text
+
+## backend/tests/unit/test_stage08_collaboration_graph.py
+diff --git a/backend/tests/unit/test_stage08_collaboration_graph.py b/backend/tests/unit/test_stage08_collaboration_graph.py
+new file mode 100644
+index 0000000..b9ec5e3
+--- /dev/null
++++ b/backend/tests/unit/test_stage08_collaboration_graph.py
+@@ -0,0 +1,437 @@
++from __future__ import annotations
++
++import ast
++from dataclasses import fields
++import json
++from pathlib import Path
++import pickle
++from threading import Lock
++from types import SimpleNamespace
++from uuid import UUID
++
++import pytest
++
++from app.agents.stage08_collaboration import (
++    Stage08CollaborationNodes,
++    _SequentialStateUpdate,
++    _merge_collaboration_state,
++    _sealed_node,
++    build_stage08_collaboration_graph,
++)
++from app.runtime.stage08_collaboration_contracts import (
++    AnalysisDecision,
++    Stage08CollaborationContractFactory,
++)
++
++
++EXPECTED_NODES = {
++    "plan_request",
++    "read_composite_context",
++    "read_retrieval",
++    "mark_general_advice",
++    "fan_in",
++    "compress_group_context",
++    "analyse",
++    "policy_gate",
++    "materialize_draft",
++    "finalize",
++}
++READ_NODES = {
++    "read_composite_context",
++    "read_retrieval",
++    "mark_general_advice",
++}
++
++
++def _command(*, action: str = "read_only"):
++    return Stage08CollaborationContractFactory.command(
++        workspace_id=UUID("00000000-0000-4000-8000-000000000201"),
++        employee_id=UUID("00000000-0000-4000-8000-000000000202"),
++        actor_user_id="telegram-user-e1",
++        intent="mixed",
++        query="给出当前可见业务状态摘要",
++        requested_action=action,
++        target_record_id=(
++            UUID("00000000-0000-4000-8000-000000000203")
++            if action == "draft_update"
++            else None
++        ),
++        idempotency_key=f"idem-{action}",
++    )
++
++
++def _recording_nodes(
++    calls: list[str],
++    *,
++    cancel_at_plan: bool = False,
++) -> Stage08CollaborationNodes:
++    lock = Lock()
++
++    def callback(name: str):
++        def node(state):
++            with lock:
++                calls.append(name)
++            if name == "plan_request" and cancel_at_plan:
++                return Stage08CollaborationContractFactory.transition(
++                    state,
++                    status="cancelled",
++                )
++            if (
++                name == "analyse"
++                and Stage08CollaborationContractFactory.requested_action(state)
++                == "draft_update"
++            ):
++                return Stage08CollaborationContractFactory.record_analysis(
++                    state,
++                    AnalysisDecision(
++                        answer="已形成待确认建议。",
++                        citation_ordinals=(),
++                        action="draft_update",
++                        draft_intent=Stage08CollaborationContractFactory.draft_intent(
++                            summary="形成待确认草稿"
++                        ),
++                    ),
++                )
++            if (
++                name == "policy_gate"
++                and Stage08CollaborationContractFactory.requested_action(state)
++                == "draft_update"
++            ):
++                return Stage08CollaborationContractFactory.record_policy_result(
++                    state,
++                    draft_allowed=True,
++                )
++            return state
++
++        return node
++
++    return Stage08CollaborationNodes(
++        **{name: callback(name) for name in EXPECTED_NODES}
++    )
++
++
++def test_graph_has_exact_ten_nodes_fixed_edges_and_no_checkpointer() -> None:
++    graph = build_stage08_collaboration_graph(_recording_nodes([]))
++    drawable = graph.get_graph()
++    node_names = set(drawable.nodes) - {"__start__", "__end__"}
++    edges = {(edge.source, edge.target) for edge in drawable.edges}
++
++    assert {field.name for field in fields(Stage08CollaborationNodes)} == EXPECTED_NODES
++    assert node_names == EXPECTED_NODES
++    assert graph.checkpointer is None
++    assert {("__start__", "plan_request"), ("finalize", "__end__")} <= edges
++    assert {("plan_request", node) for node in READ_NODES} <= edges
++    assert {(node, "fan_in") for node in READ_NODES} <= edges
++    assert ("fan_in", "compress_group_context") in edges
++    assert ("compress_group_context", "analyse") in edges
++    assert ("analyse", "policy_gate") in edges
++    assert ("policy_gate", "materialize_draft") in edges
++    assert ("policy_gate", "finalize") in edges
++    assert ("materialize_draft", "finalize") in edges
++
++
++def test_graph_fans_out_exactly_three_reads_then_fans_in() -> None:
++    calls: list[str] = []
++    graph = build_stage08_collaboration_graph(_recording_nodes(calls))
++    state = Stage08CollaborationContractFactory.initial_state(_command())
++
++    result = graph.invoke(state)
++
++    assert calls[0] == "plan_request"
++    assert set(calls[1:4]) == READ_NODES
++    assert calls[4:] == [
++        "fan_in",
++        "compress_group_context",
++        "analyse",
++        "policy_gate",
++        "finalize",
++    ]
++    assert "materialize_draft" not in calls
++    assert result is state
++
++
++def test_draft_request_takes_only_policy_to_materialize_then_finalize_path() -> None:
++    calls: list[str] = []
++    graph = build_stage08_collaboration_graph(_recording_nodes(calls))
++    state = Stage08CollaborationContractFactory.initial_state(
++        _command(action="draft_update")
++    )
++
++    graph.invoke(state)
++
++    assert calls[-3:] == ["policy_gate", "materialize_draft", "finalize"]
++
++
++def test_draft_request_without_explicit_policy_pass_skips_materialization() -> None:
++    calls: list[str] = []
++    nodes = _recording_nodes(calls)
++
++    def no_decision_policy(state):
++        calls.append("policy_gate")
++        return state
++
++    nodes = Stage08CollaborationNodes(
++        **{
++            field.name: (
++                no_decision_policy
++                if field.name == "policy_gate"
++                else getattr(nodes, field.name)
++            )
++            for field in fields(Stage08CollaborationNodes)
++        }
++    )
++    graph = build_stage08_collaboration_graph(nodes)
++    graph.invoke(
++        Stage08CollaborationContractFactory.initial_state(
++            _command(action="draft_update")
++        )
++    )
++
++    assert "materialize_draft" not in calls
++    assert calls[-1] == "finalize"
++
++
++def test_cancelled_plan_skips_all_reads_and_actions_and_only_finalizes() -> None:
++    calls: list[str] = []
++    graph = build_stage08_collaboration_graph(
++        _recording_nodes(calls, cancel_at_plan=True)
++    )
++    state = Stage08CollaborationContractFactory.initial_state(_command())
++
++    result = graph.invoke(state)
++
++    assert calls == ["plan_request", "finalize"]
++    assert Stage08CollaborationContractFactory.terminal_status(result) == "cancelled"
++
++
++def test_graph_rejects_public_dict_as_private_state() -> None:
++    graph = build_stage08_collaboration_graph(_recording_nodes([]))
++    try:
++        graph.invoke({"status": "completed", "private_material": "leak"})
++    except (TypeError, ValueError):
++        pass
++    else:
++        raise AssertionError("public dict must not enter the private graph")
++
++
++def _state_with_read_outcome(state, *, material_payload: object):
++    material = Stage08CollaborationContractFactory.private_material(
++        material_payload,
++        kind="retrieval_evidence",
++    )
++    outcome = Stage08CollaborationContractFactory.read_outcome(
++        branch="retrieval",
++        status="available",
++        reason_code="none",
++        material=material,
++    )
++    return Stage08CollaborationContractFactory.record_read_outcome(state, outcome)
++
++
++def _draft_analysis(state, *, answer: str):
++    return Stage08CollaborationContractFactory.record_analysis(
++        state,
++        AnalysisDecision(
++            answer=answer,
++            citation_ordinals=(),
++            action="draft_update",
++            draft_intent=Stage08CollaborationContractFactory.draft_intent(
++                summary="形成待确认草稿"
++            ),
++        ),
++    )
++
++
++def test_reducer_allows_only_zero_outcome_same_state_seed_noop() -> None:
++    state = Stage08CollaborationContractFactory.initial_state(_command())
++    assert _merge_collaboration_state(state, state) is state
++
++    state_with_outcome = _state_with_read_outcome(
++        state,
++        material_payload=object(),
++    )
++    try:
++        _merge_collaboration_state(state_with_outcome, state_with_outcome)
++    except ValueError as exc:
++        assert str(exc) == "collaboration_parallel_read_conflict"
++    else:
++        raise AssertionError("same-object duplicate read branch must fail closed")
++
++
++def test_reducer_rejects_distinct_outcomes_for_the_same_read_branch() -> None:
++    state = Stage08CollaborationContractFactory.initial_state(_command())
++    left = _state_with_read_outcome(state, material_payload=object())
++    right = _state_with_read_outcome(state, material_payload=object())
++
++    try:
++        _merge_collaboration_state(left, right)
++    except ValueError as exc:
++        assert str(exc) == "collaboration_parallel_read_conflict"
++    else:
++        raise AssertionError("duplicate read branch must fail closed")
++
++
++def test_reducer_rejects_false_true_policy_conflict() -> None:
++    base = _draft_analysis(
++        Stage08CollaborationContractFactory.initial_state(
++            _command(action="draft_update")
++        ),
++        answer="建议一",
++    )
++    denied = Stage08CollaborationContractFactory.record_policy_result(
++        base,
++        draft_allowed=False,
++    )
++    allowed = Stage08CollaborationContractFactory.record_policy_result(
++        base,
++        draft_allowed=True,
++    )
++
++    try:
++        _merge_collaboration_state(denied, allowed)
++    except ValueError as exc:
++        assert str(exc) == "collaboration_parallel_policy_conflict"
++    else:
++        raise AssertionError("policy false/true conflict must fail closed")
++
++
++def test_reducer_rejects_nonempty_analysis_and_terminal_conflicts() -> None:
++    base = Stage08CollaborationContractFactory.initial_state(
++        _command(action="draft_update")
++    )
++    first = _draft_analysis(base, answer="建议一")
++    second = _draft_analysis(base, answer="建议二")
++    try:
++        _merge_collaboration_state(first, second)
++    except ValueError as exc:
++        assert str(exc) == "collaboration_parallel_analysis_conflict"
++    else:
++        raise AssertionError("different nonempty analysis must fail closed")
++
++    cancelled = Stage08CollaborationContractFactory.transition(
++        base,
++        status="cancelled",
++    )
++    failed = Stage08CollaborationContractFactory.transition(
++        base,
++        status="failed",
++    )
++    try:
++        _merge_collaboration_state(cancelled, failed)
++    except ValueError as exc:
++        assert str(exc) == "collaboration_parallel_terminal_conflict"
++    else:
++        raise AssertionError("different terminal states must fail closed")
++
++
++def test_sequential_update_marker_is_factory_only_opaque_and_nonserializable() -> None:
++    state = Stage08CollaborationContractFactory.initial_state(_command())
++    with pytest.raises(
++        TypeError,
++        match="collaboration_sequential_update_unavailable",
++    ):
++        _SequentialStateUpdate(parent=state, result=state)
++
++    marker = _sealed_node(lambda current: current)(state)
++    assert not hasattr(marker, "__dict__")
++    assert repr(marker) == "<_SequentialStateUpdate opaque>"
++    with pytest.raises((TypeError, pickle.PicklingError)):
++        pickle.dumps(marker)
++    with pytest.raises(TypeError):
++        json.dumps(marker)
++
++
++def test_reducer_rejects_object_new_and_wrong_snapshot_markers() -> None:
++    state = Stage08CollaborationContractFactory.initial_state(_command())
++    empty = object.__new__(_SequentialStateUpdate)
++    with pytest.raises(
++        TypeError,
++        match="collaboration_sequential_update_unavailable",
++    ):
++        _merge_collaboration_state(state, empty)
++
++    wrong_snapshot = object.__new__(_SequentialStateUpdate)
++    try:
++        object.__setattr__(
++            wrong_snapshot,
++            "_sealed_snapshot",
++            SimpleNamespace(seal=object(), parent=state, result=state),
++        )
++    except AttributeError:
++        object.__setattr__(wrong_snapshot, "parent", state)
++        object.__setattr__(wrong_snapshot, "result", state)
++    with pytest.raises(
++        TypeError,
++        match="collaboration_sequential_update_unavailable",
++    ):
++        _merge_collaboration_state(state, wrong_snapshot)
++
++
++def test_forged_sequential_marker_cannot_bypass_policy_conflict() -> None:
++    analysed = _draft_analysis(
++        Stage08CollaborationContractFactory.initial_state(
++            _command(action="draft_update")
++        ),
++        answer="建议一",
++    )
++    denied = Stage08CollaborationContractFactory.record_policy_result(
++        analysed,
++        draft_allowed=False,
++    )
++    allowed = Stage08CollaborationContractFactory.record_policy_result(
++        analysed,
++        draft_allowed=True,
++    )
++    forged = object.__new__(_SequentialStateUpdate)
++    try:
++        object.__setattr__(
++            forged,
++            "_sealed_snapshot",
++            SimpleNamespace(seal=object(), parent=denied, result=allowed),
++        )
++    except AttributeError:
++        object.__setattr__(forged, "parent", denied)
++        object.__setattr__(forged, "result", allowed)
++
++    with pytest.raises(
++        TypeError,
++        match="collaboration_sequential_update_unavailable",
++    ):
++        _merge_collaboration_state(denied, forged)
++
++
++def test_e1_modules_have_no_database_tool_network_or_provider_dependencies() -> None:
++    root = Path(__file__).resolve().parents[2]
++    paths = (
++        root / "app/runtime/stage08_collaboration_contracts.py",
++        root / "app/agents/stage08_collaboration.py",
++    )
++    banned_import_roots = {
++        "requests",
++        "httpx",
++        "openai",
++        "redis",
++        "pymilvus",
++        "sqlalchemy",
++        "telegram",
++    }
++    banned_symbols = {
++        "OpenRouter",
++        "Stage08ToolGateway",
++        "Stage06PlatformUnitOfWork",
++        "PostgresRetrievalProvider",
++    }
++
++    for path in paths:
++        source = path.read_text(encoding="utf-8")
++        tree = ast.parse(source)
++        imported_roots = set()
++        for node in ast.walk(tree):
++            if isinstance(node, ast.Import):
++                imported_roots.update(
++                    alias.name.split(".", 1)[0] for alias in node.names
++                )
++            elif isinstance(node, ast.ImportFrom) and node.module:
++                imported_roots.add(node.module.split(".", 1)[0])
++        assert imported_roots.isdisjoint(banned_import_roots)
++        assert banned_symbols.isdisjoint(source.split())
+
+## backend/tests/integration/test_stage08_collaboration_postgres.py
+diff --git a/backend/tests/integration/test_stage08_collaboration_postgres.py b/backend/tests/integration/test_stage08_collaboration_postgres.py
+new file mode 100644
+index 0000000..d68536f
+--- /dev/null
++++ b/backend/tests/integration/test_stage08_collaboration_postgres.py
+@@ -0,0 +1,27 @@
++from __future__ import annotations
++
++import os
++
++import pytest
++from sqlalchemy import create_engine, text
++
++
++STAGE08_RAG_DATABASE_URL_ENV = "STAGE08_RAG_DATABASE_URL"
++
++pytestmark = pytest.mark.postgres
++
++
++def test_stage08_collaboration_uses_only_configured_disposable_loopback_database() -> None:
++    """Keep E3's optional PostgreSQL evidence opt-in and free of credential output."""
++
++    database_url = os.getenv(STAGE08_RAG_DATABASE_URL_ENV)
++    if not database_url:
++        pytest.skip(
++            "STAGE08_RAG_DATABASE_URL is required for Stage08 collaboration PostgreSQL evidence"
++        )
++    engine = create_engine(database_url, future=True, pool_pre_ping=True)
++    try:
++        with engine.connect() as connection:
++            assert connection.execute(text("SELECT 1")).scalar_one() == 1
++    finally:
++        engine.dispose()

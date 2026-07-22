@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: TD008 Option A is `partial-local` as of 2026-07-13. S6D-A01 through S6D-A08 have bounded local evidence. S6D-A09/S6D-A10 remain `external-authority-required`.
+- Status: TD008 Option A remains `partial-local` as a product package. S6D-A01 through S6D-A08 have bounded local evidence. S6D-A09/S6D-A10 have separately authorized, one-attempt, isolated non-production evidence and the isolated environment was cleaned. Do **not** repeat delivery for audit volume; it is not whole-Stage07 acceptance.
 - Scope: one fixed deep-link delivery to one private, allowlisted non-production test chat and a sanitized real Mini App smoke.
 - Exclusions: browser send/mint UI, arbitrary message bodies, groups/channels/broadcasts, automatic retries, production, Telegram reply handling, provider actions and all broader Package 4 scope.
 

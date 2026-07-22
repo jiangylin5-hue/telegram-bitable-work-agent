@@ -2,9 +2,9 @@
 
 ## Status
 
-- Status: TD007 Option A is `partial-local` implementation. Backend validation/identity/storage/resolver and Mini App memory/handoff code exist; external delivery and unaccepted evidence remain outside this SDD's implemented boundary.
+- Status: TD007 Option A is `partial-local` implementation. Backend validation/identity/storage/resolver and Mini App memory/handoff code exist. Bounded isolated external identity/deep-link evidence was completed and cleaned; it is retained as supporting evidence only and must not be replayed without a new explicit authorization.
 - Scope: server identity adaptation and opaque destination resolution for Telegram Mini App launches.
-- Current Progress: S6.1 route, schema/migration, frontend header and local synthetic validation exist. A disposable safe-DTO Browser fixture observed recovery and Record handoff at 1440/1280/430/390, including the 44px recovery action and raw-token absence. The local resolver matrix now proves cross-workspace recovery and the existing field-read rule: hiding a field after issuance retains only a closed record pointer and the authoritative reread omits the field. The complete target-reread App flow is `implemented-local`: `401`/`403` hold generic denied state; `404`/`409`/`422`/network return fixed Home recovery; an unmounted late resolver response loads neither Home nor target data. No Telegram configuration, external message or real Telegram identity test exists.
+- Current Progress: S6.1 route, schema/migration, frontend header and local synthetic validation exist. A disposable safe-DTO Browser fixture observed recovery and Record handoff at 1440/1280/430/390, including the 44px recovery action and raw-token absence. The local resolver matrix now proves cross-workspace recovery and the existing field-read rule: hiding a field after issuance retains only a closed record pointer and the authoritative reread omits the field. The complete target-reread App flow is `implemented-local`: `401`/`403` hold generic denied state; `404`/`409`/`422`/network return fixed Home recovery; an unmounted late resolver response loads neither Home nor target data. A separately authorized isolated real Telegram identity/deep-link test did occur and was cleaned; no external operation is authorized for repetition in this SDD.
 
 ## Architecture
 

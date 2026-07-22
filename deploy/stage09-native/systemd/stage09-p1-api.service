@@ -1,0 +1,20 @@
+[Unit]
+Description=Stage09 P1 native API
+
+[Service]
+Type=simple
+User=stage09-p1
+Group=stage09-p1
+WorkingDirectory=/opt/stage09-p1/current/backend
+EnvironmentFile=/etc/stage09-p1/runtime.env
+ExecStartPre=/opt/stage09-p1/current/deploy/stage09-native/scripts/verify-native-isolation.sh /etc/stage09-p1/runtime.env
+ExecStart=/opt/stage09-p1/current-venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 18080
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

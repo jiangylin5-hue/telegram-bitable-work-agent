@@ -1,0 +1,113 @@
+name: stage07-acceptance
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+    volumes:
+      - stage07_acceptance_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - stage07_acceptance_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  migrate:
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+    env_file:
+      - path: ${STAGE07_ENV_FILE:-runtime/.env.stage07-acceptance}
+        required: true
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["tools"]
+
+  api:
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: ${STAGE07_ENV_FILE:-runtime/.env.stage07-acceptance}
+        required: true
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      default: {}
+      caddy_ingress:
+        aliases: ["stage07-api"]
+
+  outbox-bridge:
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: ${STAGE07_ENV_FILE:-runtime/.env.stage07-acceptance}
+        required: true
+    command: ["python", "-m", "app.workers.stage03_outbox_bridge_runtime"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: ${STAGE07_ENV_FILE:-runtime/.env.stage07-acceptance}
+        required: true
+    command: ["python", "-m", "app.workers.stage03_runtime"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/stage07-acceptance/Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    networks:
+      default: {}
+      caddy_ingress:
+        aliases: ["stage07-web"]
+
+networks:
+  caddy_ingress:
+    external: true
+    name: ${STAGE07_CADDY_NETWORK:?set STAGE07_CADDY_NETWORK}
+
+volumes:
+  stage07_acceptance_postgres_data:
+  stage07_acceptance_redis_data:

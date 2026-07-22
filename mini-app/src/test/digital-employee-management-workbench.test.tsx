@@ -60,7 +60,18 @@ test('renders only bounded employee management controls and filters views by sel
   expect(screen.queryByLabelText('范围视图 全部项目')).not.toBeInTheDocument()
 })
 
-test('requires valid safe scope and assignment before activation, while active is read-only', async () => {
+test('renders a read-only status and audit rail without exposing hidden runtime configuration', () => {
+  renderWorkbench()
+
+  const reviewRail = screen.getByLabelText('运行状态与审计')
+  expect(reviewRail).toBeVisible()
+  expect(screen.getByText('当前生命周期')).toBeVisible()
+  expect(screen.getByText('确认约束')).toBeVisible()
+  expect(screen.getByText('审计说明')).toBeVisible()
+  expect(screen.queryByText(/provider|prompt|memory|模型配置/i)).not.toBeInTheDocument()
+})
+
+test('requires persisted valid safe scope and assignment before activation, while active is read-only', async () => {
   const onActivate = vi.fn().mockResolvedValue(undefined)
   const { rerender } = renderWorkbench(draft, { onActivate })
 
@@ -68,7 +79,24 @@ test('requires valid safe scope and assignment before activation, while active i
   fireEvent.click(screen.getByLabelText('范围表 客户表'))
   fireEvent.click(screen.getByLabelText('范围视图 全部客户'))
   fireEvent.click(screen.getByLabelText('可用成员 成员 1'))
+  expect(screen.getByRole('button', { name: '激活员工' })).toBeDisabled()
+  expect(screen.getByText('请先保存当前配置和成员，然后激活员工。')).toBeVisible()
+
+  rerender(<DigitalEmployeeManagementWorkbench
+    context={context}
+    directory={{ baseId: 'base-1', employees: [draft], nextCursor: null, hasMore: false }}
+    detail={{ ...draft, accessibleTableIds: ['table-1'], accessibleViewIds: ['view-1'], memberIds: ['member-1'] }}
+    loading={false}
+    onSelectEmployee={vi.fn()}
+    onCreate={vi.fn()}
+    onUpdate={vi.fn()}
+    onReplaceGrants={vi.fn()}
+    onActivate={onActivate}
+    onPause={vi.fn()}
+    onClose={vi.fn()}
+  />)
   expect(screen.getByRole('button', { name: '激活员工' })).toBeEnabled()
+  expect(screen.queryByText('请先保存当前配置和成员，然后激活员工。')).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: '激活员工' }))
   await waitFor(() => expect(onActivate).toHaveBeenCalledWith('employee-1', 1))
   await waitFor(() => expect(screen.getByRole('button', { name: '激活员工' })).toBeEnabled())

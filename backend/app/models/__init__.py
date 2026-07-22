@@ -45,6 +45,19 @@ from app.models.stage06_runtime import (
     NotificationRequest,
     RecordChangeDraft,
 )
+from app.models.stage08_runtime import Stage08ExecutionTicket
+from app.models.stage08_memory import (
+    Stage08MemoryExtractionCandidate,
+    Stage08MemoryItem,
+)
+from app.models.stage08_group_context import (
+    Stage08GroupBusinessContextBinding,
+    Stage08GroupMessageProjection,
+)
+from app.models.stage08_knowledge import (
+    Stage08KnowledgeChunk,
+    Stage08KnowledgeSource,
+)
 from app.models.stage06_templates import (
     ImportJob,
     PlatformTemplate,
@@ -105,6 +118,13 @@ __all__ = [
     "RecordLink",
     "Stage06TelegramBinding",
     "Stage06IdempotencyRecord",
+    "Stage08MemoryExtractionCandidate",
+    "Stage08MemoryItem",
+    "Stage08GroupBusinessContextBinding",
+    "Stage08GroupMessageProjection",
+    "Stage08KnowledgeChunk",
+    "Stage08KnowledgeSource",
+    "Stage08ExecutionTicket",
     "Stage07TelegramDeepLink",
     "Stage07TelegramDeepLinkDelivery",
     "TableView",

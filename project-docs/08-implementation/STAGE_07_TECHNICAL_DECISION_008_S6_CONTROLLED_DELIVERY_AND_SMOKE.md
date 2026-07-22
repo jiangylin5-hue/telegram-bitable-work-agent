@@ -2,10 +2,10 @@
 
 ## Status
 
-- Decision status: **approved for local implementation** by the user on 2026-07-13. It authorizes only the documented source, migration and local verification package. BotFather/webhook configuration, secret entry, external message delivery and the manual smoke remain separately subject to explicit per-environment authority.
+- Decision status: **approved for local implementation** by the user on 2026-07-13. The later BotFather/webhook configuration, secret entry, external message delivery and manual smoke each received separate explicit authority, produced bounded isolated evidence and were cleaned. This decision does not authorize another delivery or whole-Stage07 completion.
 - Scope: one non-production, explicitly confirmed Telegram Mini App deep-link delivery and end-to-end smoke path after S6.1.
 - Authority: current user instruction, `AGENTS.md`, Stage07 Source Of Truth, TD007 Option A, existing `restricted_test` send policy and Stage06 authorization/audit boundaries.
-- Current implementation: `partial-local`. The closed extension, server-only create/confirm service, one-attempt Worker reservation, fixed URL-button client and configuration guard are implemented. Focused local PostgreSQL proves success, definite rejection, transport uncertainty, sequential reserved replay, rollback/replay migration, pointer revocation, a two-session claimed-worker collision with at most one Bot call, and revoked-binding confirmation to closed `blocked` state without an Outbox event. Direct Service/Worker/typed-client inventory has no logger sink and fixed-code exception persistence is tested. Only real Telegram operation remains open.
+- Current implementation: `partial-local`. The closed extension, server-only create/confirm service, one-attempt Worker reservation, fixed URL-button client and configuration guard are implemented. Focused local PostgreSQL proves success, definite rejection, transport uncertainty, sequential reserved replay, rollback/replay migration, pointer revocation, a two-session claimed-worker collision with at most one Bot call, and revoked-binding confirmation to closed `blocked` state without an Outbox event. Direct Service/Worker/typed-client inventory has no logger sink and fixed-code exception persistence is tested. Real Telegram operation is bounded historical evidence, not an open invitation to resend.
 
 ## Decision Required
 

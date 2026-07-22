@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DigitalEmployeeContactResponse(BaseModel):
@@ -111,7 +111,7 @@ class SafeEmployeeInvocationRequest(BaseModel):
     base_id: str
     view_id: str | None = None
     record_id: str | None = None
-    instruction: str | None = None
+    instruction: str | None = Field(default=None, max_length=1000)
 
 
 class SafeCitationResponse(BaseModel):

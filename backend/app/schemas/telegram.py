@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -13,6 +14,13 @@ class MockTelegramUpdate(BaseModel):
     caption: str | None = None
     message_type: str = "text"
     received_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    update_kind: Literal["new", "edited"] = Field(
+        default="new",
+        exclude=True,
+        repr=False,
+    )
+    chat_type: str | None = Field(default=None, exclude=True, repr=False)
+    edited_at: datetime | None = Field(default=None, exclude=True, repr=False)
 
 
 class MockTelegramIngestionResponse(BaseModel):

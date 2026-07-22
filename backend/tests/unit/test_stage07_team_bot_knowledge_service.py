@@ -39,6 +39,15 @@ class CapturingLLMClient:
         )
 
 
+class FailingLLMClient:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def generate_json(self, request: StructuredLLMRequest) -> StructuredLLMResult:
+        self.calls += 1
+        raise RuntimeError("private provider failure")
+
+
 def test_live_team_summary_uses_only_the_server_bounded_override_window() -> None:
     uow, owner, employee, view = _fixture()
     visible_records = [
@@ -161,6 +170,169 @@ def test_team_bot_empty_context_is_audited_without_provider_call() -> None:
     assert receipt.knowledge_window_truncated is False
     assert client.requests == []
     assert uow.audit_events[-1].after_state["outcome"] == "empty_context"
+
+
+def test_team_bot_provider_failure_releases_its_started_idempotency_reservation() -> None:
+    uow, owner, employee, view = _fixture(record_count=1)
+    client = FailingLLMClient()
+
+    with pytest.raises(PlatformValidationError) as first:
+        summarize_team_bot_knowledge(
+            uow,
+            employee_id=employee.id,
+            base_id=employee.base_id,
+            view_id=view.id,
+            actor=owner,
+            instruction="Summarize the permitted view.",
+            idempotency_key="team-provider-retry",
+            llm_client=client,
+        )
+    with pytest.raises(PlatformValidationError) as retry:
+        summarize_team_bot_knowledge(
+            uow,
+            employee_id=employee.id,
+            base_id=employee.base_id,
+            view_id=view.id,
+            actor=owner,
+            instruction="Summarize the permitted view.",
+            idempotency_key="team-provider-retry",
+            llm_client=client,
+        )
+
+    assert first.value.code == retry.value.code == "openrouter_runtime_error"
+    assert client.calls == 2
+    assert uow.idempotency_records == []
+
+
+def test_team_bot_empty_provider_answer_releases_its_started_idempotency_reservation() -> None:
+    uow, owner, employee, view = _fixture(record_count=1)
+    client = CapturingLLMClient({"answer": "", "citations": []})
+
+    with pytest.raises(PlatformValidationError) as first:
+        summarize_team_bot_knowledge(
+            uow,
+            employee_id=employee.id,
+            base_id=employee.base_id,
+            view_id=view.id,
+            actor=owner,
+            instruction="Summarize the permitted view.",
+            idempotency_key="team-empty-answer-retry",
+            llm_client=client,
+        )
+    with pytest.raises(PlatformValidationError) as retry:
+        summarize_team_bot_knowledge(
+            uow,
+            employee_id=employee.id,
+            base_id=employee.base_id,
+            view_id=view.id,
+            actor=owner,
+            instruction="Summarize the permitted view.",
+            idempotency_key="team-empty-answer-retry",
+            llm_client=client,
+        )
+
+    assert first.value.code == retry.value.code == "live_employee_invalid_output"
+    assert len(client.requests) == 2
+    assert uow.idempotency_records == []
+
+
+def test_team_bot_rechecks_paused_or_ungranted_employee_before_provider_invocation() -> None:
+    uow, owner, employee, view = _fixture()
+    client = CapturingLLMClient({"answer": "must not be called", "citations": []})
+    employee.status = "paused"
+
+    with pytest.raises(PlatformValidationError) as paused_error:
+        summarize_team_bot_knowledge(
+            uow,
+            employee_id=employee.id,
+            base_id=employee.base_id,
+            view_id=view.id,
+            actor=owner,
+            instruction=None,
+            idempotency_key="team-paused-1",
+            llm_client=client,
+        )
+
+    assert paused_error.value.code == "team_bot_not_found"
+    assert client.requests == []
+
+    employee.status = "active"
+    employee.access_mode = "assigned"
+    with pytest.raises(PlatformValidationError) as grant_error:
+        summarize_team_bot_knowledge(
+            uow,
+            employee_id=employee.id,
+            base_id=employee.base_id,
+            view_id=view.id,
+            actor=owner,
+            instruction=None,
+            idempotency_key="team-grant-revoked-1",
+            llm_client=client,
+        )
+
+    assert grant_error.value.code == "team_bot_not_found"
+    assert client.requests == []
+
+
+def test_team_bot_rejects_cross_base_view_and_changed_idempotency_payload() -> None:
+    uow, owner, employee, view = _fixture()
+    client = CapturingLLMClient({"answer": "must not be called", "citations": []})
+    workspace = uow.get_workspace(employee.workspace_id)
+    assert workspace is not None
+    other_base = create_base(uow, workspace.id, name="Other base", actor=owner)
+    other_table = create_table(uow, other_base.id, name="Other tasks", key="other_tasks", actor=owner)
+    create_field(uow, other_table.id, name="Title", key="title", field_type="text", actor=owner)
+    other_view = create_form_view(
+        uow,
+        other_base.id,
+        other_table.id,
+        name="Other view",
+        view_type="grid",
+        config={"fields": []},
+        actor=owner,
+    )
+    employee.accessible_tables.append(str(other_table.id))
+    employee.accessible_views.append(str(other_view.id))
+
+    with pytest.raises(PlatformValidationError) as cross_base_error:
+        summarize_team_bot_knowledge(
+            uow,
+            employee_id=employee.id,
+            base_id=employee.base_id,
+            view_id=other_view.id,
+            actor=owner,
+            instruction=None,
+            idempotency_key="team-cross-base-1",
+            llm_client=client,
+        )
+
+    assert cross_base_error.value.code == "team_bot_context_not_found"
+    assert client.requests == []
+
+    first = summarize_team_bot_knowledge(
+        uow,
+        employee_id=employee.id,
+        base_id=employee.base_id,
+        view_id=view.id,
+        actor=owner,
+        instruction="first instruction",
+        idempotency_key="team-changed-key-1",
+        llm_client=client,
+    )
+    with pytest.raises(PlatformValidationError) as changed_payload_error:
+        summarize_team_bot_knowledge(
+            uow,
+            employee_id=employee.id,
+            base_id=employee.base_id,
+            view_id=view.id,
+            actor=owner,
+            instruction="changed instruction",
+            idempotency_key="team-changed-key-1",
+            llm_client=client,
+        )
+
+    assert first.kind == "empty_context"
+    assert changed_payload_error.value.code == "idempotency_conflict"
 
 
 def _fixture(*, record_count: int = 0):

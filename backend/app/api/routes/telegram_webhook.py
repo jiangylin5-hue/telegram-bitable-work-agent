@@ -78,6 +78,9 @@ def receive_telegram_webhook(
         caption=parsed.caption,
         message_type=parsed.message_type,
         received_at=parsed.received_at,
+        update_kind=parsed.update_kind,
+        chat_type=parsed.chat_type,
+        edited_at=parsed.edited_at,
     )
     result = ingest_mock_telegram_update(
         update,

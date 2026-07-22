@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID, uuid4
 
+from sqlalchemy import inspect
+
 from app.agents.interfaces import StructuredLLMClient
 from app.models.stage06_runtime import DigitalEmployee
 from app.services.audit import record_audit_event
@@ -199,17 +201,21 @@ def summarize_team_bot_knowledge(
             ),
         )
     else:
-        result = invoke_digital_employee(
-            uow,
-            window.employee.id,
-            action="summarize",
-            actor=actor,
-            view_id=view_id,
-            runtime_mode="live_openrouter",
-            prompt=normalized_instruction,
-            llm_client=llm_client,
-            view_records_override=window.records,
-        )
+        try:
+            result = invoke_digital_employee(
+                uow,
+                window.employee.id,
+                action="summarize",
+                actor=actor,
+                view_id=view_id,
+                runtime_mode="live_openrouter",
+                prompt=normalized_instruction,
+                llm_client=llm_client,
+                view_records_override=window.records,
+            )
+        except Exception:
+            _discard_team_bot_idempotency_reservation(uow, decision.record)
+            raise
         answer = result.get("answer")
         if not isinstance(answer, str) or not answer.strip():
             raise PlatformValidationError("team_bot_summary_unavailable", str(employee_id))
@@ -378,6 +384,25 @@ def _receipt_response_ref(receipt: TeamBotSummaryReceipt) -> dict[str, object]:
     }
 
 
+def _discard_team_bot_idempotency_reservation(
+    uow: Stage06PlatformUnitOfWork,
+    record: object,
+) -> None:
+    """Make an unavailable provider retryable before any safe summary receipt exists."""
+    session = getattr(uow, "session", None)
+    if session is not None:
+        state = inspect(record)
+        if state.pending:
+            session.expunge(record)
+        elif state.persistent:
+            session.delete(record)
+        session.commit()
+        return
+    records = getattr(uow, "idempotency_records", None)
+    if isinstance(records, list) and record in records:
+        records.remove(record)
+
+
 def _receipt_from_idempotency_replay(
     response_ref: dict[str, Any] | None,
 ) -> TeamBotSummaryReceipt:
@@ -408,4 +433,3 @@ def _receipt_from_idempotency_replay(
         )
     except (KeyError, TypeError, ValueError) as exc:
         raise PlatformValidationError("team_bot_summary_unavailable", _TEAM_BOT_OPERATION) from exc
-

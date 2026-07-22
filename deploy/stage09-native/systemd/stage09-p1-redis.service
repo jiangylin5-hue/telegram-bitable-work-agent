@@ -1,0 +1,23 @@
+[Unit]
+Description=Stage09 P1 native Redis
+
+[Service]
+Type=simple
+User=stage09-redis
+Group=stage09-redis-socket
+WorkingDirectory=/var/lib/redis-stage09-p1
+RuntimeDirectory=stage09-p1
+RuntimeDirectoryMode=0750
+StateDirectory=redis-stage09-p1
+StateDirectoryMode=0710
+UMask=0077
+ExecStart=/usr/bin/redis-server /opt/stage09-p1/current/deploy/stage09-native/redis/redis-stage09-p1.conf --supervised systemd
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

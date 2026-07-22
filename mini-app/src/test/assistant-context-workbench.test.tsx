@@ -25,6 +25,9 @@ test('starts without inferred context and exposes only safe contact/view selecti
   const rendered = render(<AssistantContextWorkbench contacts={[contact]} context={null} selectedView={null} summary={null} loading={false} failed={false} onSelectContact={onSelectContact} onSelectView={onSelectView} onSummarize={vi.fn()} onOpenBase={vi.fn()} onRetry={vi.fn()} onClose={vi.fn()} />)
 
   expect(screen.getByRole('dialog', { name: '个人助理上下文' })).toBeInTheDocument()
+  expect(screen.getByLabelText('数字员工目录')).toBeVisible()
+  expect(screen.getByLabelText('当前已授权视图')).toBeVisible()
+  expect(screen.getByLabelText('摘要与审计')).toBeVisible()
   expect(screen.getByText('请选择数字员工和可访问视图，再开始协作。')).toBeVisible()
   fireEvent.click(screen.getByRole('button', { name: '选择数字员工 运营助理' }))
   expect(onSelectContact).toHaveBeenCalledWith('employee-1')

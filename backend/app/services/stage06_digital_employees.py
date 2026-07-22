@@ -7,11 +7,16 @@ from app.agents.interfaces import StructuredLLMClient, StructuredLLMResult
 from app.agents.stage06_live_digital_employee import run_stage06_live_employee
 from app.agents.stage06_skill_matching import build_stage06_skill_evidence
 from app.models.agent import AgentRun
-from app.models.stage06_platform import Stage06TelegramBinding
+from app.models.stage06_platform import Stage06TelegramBinding, WorkspaceMember
 from app.models.stage06_runtime import (
     DigitalEmployee,
     NotificationRequest,
     RecordChangeDraft,
+)
+from app.runtime.stage08_collaboration_contracts import (
+    Stage08SafeExecutionContext,
+    _safe_execution_context_snapshot,
+    _stage08_safe_execution_summary,
 )
 from app.services.audit import record_audit_event
 from app.services.permissions import Actor
@@ -19,11 +24,15 @@ from app.services.stage06_audit import sanitize_stage06_audit_state
 from app.services.stage06_platform import (
     PlatformValidationError,
     Stage06PlatformUnitOfWork,
+    can_actor_write_record_fields,
+    create_record,
+    get_create_form,
     get_table_schema,
     list_view_records,
     read_base,
     update_record,
 )
+from app.services.stage08_memory import enqueue_confirmed_record_memory_event
 
 
 class Stage06RuntimeUnitOfWork(Stage06PlatformUnitOfWork, Protocol):
@@ -32,6 +41,15 @@ class Stage06RuntimeUnitOfWork(Stage06PlatformUnitOfWork, Protocol):
 
 READ_ACTIONS = frozenset({"schema_inspect", "query", "summarize"})
 WRITE_LIKE_ACTIONS = frozenset({"draft_create", "draft_update", "status_advance"})
+STAGE08_TOOL_CATALOG = (
+    "contact.resolve",
+    "import.preview",
+    "record.query",
+    "record_change_draft.create",
+    "table.summarize",
+    "task.create_draft",
+    "tool_catalog.inspect",
+)
 
 
 def create_digital_employee(
@@ -188,7 +206,15 @@ def invoke_digital_employee(
     prompt: str | None = None,
     llm_client: StructuredLLMClient | None = None,
     view_records_override: list[dict[str, Any]] | None = None,
+    safe_context: Stage08SafeExecutionContext | None = None,
 ) -> dict[str, Any]:
+    if safe_context is not None:
+        _safe_execution_context_snapshot(safe_context)
+        if runtime_mode != "deterministic":
+            raise PlatformValidationError(
+                "stage08_safe_execution_runtime_mode_denied",
+                "stage08_safe_execution_runtime_mode_denied",
+            )
     employee = _require_employee(uow, employee_id)
     _assert_employee_action(employee, action)
     if view_records_override is not None and (
@@ -263,12 +289,20 @@ def invoke_digital_employee(
             record_id=record_id,
             proposed_values=proposed_values,
             actor=actor,
+            safe_context=safe_context,
         )
         response["skill_evidence"] = skill_evidence
     else:
         raise PlatformValidationError("unsupported_employee_action", action)
 
-    _record_agent_run(uow, employee=employee, action=action, actor=actor, output=response)
+    _record_agent_run(
+        uow,
+        employee=employee,
+        action=action,
+        actor=actor,
+        output=response,
+        safe_context=safe_context,
+    )
     _record_runtime_audit(
         uow,
         actor=actor,
@@ -276,6 +310,10 @@ def invoke_digital_employee(
         entity_type="digital_employee",
         entity_id=employee.id,
         after_state={"action": action, "output": _safe_output_summary(response)},
+        safe_context=safe_context,
+        safe_action=action,
+        safe_counts={"draft_count": int("draft_id" in response)},
+        safe_draft_present="draft_id" in response,
     )
     return response
 
@@ -439,26 +477,141 @@ def confirm_record_change_draft(
     *,
     actor: Actor,
 ) -> RecordChangeDraft:
-    draft = _require_draft(uow, draft_id)
+    draft = _require_draft_transition_lock(uow, draft_id)
     if draft.status != "pending_confirmation":
         raise PlatformValidationError("record_change_draft_invalid_state", str(draft_id))
+    if draft.draft_type == "create_record":
+        if draft.record_id is not None:
+            raise PlatformValidationError("record_change_draft_invalid_state", str(draft_id))
+        confirmation_actor = _assert_create_record_confirmation_allowed(uow, draft, actor)
+        record = create_record(
+            uow,
+            draft.table_id,
+            values=draft.proposed_values,
+            actor=confirmation_actor,
+        )
+        draft.record_id = record.id
+        confirmed_actor = confirmation_actor
+    elif draft.draft_type == "update_record":
+        if draft.record_id is None:
+            raise PlatformValidationError("record_change_draft_missing_record", str(draft_id))
+        update_record(
+            uow,
+            draft.record_id,
+            values=draft.proposed_values,
+            expected_version=draft.expected_version,
+            actor=actor,
+        )
+        confirmed_actor = actor
+    else:
+        raise PlatformValidationError("record_change_draft_type_invalid", draft.draft_type)
     if draft.record_id is None:
         raise PlatformValidationError("record_change_draft_missing_record", str(draft_id))
-    update_record(
-        uow,
-        draft.record_id,
-        values=draft.proposed_values,
-        expected_version=draft.expected_version,
-        actor=actor,
-    )
     draft.status = "confirmed"
     _record_runtime_audit(
         uow,
-        actor=actor,
+        actor=confirmed_actor,
         event_type="stage06.record_change_draft_confirmed",
         entity_type="record_change_draft",
         entity_id=draft.id,
         after_state={"record_id": str(draft.record_id), "status": draft.status},
+    )
+    record = uow.get_record(draft.record_id)
+    if record is not None:
+        enqueue_confirmed_record_memory_event(
+            uow,
+            draft,
+            record,
+            confirmation_actor=confirmed_actor,
+            now=datetime.now(UTC),
+        )
+    return draft
+
+
+def resolve_active_workspace_member(
+    uow: Stage06RuntimeUnitOfWork,
+    workspace_id: UUID,
+    workspace_member_id: UUID,
+) -> object:
+    member = uow.get_workspace_member(workspace_member_id)
+    if (
+        member is None
+        or member.workspace_id != workspace_id
+        or member.status != "active"
+    ):
+        raise PlatformValidationError("resource_scope_mismatch", "workspace_member")
+    return member
+
+
+def get_stage08_tool_catalog() -> tuple[str, ...]:
+    return STAGE08_TOOL_CATALOG
+
+
+def create_create_record_draft(
+    uow: Stage06RuntimeUnitOfWork,
+    employee_id: UUID,
+    *,
+    table_id: UUID,
+    proposed_values: dict[str, Any],
+    actor: Actor,
+    safe_context: Stage08SafeExecutionContext | None = None,
+) -> RecordChangeDraft:
+    safe_snapshot = (
+        None
+        if safe_context is None
+        else _safe_execution_context_snapshot(safe_context)
+    )
+    employee = _require_employee(uow, employee_id)
+    _assert_employee_action(employee, "draft_create")
+    _assert_table_in_scope(employee, table_id)
+    table = uow.get_table(table_id)
+    if table is None:
+        raise PlatformValidationError("table_not_found", str(table_id))
+    base = read_base(uow, table.base_id)
+    if base.workspace_id != employee.workspace_id:
+        raise PlatformValidationError("resource_scope_mismatch", "employee_table_workspace")
+    canonical_actor = _canonical_active_member_actor(uow, base.workspace_id, actor)
+    create_form = get_create_form(uow, table_id, actor=canonical_actor)
+    writable_field_keys = {
+        field["key"]
+        for field in create_form["fields"]
+        if isinstance(field.get("key"), str)
+    }
+    if not create_form["can_create"] or not set(proposed_values).issubset(writable_field_keys):
+        raise PlatformValidationError("record_create_permission_denied", str(table_id))
+    draft = RecordChangeDraft(
+        id=uuid4(),
+        workspace_id=base.workspace_id,
+        base_id=base.id,
+        table_id=table.id,
+        record_id=None,
+        draft_type="create_record",
+        proposed_values=dict(proposed_values),
+        before_values=None,
+        created_by_type="digital_employee",
+        created_by_id=str(employee.id),
+        status="pending_confirmation",
+        confirmation_policy=employee.confirmation_policy,
+        trace_id=(
+            safe_snapshot.trace_hash
+            if safe_snapshot is not None
+            else f"stage06:draft:{uuid4()}"
+        ),
+        expected_version=1,
+    )
+    uow.add_record_change_draft(draft)
+    _record_runtime_audit(
+        uow,
+        actor=canonical_actor,
+        event_type="stage06.record_change_draft_created",
+        entity_type="record_change_draft",
+        entity_id=draft.id,
+        after_state={"table_id": str(table.id), "status": draft.status},
+        safe_context=safe_context,
+        safe_action="task.create_draft",
+        safe_status=draft.status,
+        safe_counts={"draft_count": 1},
+        safe_draft_present=True,
     )
     return draft
 
@@ -469,7 +622,7 @@ def reject_record_change_draft(
     *,
     actor: Actor,
 ) -> RecordChangeDraft:
-    draft = _require_draft(uow, draft_id)
+    draft = _require_draft_transition_lock(uow, draft_id)
     if draft.status != "pending_confirmation":
         raise PlatformValidationError("record_change_draft_invalid_state", str(draft_id))
     draft.status = "rejected"
@@ -679,7 +832,13 @@ def _create_update_draft_response(
     record_id: UUID,
     proposed_values: dict[str, Any],
     actor: Actor,
+    safe_context: Stage08SafeExecutionContext | None = None,
 ) -> dict[str, Any]:
+    safe_snapshot = (
+        None
+        if safe_context is None
+        else _safe_execution_context_snapshot(safe_context)
+    )
     record = uow.get_record(record_id)
     if record is None:
         raise PlatformValidationError("record_not_found", str(record_id))
@@ -706,7 +865,11 @@ def _create_update_draft_response(
         created_by_id=str(employee.id),
         status="pending_confirmation",
         confirmation_policy=employee.confirmation_policy,
-        trace_id=f"stage06:draft:{uuid4()}",
+        trace_id=(
+            safe_snapshot.trace_hash
+            if safe_snapshot is not None
+            else f"stage06:draft:{uuid4()}"
+        ),
         expected_version=record.version,
     )
     uow.add_record_change_draft(draft)
@@ -717,6 +880,11 @@ def _create_update_draft_response(
         entity_type="record_change_draft",
         entity_id=draft.id,
         after_state={"record_id": str(record.id), "status": draft.status},
+        safe_context=safe_context,
+        safe_action="record_change_draft.create",
+        safe_status=draft.status,
+        safe_counts={"draft_count": 1},
+        safe_draft_present=True,
     )
     return {
         "action": "draft_update",
@@ -733,8 +901,44 @@ def _record_agent_run(
     action: str,
     actor: Actor,
     output: dict[str, Any],
+    safe_context: Stage08SafeExecutionContext | None = None,
 ) -> None:
     now = datetime.now(UTC)
+    if safe_context is not None:
+        summary = _stage08_safe_execution_summary(
+            safe_context,
+            graph="stage08_collaboration_e3",
+            status="succeeded",
+            action=action,
+            counts={"draft_count": int("draft_id" in output)},
+            code=None,
+            latency_ms=0,
+            ticket_present=True,
+            draft_present="draft_id" in output,
+        )
+        uow.add_agent_run(
+            AgentRun(
+                id=uuid4(),
+                agent_name="stage08_safe_execution",
+                graph_name="stage08_collaboration_e3",
+                model_provider="controlled",
+                model_name="deterministic_tool_gateway",
+                prompt_version="stage08-e3-safe",
+                input_summary=summary,
+                output_summary=summary,
+                tool_calls=[summary],
+                status="succeeded",
+                trace_id=_safe_execution_context_snapshot(safe_context).trace_hash,
+                started_at=now,
+                completed_at=now,
+                usage_summary=None,
+                cost_summary=None,
+                latency_ms=0,
+                created_entity_refs=[],
+                redaction_policy="stage08_e3_whitelist",
+            )
+        )
+        return
     uow.add_agent_run(
         AgentRun(
             id=uuid4(),
@@ -869,7 +1073,35 @@ def _record_runtime_audit(
     entity_type: str,
     entity_id: UUID,
     after_state: dict[str, Any],
+    safe_context: Stage08SafeExecutionContext | None = None,
+    safe_action: str | None = None,
+    safe_status: str = "succeeded",
+    safe_counts: dict[str, int] | None = None,
+    safe_draft_present: bool = False,
 ) -> None:
+    if safe_context is not None:
+        record_audit_event(
+            getattr(uow, "session", uow),
+            trace_id=_safe_execution_context_snapshot(safe_context).trace_hash,
+            actor_type="system",
+            actor_id="stage08_e3_safe",
+            event_type=event_type,
+            entity_type="stage08_safe_execution",
+            entity_id=None,
+            after_state=_stage08_safe_execution_summary(
+                safe_context,
+                graph="stage08_collaboration_e3",
+                status=safe_status,
+                action=safe_action or "safe_execution",
+                counts=safe_counts or {},
+                code=None,
+                latency_ms=0,
+                ticket_present=True,
+                draft_present=safe_draft_present,
+            ),
+            permission_snapshot=None,
+        )
+        return
     record_audit_event(
         getattr(uow, "session", uow),
         trace_id=f"stage06:{entity_type}:{entity_id}",
@@ -897,6 +1129,33 @@ def _require_employee(
     return employee
 
 
+def _require_active_actor_member(
+    uow: Stage06RuntimeUnitOfWork,
+    workspace_id: UUID,
+    actor: Actor,
+) -> WorkspaceMember:
+    member = next(
+        (
+            candidate
+            for candidate in uow.list_workspace_members(workspace_id)
+            if candidate.user_id == actor.actor_id and candidate.status == "active"
+        ),
+        None,
+    )
+    if member is None:
+        raise PlatformValidationError("actor_not_workspace_member", actor.actor_id)
+    return member
+
+
+def _canonical_active_member_actor(
+    uow: Stage06RuntimeUnitOfWork,
+    workspace_id: UUID,
+    actor: Actor,
+) -> Actor:
+    member = _require_active_actor_member(uow, workspace_id, actor)
+    return Actor(actor_type="user", actor_id=member.user_id, role=member.role)
+
+
 def _require_employee_for_update(
     uow: Stage06RuntimeUnitOfWork,
     employee_id: UUID,
@@ -915,6 +1174,42 @@ def _require_draft(
     if draft is None:
         raise PlatformValidationError("record_change_draft_not_found", str(draft_id))
     return draft
+
+
+def _require_draft_transition_lock(
+    uow: Stage06RuntimeUnitOfWork,
+    draft_id: UUID,
+) -> RecordChangeDraft:
+    draft = uow.lock_record_change_draft_for_transition(draft_id)
+    if draft is None:
+        raise PlatformValidationError("record_change_draft_not_found", str(draft_id))
+    return draft
+
+
+def _assert_create_record_confirmation_allowed(
+    uow: Stage06RuntimeUnitOfWork,
+    draft: RecordChangeDraft,
+    actor: Actor,
+) -> Actor:
+    table = uow.get_table(draft.table_id)
+    if table is None:
+        raise PlatformValidationError("table_not_found", str(draft.table_id))
+    base = read_base(uow, table.base_id)
+    if base.id != draft.base_id or base.workspace_id != draft.workspace_id:
+        raise PlatformValidationError("resource_scope_mismatch", "record_change_draft_table")
+    canonical_actor = _canonical_active_member_actor(uow, draft.workspace_id, actor)
+    create_form = get_create_form(uow, draft.table_id, actor=canonical_actor)
+    if (
+        not create_form["can_create"]
+        or not can_actor_write_record_fields(
+            uow,
+            draft.table_id,
+            draft.proposed_values.keys(),
+            actor=canonical_actor,
+        )
+    ):
+        raise PlatformValidationError("record_create_permission_denied", str(draft.table_id))
+    return canonical_actor
 
 
 def _assert_employee_action(employee: DigitalEmployee, action: str) -> None:

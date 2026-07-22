@@ -4,7 +4,7 @@
 
 - Document status: active visual acceptance reference
 - Scope: Stage07 desktop visual language and its responsive translation; it does not define API, authorization, data content or behaviour.
-- Current Progress: 2026-07-10 the user-provided source images are retained under `assets/stage07/` and are the durable visual baseline for later design QA. No claim is made that every current screen already matches them pixel for pixel.
+- Current Progress: 2026-07-16 the three user-provided source images remain the durable baseline, and an original chat-generated Digital Employee workbench reference is retained beside them for TD010 visual QA. A loopback-only rendered visual-rebaseline QA pass covers the four reference families at `1440`, `1280`, `430` and `390` widths; details are in `evidence/stage07-ui-closure-regressions-2026-07-16.md`. It remains local synthetic visual evidence, not Telegram, provider, PostgreSQL, staging, production or whole-Stage07 acceptance.
 
 ## 1. Purpose And Boundary
 
@@ -24,6 +24,7 @@ Visual resemblance never authorizes a client-side queue, a hidden field, a Bot a
 | --- | --- | --- |
 | [work-queue-atlas-reference.png](assets/stage07/work-queue-atlas-reference.png) | `Work Queue Atlas`: queue-first Home, compact task rows, recent Base rail and personal-assistant dock. | Workspace Home at desktop widths. |
 | [conversation-desk-reference.png](assets/stage07/conversation-desk-reference.png) | `Conversation Desk`: team/personal assistant list, contextual conversation, selected-record summary and explicit confirmation rail. | Future Package 4 Bot/draft screens only after their separate contract gate. |
+| [digital-employee-workbench-reference-v1.png](assets/stage07/digital-employee-workbench-reference-v1.png) | `Digital Employee Workbench`: Base-bound employee directory, safe work-scope canvas, status/draft rail and audit projection. | TD010 management surface at desktop widths. |
 | [workspace-ledger-reference.png](assets/stage07/workspace-ledger-reference.png) | `Workspace Ledger`: dense table canvas, tabbed work modes, table toolbar, row grid and narrow assistant rail. | Base/table/field/view Builder desktop surface. |
 
 The source images are intentionally not used as in-product background images or mock data. They are comparison targets for the rendered interface.

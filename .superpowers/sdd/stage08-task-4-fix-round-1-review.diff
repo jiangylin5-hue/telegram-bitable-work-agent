@@ -1,0 +1,2554 @@
+﻿# Review package: Stage08 Package A Task 4 fix round 1 working-tree scope
+
+## Modified tracked implementation
+diff --git a/backend/app/services/stage06_digital_employees.py b/backend/app/services/stage06_digital_employees.py
+index 41a10b1..bb9f08d 100644
+--- a/backend/app/services/stage06_digital_employees.py
++++ b/backend/app/services/stage06_digital_employees.py
+@@ -12,33 +12,45 @@ from app.models.stage06_runtime import (
+     DigitalEmployee,
+     NotificationRequest,
+     RecordChangeDraft,
+ )
+ from app.services.audit import record_audit_event
+ from app.services.permissions import Actor
+ from app.services.stage06_audit import sanitize_stage06_audit_state
+ from app.services.stage06_platform import (
+     PlatformValidationError,
+     Stage06PlatformUnitOfWork,
++    can_actor_write_record_fields,
++    create_record,
++    get_create_form,
+     get_table_schema,
+     list_view_records,
+     read_base,
+     update_record,
+ )
+ 
+ 
+ class Stage06RuntimeUnitOfWork(Stage06PlatformUnitOfWork, Protocol):
+     pass
+ 
+ 
+ READ_ACTIONS = frozenset({"schema_inspect", "query", "summarize"})
+ WRITE_LIKE_ACTIONS = frozenset({"draft_create", "draft_update", "status_advance"})
++STAGE08_TOOL_CATALOG = (
++    "contact.resolve",
++    "import.preview",
++    "record.query",
++    "record_change_draft.create",
++    "table.summarize",
++    "task.create_draft",
++    "tool_catalog.inspect",
++)
+ 
+ 
+ def create_digital_employee(
+     uow: Stage06RuntimeUnitOfWork,
+     base_id: UUID,
+     *,
+     name: str,
+     description: str,
+     telegram_alias: str | None,
+     accessible_tables: list[str],
+@@ -432,51 +444,140 @@ def list_record_change_drafts(
+ ) -> list[RecordChangeDraft]:
+     return uow.list_record_change_drafts(base_id)
+ 
+ 
+ def confirm_record_change_draft(
+     uow: Stage06RuntimeUnitOfWork,
+     draft_id: UUID,
+     *,
+     actor: Actor,
+ ) -> RecordChangeDraft:
+-    draft = _require_draft(uow, draft_id)
++    draft = _require_draft_transition_lock(uow, draft_id)
+     if draft.status != "pending_confirmation":
+         raise PlatformValidationError("record_change_draft_invalid_state", str(draft_id))
++    if draft.draft_type == "create_record":
++        if draft.record_id is not None:
++            raise PlatformValidationError("record_change_draft_invalid_state", str(draft_id))
++        _assert_create_record_confirmation_allowed(uow, draft, actor)
++        record = create_record(
++            uow,
++            draft.table_id,
++            values=draft.proposed_values,
++            actor=actor,
++        )
++        draft.record_id = record.id
++    elif draft.draft_type == "update_record":
++        if draft.record_id is None:
++            raise PlatformValidationError("record_change_draft_missing_record", str(draft_id))
++        update_record(
++            uow,
++            draft.record_id,
++            values=draft.proposed_values,
++            expected_version=draft.expected_version,
++            actor=actor,
++        )
++    else:
++        raise PlatformValidationError("record_change_draft_type_invalid", draft.draft_type)
+     if draft.record_id is None:
+         raise PlatformValidationError("record_change_draft_missing_record", str(draft_id))
+-    update_record(
+-        uow,
+-        draft.record_id,
+-        values=draft.proposed_values,
+-        expected_version=draft.expected_version,
+-        actor=actor,
+-    )
+     draft.status = "confirmed"
+     _record_runtime_audit(
+         uow,
+         actor=actor,
+         event_type="stage06.record_change_draft_confirmed",
+         entity_type="record_change_draft",
+         entity_id=draft.id,
+         after_state={"record_id": str(draft.record_id), "status": draft.status},
+     )
+     return draft
+ 
+ 
++def resolve_active_workspace_member(
++    uow: Stage06RuntimeUnitOfWork,
++    workspace_id: UUID,
++    workspace_member_id: UUID,
++) -> object:
++    member = uow.get_workspace_member(workspace_member_id)
++    if (
++        member is None
++        or member.workspace_id != workspace_id
++        or member.status != "active"
++    ):
++        raise PlatformValidationError("resource_scope_mismatch", "workspace_member")
++    return member
++
++
++def get_stage08_tool_catalog() -> tuple[str, ...]:
++    return STAGE08_TOOL_CATALOG
++
++
++def create_create_record_draft(
++    uow: Stage06RuntimeUnitOfWork,
++    employee_id: UUID,
++    *,
++    table_id: UUID,
++    proposed_values: dict[str, Any],
++    actor: Actor,
++) -> RecordChangeDraft:
++    employee = _require_employee(uow, employee_id)
++    _assert_employee_action(employee, "draft_create")
++    _assert_table_in_scope(employee, table_id)
++    table = uow.get_table(table_id)
++    if table is None:
++        raise PlatformValidationError("table_not_found", str(table_id))
++    base = read_base(uow, table.base_id)
++    if base.workspace_id != employee.workspace_id:
++        raise PlatformValidationError("resource_scope_mismatch", "employee_table_workspace")
++    _require_active_actor_member(uow, base.workspace_id, actor)
++    create_form = get_create_form(uow, table_id, actor=actor)
++    writable_field_keys = {
++        field["key"]
++        for field in create_form["fields"]
++        if isinstance(field.get("key"), str)
++    }
++    if not create_form["can_create"] or not set(proposed_values).issubset(writable_field_keys):
++        raise PlatformValidationError("record_create_permission_denied", str(table_id))
++    draft = RecordChangeDraft(
++        id=uuid4(),
++        workspace_id=base.workspace_id,
++        base_id=base.id,
++        table_id=table.id,
++        record_id=None,
++        draft_type="create_record",
++        proposed_values=dict(proposed_values),
++        before_values=None,
++        created_by_type="digital_employee",
++        created_by_id=str(employee.id),
++        status="pending_confirmation",
++        confirmation_policy=employee.confirmation_policy,
++        trace_id=f"stage06:draft:{uuid4()}",
++        expected_version=1,
++    )
++    uow.add_record_change_draft(draft)
++    _record_runtime_audit(
++        uow,
++        actor=actor,
++        event_type="stage06.record_change_draft_created",
++        entity_type="record_change_draft",
++        entity_id=draft.id,
++        after_state={"table_id": str(table.id), "status": draft.status},
++    )
++    return draft
++
++
+ def reject_record_change_draft(
+     uow: Stage06RuntimeUnitOfWork,
+     draft_id: UUID,
+     *,
+     actor: Actor,
+ ) -> RecordChangeDraft:
+-    draft = _require_draft(uow, draft_id)
++    draft = _require_draft_transition_lock(uow, draft_id)
+     if draft.status != "pending_confirmation":
+         raise PlatformValidationError("record_change_draft_invalid_state", str(draft_id))
+     draft.status = "rejected"
+     _record_runtime_audit(
+         uow,
+         actor=actor,
+         event_type="stage06.record_change_draft_rejected",
+         entity_type="record_change_draft",
+         entity_id=draft.id,
+         after_state={"status": draft.status},
+@@ -890,40 +991,92 @@ def _require_employee(
+     employee_id: UUID,
+ ) -> DigitalEmployee:
+     employee = uow.get_digital_employee(employee_id)
+     if employee is None:
+         raise PlatformValidationError("digital_employee_not_found", str(employee_id))
+     if employee.status != "active":
+         raise PlatformValidationError("digital_employee_disabled", str(employee_id))
+     return employee
+ 
+ 
++def _require_active_actor_member(
++    uow: Stage06RuntimeUnitOfWork,
++    workspace_id: UUID,
++    actor: Actor,
++) -> None:
++    member = next(
++        (
++            candidate
++            for candidate in uow.list_workspace_members(workspace_id)
++            if candidate.user_id == actor.actor_id and candidate.status == "active"
++        ),
++        None,
++    )
++    if member is None:
++        raise PlatformValidationError("actor_not_workspace_member", actor.actor_id)
++
++
+ def _require_employee_for_update(
+     uow: Stage06RuntimeUnitOfWork,
+     employee_id: UUID,
+ ) -> DigitalEmployee:
+     employee = uow.get_digital_employee(employee_id)
+     if employee is None:
+         raise PlatformValidationError("digital_employee_not_found", str(employee_id))
+     return employee
+ 
+ 
+ def _require_draft(
+     uow: Stage06RuntimeUnitOfWork,
+     draft_id: UUID,
+ ) -> RecordChangeDraft:
+     draft = uow.get_record_change_draft(draft_id)
+     if draft is None:
+         raise PlatformValidationError("record_change_draft_not_found", str(draft_id))
+     return draft
+ 
+ 
++def _require_draft_transition_lock(
++    uow: Stage06RuntimeUnitOfWork,
++    draft_id: UUID,
++) -> RecordChangeDraft:
++    draft = uow.lock_record_change_draft_for_transition(draft_id)
++    if draft is None:
++        raise PlatformValidationError("record_change_draft_not_found", str(draft_id))
++    return draft
++
++
++def _assert_create_record_confirmation_allowed(
++    uow: Stage06RuntimeUnitOfWork,
++    draft: RecordChangeDraft,
++    actor: Actor,
++) -> None:
++    table = uow.get_table(draft.table_id)
++    if table is None:
++        raise PlatformValidationError("table_not_found", str(draft.table_id))
++    base = read_base(uow, table.base_id)
++    if base.id != draft.base_id or base.workspace_id != draft.workspace_id:
++        raise PlatformValidationError("resource_scope_mismatch", "record_change_draft_table")
++    _require_active_actor_member(uow, draft.workspace_id, actor)
++    create_form = get_create_form(uow, draft.table_id, actor=actor)
++    if (
++        not create_form["can_create"]
++        or not can_actor_write_record_fields(
++            uow,
++            draft.table_id,
++            draft.proposed_values.keys(),
++            actor=actor,
++        )
++    ):
++        raise PlatformValidationError("record_create_permission_denied", str(draft.table_id))
++
++
+ def _assert_employee_action(employee: DigitalEmployee, action: str) -> None:
+     if action not in set(employee.allowed_actions):
+         raise PlatformValidationError("digital_employee_action_denied", action)
+ 
+ 
+ def _assert_view_in_scope(employee: DigitalEmployee, view_id: UUID) -> None:
+     if str(view_id) not in set(employee.accessible_views):
+         raise PlatformValidationError("digital_employee_scope_denied", str(view_id))
+ 
+ 
+diff --git a/backend/app/services/stage06_platform.py b/backend/app/services/stage06_platform.py
+index b72ce88..41685da 100644
+--- a/backend/app/services/stage06_platform.py
++++ b/backend/app/services/stage06_platform.py
+@@ -25,20 +25,21 @@ from app.models.stage06_runtime import (
+     DigitalEmployeeMemberGrant,
+     NotificationRequest,
+     RecordChangeDraft,
+ )
+ from app.models.stage06_templates import (
+     ImportJob,
+     PlatformTemplate,
+     TemplateInstallation,
+ )
+ from app.models.stage06_hardening import Stage06IdempotencyRecord
++from app.models.stage08_runtime import Stage08ExecutionTicket
+ from app.models.stage07_telegram import (
+     Stage07TelegramDeepLink,
+     Stage07TelegramDeepLinkDelivery,
+ )
+ from app.schemas.stage06_platform import (
+     ViewInitializationRequest,
+     ViewMemberCommand,
+     ViewPresentationCommand,
+     ViewPresentationPatchRequest,
+ )
+@@ -205,20 +206,26 @@ class Stage06PlatformUnitOfWork(Protocol):
+ 
+     def add_workspace(self, workspace: Workspace) -> None:
+         pass
+ 
+     def add_workspace_member(self, member: WorkspaceMember) -> None:
+         pass
+ 
+     def get_workspace(self, workspace_id: UUID) -> Workspace | None:
+         pass
+ 
++    def lock_workspace_for_stage08_execution(
++        self,
++        workspace_id: UUID,
++    ) -> Workspace | None:
++        pass
++
+     def list_workspace_members(self, workspace_id: UUID) -> list[WorkspaceMember]:
+         pass
+ 
+     def list_workspace_members_for_user(self, user_id: str) -> list[WorkspaceMember]:
+         pass
+ 
+     def get_workspace_member(self, member_id: UUID) -> WorkspaceMember | None:
+         pass
+ 
+     def lock_workspace_member_for_mutation(
+@@ -327,20 +334,42 @@ class Stage06PlatformUnitOfWork(Protocol):
+ 
+     def get_import_job(self, import_job_id: UUID) -> ImportJob | None:
+         pass
+ 
+     def add_digital_employee(self, employee: DigitalEmployee) -> None:
+         pass
+ 
+     def get_digital_employee(self, employee_id: UUID) -> DigitalEmployee | None:
+         pass
+ 
++    def add_execution_ticket(self, ticket: Stage08ExecutionTicket) -> None:
++        pass
++
++    def get_execution_ticket(
++        self,
++        ticket_id: UUID,
++    ) -> Stage08ExecutionTicket | None:
++        pass
++
++    def lock_execution_ticket_for_transition(
++        self,
++        ticket_id: UUID,
++    ) -> Stage08ExecutionTicket | None:
++        pass
++
++    def get_execution_ticket_by_trace(
++        self,
++        workspace_id: UUID,
++        trace_id: str,
++    ) -> Stage08ExecutionTicket | None:
++        pass
++
+     def lock_digital_employee_for_management(
+         self,
+         employee_id: UUID,
+     ) -> DigitalEmployee | None:
+         pass
+ 
+     def list_digital_employees(self, base_id: UUID) -> list[DigitalEmployee]:
+         pass
+ 
+     def add_digital_employee_member_grant(
+@@ -468,20 +497,21 @@ class InMemoryStage06PlatformUnitOfWork:
+     tables: list[PlatformTable] = field(default_factory=list)
+     fields: list[PlatformField] = field(default_factory=list)
+     records: list[PlatformRecord] = field(default_factory=list)
+     record_links: list[RecordLink] = field(default_factory=list)
+     views: list[PlatformView] = field(default_factory=list)
+     view_member_grants: list[ViewMemberGrant] = field(default_factory=list)
+     templates: list[PlatformTemplate] = field(default_factory=list)
+     template_installations: list[TemplateInstallation] = field(default_factory=list)
+     import_jobs: list[ImportJob] = field(default_factory=list)
+     digital_employees: list[DigitalEmployee] = field(default_factory=list)
++    execution_tickets: list[Stage08ExecutionTicket] = field(default_factory=list)
+     digital_employee_member_grants: list[DigitalEmployeeMemberGrant] = field(
+         default_factory=list
+     )
+     record_change_drafts: list[RecordChangeDraft] = field(default_factory=list)
+     notification_requests: list[NotificationRequest] = field(default_factory=list)
+     agent_runs: list[AgentRun] = field(default_factory=list)
+     telegram_bindings: list[Stage06TelegramBinding] = field(default_factory=list)
+     telegram_deep_links: list[Stage07TelegramDeepLink] = field(default_factory=list)
+     telegram_deep_link_deliveries: list[Stage07TelegramDeepLinkDelivery] = field(
+         default_factory=list
+@@ -495,20 +525,26 @@ class InMemoryStage06PlatformUnitOfWork:
+ 
+     def add_workspace(self, workspace: Workspace) -> None:
+         self.workspaces.append(workspace)
+ 
+     def add_workspace_member(self, member: WorkspaceMember) -> None:
+         self.workspace_members.append(member)
+ 
+     def get_workspace(self, workspace_id: UUID) -> Workspace | None:
+         return _find_by_id(self.workspaces, workspace_id)
+ 
++    def lock_workspace_for_stage08_execution(
++        self,
++        workspace_id: UUID,
++    ) -> Workspace | None:
++        return self.get_workspace(workspace_id)
++
+     def list_workspace_members(self, workspace_id: UUID) -> list[WorkspaceMember]:
+         return [
+             member for member in self.workspace_members if member.workspace_id == workspace_id
+         ]
+ 
+     def list_workspace_members_for_user(self, user_id: str) -> list[WorkspaceMember]:
+         return [
+             member for member in self.workspace_members if member.user_id == user_id
+         ]
+ 
+@@ -648,20 +684,49 @@ class InMemoryStage06PlatformUnitOfWork:
+ 
+     def get_import_job(self, import_job_id: UUID) -> ImportJob | None:
+         return _find_by_id(self.import_jobs, import_job_id)
+ 
+     def add_digital_employee(self, employee: DigitalEmployee) -> None:
+         self.digital_employees.append(employee)
+ 
+     def get_digital_employee(self, employee_id: UUID) -> DigitalEmployee | None:
+         return _find_by_id(self.digital_employees, employee_id)
+ 
++    def add_execution_ticket(self, ticket: Stage08ExecutionTicket) -> None:
++        self.execution_tickets.append(ticket)
++
++    def get_execution_ticket(
++        self,
++        ticket_id: UUID,
++    ) -> Stage08ExecutionTicket | None:
++        return _find_by_id(self.execution_tickets, ticket_id)
++
++    def lock_execution_ticket_for_transition(
++        self,
++        ticket_id: UUID,
++    ) -> Stage08ExecutionTicket | None:
++        return self.get_execution_ticket(ticket_id)
++
++    def get_execution_ticket_by_trace(
++        self,
++        workspace_id: UUID,
++        trace_id: str,
++    ) -> Stage08ExecutionTicket | None:
++        return next(
++            (
++                ticket
++                for ticket in self.execution_tickets
++                if ticket.workspace_id == workspace_id and ticket.trace_id == trace_id
++            ),
++            None,
++        )
++
+     def lock_digital_employee_for_management(
+         self,
+         employee_id: UUID,
+     ) -> DigitalEmployee | None:
+         return self.get_digital_employee(employee_id)
+ 
+     def list_digital_employees(self, base_id: UUID) -> list[DigitalEmployee]:
+         return [employee for employee in self.digital_employees if employee.base_id == base_id]
+ 
+     def add_digital_employee_member_grant(
+@@ -852,20 +917,30 @@ class SqlAlchemyStage06PlatformUnitOfWork:
+ 
+     def add_workspace(self, workspace: Workspace) -> None:
+         self.session.add(workspace)
+ 
+     def add_workspace_member(self, member: WorkspaceMember) -> None:
+         self.session.add(member)
+ 
+     def get_workspace(self, workspace_id: UUID) -> Workspace | None:
+         return self.session.get(Workspace, workspace_id)
+ 
++    def lock_workspace_for_stage08_execution(
++        self,
++        workspace_id: UUID,
++    ) -> Workspace | None:
++        return self.session.scalar(
++            select(Workspace)
++            .where(Workspace.id == workspace_id)
++            .with_for_update()
++        )
++
+     def list_workspace_members(self, workspace_id: UUID) -> list[WorkspaceMember]:
+         return list(
+             self.session.scalars(
+                 select(WorkspaceMember).where(
+                     WorkspaceMember.workspace_id == workspace_id
+                 )
+             )
+         )
+ 
+     def list_workspace_members_for_user(self, user_id: str) -> list[WorkspaceMember]:
+@@ -1062,20 +1137,51 @@ class SqlAlchemyStage06PlatformUnitOfWork:
+ 
+     def get_import_job(self, import_job_id: UUID) -> ImportJob | None:
+         return self.session.get(ImportJob, import_job_id)
+ 
+     def add_digital_employee(self, employee: DigitalEmployee) -> None:
+         self.session.add(employee)
+ 
+     def get_digital_employee(self, employee_id: UUID) -> DigitalEmployee | None:
+         return self.session.get(DigitalEmployee, employee_id)
+ 
++    def add_execution_ticket(self, ticket: Stage08ExecutionTicket) -> None:
++        self.session.add(ticket)
++
++    def get_execution_ticket(
++        self,
++        ticket_id: UUID,
++    ) -> Stage08ExecutionTicket | None:
++        return self.session.get(Stage08ExecutionTicket, ticket_id)
++
++    def lock_execution_ticket_for_transition(
++        self,
++        ticket_id: UUID,
++    ) -> Stage08ExecutionTicket | None:
++        return self.session.scalar(
++            select(Stage08ExecutionTicket)
++            .where(Stage08ExecutionTicket.id == ticket_id)
++            .with_for_update()
++        )
++
++    def get_execution_ticket_by_trace(
++        self,
++        workspace_id: UUID,
++        trace_id: str,
++    ) -> Stage08ExecutionTicket | None:
++        return self.session.scalar(
++            select(Stage08ExecutionTicket).where(
++                Stage08ExecutionTicket.workspace_id == workspace_id,
++                Stage08ExecutionTicket.trace_id == trace_id,
++            )
++        )
++
+     def lock_digital_employee_for_management(
+         self,
+         employee_id: UUID,
+     ) -> DigitalEmployee | None:
+         return self.session.scalar(
+             select(DigitalEmployee)
+             .where(DigitalEmployee.id == employee_id)
+             .with_for_update()
+         )
+ 
+
+## New gateway and tests
+diff --git a/backend/app/runtime/stage08_tool_gateway.py b/backend/app/runtime/stage08_tool_gateway.py
+new file mode 100644
+index 0000000..4d9eb9e
+--- /dev/null
++++ b/backend/app/runtime/stage08_tool_gateway.py
+@@ -0,0 +1,403 @@
++from __future__ import annotations
++
++from collections.abc import Callable
++from typing import Any
++from uuid import UUID
++
++from app.models.stage08_runtime import Stage08ExecutionTicket
++from app.runtime.stage08_contracts import ExecutionTicketState, RedactedToolResult, ToolInvocation, ToolName
++from app.services.permissions import Actor
++from app.services.stage06_digital_employees import (
++    create_create_record_draft,
++    get_stage08_tool_catalog,
++    invoke_digital_employee,
++    resolve_active_workspace_member,
++)
++from app.services.stage06_platform import PlatformValidationError, Stage06PlatformUnitOfWork
++from app.services.stage06_templates import read_import_job
++from app.services.stage08_runtime import transition_execution_ticket
++
++
++_TOOL_ACTIONS: dict[ToolName, str] = {
++    "record.query": "query",
++    "table.summarize": "summarize",
++    "contact.resolve": "contact.resolve",
++    "import.preview": "import.preview",
++    "tool_catalog.inspect": "tool_catalog.inspect",
++    "task.create_draft": "draft_create",
++    "record_change_draft.create": "draft_update",
++}
++_SENSITIVE_INPUT_KEYS = frozenset({"prompt", "response", "api_key", "token", "raw_text"})
++
++
++class Stage08ToolGatewayError(RuntimeError):
++    def __init__(self, code: str) -> None:
++        self.code = code
++        super().__init__(code)
++
++
++class Stage08ToolGateway:
++    def __init__(self) -> None:
++        self._registry: dict[str, Callable[[Stage06PlatformUnitOfWork, Stage08ExecutionTicket, Actor, Any], RedactedToolResult]] = {
++            "record.query": self._record_query,
++            "table.summarize": self._table_summarize,
++            "contact.resolve": self._contact_resolve,
++            "import.preview": self._import_preview,
++            "tool_catalog.inspect": self._tool_catalog_inspect,
++            "task.create_draft": self._task_create_draft,
++            "record_change_draft.create": self._record_change_draft_create,
++        }
++
++    def execute(
++        self,
++        uow: Stage06PlatformUnitOfWork,
++        ticket: Stage08ExecutionTicket,
++        invocation: ToolInvocation,
++    ) -> RedactedToolResult:
++        tool_name = invocation.tool_name
++        tracked = self._locked_planned_ticket(uow, ticket.id)
++        try:
++            actor = self._begin(uow, tracked, tool_name)
++        except Stage08ToolGatewayError as exc:
++            self._complete_denied(uow, tracked, tool_name, exc.code)
++            raise
++        try:
++            result = self._registry[tool_name](uow, tracked, actor, invocation.input)
++        except Stage08ToolGatewayError as exc:
++            self._complete_denied(uow, tracked, tool_name, exc.code)
++            raise
++        except PlatformValidationError as exc:
++            self._complete_denied(uow, tracked, tool_name, _platform_error_code(exc))
++            raise Stage08ToolGatewayError(_platform_error_code(exc)) from None
++        except Exception:
++            self._complete_failed(uow, tracked, tool_name)
++            raise Stage08ToolGatewayError("tool_execution_failed") from None
++        tracked.tool_summary = [*tracked.tool_summary, result.model_dump()]
++        transition_execution_ticket(uow, tracked, ExecutionTicketState.succeeded)
++        return result
++
++    def _begin(
++        self,
++        uow: Stage06PlatformUnitOfWork,
++        tracked: Stage08ExecutionTicket,
++        tool_name: str,
++    ) -> Actor:
++        transition_execution_ticket(uow, tracked, ExecutionTicketState.executing)
++        if tool_name not in _TOOL_ACTIONS:
++            raise Stage08ToolGatewayError("tool_not_registered")
++        if tracked.action != tool_name:
++            raise Stage08ToolGatewayError("policy_denied")
++        employee = uow.get_digital_employee(tracked.employee_id)
++        if (
++            employee is None
++            or employee.status != "active"
++            or employee.workspace_id != tracked.workspace_id
++            or _TOOL_ACTIONS[tool_name] not in set(employee.allowed_actions)
++        ):
++            raise Stage08ToolGatewayError("policy_denied")
++        actor = _actor_for_ticket(uow, tracked)
++        return actor
++
++    def _locked_planned_ticket(
++        self,
++        uow: Stage06PlatformUnitOfWork,
++        ticket_id: UUID,
++    ) -> Stage08ExecutionTicket:
++        if not isinstance(ticket_id, UUID):
++            raise Stage08ToolGatewayError("ticket_not_found")
++        tracked = uow.lock_execution_ticket_for_transition(ticket_id)
++        if tracked is None:
++            raise Stage08ToolGatewayError("ticket_not_found")
++        if tracked.status != ExecutionTicketState.planned.value:
++            raise Stage08ToolGatewayError("ticket_not_planned")
++        return tracked
++
++    def _complete_denied(
++        self,
++        uow: Stage06PlatformUnitOfWork,
++        ticket: Stage08ExecutionTicket,
++        tool_name: object,
++        code: str,
++    ) -> None:
++        self._append_error_summary(ticket, tool_name, "denied", code)
++        transition_execution_ticket(uow, ticket, ExecutionTicketState.denied)
++
++    def _complete_failed(
++        self,
++        uow: Stage06PlatformUnitOfWork,
++        ticket: Stage08ExecutionTicket,
++        tool_name: object,
++    ) -> None:
++        self._append_error_summary(ticket, tool_name, "failed", "tool_execution_failed")
++        transition_execution_ticket(uow, ticket, ExecutionTicketState.failed)
++
++    def _append_error_summary(
++        self,
++        ticket: Stage08ExecutionTicket,
++        tool_name: object,
++        status: str,
++        error_code: str,
++    ) -> None:
++        if tool_name not in _TOOL_ACTIONS:
++            return
++        ticket.tool_summary = [
++            *ticket.tool_summary,
++            RedactedToolResult(
++                tool_name=tool_name,
++                status=status,
++                entity_refs=[],
++                visible_field_keys=[],
++                counts={},
++                error_code=error_code,
++            ).model_dump(),
++        ]
++
++    def _record_query(
++        self,
++        uow: Stage06PlatformUnitOfWork,
++        ticket: Stage08ExecutionTicket,
++        actor: Actor,
++        value: Any,
++    ) -> RedactedToolResult:
++        view_id = _uuid_input(value, "view_id")
++        response = invoke_digital_employee(
++            uow,
++            ticket.employee_id,
++            action="query",
++            actor=actor,
++            view_id=view_id,
++        )
++        return _view_result("record.query", view_id, response)
++
++    def _table_summarize(
++        self,
++        uow: Stage06PlatformUnitOfWork,
++        ticket: Stage08ExecutionTicket,
++        actor: Actor,
++        value: Any,
++    ) -> RedactedToolResult:
++        view_id = _uuid_input(value, "view_id")
++        response = invoke_digital_employee(
++            uow,
++            ticket.employee_id,
++            action="summarize",
++            actor=actor,
++            view_id=view_id,
++        )
++        return _view_result("table.summarize", view_id, response)
++
++    def _contact_resolve(
++        self,
++        uow: Stage06PlatformUnitOfWork,
++        ticket: Stage08ExecutionTicket,
++        actor: Actor,
++        value: Any,
++    ) -> RedactedToolResult:
++        member_id = _uuid_input(value, "workspace_member_id")
++        member = resolve_active_workspace_member(uow, ticket.workspace_id, member_id)
++        return RedactedToolResult(
++            tool_name="contact.resolve",
++            status="succeeded",
++            entity_refs=[str(member.id)],
++            visible_field_keys=[],
++            counts={"resolved_count": 1},
++            error_code=None,
++        )
++
++    def _import_preview(
++        self,
++        uow: Stage06PlatformUnitOfWork,
++        ticket: Stage08ExecutionTicket,
++        actor: Actor,
++        value: Any,
++    ) -> RedactedToolResult:
++        import_job_id = _uuid_input(value, "import_job_id")
++        job = read_import_job(uow, import_job_id)
++        if job.workspace_id != ticket.workspace_id or job.status != "awaiting_confirmation":
++            raise Stage08ToolGatewayError("policy_denied")
++        row_count = len(job.file_ref.get("rows", [])) if isinstance(job.file_ref, dict) else 0
++        field_count = len(job.detected_schema) if isinstance(job.detected_schema, list) else 0
++        return RedactedToolResult(
++            tool_name="import.preview",
++            status="succeeded",
++            entity_refs=[str(job.id)],
++            visible_field_keys=[],
++            counts={"row_count": row_count, "field_count": field_count},
++            error_code=None,
++        )
++
++    def _tool_catalog_inspect(
++        self,
++        uow: Stage06PlatformUnitOfWork,
++        ticket: Stage08ExecutionTicket,
++        actor: Actor,
++        value: Any,
++    ) -> RedactedToolResult:
++        _empty_input(value)
++        catalog = get_stage08_tool_catalog()
++        return RedactedToolResult(
++            tool_name="tool_catalog.inspect",
++            status="succeeded",
++            entity_refs=list(catalog),
++            visible_field_keys=[],
++            counts={"tool_count": len(catalog)},
++            error_code=None,
++        )
++
++    def _task_create_draft(
++        self,
++        uow: Stage06PlatformUnitOfWork,
++        ticket: Stage08ExecutionTicket,
++        actor: Actor,
++        value: Any,
++    ) -> RedactedToolResult:
++        table_id, proposed_values = _draft_input(value, "table_id")
++        draft = create_create_record_draft(
++            uow,
++            ticket.employee_id,
++            table_id=table_id,
++            proposed_values=proposed_values,
++            actor=actor,
++        )
++        return _draft_result("task.create_draft", draft.id, table_id)
++
++    def _record_change_draft_create(
++        self,
++        uow: Stage06PlatformUnitOfWork,
++        ticket: Stage08ExecutionTicket,
++        actor: Actor,
++        value: Any,
++    ) -> RedactedToolResult:
++        record_id, proposed_values = _draft_input(value, "record_id")
++        response = invoke_digital_employee(
++            uow,
++            ticket.employee_id,
++            action="draft_update",
++            actor=actor,
++            record_id=record_id,
++            proposed_values=proposed_values,
++        )
++        draft_id = _response_uuid(response, "draft_id")
++        return _draft_result("record_change_draft.create", draft_id, record_id)
++
++
++def _actor_for_ticket(uow: Stage06PlatformUnitOfWork, ticket: Stage08ExecutionTicket) -> Actor:
++    if not isinstance(ticket.actor_id, str) or not ticket.actor_id.startswith("user:"):
++        raise Stage08ToolGatewayError("policy_denied")
++    user_id = ticket.actor_id.removeprefix("user:")
++    if not user_id or not user_id.strip():
++        raise Stage08ToolGatewayError("policy_denied")
++    member = next(
++        (
++            candidate
++            for candidate in uow.list_workspace_members(ticket.workspace_id)
++            if candidate.user_id == user_id and candidate.status == "active"
++        ),
++        None,
++    )
++    if member is None:
++        raise Stage08ToolGatewayError("policy_denied")
++    return Actor(actor_type="user", actor_id=user_id, role=member.role)
++
++
++def _uuid_input(value: Any, key: str) -> UUID:
++    if not isinstance(value, dict) or set(value) != {key}:
++        raise Stage08ToolGatewayError("invalid_input")
++    raw = value.get(key)
++    if not isinstance(raw, str):
++        raise Stage08ToolGatewayError("invalid_input")
++    try:
++        return UUID(raw)
++    except (TypeError, ValueError):
++        raise Stage08ToolGatewayError("invalid_input") from None
++
++
++def _draft_input(value: Any, id_key: str) -> tuple[UUID, dict[str, Any]]:
++    if not isinstance(value, dict) or set(value) != {id_key, "proposed_values"}:
++        raise Stage08ToolGatewayError("invalid_input")
++    record_id = _uuid_input({id_key: value.get(id_key)}, id_key)
++    proposed_values = value.get("proposed_values")
++    if not isinstance(proposed_values, dict) or not _safe_json_value(proposed_values):
++        raise Stage08ToolGatewayError("invalid_input")
++    return record_id, dict(proposed_values)
++
++
++def _empty_input(value: Any) -> None:
++    if not isinstance(value, dict) or value:
++        raise Stage08ToolGatewayError("invalid_input")
++
++
++def _safe_json_value(value: Any) -> bool:
++    if value is None or type(value) in {str, int, float, bool}:
++        return True
++    if isinstance(value, list):
++        return all(_safe_json_value(item) for item in value)
++    if isinstance(value, dict):
++        return all(
++            isinstance(key, str)
++            and key.casefold() not in _SENSITIVE_INPUT_KEYS
++            and _safe_json_value(item)
++            for key, item in value.items()
++        )
++    return False
++
++
++def _view_result(tool_name: ToolName, view_id: UUID, response: dict[str, Any]) -> RedactedToolResult:
++    records = response.get("records")
++    if not isinstance(records, list):
++        raise Stage08ToolGatewayError("tool_execution_failed")
++    visible_field_keys = sorted(
++        {
++            key
++            for record in records
++            if isinstance(record, dict)
++            for key in record
++            if isinstance(key, str)
++        }
++    )
++    record_count = response.get("record_count")
++    if type(record_count) is not int or record_count < 0:
++        raise Stage08ToolGatewayError("tool_execution_failed")
++    return RedactedToolResult(
++        tool_name=tool_name,
++        status="succeeded",
++        entity_refs=[str(view_id)],
++        visible_field_keys=visible_field_keys,
++        counts={"record_count": record_count},
++        error_code=None,
++    )
++
++
++def _draft_result(tool_name: ToolName, draft_id: UUID, entity_id: UUID) -> RedactedToolResult:
++    return RedactedToolResult(
++        tool_name=tool_name,
++        status="succeeded",
++        entity_refs=[str(draft_id), str(entity_id)],
++        visible_field_keys=[],
++        counts={"draft_count": 1, "confirmation_required": 1},
++        error_code=None,
++    )
++
++
++def _response_uuid(response: dict[str, Any], key: str) -> UUID:
++    value = response.get(key)
++    if not isinstance(value, str):
++        raise Stage08ToolGatewayError("tool_execution_failed")
++    try:
++        return UUID(value)
++    except ValueError:
++        raise Stage08ToolGatewayError("tool_execution_failed") from None
++
++
++def _platform_error_code(exc: PlatformValidationError) -> str:
++    if exc.code in {"record_not_found", "view_not_found", "table_not_found"}:
++        return "not_found"
++    if exc.code in {
++        "digital_employee_action_denied",
++        "digital_employee_scope_denied",
++        "record_create_permission_denied",
++        "resource_scope_mismatch",
++        "actor_not_workspace_member",
++    }:
++        return "permission_denied"
++    return "tool_execution_failed"
+diff --git a/backend/tests/unit/test_stage08_tool_gateway.py b/backend/tests/unit/test_stage08_tool_gateway.py
+new file mode 100644
+index 0000000..5adf4d5
+--- /dev/null
++++ b/backend/tests/unit/test_stage08_tool_gateway.py
+@@ -0,0 +1,462 @@
++from __future__ import annotations
++
++import json
++from uuid import UUID, uuid4
++
++import pytest
++
++from app.models.stage06_templates import ImportJob
++from app.models.stage06_platform import WorkspaceMember
++from app.models.stage08_runtime import Stage08ExecutionTicket
++from app.runtime.stage08_contracts import ExecutionBudget, ExecutionTicketState, ToolInvocation
++from app.runtime.stage08_tool_gateway import Stage08ToolGateway, Stage08ToolGatewayError
++from app.services.permissions import Actor
++from app.services.stage06_digital_employees import (
++    confirm_record_change_draft,
++    create_digital_employee,
++    reject_record_change_draft,
++)
++from app.services.stage06_platform import (
++    InMemoryStage06PlatformUnitOfWork,
++    PlatformValidationError,
++    create_base,
++    create_field,
++    create_form_view,
++    create_record,
++    create_table,
++    create_workspace,
++)
++from app.services.stage08_runtime import begin_execution_plan
++
++
++def test_record_query_returns_visible_field_keys_and_count() -> None:
++    fixture = _gateway_fixture()
++    employee = fixture.employee(actions=["query"], views=[fixture.view.id])
++
++    result = fixture.execute(employee, "record.query", {"view_id": str(fixture.view.id)})
++
++    assert result.visible_field_keys == ["status"]
++    assert result.counts == {"record_count": 1}
++    assert result.entity_refs == [str(fixture.view.id)]
++    assert result.error_code is None
++
++
++def test_table_summarize_returns_only_projection_metadata() -> None:
++    fixture = _gateway_fixture()
++    employee = fixture.employee(actions=["summarize"], views=[fixture.view.id])
++
++    result = fixture.execute(employee, "table.summarize", {"view_id": str(fixture.view.id)})
++
++    assert result.visible_field_keys == ["status"]
++    assert result.counts == {"record_count": 1}
++    assert result.entity_refs == [str(fixture.view.id)]
++
++
++def test_contact_resolve_returns_only_member_reference_and_count() -> None:
++    fixture = _gateway_fixture()
++    employee = fixture.employee(actions=["contact.resolve"])
++
++    result = fixture.execute(
++        employee,
++        "contact.resolve",
++        {"workspace_member_id": str(fixture.operator_member.id)},
++    )
++
++    assert result.entity_refs == [str(fixture.operator_member.id)]
++    assert result.visible_field_keys == []
++    assert result.counts == {"resolved_count": 1}
++    assert "operator-1" not in result.model_dump_json()
++
++
++def test_import_preview_returns_only_import_metadata_counts() -> None:
++    fixture = _gateway_fixture()
++    employee = fixture.employee(actions=["import.preview"])
++    import_job = ImportJob(
++        id=uuid4(),
++        workspace_id=fixture.workspace.id,
++        base_id=None,
++        source_type="csv",
++        file_ref={"filename": "private.csv", "rows": [{"status": "open"}, {"status": "closed"}]},
++        detected_schema=[{"key": "status"}, {"key": "private"}],
++        preview_rows=[{"status": "open"}],
++        mapping=[],
++        status="awaiting_confirmation",
++        created_by_user_id="operator-1",
++        error_summary=None,
++    )
++    fixture.uow.add_import_job(import_job)
++
++    result = fixture.execute(
++        employee,
++        "import.preview",
++        {"import_job_id": str(import_job.id)},
++    )
++
++    assert result.entity_refs == [str(import_job.id)]
++    assert result.visible_field_keys == []
++    assert result.counts == {"row_count": 2, "field_count": 2}
++    assert "private.csv" not in result.model_dump_json()
++
++
++def test_tool_catalog_returns_exact_allowlist_without_manifest_text() -> None:
++    fixture = _gateway_fixture()
++    employee = fixture.employee(actions=["tool_catalog.inspect"])
++
++    result = fixture.execute(employee, "tool_catalog.inspect", {})
++
++    assert result.counts == {"tool_count": 7}
++    assert result.entity_refs == [
++        "contact.resolve",
++        "import.preview",
++        "record.query",
++        "record_change_draft.create",
++        "table.summarize",
++        "task.create_draft",
++        "tool_catalog.inspect",
++    ]
++    assert result.visible_field_keys == []
++
++
++def test_task_create_draft_does_not_create_record_until_confirmed() -> None:
++    fixture = _gateway_fixture(with_record=False)
++    employee = fixture.employee(actions=["draft_create"], tables=[fixture.table.id])
++    proposed_values = {"status": "open"}
++
++    result = fixture.execute(
++        employee,
++        "task.create_draft",
++        {"table_id": str(fixture.table.id), "proposed_values": proposed_values},
++    )
++
++    assert len(fixture.uow.records) == 0
++    assert len(fixture.uow.record_change_drafts) == 1
++    draft = fixture.uow.record_change_drafts[0]
++    assert draft.draft_type == "create_record"
++    assert draft.record_id is None
++    assert draft.status == "pending_confirmation"
++    assert result.entity_refs == [str(draft.id), str(fixture.table.id)]
++    assert result.counts == {"draft_count": 1, "confirmation_required": 1}
++    assert "proposed_values" not in result.model_dump_json()
++
++    confirm_record_change_draft(fixture.uow, draft.id, actor=fixture.operator)
++
++    assert draft.status == "confirmed"
++    assert draft.record_id is not None
++    assert len(fixture.uow.records) == 1
++    assert fixture.uow.records[0].values == proposed_values
++    assert "proposed_values" not in _persisted_gateway_text(fixture)
++
++
++def test_rejected_task_create_draft_never_creates_record() -> None:
++    fixture = _gateway_fixture(with_record=False)
++    employee = fixture.employee(actions=["draft_create"], tables=[fixture.table.id])
++
++    fixture.execute(
++        employee,
++        "task.create_draft",
++        {"table_id": str(fixture.table.id), "proposed_values": {"status": "open"}},
++    )
++    draft = fixture.uow.record_change_drafts[0]
++    reject_record_change_draft(fixture.uow, draft.id, actor=fixture.operator)
++
++    assert draft.status == "rejected"
++    assert fixture.uow.records == []
++
++
++def test_record_change_draft_create_is_redacted_and_does_not_write_record() -> None:
++    fixture = _gateway_fixture()
++    employee = fixture.employee(
++        actions=["draft_update"],
++        tables=[fixture.table.id],
++        views=[fixture.view.id],
++    )
++    original_version = fixture.record.version
++
++    result = fixture.execute(
++        employee,
++        "record_change_draft.create",
++        {"record_id": str(fixture.record.id), "proposed_values": {"status": "closed"}},
++    )
++
++    draft = fixture.uow.record_change_drafts[0]
++    assert fixture.record.values["status"] == "open"
++    assert fixture.record.version == original_version
++    assert draft.status == "pending_confirmation"
++    assert result.entity_refs == [str(draft.id), str(fixture.record.id)]
++    assert result.counts == {"draft_count": 1, "confirmation_required": 1}
++    assert "proposed_values" not in _persisted_gateway_text(fixture)
++
++
++def test_gateway_fails_closed_for_unknown_tool_invalid_input_denied_policy_and_terminal_ticket() -> None:
++    fixture = _gateway_fixture()
++    employee = fixture.employee(actions=["query"], views=[fixture.view.id])
++    ticket = fixture.ticket(employee, "record.query")
++    unknown = ToolInvocation.model_construct(tool_name="unknown.tool", input={})
++
++    with pytest.raises(Stage08ToolGatewayError, match="tool_not_registered"):
++        fixture.gateway.execute(fixture.uow, ticket, unknown)
++    assert ticket.status == "denied"
++    assert fixture.uow.agent_runs == []
++
++    invalid_ticket = fixture.ticket(employee, "record.query", trace_id="invalid-input")
++    with pytest.raises(Stage08ToolGatewayError, match="invalid_input"):
++        fixture.gateway.execute(
++            fixture.uow,
++            invalid_ticket,
++            ToolInvocation(tool_name="record.query", input={"view_id": "not-a-uuid"}),
++        )
++    assert invalid_ticket.status == "denied"
++
++    denied_ticket = fixture.ticket(employee, "record.query", trace_id="policy-denied")
++    employee.allowed_actions = []
++    with pytest.raises(Stage08ToolGatewayError, match="policy_denied"):
++        fixture.gateway.execute(
++            fixture.uow,
++            denied_ticket,
++            ToolInvocation(tool_name="record.query", input={"view_id": str(fixture.view.id)}),
++        )
++    assert denied_ticket.status == "denied"
++
++    employee.allowed_actions = ["query"]
++    completed_ticket = fixture.ticket(employee, "record.query", trace_id="completed")
++    fixture.gateway.execute(
++        fixture.uow,
++        completed_ticket,
++        ToolInvocation(tool_name="record.query", input={"view_id": str(fixture.view.id)}),
++    )
++    with pytest.raises(Stage08ToolGatewayError, match="ticket_not_planned"):
++        fixture.gateway.execute(
++            fixture.uow,
++            completed_ticket,
++            ToolInvocation(tool_name="record.query", input={"view_id": str(fixture.view.id)}),
++        )
++    assert completed_ticket.status == "succeeded"
++
++
++def test_gateway_uses_only_canonical_ticket_after_detached_employee_and_actor_forgery() -> None:
++    fixture = _gateway_fixture()
++    canonical_employee = fixture.employee(actions=["query"], views=[fixture.view.id])
++    forged_employee = fixture.employee(actions=["query"], views=[fixture.view.id])
++    ticket = fixture.ticket(canonical_employee, "record.query")
++    detached = Stage08ExecutionTicket(
++        id=ticket.id,
++        workspace_id=uuid4(),
++        employee_id=forged_employee.id,
++        actor_id="user:owner-1",
++        action="record.query",
++        trace_id="forged",
++        request_fingerprint="f" * 64,
++        status="planned",
++        budget={},
++        tool_summary=[],
++        completed_at=None,
++    )
++
++    result = fixture.gateway.execute(
++        fixture.uow,
++        detached,
++        ToolInvocation(tool_name="record.query", input={"view_id": str(fixture.view.id)}),
++    )
++
++    assert result.visible_field_keys == ["status"]
++    assert fixture.uow.agent_runs[-1].agent_name == canonical_employee.name
++    assert ticket.status == "succeeded"
++    assert len(ticket.tool_summary) == 1
++    assert detached.status == "planned"
++    assert detached.tool_summary == []
++
++
++def test_gateway_rejects_detached_workspace_scope_without_calling_adapter() -> None:
++    fixture = _gateway_fixture()
++    employee = fixture.employee(actions=["contact.resolve"])
++    ticket = fixture.ticket(employee, "contact.resolve")
++    foreign_workspace = create_workspace(
++        fixture.uow,
++        name="Foreign",
++        owner_user_id="foreign-owner",
++        actor=fixture.owner,
++    )
++    foreign_member = WorkspaceMember(
++        id=uuid4(),
++        workspace_id=foreign_workspace.id,
++        user_id="foreign-user",
++        role="owner",
++        status="active",
++        version=1,
++    )
++    fixture.uow.add_workspace_member(foreign_member)
++    detached = Stage08ExecutionTicket(
++        id=ticket.id,
++        workspace_id=foreign_workspace.id,
++        employee_id=employee.id,
++        actor_id="user:foreign-user",
++        action="contact.resolve",
++        trace_id="forged-workspace",
++        request_fingerprint="f" * 64,
++        status="planned",
++        budget={},
++        tool_summary=[],
++        completed_at=None,
++    )
++
++    with pytest.raises(Stage08ToolGatewayError, match="permission_denied"):
++        fixture.gateway.execute(
++            fixture.uow,
++            detached,
++            ToolInvocation(
++                tool_name="contact.resolve",
++                input={"workspace_member_id": str(foreign_member.id)},
++            ),
++        )
++
++    assert ticket.status == "denied"
++    assert len(ticket.tool_summary) == 1
++    assert detached.status == "planned"
++    assert detached.tool_summary == []
++
++
++@pytest.mark.parametrize("confirmation_actor", [
++    Actor(actor_type="user", actor_id="operator-1", role="operator"),
++    Actor(actor_type="user", actor_id="viewer-1", role="viewer"),
++])
++def test_create_record_draft_confirmation_revalidates_current_actor_write_access(
++    confirmation_actor: Actor,
++) -> None:
++    fixture = _gateway_fixture(with_record=False)
++    employee = fixture.employee(actions=["draft_create"], tables=[fixture.table.id])
++    fixture.uow.add_workspace_member(
++        WorkspaceMember(
++            id=uuid4(),
++            workspace_id=fixture.workspace.id,
++            user_id="viewer-1",
++            role="viewer",
++            status="active",
++            version=1,
++        )
++    )
++    fixture.execute(
++        employee,
++        "task.create_draft",
++        {"table_id": str(fixture.table.id), "proposed_values": {"status": "open"}},
++    )
++    draft = fixture.uow.record_change_drafts[0]
++    if confirmation_actor.actor_id == "operator-1":
++        fixture.uow.fields[0].permission_policy = {"operator": "read", "owner": "write"}
++
++    with pytest.raises(PlatformValidationError):
++        confirm_record_change_draft(fixture.uow, draft.id, actor=confirmation_actor)
++
++    assert draft.status == "pending_confirmation"
++    assert draft.record_id is None
++    assert fixture.uow.records == []
++
++
++def test_create_record_draft_confirmation_rejects_revoked_workspace_membership() -> None:
++    fixture = _gateway_fixture(with_record=False)
++    employee = fixture.employee(actions=["draft_create"], tables=[fixture.table.id])
++    fixture.execute(
++        employee,
++        "task.create_draft",
++        {"table_id": str(fixture.table.id), "proposed_values": {"status": "open"}},
++    )
++    draft = fixture.uow.record_change_drafts[0]
++    fixture.operator_member.status = "inactive"
++
++    with pytest.raises(PlatformValidationError):
++        confirm_record_change_draft(fixture.uow, draft.id, actor=fixture.operator)
++
++    assert draft.status == "pending_confirmation"
++    assert draft.record_id is None
++    assert fixture.uow.records == []
++
++
++class _GatewayFixture:
++    def __init__(self, *, with_record: bool = True) -> None:
++        self.uow = InMemoryStage06PlatformUnitOfWork()
++        self.owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
++        self.operator = Actor(actor_type="user", actor_id="operator-1", role="operator")
++        self.workspace = create_workspace(
++            self.uow,
++            name="Stage08 Gateway",
++            owner_user_id=self.owner.actor_id,
++            actor=self.owner,
++        )
++        self.base = create_base(self.uow, self.workspace.id, name="Gateway", actor=self.owner)
++        self.operator_member = self.uow.workspace_members[0].__class__(
++            id=uuid4(),
++            workspace_id=self.workspace.id,
++            user_id=self.operator.actor_id,
++            role=self.operator.role,
++            status="active",
++            version=1,
++        )
++        self.uow.add_workspace_member(self.operator_member)
++        self.table = create_table(self.uow, self.base.id, name="Tasks", key="tasks", actor=self.owner)
++        create_field(self.uow, self.table.id, name="Status", key="status", field_type="status", permission_policy={"operator": "write", "owner": "write"}, actor=self.owner)
++        create_field(self.uow, self.table.id, name="Internal", key="internal", field_type="text", permission_policy={"operator": "hidden", "owner": "write"}, actor=self.owner)
++        self.record = None
++        if with_record:
++            self.record = create_record(self.uow, self.table.id, values={"status": "open", "internal": "secret"}, actor=self.owner)
++        self.view = create_form_view(
++            self.uow,
++            self.base.id,
++            self.table.id,
++            name="Task Grid",
++            view_type="grid",
++            config={"fields": ["status", "internal"]},
++            actor=self.owner,
++        )
++        self.gateway = Stage08ToolGateway()
++
++    def employee(self, *, actions: list[str], tables: list[UUID] | None = None, views: list[UUID] | None = None):
++        return create_digital_employee(
++            self.uow,
++            self.base.id,
++            name=f"Employee {len(self.uow.digital_employees)}",
++            description="Gateway test employee",
++            telegram_alias=None,
++            accessible_tables=[str(table_id) for table_id in tables or []],
++            accessible_views=[str(view_id) for view_id in views or []],
++            allowed_actions=actions,
++            actor=self.owner,
++        )
++
++    def ticket(self, employee, tool_name: str, *, trace_id: str | None = None):
++        from app.runtime.stage08_contracts import ExecutionPlan
++
++        return begin_execution_plan(
++            self.uow,
++            ExecutionPlan(
++                ticket_id=str(uuid4()),
++                workspace_id=str(self.workspace.id),
++                employee_id=str(employee.id),
++                actor="user:operator-1",
++                action=tool_name,
++                trace_id=trace_id or str(uuid4()),
++                idempotency_key=str(uuid4()),
++                state=ExecutionTicketState.planned,
++                budget=ExecutionBudget(max_tool_calls=1, max_wall_time_ms=100, max_graph_depth=1, max_retries=0, max_retrieval_chunks=0),
++                invocations=[ToolInvocation(tool_name=tool_name, input={})],
++            ),
++        )
++
++    def execute(self, employee, tool_name: str, tool_input: dict[str, object]):
++        return self.gateway.execute(self.uow, self.ticket(employee, tool_name), ToolInvocation(tool_name=tool_name, input=tool_input))
++
++
++def _gateway_fixture(*, with_record: bool = True) -> _GatewayFixture:
++    return _GatewayFixture(with_record=with_record)
++
++
++def _persisted_gateway_text(fixture: _GatewayFixture) -> str:
++    return json.dumps(
++        {
++            "ticket_summaries": [ticket.tool_summary for ticket in fixture.uow.execution_tickets],
++            "audits": [
++                {"before": event.before_state, "after": event.after_state}
++                for event in fixture.uow.audit_events
++            ],
++        },
++        default=str,
++        sort_keys=True,
++    )
+diff --git a/backend/tests/integration/test_stage08_runtime_postgres.py b/backend/tests/integration/test_stage08_runtime_postgres.py
+new file mode 100644
+index 0000000..473df97
+--- /dev/null
++++ b/backend/tests/integration/test_stage08_runtime_postgres.py
+@@ -0,0 +1,669 @@
++from __future__ import annotations
++
++import os
++import re
++import time
++from concurrent.futures import ThreadPoolExecutor
++from threading import Event
++from uuid import uuid4
++
++import pytest
++from sqlalchemy import func, inspect, select
++from sqlalchemy.exc import IntegrityError
++
++from app.models.agent import AgentRun
++from app.models.stage06_platform import PlatformRecord, WorkspaceMember
++from app.models.stage06_runtime import DigitalEmployee, RecordChangeDraft
++from app.models.stage08_runtime import Stage08ExecutionTicket
++from app.models.stage06_hardening import Stage06IdempotencyRecord
++from app.runtime.stage08_contracts import (
++    ExecutionBudget,
++    ExecutionPlan,
++    ExecutionTicketState,
++    ToolInvocation,
++)
++from app.runtime.stage08_tool_gateway import Stage08ToolGateway, Stage08ToolGatewayError
++from app.services.permissions import Actor
++from app.services.stage06_digital_employees import (
++    confirm_record_change_draft,
++    create_create_record_draft,
++    create_digital_employee,
++    reject_record_change_draft,
++)
++from app.services.stage06_platform import (
++    InMemoryStage06PlatformUnitOfWork,
++    SqlAlchemyStage06PlatformUnitOfWork,
++    create_base,
++    create_field,
++    create_form_view,
++    create_record,
++    create_table,
++    create_workspace,
++)
++from app.services.stage08_runtime import begin_execution_plan
++from tests.integration.test_stage07_governance_postgres import (
++    DATABASE_URL_ENV,
++    Stage06Postgres,
++    stage06_postgres,
++)
++
++
++def _status_literals(check_sql: str) -> set[str]:
++    return set(re.findall(r"'([^']+)'", check_sql))
++
++
++def _ticket(
++    *,
++    workspace_id,
++    employee_id,
++    trace_id: str,
++    status: str = "planned",
++    budget=None,
++    tool_summary=None,
++):
++    return Stage08ExecutionTicket(
++        id=uuid4(),
++        workspace_id=workspace_id,
++        employee_id=employee_id,
++        actor_id="stage08-test-actor",
++        action="record.query",
++        trace_id=trace_id,
++        request_fingerprint="f" * 64,
++        status=status,
++        budget={"max_tool_calls": 1} if budget is None else budget,
++        tool_summary=(
++            [{"tool_name": "record.query", "status": "succeeded"}]
++            if tool_summary is None
++            else tool_summary
++        ),
++    )
++
++
++def _employee(*, workspace_id, base_id) -> DigitalEmployee:
++    return DigitalEmployee(
++        id=uuid4(),
++        workspace_id=workspace_id,
++        base_id=base_id,
++        name="Stage08 test employee",
++        description="Minimal ticket persistence fixture.",
++        telegram_alias=None,
++        accessible_tables=[],
++        accessible_views=[],
++        field_policy={},
++        allowed_actions=[],
++        confirmation_policy={},
++        response_style={},
++        status="active",
++        version=1,
++        access_mode="workspace",
++    )
++
++
++def test_in_memory_execution_ticket_looks_up_by_id_and_workspace_trace() -> None:
++    uow = InMemoryStage06PlatformUnitOfWork()
++    workspace_id = uuid4()
++    ticket = _ticket(
++        workspace_id=workspace_id,
++        employee_id=uuid4(),
++        trace_id="memory-trace",
++    )
++
++    uow.add_execution_ticket(ticket)
++
++    assert uow.get_execution_ticket(ticket.id) is ticket
++    assert uow.get_execution_ticket_by_trace(workspace_id, "memory-trace") is ticket
++    assert uow.get_execution_ticket_by_trace(uuid4(), "memory-trace") is None
++
++
++@pytest.mark.postgres
++@pytest.mark.skipif(
++    not os.getenv(DATABASE_URL_ENV),
++    reason=f"{DATABASE_URL_ENV} is required for disposable Stage08 PostgreSQL tests",
++)
++def test_execution_ticket_migration_has_required_postgres_shape(
++    stage06_postgres: Stage06Postgres,
++) -> None:
++    inspector = inspect(stage06_postgres.engine)
++
++    assert "stage08_execution_tickets" in inspector.get_table_names()
++    assert {
++        "id",
++        "workspace_id",
++        "employee_id",
++        "actor_id",
++        "action",
++        "trace_id",
++        "request_fingerprint",
++        "status",
++        "budget",
++        "tool_summary",
++        "created_at",
++        "updated_at",
++        "completed_at",
++    }.issubset(
++        {column["name"] for column in inspector.get_columns("stage08_execution_tickets")}
++    )
++    assert "uq_stage08_execution_ticket_workspace_trace" in {
++        constraint["name"]
++        for constraint in inspector.get_unique_constraints("stage08_execution_tickets")
++    }
++    checks = {
++        constraint["name"]: constraint["sqltext"]
++        for constraint in inspector.get_check_constraints("stage08_execution_tickets")
++    }
++    assert {
++        "ck_stage08_execution_ticket_status",
++        "ck_stage08_execution_ticket_budget_object",
++        "ck_stage08_execution_ticket_tool_summary_array",
++    }.issubset(checks)
++    assert _status_literals(checks["ck_stage08_execution_ticket_status"]) == {
++        "planned",
++        "executing",
++        "succeeded",
++        "failed",
++        "denied",
++        "cancelled",
++        "timed_out",
++        "expired",
++    }
++    assert "ix_stage08_execution_ticket_workspace_status_created" in {
++        index["name"] for index in inspector.get_indexes("stage08_execution_tickets")
++    }
++
++
++@pytest.mark.postgres
++@pytest.mark.skipif(
++    not os.getenv(DATABASE_URL_ENV),
++    reason=f"{DATABASE_URL_ENV} is required for disposable Stage08 PostgreSQL tests",
++)
++def test_sqlalchemy_execution_ticket_round_trips_and_enforces_ticket_constraints(
++    stage06_postgres: Stage06Postgres,
++) -> None:
++    with stage06_postgres.session_factory() as session:
++        uow = SqlAlchemyStage06PlatformUnitOfWork(session)
++        workspace = create_workspace(
++            uow,
++            name=f"Stage08 runtime {uuid4().hex[:8]}",
++            owner_user_id="stage08-owner",
++        )
++        session.flush()
++        base = create_base(uow, workspace.id, name="Runtime")
++        employee = _employee(workspace_id=workspace.id, base_id=base.id)
++        uow.add_digital_employee(employee)
++        ticket = _ticket(
++            workspace_id=workspace.id,
++            employee_id=employee.id,
++            trace_id="postgres-trace",
++        )
++        uow.add_execution_ticket(ticket)
++        session.commit()
++
++        assert uow.get_execution_ticket(ticket.id) is not None
++        by_trace = uow.get_execution_ticket_by_trace(workspace.id, "postgres-trace")
++        assert by_trace is not None
++        assert by_trace.budget == {"max_tool_calls": 1}
++        assert by_trace.tool_summary == [
++            {"tool_name": "record.query", "status": "succeeded"}
++        ]
++
++        uow.add_execution_ticket(
++            _ticket(
++                workspace_id=workspace.id,
++                employee_id=employee.id,
++                trace_id="postgres-trace",
++            )
++        )
++        with pytest.raises(IntegrityError):
++            session.commit()
++        session.rollback()
++
++        other_workspace = create_workspace(
++            uow,
++            name=f"Stage08 other {uuid4().hex[:8]}",
++            owner_user_id="stage08-owner",
++        )
++        session.flush()
++        other_base = create_base(uow, other_workspace.id, name="Runtime")
++        other_employee = _employee(
++            workspace_id=other_workspace.id,
++            base_id=other_base.id,
++        )
++        uow.add_digital_employee(other_employee)
++        uow.add_execution_ticket(
++            _ticket(
++                workspace_id=other_workspace.id,
++                employee_id=other_employee.id,
++                trace_id="postgres-trace",
++            )
++        )
++        session.commit()
++
++        for invalid_status in (
++            "pending_confirmation",
++            "confirmed",
++            "rejected",
++            "non_whitelist_status",
++        ):
++            uow.add_execution_ticket(
++                _ticket(
++                    workspace_id=other_workspace.id,
++                    employee_id=other_employee.id,
++                    trace_id=f"invalid-{invalid_status}",
++                    status=invalid_status,
++                )
++            )
++            with pytest.raises(IntegrityError):
++                session.commit()
++            session.rollback()
++
++        for invalid_budget in ([], "not-an-object"):
++            uow.add_execution_ticket(
++                _ticket(
++                    workspace_id=other_workspace.id,
++                    employee_id=other_employee.id,
++                    trace_id=f"invalid-budget-{uuid4().hex}",
++                    budget=invalid_budget,
++                )
++            )
++            with pytest.raises(IntegrityError):
++                session.commit()
++            session.rollback()
++
++        for invalid_tool_summary in ({}, "not-an-array"):
++            uow.add_execution_ticket(
++                _ticket(
++                    workspace_id=other_workspace.id,
++                    employee_id=other_employee.id,
++                    trace_id=f"invalid-tool-summary-{uuid4().hex}",
++                    tool_summary=invalid_tool_summary,
++                )
++            )
++            with pytest.raises(IntegrityError):
++                session.commit()
++            session.rollback()
++
++
++@pytest.mark.postgres
++@pytest.mark.skipif(
++    not os.getenv(DATABASE_URL_ENV),
++    reason=f"{DATABASE_URL_ENV} is required for disposable Stage08 PostgreSQL tests",
++)
++def test_workspace_lock_serializes_conflicting_ticket_creates_without_in_progress_idempotency(
++    stage06_postgres: Stage06Postgres,
++) -> None:
++    with stage06_postgres.session_factory() as session:
++        uow = SqlAlchemyStage06PlatformUnitOfWork(session)
++        workspace = create_workspace(
++            uow,
++            name=f"Stage08 lock {uuid4().hex[:8]}",
++            owner_user_id="stage08-operator",
++        )
++        session.flush()
++        base = create_base(uow, workspace.id, name="Runtime")
++        employee = _employee(workspace_id=workspace.id, base_id=base.id)
++        employee.allowed_actions = ["query"]
++        uow.add_digital_employee(employee)
++        session.commit()
++
++    b_pid_ready = Event()
++    b_pid_holder: list[int] = []
++
++    def begin_in_session_b():
++        plan = ExecutionPlan(
++            ticket_id=str(uuid4()),
++            workspace_id=str(workspace.id),
++            employee_id=str(employee.id),
++            actor="user:stage08-operator",
++            action="record.query",
++            trace_id="concurrent-trace",
++            idempotency_key="concurrent-key-2",
++            state=ExecutionTicketState.planned,
++            budget=ExecutionBudget(
++                max_tool_calls=1,
++                max_wall_time_ms=1_000,
++                max_graph_depth=1,
++                max_retries=0,
++                max_retrieval_chunks=0,
++            ),
++            invocations=[ToolInvocation(tool_name="record.query", input={"query": "second"})],
++        )
++        with stage06_postgres.session_factory() as session:
++            try:
++                b_pid = session.scalar(select(func.pg_backend_pid()))
++                assert isinstance(b_pid, int)
++                b_pid_holder.append(b_pid)
++                b_pid_ready.set()
++                ticket = begin_execution_plan(
++                    SqlAlchemyStage06PlatformUnitOfWork(session),
++                    plan,
++                )
++                session.commit()
++                return "created", ticket.id
++            except Exception as exc:
++                session.rollback()
++                return "error", getattr(exc, "code", type(exc).__name__)
++
++    with stage06_postgres.session_factory() as session_a:
++        uow_a = SqlAlchemyStage06PlatformUnitOfWork(session_a)
++        assert uow_a.lock_workspace_for_stage08_execution(workspace.id) is not None
++        a_pid = session_a.scalar(select(func.pg_backend_pid()))
++        assert isinstance(a_pid, int)
++        with ThreadPoolExecutor(max_workers=1) as executor:
++            future = executor.submit(begin_in_session_b)
++            try:
++                assert b_pid_ready.wait(timeout=5)
++                b_pid = b_pid_holder[0]
++                _wait_until_backend_is_blocked(
++                    stage06_postgres,
++                    blocked_pid=b_pid,
++                    blocking_pid=a_pid,
++                )
++                assert future.done() is False
++                first_plan = ExecutionPlan(
++                    ticket_id=str(uuid4()),
++                    workspace_id=str(workspace.id),
++                    employee_id=str(employee.id),
++                    actor="user:stage08-operator",
++                    action="record.query",
++                    trace_id="concurrent-trace",
++                    idempotency_key="concurrent-key-1",
++                    state=ExecutionTicketState.planned,
++                    budget=ExecutionBudget(
++                        max_tool_calls=1,
++                        max_wall_time_ms=1_000,
++                        max_graph_depth=1,
++                        max_retries=0,
++                        max_retrieval_chunks=0,
++                    ),
++                    invocations=[
++                        ToolInvocation(
++                            tool_name="record.query",
++                            input={"query": "first"},
++                        )
++                    ],
++                )
++                first_ticket = begin_execution_plan(uow_a, first_plan)
++                session_a.commit()
++                result_b = future.result(timeout=15)
++            finally:
++                if session_a.in_transaction():
++                    session_a.rollback()
++
++    assert first_ticket.status == "planned"
++    assert result_b == ("error", "stage08_trace_conflict")
++    with stage06_postgres.session_factory() as session:
++        tickets = list(
++            session.scalars(
++                select(Stage08ExecutionTicket).where(
++                    Stage08ExecutionTicket.workspace_id == workspace.id
++                )
++            )
++        )
++        idempotency_records = list(
++            session.scalars(
++                select(Stage06IdempotencyRecord).where(
++                    Stage06IdempotencyRecord.workspace_id == workspace.id
++                )
++            )
++        )
++
++    assert len(tickets) == 1
++    assert len(idempotency_records) == 1
++    assert idempotency_records[0].status == "completed"
++
++
++def _wait_until_backend_is_blocked(
++    stage06_postgres: Stage06Postgres,
++    *,
++    blocked_pid: int,
++    blocking_pid: int,
++) -> None:
++    deadline = time.monotonic() + 5
++    with stage06_postgres.engine.connect() as observer:
++        while time.monotonic() < deadline:
++            blocking_pids = observer.scalar(select(func.pg_blocking_pids(blocked_pid)))
++            if blocking_pid in set(blocking_pids or ()):
++                return
++            time.sleep(0.05)
++    pytest.fail("Session B did not enter a PostgreSQL lock wait for Session A")
++
++
++@pytest.mark.postgres
++@pytest.mark.skipif(
++    not os.getenv(DATABASE_URL_ENV),
++    reason=f"{DATABASE_URL_ENV} is required for disposable Stage08 PostgreSQL tests",
++)
++def test_gateway_execution_ticket_lock_claims_once_with_postgres_wait_evidence(
++    stage06_postgres: Stage06Postgres,
++) -> None:
++    fixture = _postgres_gateway_fixture(stage06_postgres)
++    gateway = Stage08ToolGateway()
++    blocked_pid_ready = Event()
++    blocked_pids: list[int] = []
++
++    def second_claim() -> tuple[str, str]:
++        with stage06_postgres.session_factory() as session:
++            try:
++                blocked_pid = session.scalar(select(func.pg_backend_pid()))
++                assert isinstance(blocked_pid, int)
++                blocked_pids.append(blocked_pid)
++                blocked_pid_ready.set()
++                gateway.execute(
++                    SqlAlchemyStage06PlatformUnitOfWork(session),
++                    Stage08ExecutionTicket(id=fixture["ticket_id"]),
++                    ToolInvocation(
++                        tool_name="record.query",
++                        input={"view_id": str(fixture["view_id"])},
++                    ),
++                )
++                session.commit()
++                return "unexpected", "succeeded"
++            except Stage08ToolGatewayError as exc:
++                session.rollback()
++                return "denied", exc.code
++            finally:
++                if session.in_transaction():
++                    session.rollback()
++
++    with stage06_postgres.session_factory() as session_a:
++        uow_a = SqlAlchemyStage06PlatformUnitOfWork(session_a)
++        assert uow_a.lock_execution_ticket_for_transition(fixture["ticket_id"]) is not None
++        blocking_pid = session_a.scalar(select(func.pg_backend_pid()))
++        assert isinstance(blocking_pid, int)
++        with ThreadPoolExecutor(max_workers=1) as executor:
++            future = executor.submit(second_claim)
++            try:
++                assert blocked_pid_ready.wait(timeout=5)
++                _wait_until_backend_is_blocked(
++                    stage06_postgres,
++                    blocked_pid=blocked_pids[0],
++                    blocking_pid=blocking_pid,
++                )
++                result = gateway.execute(
++                    uow_a,
++                    Stage08ExecutionTicket(id=fixture["ticket_id"]),
++                    ToolInvocation(
++                        tool_name="record.query",
++                        input={"view_id": str(fixture["view_id"])},
++                    ),
++                )
++                assert result.status == "succeeded"
++                session_a.commit()
++                second_result = future.result(timeout=15)
++            finally:
++                if session_a.in_transaction():
++                    session_a.rollback()
++
++    assert second_result == ("denied", "ticket_not_planned")
++    with stage06_postgres.session_factory() as session:
++        ticket = session.get(Stage08ExecutionTicket, fixture["ticket_id"])
++        assert ticket is not None and ticket.status == "succeeded"
++        assert len(ticket.tool_summary) == 1
++        assert session.scalar(select(func.count()).select_from(AgentRun)) == 1
++
++
++@pytest.mark.postgres
++@pytest.mark.skipif(
++    not os.getenv(DATABASE_URL_ENV),
++    reason=f"{DATABASE_URL_ENV} is required for disposable Stage08 PostgreSQL tests",
++)
++def test_create_record_draft_double_confirm_creates_one_record_with_postgres_wait_evidence(
++    stage06_postgres: Stage06Postgres,
++) -> None:
++    fixture = _postgres_create_draft_fixture(stage06_postgres)
++    blocked_pid_ready = Event()
++    blocked_pids: list[int] = []
++
++    def second_confirm() -> tuple[str, str]:
++        with stage06_postgres.session_factory() as session:
++            try:
++                blocked_pid = session.scalar(select(func.pg_backend_pid()))
++                assert isinstance(blocked_pid, int)
++                blocked_pids.append(blocked_pid)
++                blocked_pid_ready.set()
++                confirm_record_change_draft(
++                    SqlAlchemyStage06PlatformUnitOfWork(session),
++                    fixture["draft_id"],
++                    actor=fixture["actor"],
++                )
++                session.commit()
++                return "unexpected", "confirmed"
++            except Exception as exc:
++                session.rollback()
++                return "denied", getattr(exc, "code", type(exc).__name__)
++
++    with stage06_postgres.session_factory() as session_a:
++        uow_a = SqlAlchemyStage06PlatformUnitOfWork(session_a)
++        assert uow_a.lock_record_change_draft_for_transition(fixture["draft_id"]) is not None
++        blocking_pid = session_a.scalar(select(func.pg_backend_pid()))
++        assert isinstance(blocking_pid, int)
++        with ThreadPoolExecutor(max_workers=1) as executor:
++            future = executor.submit(second_confirm)
++            try:
++                assert blocked_pid_ready.wait(timeout=5)
++                _wait_until_backend_is_blocked(stage06_postgres, blocked_pid=blocked_pids[0], blocking_pid=blocking_pid)
++                confirm_record_change_draft(uow_a, fixture["draft_id"], actor=fixture["actor"])
++                session_a.commit()
++                second_result = future.result(timeout=15)
++            finally:
++                if session_a.in_transaction():
++                    session_a.rollback()
++
++    assert second_result == ("denied", "record_change_draft_invalid_state")
++    _assert_create_draft_terminal_state(stage06_postgres, fixture["draft_id"], "confirmed", 1)
++
++
++@pytest.mark.postgres
++@pytest.mark.parametrize(("first_action", "expected_status", "record_count"), [
++    ("reject", "rejected", 0),
++    ("confirm", "confirmed", 1),
++])
++@pytest.mark.skipif(
++    not os.getenv(DATABASE_URL_ENV),
++    reason=f"{DATABASE_URL_ENV} is required for disposable Stage08 PostgreSQL tests",
++)
++def test_create_record_draft_confirm_reject_race_uses_locked_terminal_state(
++    stage06_postgres: Stage06Postgres,
++    first_action: str,
++    expected_status: str,
++    record_count: int,
++) -> None:
++    fixture = _postgres_create_draft_fixture(stage06_postgres)
++    blocked_pid_ready = Event()
++    blocked_pids: list[int] = []
++
++    def second_action() -> tuple[str, str]:
++        with stage06_postgres.session_factory() as session:
++            try:
++                blocked_pid = session.scalar(select(func.pg_backend_pid()))
++                assert isinstance(blocked_pid, int)
++                blocked_pids.append(blocked_pid)
++                blocked_pid_ready.set()
++                uow = SqlAlchemyStage06PlatformUnitOfWork(session)
++                if first_action == "reject":
++                    confirm_record_change_draft(uow, fixture["draft_id"], actor=fixture["actor"])
++                else:
++                    reject_record_change_draft(uow, fixture["draft_id"], actor=fixture["actor"])
++                session.commit()
++                return "unexpected", "terminal"
++            except Exception as exc:
++                session.rollback()
++                return "denied", getattr(exc, "code", type(exc).__name__)
++
++    with stage06_postgres.session_factory() as session_a:
++        uow_a = SqlAlchemyStage06PlatformUnitOfWork(session_a)
++        assert uow_a.lock_record_change_draft_for_transition(fixture["draft_id"]) is not None
++        blocking_pid = session_a.scalar(select(func.pg_backend_pid()))
++        assert isinstance(blocking_pid, int)
++        with ThreadPoolExecutor(max_workers=1) as executor:
++            future = executor.submit(second_action)
++            try:
++                assert blocked_pid_ready.wait(timeout=5)
++                _wait_until_backend_is_blocked(stage06_postgres, blocked_pid=blocked_pids[0], blocking_pid=blocking_pid)
++                if first_action == "reject":
++                    reject_record_change_draft(uow_a, fixture["draft_id"], actor=fixture["actor"])
++                else:
++                    confirm_record_change_draft(uow_a, fixture["draft_id"], actor=fixture["actor"])
++                session_a.commit()
++                second_result = future.result(timeout=15)
++            finally:
++                if session_a.in_transaction():
++                    session_a.rollback()
++
++    assert second_result == ("denied", "record_change_draft_invalid_state")
++    _assert_create_draft_terminal_state(stage06_postgres, fixture["draft_id"], expected_status, record_count)
++
++
++def _postgres_gateway_fixture(stage06_postgres: Stage06Postgres) -> dict[str, object]:
++    owner = Actor(actor_type="user", actor_id="gateway-owner", role="owner")
++    operator = Actor(actor_type="user", actor_id="gateway-operator", role="operator")
++    with stage06_postgres.session_factory() as session:
++        uow = SqlAlchemyStage06PlatformUnitOfWork(session)
++        workspace = create_workspace(uow, name=f"Gateway {uuid4().hex}", owner_user_id=owner.actor_id, actor=owner)
++        session.flush()
++        base = create_base(uow, workspace.id, name="Tasks", actor=owner)
++        session.flush()
++        table = create_table(uow, base.id, name="Tasks", key=f"tasks_{uuid4().hex[:8]}", actor=owner)
++        session.flush()
++        create_field(uow, table.id, name="Status", key="status", field_type="status", actor=owner)
++        session.flush()
++        create_record(uow, table.id, values={"status": "open"}, actor=owner)
++        view = create_form_view(uow, base.id, table.id, name="Tasks", view_type="grid", config={"fields": ["status"]}, actor=owner)
++        session.flush()
++        uow.add_workspace_member(WorkspaceMember(id=uuid4(), workspace_id=workspace.id, user_id=operator.actor_id, role=operator.role, status="active", version=1))
++        session.flush()
++        employee = create_digital_employee(uow, base.id, name="Gateway query", description="Query", telegram_alias=None, accessible_tables=[], accessible_views=[str(view.id)], allowed_actions=["query"], actor=owner)
++        session.flush()
++        plan = ExecutionPlan(ticket_id=str(uuid4()), workspace_id=str(workspace.id), employee_id=str(employee.id), actor=f"user:{operator.actor_id}", action="record.query", trace_id=uuid4().hex, idempotency_key=uuid4().hex, state=ExecutionTicketState.planned, budget=ExecutionBudget(max_tool_calls=1, max_wall_time_ms=1_000, max_graph_depth=1, max_retries=0, max_retrieval_chunks=0), invocations=[ToolInvocation(tool_name="record.query", input={"view_id": str(view.id)})])
++        ticket = begin_execution_plan(uow, plan)
++        session.commit()
++        return {"ticket_id": ticket.id, "view_id": view.id}
++
++
++def _postgres_create_draft_fixture(stage06_postgres: Stage06Postgres) -> dict[str, object]:
++    owner = Actor(actor_type="user", actor_id="draft-owner", role="owner")
++    operator = Actor(actor_type="user", actor_id="draft-operator", role="operator")
++    with stage06_postgres.session_factory() as session:
++        uow = SqlAlchemyStage06PlatformUnitOfWork(session)
++        workspace = create_workspace(uow, name=f"Draft {uuid4().hex}", owner_user_id=owner.actor_id, actor=owner)
++        session.flush()
++        base = create_base(uow, workspace.id, name="Tasks", actor=owner)
++        session.flush()
++        table = create_table(uow, base.id, name="Tasks", key=f"tasks_{uuid4().hex[:8]}", actor=owner)
++        session.flush()
++        create_field(uow, table.id, name="Status", key="status", field_type="status", actor=owner)
++        session.flush()
++        uow.add_workspace_member(WorkspaceMember(id=uuid4(), workspace_id=workspace.id, user_id=operator.actor_id, role=operator.role, status="active", version=1))
++        session.flush()
++        employee = create_digital_employee(uow, base.id, name="Draft creator", description="Draft", telegram_alias=None, accessible_tables=[str(table.id)], accessible_views=[], allowed_actions=["draft_create"], actor=owner)
++        session.flush()
++        draft = create_create_record_draft(uow, employee.id, table_id=table.id, proposed_values={"status": "open"}, actor=operator)
++        session.commit()
++        return {"draft_id": draft.id, "actor": operator}
++
++
++def _assert_create_draft_terminal_state(stage06_postgres: Stage06Postgres, draft_id, status: str, record_count: int) -> None:
++    with stage06_postgres.session_factory() as session:
++        draft = session.get(RecordChangeDraft, draft_id)
++        assert draft is not None and draft.status == status
++        assert session.scalar(select(func.count()).select_from(PlatformRecord)) == record_count
+
+## Task documents and report
+diff --git a/docs/superpowers/plans/2026-07-17-stage08-runtime-foundation-implementation-plan.md b/docs/superpowers/plans/2026-07-17-stage08-runtime-foundation-implementation-plan.md
+new file mode 100644
+index 0000000..f36a5c2
+--- /dev/null
++++ b/docs/superpowers/plans/2026-07-17-stage08-runtime-foundation-implementation-plan.md
+@@ -0,0 +1,258 @@
++# Stage08 Runtime Foundation 与类型化 Tool Gateway 实施计划
++
++> **供 Agent 执行：** 必须使用 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐任务执行；用 `- [ ]` 跟踪步骤。
++
++**Goal：** 把已批准的 Stage06 Skill Manifest 命中转为类型化、受权限约束的工具调用；每次调用具备预算、execution ticket、幂等与审计证据。
++
++**Architecture：** 实时表格读取和草稿创建仍在既有 Stage06 service boundary 内完成。本包新增小型 Stage08 runtime domain：校验类型化执行计划、分派 allowlist tool adapter、执行策略检查并记录脱敏工具证据。PostgreSQL 仍是真源；本包不实现 Memory、RAG、群历史持久化、协调器 LLM 路由或新的 Telegram 发送路径。
++
++**Tech Stack：** Python 3.12、FastAPI、SQLAlchemy 2.x、Alembic、PostgreSQL JSONB、既有 LangGraph、Pydantic、pytest。
++
++## 全局约束
++
++- 复用既有 Stage06 scope intersection 和 service boundary；tool adapter 禁止 raw SQL 和直接操作 ORM model。
++- 工具输入输出、audit state 和 AgentRun 只保存 ID、计数、动作名、脱敏错误与权限过滤 field key；不得保存原始模型 prompt/response 或密钥。
++- 每个执行计划必须携带最大墙钟时间、工具次数、检索 chunk 数（本包固定为零）、图深度与重试预算。
++- 本包只开放 `record.query`、`table.summarize`、`contact.resolve`、`import.preview`、`tool_catalog.inspect`、`task.create_draft`、`record_change_draft.create`；其他 Skill 必须 fail closed。
++- 草稿仍为 `pending_confirmation`；不新增直接写入、通知发送或 Telegram 发送。
++- 当前 worktree 已有未提交 Stage07 改动；不得 stage、commit、reset、checkout 或影响无关文件。
++
++## 文件结构
++
++- 新建 `backend/app/runtime/stage08_contracts.py`：执行预算、计划、ticket、调用与脱敏结果的 Pydantic 合同。
++- 新建 `backend/app/runtime/stage08_policy.py`：作用域/预算/动作等级校验。
++- 新建 `backend/app/runtime/stage08_tool_gateway.py`：固定 allowlist adapter registry 与 dispatcher。
++- 新建 `backend/app/services/stage08_runtime.py`：trace、幂等、ticket 与审计编排。
++- 新建 `backend/app/models/stage08_runtime.py`：execution ticket 持久化模型。
++- 新建 `backend/alembic/versions/20260717_0028_stage08_runtime_foundation.py`：ticket 表迁移。
++- 修改 `backend/app/models/__init__.py` 与 `backend/app/services/stage06_platform.py`：模型注册和 UnitOfWork 支持。
++- 修改 `backend/app/services/stage06_digital_employees.py`：仅暴露 adapter 所需的受限 helper，禁止复制授权逻辑。
++- 新建 `backend/tests/unit/test_stage08_runtime_contracts.py`、`test_stage08_tool_gateway.py`、`test_stage08_runtime_service.py`、`test_stage08_runtime_api.py`。
++- 新建 `backend/tests/integration/test_stage08_runtime_postgres.py`。
++- 新建 `project-docs/08-implementation/STAGE_08_RUNTIME_FOUNDATION_BDD_AND_ACCEPTANCE.md` 与 `evidence/stage08-runtime-foundation.md`。
++
++---
++
++### Task 1：定义 Runtime 合同与红灯测试
++
++**Files：** 创建 `backend/app/runtime/stage08_contracts.py`；测试 `backend/tests/unit/test_stage08_runtime_contracts.py`。
++
++**Produces：** `ExecutionBudget`、`ExecutionPlan`、`ToolInvocation`、`ExecutionTicketState`、`RedactedToolResult`；其中 `ExecutionPlan` 包含 `workspace_id`、`employee_id`、`Actor`、`action`、调用元组、预算、`trace_id` 与 `idempotency_key`。
++
++- [ ] **步骤 1：先写失败测试**
++
++```python
++def test_execution_budget_rejects_invalid_limits():
++    with pytest.raises(ValidationError):
++        ExecutionBudget(max_tool_calls=0, max_wall_time_ms=30_000,
++                        max_graph_depth=1, max_retries=0, max_retrieval_chunks=0)
++
++
++def test_tool_invocation_rejects_unapproved_tool_and_raw_prompt_key():
++    with pytest.raises(ValidationError):
++        ToolInvocation(tool_name="provider.chat", input={"prompt": "secret"})
++```
++
++- [ ] **步骤 2：确认测试失败**
++
++运行：`python -m pytest -q tests/unit/test_stage08_runtime_contracts.py`  
++预期：因模块不存在而失败。
++
++- [ ] **步骤 3：最小实现**
++
++```python
++JSONScalar = str | int | float | bool | None
++
++class ExecutionBudget(BaseModel):
++    max_tool_calls: Annotated[int, Field(ge=1, le=7)]
++    max_wall_time_ms: Annotated[int, Field(ge=100, le=30_000)]
++    max_graph_depth: Annotated[int, Field(ge=1, le=3)]
++    max_retries: Annotated[int, Field(ge=0, le=2)]
++    max_retrieval_chunks: Literal[0] = 0
++```
++
++`ToolInvocation.tool_name` 必须是全局约束中的 Literal；递归拒绝 `prompt`、`response`、`api_key`、`token`、`raw_text`。`RedactedToolResult` 只允许 `tool_name`、`status`、`entity_refs`、`field_keys`、`counts`、`error_code`，不含自由文本内容。
++
++- [ ] **步骤 4：确认通过并检查 diff**
++
++运行：`python -m pytest -q tests/unit/test_stage08_runtime_contracts.py`  
++预期：PASS。  
++运行：`git diff --check -- backend/app/runtime/stage08_contracts.py backend/tests/unit/test_stage08_runtime_contracts.py`  
++预期：exit 0。
++
++### Task 2：持久化 execution ticket 并扩展 UnitOfWork
++
++**Files：** 创建 `backend/app/models/stage08_runtime.py`、迁移 `backend/alembic/versions/20260717_0028_stage08_runtime_foundation.py`；修改 models registry 与 `stage06_platform.py`；测试 `backend/tests/integration/test_stage08_runtime_postgres.py`。
++
++**Produces：** `Stage08ExecutionTicket(id, workspace_id, employee_id, actor_id, action, trace_id, request_fingerprint, status, budget, tool_summary, created_at, completed_at)`；UoW 增加 `add_execution_ticket`、`get_execution_ticket`、`get_execution_ticket_by_trace`。
++
++- [ ] **步骤 1：写失败的 round-trip/唯一约束测试**
++
++```python
++def test_execution_ticket_round_trip_and_trace_uniqueness(postgres_uow, workspace):
++    ticket = Stage08ExecutionTicket(..., status="planned",
++        budget={"max_tool_calls": 1}, tool_summary=[])
++    postgres_uow.add_execution_ticket(ticket)
++    postgres_uow.commit()
++    assert postgres_uow.get_execution_ticket(ticket.id).status == "planned"
++```
++
++同一 `(workspace_id, trace_id)` 需触发数据库唯一约束。
++
++- [ ] **步骤 2：确认失败**
++
++运行：`python -m pytest -q tests/integration/test_stage08_runtime_postgres.py -k execution_ticket`  
++预期：missing model/table。
++
++- [ ] **步骤 3：实现模型、迁移与两种 UoW**
++
++使用 `UuidPrimaryKeyMixin`、时区时间戳、JSONB `budget/tool_summary`、`(workspace_id, status, created_at)` 索引与 `(workspace_id, trace_id)` 唯一约束。数据库还必须通过 `jsonb_typeof` 约束 `budget` 是 object、`tool_summary` 是 array；`tool_summary` 必须由合同保障脱敏。状态 check 必须严格列出 canonical 白名单，并在测试中验证任一非白名单状态被拒绝。
++
++- [ ] **步骤 4：运行迁移和测试**
++
++运行：`python -m pytest -q tests/integration/test_stage08_runtime_postgres.py -k execution_ticket`  
++预期：PASS。  
++运行：`alembic heads`  
++预期：只有一个 head，末尾是 `20260717_0028`。
++
++### Task 3：实现 Policy 与 ticket 生命周期
++
++**Files：** 创建 `backend/app/runtime/stage08_policy.py`、`backend/app/services/stage08_runtime.py`；测试 `backend/tests/unit/test_stage08_runtime_service.py`。
++
++**Produces：** `evaluate_execution_plan(uow, plan) -> PolicyDecision` 与 `begin_execution_plan(uow, plan) -> Stage08ExecutionTicket`；`PolicyDecision` 包含 `allowed`、`reason_code`、`effective_tool_names`。
++
++- [ ] **步骤 1：写失败测试**
++
++```python
++def test_policy_denies_tool_not_allowed_by_employee_scope(uow, employee, actor):
++    plan = plan_for(employee=employee, actor=actor, tool_name="import.preview")
++    assert evaluate_execution_plan(uow, plan).reason_code == "tool_not_allowed_by_employee"
++
++def test_same_idempotency_key_replays_without_second_ticket(uow, plan):
++    assert begin_execution_plan(uow, plan).id == begin_execution_plan(uow, plan).id
++```
++
++- [ ] **步骤 2：确认失败**
++
++运行：`python -m pytest -q tests/unit/test_stage08_runtime_service.py -k "policy or idempotency"`  
++预期：模块不存在。
++
++- [ ] **步骤 3：最小实现**
++
++将 tool 名映射到既有 employee allowed action，并复用既有 authorization/scope helper；校验工具数、图深度、`max_retrieval_chunks == 0`，拒绝发送与写入绕过。只在 allowed 后创建 `planned` ticket，并使用 `fingerprint_request`/`begin_idempotent_operation` 处理重放与冲突。为消除同 workspace 的 trace/幂等并发竞态，新增一个窄 UnitOfWork 行锁方法：SQLAlchemy 对 `workspaces` 目标行使用 `FOR UPDATE`，内存实现只返回对应对象；锁内完成 trace 预检、幂等预检和创建，锁不改变权限语义。重放 ticket 必须复核 workspace 与 request fingerprint；状态迁移必须先由 UoW 重新取得受跟踪 ticket。
++
++- [ ] **步骤 4：回归**
++
++运行：`python -m pytest -q tests/unit/test_stage08_runtime_service.py tests/unit/test_stage06_audit_redaction.py`  
++预期：PASS。
++
++### Task 4：实现固定 allowlist Tool Gateway
++
++**Files：** 创建 `backend/app/runtime/stage08_tool_gateway.py`；修改 `backend/app/services/stage06_digital_employees.py`；测试 `backend/tests/unit/test_stage08_tool_gateway.py`。
++
++**Produces：** `Stage08ToolGateway.execute(uow, ticket, invocation) -> RedactedToolResult`；adapter 统一使用 `(uow, employee_id, actor, input)`。
++
++#### 已确认的任务草稿语义（2026-07-18）
++
++`task.create_draft` 不引入独立 `Task`、`TaskDraft` 表或新的业务垂类。它只接受一个调用者和数字员工都已获授权的任务表 `table_id` 与 `proposed_values`，在既有 `RecordChangeDraft` 中创建 `draft_type="create_record"`、`record_id=null`、`status="pending_confirmation"` 的草稿。草稿创建本身不得写入 `PlatformRecord`。
++
++确认 `create_record` 草稿时，既有 Stage06 服务必须先按确认者的字段权限和表校验调用 `create_record`，再把新 record ID 回写到该草稿并把状态置为 `confirmed`，同时留下不含 `proposed_values` 的审计摘要。更新草稿继续沿用既有 `draft_type="update_record"` 路径。拒绝路径不创建记录。此为用户明确确认的实现边界；不改变 Package A 禁止直接写入和禁止发送的规则。
++
++- [ ] **步骤 1：写失败测试**
++
++```python
++def test_record_query_returns_visible_field_keys_and_count(uow, ticket):
++    result = gateway.execute(uow, ticket, ToolInvocation(
++        tool_name="record.query", input={"view_id": str(view.id)}))
++    assert result.visible_field_keys == ("status",)
++    assert result.counts["record_count"] == 1
++
++def test_unknown_tool_fails_closed_without_service_call(uow, ticket):
++    with pytest.raises(Stage08ToolGatewayError, match="tool_not_registered"):
++        gateway.execute(uow, ticket, unknown_invocation)
++```
++
++草稿 adapter 还必须证明：仅生成一个 `pending_confirmation`、源记录不变、结果不含 `proposed_values`。
++
++- [ ] **步骤 2：确认失败；步骤 3：实现 adapter**
++
++运行：`python -m pytest -q tests/unit/test_stage08_tool_gateway.py`  
++预期：模块不存在。  
++实现固定 dictionary dispatcher，禁止反射和用户控制 import path；每个 adapter 只能调用 Stage06 service boundary，并将输出映射为 `executing` 后的 `succeeded`、`denied`、`failed`、`cancelled` 或 `timed_out`。
++
++- [ ] **步骤 4：回归与无发送扫描**
++
++运行：`python -m pytest -q tests/unit/test_stage08_tool_gateway.py tests/unit/test_stage06_live_digital_employee_runtime.py tests/unit/test_stage06_skill_matching.py`  
++预期：PASS。  
++运行：`rg -n "sendMessage|notification_request.confirm|Telegram.*send" backend/app/runtime/stage08_tool_gateway.py backend/app/services/stage08_runtime.py`  
++预期：无匹配。
++
++### Task 5：增加 API、BDD 与证据
++
++**Files：** 创建 `backend/app/schemas/stage08_runtime.py`、`backend/app/api/routes/stage08_runtime.py`、BDD/证据文档；修改 `backend/app/main.py`；测试 `backend/tests/unit/test_stage08_runtime_api.py`。
++
++**Produces：** `POST /api/stage08/runtime/execute-plan`。它接受执行计划，返回 ticket ID、终态和脱敏工具摘要，且必须先走既有 verified identity/workspace authorization。
++
++- [ ] **步骤 1：写失败 API 测试**
++
++```python
++def test_execute_plan_returns_403_before_dispatch_for_wrong_workspace(client, identity):
++    response = client.post("/api/stage08/runtime/execute-plan", json=plan_payload,
++                           headers=identity.headers)
++    assert response.status_code == 403
++
++def test_execute_plan_returns_redacted_summary(client, identity):
++    response = client.post("/api/stage08/runtime/execute-plan", json=allowed_query_payload,
++                           headers=identity.headers)
++    assert response.json()["status"] == "succeeded"
++    assert "answer" not in response.text
++```
++
++- [ ] **步骤 2：确认失败；步骤 3：实现 route 和文档**
++
++运行：`python -m pytest -q tests/unit/test_stage08_runtime_api.py`  
++预期：route-not-found。  
++采用项目既有 error envelope/identity dependency；Pydantic 必须在服务前拒绝 raw prompt-like input。BDD/证据文档记录验收 case、命令、合成数据边界和 no-send 保证。
++
++- [ ] **步骤 4：API/PG 回归**
++
++运行：`python -m pytest -q tests/unit/test_stage08_runtime_api.py tests/integration/test_stage08_runtime_postgres.py`  
++预期：PASS。
++
++### Task 6：隔离真实 Provider 评测器
++
++**Files：** 修改 `backend/scripts/stage06_live_llm_skill_quality_eval.py`、`backend/tests/unit/test_stage06_live_llm_skill_quality_eval.py`、`project-docs/08-implementation/evidence/stage06-live-llm-skill-quality-2026-07-16.md`。
++
++**Produces：** `run_case_isolated(case, timeout_seconds) -> RedactedCaseResult` 和 `run_batch(cases, max_parallelism, timeout_seconds) -> RedactedBatchResult`。
++
++- [ ] **步骤 1：写失败隔离测试**
++
++```python
++def test_timed_out_case_has_static_label_without_raw_content(monkeypatch):
++    result = run_case_isolated(case, timeout_seconds=1)
++    assert result.failure_labels == ("case_timeout",)
++    assert "prompt" not in result.model_dump_json()
++
++def test_batch_continues_after_one_timeout(monkeypatch):
++    assert run_batch((slow_case, passing_case), max_parallelism=2,
++                     timeout_seconds=1).case_count == 2
++```
++
++- [ ] **步骤 2：确认失败；步骤 3：实现进程级隔离**
++
++运行：`python -m pytest -q tests/unit/test_stage06_live_llm_skill_quality_eval.py -k "timeout or batch"`  
++预期：导入或断言失败。  
++每个 case 使用子进程硬超时；子进程内部可处理原始 provider 输出，但对外只传固定 allowlist 的布尔、计数、状态和静态错误标签。默认并发最多 2；保留 Telegram dry-run/provider-write disabled；`finally` 清理临时结果。
++
++- [ ] **步骤 4：测试与证据更新**
++
++运行：`python -m pytest -q tests/unit/test_stage06_live_llm_skill_quality_eval.py`  
++预期：PASS。  
++证据只记录旧串行批次是否被中断/超时、新超时合同及“未保留原始输出”。本任务不得触发新的 Provider 调用，除非另获明确执行授权。
++
++## 计划自检
++
++- 覆盖范围：Package A 实现 Tool Gateway、预算、execution ticket、policy、audit、幂等和 Provider 评测隔离；Memory、群持久化、检索和协调器属于路线图 B-F，不在本包抢先实现。
++- 完整性：每个任务都有精确文件、接口、红灯测试、命令和预期结果。
++- 类型一致性：`ExecutionBudget`、`ExecutionPlan`、`ToolInvocation`、`RedactedToolResult`、`Stage08ExecutionTicket` 与 gateway 在使用前已定义。
++- 范围检查：本包不创建 Memory/vector chunk/Milvus、直接 Telegram 发送或自治 Agent loop。
+diff --git a/project-docs/08-implementation/STAGE_08_IMPLEMENTATION_PLAN.md b/project-docs/08-implementation/STAGE_08_IMPLEMENTATION_PLAN.md
+new file mode 100644
+index 0000000..bbba893
+--- /dev/null
++++ b/project-docs/08-implementation/STAGE_08_IMPLEMENTATION_PLAN.md
+@@ -0,0 +1,154 @@
++# Stage08 完整阶段实施计划
++
++## Status
++
++- Scope：Stage08 从 Runtime Foundation 到复杂协作运行时的完整实施顺序、交付物和包间门禁。
++- Current Progress：Package A Task 1（合同）、Task 2（ticket 持久化）、Task 3（Policy/生命周期）已完成独立复审；Task 4（固定 allowlist Tool Gateway）首次独立审查发现 canonical ticket、确认时权限重验及并发状态机缺口，正在按既有安全合同修复。Task 5/6、Runtime API、Memory/RAG、LangGraph、真实 Provider 评测与生产部署均尚未开始；本阶段尚无新的外部操作。
++
++## 1. 规划文档关系
++
++| 文档 | 职责 |
++| --- | --- |
++| `STAGE_08_SOURCE_OF_TRUTH.md` | 阶段目标、确认决策、边界、完成定义 |
++| `STAGE_08_COMPLEX_AGENT_ARCHITECTURE.md` | 分层架构、节点职责、状态机、预算、基础设施 |
++| `STAGE_08_DATA_API_SECURITY_CONTRACT.md` | schema、API、权限、留存、action tier、数据红线 |
++| `STAGE_08_SDD.md` | A-F 包的设计单元、测试重点和退出条件 |
++| `STAGE_08_TEST_PLAN.md` | 分层测试、真实 Provider 规则与质量门槛 |
++| `STAGE_08_ACCEPTANCE_CHECKLIST.md` | Requirement ID 账本 |
++| `docs/superpowers/plans/2026-07-17-stage08-runtime-foundation-implementation-plan.md` | Package A 的逐任务 TDD 实施计划 |
++
++本文件不复制它们的合同细节；实施者必须按上表顺序阅读，后文的每个阶段只说明何时可以开始、必须实现什么、必须留下哪些证据。
++
++## 2. 总体依赖图
++
++```text
++A Runtime Foundation
++  -> B Business Memory
++  -> C Context Engineering
++  -> D RAG / pgvector Indexing
++  -> E LangGraph Collaboration
++  -> F Quality / Operations / Milvus Decision
++```
++
++其中 F 的评测器隔离基础可在 A 中先行实现；F 的完整质量门禁必须等到 E 的 graph 路径稳定后完成。
++
++## 3. Package A：Runtime Foundation
++
++### 功能范围
++
++- `ExecutionBudget`、`ExecutionPlan`、`ToolInvocation`、`RedactedToolResult` 等类型化合同；
++- 运行票据 `Stage08ExecutionTicket`、状态机、预算、取消、幂等和审计；
++- 固定 allowlist Tool Gateway，连接实时查表、汇总、联系人解析、导入预览、工具目录、任务草稿和记录草稿；
++- `PolicyGate` 在 dispatch 前计算 authority intersection；
++- API 只能接受服务端可重新计算的输入；
++- 将长时间卡住的真实 Provider 评测改成 case 隔离、硬超时和受限并发。
++
++### 不做什么
++
++不做 Memory、向量检索、群聊历史持久化、Coordinator、多 Agent loop、直接写入或发送。
++
++### 已确认的 Package A 任务草稿落点（2026-07-18）
++
++`task.create_draft` 以已有任务表中的 `RecordChangeDraft(draft_type="create_record")` 表达“待确认的新任务记录”，不新建独立 Task schema。Tool Gateway 只能生成 `pending_confirmation` 草稿；确认服务在确认者权限校验后才创建记录，拒绝不会创建记录。该决定只补齐既有草稿合同的创建记录分支，不扩展 Telegram、通知、Provider、Memory 或直接写入权限。
++
++### 开始门槛
++
++用户确认 Package A 的逐任务计划；工作区保持 dirty-safe；existing Stage06/07 authorization/draft/audit 回归可运行。
++
++### 退出门槛
++
++满足 A-01 至 A-07，迁移在 disposable local PostgreSQL 通过，且没有新发送路径或 raw provider 内容持久化。
++
++## 4. Package B：Business Memory
++
++### 功能范围
++
++- 建立 `MemoryItem`、`MemoryExtractionCandidate`、source reference/version、TTL/删除/撤权状态；
++- 对已确认表格事件自动写入结构化 Memory；
++- 使用受控群聊提取器识别高置信决策、偏好、风险、客户事实和项目事实；
++- conflict detector 以版本链而非覆盖处理矛盾；
++- 管理端可查询、撤销、删除、导出 Memory 的安全投影；
++- source 删除或权限撤销触发 Memory/索引失效。
++
++### 底层架构
++
++写入采用 outbox/queue 风格：业务事件先提交原事实与 audit，再产生幂等 Memory job；job 只能生成类型化 payload。群聊提取先生成 candidate，再由 policy/confidence/冲突器决定 active、conflicted 或 discarded；不保存群全文。
++
++### 退出门槛
++
++满足 B-01 至 B-05；包含并发/幂等、TTL、删除、跨 scope、脱敏和 local PostgreSQL 证据。
++
++## 5. Package C：Context Engineering
++
++### 功能范围
++
++- 建立 `ContextPlan`：问题分类、读取源、最大窗口/chunk、预算和回答标签；
++- 当前群最近消息窗口、客户/项目关联表、按时间衰减的历史选择器；
++- 实时结构化查表、Memory、RAG 与通用建议的上下文合并与截断；
++- evidence pack：每条内容都带 source/type/scope/version/label；
++- 资料不足时的 `general_advice` 安全降级。
++
++### 核心算法
++
++`ContextPlanner` 先判定是否涉及具体业务事实。涉及事实时优先 `record.query/table.summarize`；涉及群动态时取当前群窗口；涉及知识文件时请求检索；没有内部事实需求或读取失败时输出通用建议标签。它不能自己调用 provider，也不能扩展 scope。
++
++### 退出门槛
++
++满足 C-01 至 C-03；prompt projection 证明不存在全表、全群、隐藏字段或未授权引用。
++
++## 6. Package D：RAG 与 pgvector 索引
++
++### 功能范围
++
++- `KnowledgeSource` 的文件、Memory、批准摘要版本管理；
++- extraction projection、chunking、content hash、embedding adapter、pgvector index；
++- keyword + vector + structured filter 的混合检索；
++- reindex/delete/revoke/TTL worker 与 source-version 对齐；
++- `RetrievalProvider` 抽象，首发 `PostgresRetrievalProvider`；
++- 引用和 rerank 在 PostgreSQL 重新授权后才可给模型。
++
++### 索引原则
++
++embedding 只针对可检索文本投影，不针对完整敏感内容；向量 metadata 只包含最小 scope/filter 字段。检索索引可被删掉后从 PostgreSQL 重建；PostgreSQL 本身永不从向量库回写权限或业务事实。
++
++### 退出门槛
++
++满足 D-01 至 D-04；删除/撤权后同步读取拒绝、异步索引清理与重建一致性均有本地 PG 证据。
++
++## 7. Package E：LangGraph 协作运行时
++
++### 功能范围
++
++- `Coordinator` 管理 run 生命周期和预算；
++- `ContextPlanner`、`StructuredDataAgent`、`GroupContextAgent`、`KnowledgeRetrievalAgent` 并行读取；
++- `AnalystAgent` 汇总证据、结论和不确定性；
++- `DraftAgent` 将许可的行动转为草稿；
++- `PolicyGate` 在最终回复/草稿前校验引用、权限、预算、tier 和 ticket；
++- checkpointer/resume/cancel 只保存受控状态和引用，不保存完整对话或 chain-of-thought。
++
++### 协作约束
++
++节点之间只传结构化 state；每个 state 字段有 owner。读节点不能写入；分析节点不能临时扩大检索；草稿节点不能确认；Coordinator 不能跳过 PolicyGate。失败节点产出固定失败标签，Coordinator 只能按降级策略继续。
++
++### 退出门槛
++
++满足 E-01 至 E-03；并行、取消、预算、失败、草稿与审计都可从 trace 重放解释。
++
++## 8. Package F：质量、运维与 Milvus 决策
++
++### 功能范围
++
++- 维护标注评测集：表格、文件、群聊、权限、Memory、检索、草稿、通用建议与失败降级；
++- 单 case 子进程、硬超时、最大并发、结果脱敏、临时文件 cleanup；
++- 指标：成功率、引用正确率、权限拒绝率、超时、工具次数、token、成本、延迟、检索召回、Memory conflict；
++- SLO 与容量报告；仅当触发门槛满足时撰写 Milvus 技术决策与双写/回退计划。
++
++### 退出门槛
++
++满足 F-01 至 F-04；报告必须区分合成 Provider 证据、local PostgreSQL 证据和生产证据，禁止混写。
++
++## 9. 跨包变更管理
++
++每个包开始前必须：更新 `Current Progress`、建立该包 BDD/SDD/API/安全合同、明确 migration head、写入当前风险。每个包结束后必须：更新验收矩阵、记录命令和测试数、清理临时 artifacts、执行独立代码审查。
++
++若任一包需要新增权限动作、改变 retention、自动执行新写入、接入生产 Telegram、接入 Milvus 或引入外部知识源，必须先补技术决策并获得用户明确确认。

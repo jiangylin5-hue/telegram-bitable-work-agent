@@ -1,4 +1,6 @@
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Self
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class TelegramWebhookUser(BaseModel):
@@ -46,10 +48,18 @@ class TelegramWebhookMessage(BaseModel):
     caption: str | None = None
     photo: list[TelegramWebhookPhotoSize] | None = None
     document: TelegramWebhookDocument | None = None
+    edit_date: int | None = None
 
 
 class TelegramWebhookUpdate(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     update_id: int | str
-    message: TelegramWebhookMessage
+    message: TelegramWebhookMessage | None = None
+    edited_message: TelegramWebhookMessage | None = None
+
+    @model_validator(mode="after")
+    def require_exactly_one_supported_message(self) -> Self:
+        if (self.message is None) == (self.edited_message is None):
+            raise ValueError("exactly one supported Telegram message is required")
+        return self

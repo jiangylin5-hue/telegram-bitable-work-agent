@@ -3,6 +3,7 @@
 ## Status
 
 - Status: bounded `partial-local` implementation evidence reconciled on 2026-07-13; this is not Stage07, browser, PostgreSQL, Telegram, staging or production acceptance.
+- Strict audit disposition: ACD-06 error permutations, ACD-07/ACD-08 revocation and delayed replacement, ACD-A03 PostgreSQL authorization intersection and ACD-A10 reviewed visual evidence remain open. See [Stage07 Final Audit Report](STAGE_07_FINAL_AUDIT_REPORT.md).
 - Scope: authorized Home contact-to-view selection and existing safe `summarize` invocation only.
 
 ## BDD Scenarios

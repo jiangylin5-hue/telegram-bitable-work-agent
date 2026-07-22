@@ -8,6 +8,9 @@ venv/
 .env
 .env.*
 !.env.example
+deploy/stage09-native/runtime/*
+!deploy/stage09-native/runtime/runtime.env.example
+!deploy/stage07-acceptance/runtime/.env.stage07-acceptance.example
 .local/
 .worktrees/
 mini-app/node_modules/

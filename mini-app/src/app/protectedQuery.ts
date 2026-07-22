@@ -195,7 +195,9 @@ export async function clearTemplateImportQueries(
 ): Promise<void> {
   const queryKeys: QueryKey[] = [
     templateImportKeys.templates(scope),
-    ...(importJobId ? [templateImportKeys.importJob(scope, importJobId)] : []),
+    ...(importJobId
+      ? [templateImportKeys.importJob(scope, importJobId)]
+      : [protectedQueryKey(scope, 'import')]),
   ]
   await Promise.all(queryKeys.map((queryKey) => queryClient.cancelQueries({ queryKey })))
   for (const queryKey of queryKeys) queryClient.removeQueries({ queryKey })

@@ -1,0 +1,23 @@
+[Unit]
+Description=Private Redis socket service
+After=network.target
+
+[Service]
+Type=notify
+User=stage09-p1
+Group=stage09-p1
+EnvironmentFile=/etc/stage09-p1/runtime.env
+ExecStartPre=/usr/local/lib/stage09-p1/verify-native-isolation.sh
+ExecStart=/usr/bin/redis-server /etc/stage09-p1/redis-stage09-p1.conf --supervised systemd
+RuntimeDirectory=stage09-p1
+RuntimeDirectoryMode=0750
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/run/stage09-p1 /var/lib/redis-stage09-p1
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

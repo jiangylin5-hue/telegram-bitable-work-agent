@@ -2,15 +2,15 @@
 
 ## Status
 
-- Document status: planned stage acceptance checklist
+- Document status: active historical checklist; strict final audit correction recorded
 - Scope: implementation acceptance, not documentation-package approval
-- Current Progress: this checklist is reconciled to the latest local evidence. Checked rows prove only the stated approved local contract/code/test evidence; they do not replace the remaining Browser, real-provider, Telegram or whole-stage exit gates.
+- Current Progress: 2026-07-15 [Stage07 Final Audit Report](STAGE_07_FINAL_AUDIT_REPORT.md) finds Stage07 `not accepted`. R1/R2 local evidence and bounded Telegram/OpenRouter proof are retained, but unchecked rows and owning BDD rows remain active wherever they identify a compatible original requirement-ID evidence gap. Only a clearly marked `contract-gated` or production-only row is outside this Stage07 decision.
 
 ## Foundation
 
-- [ ] Verified Mini App and desktop identity both resolve an active workspace member through backend verification.
-- [ ] Workspace switch/session expiry/revocation clear protected client state.
-- [ ] Navigation is derived from server capability data and has desktop/mobile equivalents.
+- [x] Verified Mini App and desktop identity both resolve an active workspace member through backend verification.
+- [x] Workspace switch/session expiry/revocation clear protected client state.
+- [x] Navigation is derived from server capability data and has desktop/mobile equivalents.
 
 ### Existing-Contract Home/Bases Navigation Closure
 
@@ -23,15 +23,26 @@ These checks cover only the existing-contract Home/Bases closure. They do not ac
 - [x] The directory key is user/workspace-scoped as `navigation/bases`; a delayed old-workspace result is discarded after a switch.
 - [x] No API, schema, migration, permission, dependency, URL/storage, Bot, queue, assistant, knowledge or management expansion was made.
 - [x] Local evidence: `4` focused Mini App files / `18` tests and one TypeScript/Vite production build pass.
-- [ ] User-controlled visual review of this route. Browser control is intentionally not performed.
+- [ ] A user-controlled full-product visual review of this route remains open. This does not negate the separate 2026-07-14 Codex in-app-Browser local integration observation.
 
 ## Workspace And Bitable
 
-- [ ] Home queue rows resolve to authorized durable destinations.
-- [ ] Recent Base, table, saved view and record navigation works with cursor-safe paged data.
-- [ ] Grid/Kanban/Calendar/Form preserve saved semantics across desktop/mobile layouts.
-- [ ] Builder/import/template controls are visible and executable only when authorized.
-- [ ] Record conflicts and errors refresh authoritative state without false success.
+- [x] Home queue rows resolve to authorized durable destinations.
+- [x] Recent Base, table, saved view and record navigation works with cursor-safe paged data.
+- [x] Grid/Kanban/Calendar/Form preserve saved semantics across desktop/mobile layouts.
+- [x] Builder/import/template controls are visible and executable only when authorized.
+- [x] Record conflicts and errors refresh authoritative state without false success.
+
+### R1 2026-07-15 Closure Addendum
+
+These checks concern only already-approved current contracts. The built client ran against a disposable loopback fixture with synthetic safe DTOs; persistence, authorization and concurrency assertions remain covered by the listed focused API/PostgreSQL/client tests.
+
+- [x] Authorized Home/Base, fixed empty Base, `403` fail-closed surface and authorized Home re-entry were observed in the built client.
+- [x] Owner visibly reached Builder and template/import entries; viewer visibly omitted view/schema/record/management controls.
+- [x] Grid/Kanban/Calendar/Form rendered their safe server-selected semantics. At `390 x 844`, the owner workbench and View Builder dialog remained reachable.
+- [x] A synthetic View `409` displayed fixed safe copy and canonical view/row reread; raw fixture detail and opaque record identifier were not rendered.
+- [x] Controlled `ImportWizard` file-input tests verified preview/mapping/explicit commit and unsupported-extension rejection. This is the documented alternative to Browser-native file selection.
+- [ ] Former R1 residual: backend identity/session/revocation, Home queue-to-Draft Hub, cursor/error breadth, editor visual treatment and invalid/F2/device V1 states require requirement-ID reconciliation. See [Stage07 Final Audit Report](STAGE_07_FINAL_AUDIT_REPORT.md).
 
 ### Bounded P3 Base/Table Builder Evidence
 
@@ -125,21 +136,24 @@ These checks cover only the approved Home contact-to-view-to-summary slice. They
 - [x] Focused backend tests prove manager/use-member separation, legacy `workspace` compatibility, expected-version/idempotency conflict handling, Base/table/view scope validation, active alias collision and strict safe DTO/parser boundaries (`35 passed`).
 - [x] Disposable local PostgreSQL verifies migration physical shape, downgrade/upgrade replay and legacy active-row default compatibility (`3 passed, 3 deselected`). It is not a two-session lifecycle-command contention or external environment claim.
 - [x] Active/paused contact/context/invocation behavior is gated by active status and, for `assigned`, a same-workspace active member grant; no multi-Base scope, memory, knowledge, record picker, Telegram or external-action behavior is introduced.
-- [x] Strict protected transport/query/workbench tests and full Mini App suite pass (`56 files / 215 tests`); production build passes.
-- [ ] User-controlled desktop/mobile visual review, real two-session lifecycle-command PostgreSQL contention, Telegram/provider/staging/production evidence and whole-Stage07 exit remain open.
+- [x] Strict protected transport/query/workbench tests and full Mini App suite pass (`60 files / 221 tests`); production build passes.
+- [x] A real two-session local PostgreSQL lifecycle-command contention test now proves one persisted pause, one revision conflict, one audit event and one idempotency record (`4 passed` dedicated PostgreSQL suite).
+- [ ] User-controlled management-workbench desktop/mobile review, real Telegram/provider/staging/production evidence and whole-Stage07 exit remain open.
 
 ### S5.3 Team Bot Entry And View Knowledge — Partial Local
 
 - [x] User selected the A+B documentation direction: Team Bot entry plus one permission-filtered saved-view knowledge window.
 - [x] TD011/design/BDD/SDD/work-surface/complex-index document the closed contract, all state/error boundaries, no-index decision and explicit non-goals.
 - [x] User approved the technical boundary and detailed plan, then instructed execution on 2026-07-14.
-- [ ] Partial-local: TD011 implementation has four safe routes, server-side selected-view reread, 101/100 bounded runtime input, empty-context audit/replay, isolated Team Bot transport/cache/workbench and explicit Base handoff. Evidence: focused backend 23 passed, disposable PostgreSQL 1 passed, Mini App 60 files / 221 tests and build.
-- [ ] Complete remaining TBK matrix: user-controlled visual desktop/mobile review, real OpenRouter, lifecycle/grant revocation, changed-key conflict, delayed-error replacement, Telegram/staging/production and whole-Stage07 acceptance.
+- [x] Partial-local TD011 implementation has four safe routes, server-side selected-view reread, 101/100 bounded runtime input, empty-context audit/replay, isolated Team Bot transport/cache/workbench and explicit Base handoff. Focused service evidence is `6 passed`; local PostgreSQL is `1 passed`; full Mini App is `60 files / 221 tests`; build passes.
+- [x] Local Team Bot matrix now covers paused/ungranted/cross-Base pre-provider rejection, changed-key conflict and delayed `409`/`422` input-preserving replacement; a real local FastAPI/PostgreSQL in-app-Browser flow observed the empty-context audit receipt at desktop and narrow widths.
+- [x] All five real OpenRouter smoke cases (`summarize_basic`, `hidden_field_guard`, `citations_required`, `draft_update_status`, `unsafe_commit_refusal`) pass with no pre-confirmation record change or raw prompt/response persistence; this does not substitute for a non-empty Team Bot UI-to-provider result.
+- [ ] User-controlled full visual review, non-empty Team Bot UI-to-provider result, real Telegram/staging/production and whole-Stage07 acceptance remain open; see [final local closure evidence](evidence/stage07-final-acceptance-closure.md).
 - [ ] No RAG/vector/files/memory/record picker/Telegram/direct-write capability may be claimed without a later approved decision.
 
 ### S6.1 Telegram Identity and Deep-Link Local Evidence
 
-TD007 is `partial-local`, not a delivery or production approval. The checked rows below reflect the complete approved local identity/resolver/client matrix; only a real Telegram identity/deep-link smoke remains external evidence.
+TD007 remains `partial-local` as a product package, not a delivery or production approval. The checked rows below reflect the approved local identity/resolver/client matrix plus one bounded, isolated non-production real Telegram identity/deep-link smoke. It does not accept staging, production or Stage07 as a whole.
 
 - [x] Telegram Mini App `initData` is validated server-side with official HMAC/freshness, duplicate-input and malformed/forged rejection coverage; an invalid present Telegram proof cannot fall back to the development header.
 - [x] A validated Telegram user resolves through active bindings to exactly one active internal member user or fails closed.
@@ -147,11 +161,11 @@ TD007 is `partial-local`, not a delivery or production approval. The checked row
 - [x] Unknown, expired, revoked and subject-mismatched pointer paths return the same local safe recovery response; no raw token/launch data is exposed by the closed parser/fixture DOM.
 - [x] Desktop/no-Telegram fallback and synthetic recovery/Record handoff were inspected at 1440/1280/430/390; recovery action is 44px and S6.1 has no public mint/send route.
 - [x] S6.1 local target-reread matrix: `401`/`403` denied generation, `404`/`409`/`422`/network recovery and late unmount supersession are covered alongside cross-workspace recovery, field-policy projection, Resolver locking/concurrent-revoke, mismatch zero-lookup, persisted closed-audit and no-send inventory regressions.
-- [ ] A real Telegram deep-link smoke is recorded only after separately authorized non-production Bot/private-test-chat setup.
+- [x] One separately authorized isolated non-production Telegram Main Mini App smoke produced signed `initData` -> resolver -> authoritative Base reread evidence; the redacted resolver audit records only `resolved` and `base`. No raw launch data is retained and no production claim is made.
 
 ### S6.2 Controlled Delivery and Manual Smoke
 
-TD008 Option A is `partial-local`. It reuses the existing confirmation/Outbox/Worker/`restricted_test` path through a typed one-to-one delivery extension; no configuration, external operation or real Telegram claim is made.
+TD008 Option A remains `partial-local` as a product package, while its S6.3 runtime/HTTPS and bounded real delivery/identity evidence is accepted. It reuses the existing confirmation/Outbox/Worker/`restricted_test` path through a typed one-to-one delivery extension. The actual Telegram launch exposed and corrected a missing official WebApp bridge; a separately approved fresh request then produced signed Mini App identity/resolver/Base reread evidence. The disposable S6.3 environment was removed after this evidence.
 
 - [x] Closed server-only request/confirmation, fixed URL-button client, Worker reservation and terminal no-retry paths pass focused local tests.
 - [x] Exactly-one private allowlist target, binding/member/destination confirm rechecks, generic-confirm rejection and no Mini App delivery/mint route pass negative tests.
@@ -159,19 +173,43 @@ TD008 Option A is `partial-local`. It reuses the existing confirmation/Outbox/Wo
 - [x] Disposable local PostgreSQL upgrade/downgrade/upgrade and success/definite-rejection/transport-uncertainty/sequential-reserved-replay cases pass.
 - [x] A two-session PostgreSQL claimed-Worker collision makes at most one Bot call, does not call the replay client and revokes the pointer into `delivery_unknown`.
 - [x] Direct Service/Worker/typed-client inventory has no logger sink; the exception route writes only fixed redacted codes.
-- [ ] Real private-chat delivery and real Telegram `initData` -> resolver -> reread require per-environment authority.
+- [x] Two separate user-approved one-attempt private deliveries provide bounded evidence: the first opened the Main Mini App and exposed the missing official bridge; after a test-first bridge correction, the second produced signed `initData` -> resolver -> authoritative Base reread. No automatic resend occurred.
 - [x] Definite rejection and uncertain-send paths revoke the pointer and never retry automatically in the local fake-client and disposable-PostgreSQL terminal-state matrix.
 - [x] Disposable PostgreSQL migration/lock/rollback and typed Bot URL-button tests pass.
-- [ ] One user-authorized non-production delivery and actual Telegram Mini App smoke produce sanitized evidence only.
+- [x] One user-authorized non-production delivery produced a sanitized terminal `sent` receipt with Outbox `processed` and a message ID present; no retry was sent.
+- [x] After the official WebApp bridge correction, one separately user-approved private delivery produced the signed Telegram `initData` -> resolver -> authoritative Base reread evidence. The persisted resolver audit is `resolved` for `base`; no raw launch data is retained.
+
+### S6.3 Isolated Acceptance Deployment
+
+S6.3 is the approved operational boundary for collecting the remaining S6 external evidence. It is a parallel non-production deployment only; it neither replaces Stage03 nor accepts production or whole Stage07.
+
+- [x] S6.3 SDD, BDD/acceptance, work-surface, complex-index decision and implementation plan define an independent Compose project, data stores, Caddy aliases and rollback boundary.
+- [x] Local Compose expansion proves independent Stage07 PostgreSQL/Redis volumes, `stage07-api`/`stage07-web` Caddy aliases and no Stage03 data-service reference; Postgres receives only its database bootstrap variables.
+- [x] Candidate Caddy syntax validates through the existing Caddy container with stdin only; no active config write, reload or certificate request occurred.
+- [x] DNS resolves the approved Stage07 hostname; Caddy candidate validation and active Stage07 HTTPS API/Web health are direct evidence, while Stage03 HTTPS remains healthy.
+- [x] One private TD008 delivery is directly evidenced as `sent`; the recipient opened the Main Mini App, while the pre-fix missing bridge prevented resolver evidence.
+- [x] The separately approved private TD008 delivery produced real signed `initData` resolver/reread evidence; the recipient observed the authorized Base and the sanitized resolver audit is `resolved`/`base`.
+- [x] Following explicit cleanup approval, rollback/cleanup removed the temporary isolated Compose project/volumes/runtime, Caddy host/backup and SSH key; Stage03 health remained `200` throughout and the revoked key was rejected by batch-mode SSH.
 
 ## Evidence
 
-- [x] Approved local unit, integration, contract and negative security suites pass: current backend `600 passed, 17 historical external skips`; focused frontend/build and substage PostgreSQL evidence are recorded in the linked BDD/evidence documents.
+- [x] Approved local unit, integration, contract and negative security suites pass: current backend `627 passed, 17 historical Stage02 online-smoke skips`; full Mini App `60 files / 221 tests`, production build, migration replay and focused Stage07 PostgreSQL evidence are recorded in [final local closure evidence](evidence/stage07-final-acceptance-closure.md).
 - [ ] Visual QA passes at 1440px, 1280px, 430px and 390px against selected design direction.
-- [ ] Telegram deep-link smoke is recorded only in an approved test environment.
+- [x] The bounded TD007/TD008 isolated non-production Telegram identity/deep-link/delivery smoke is recorded; it is not staging, production, group-send or whole-stage evidence.
 - [x] Recorded local evidence is sanitized and no production launch is claimed.
 
 ### P3 Evidence Boundary
 
 - [x] P3 documentation records a synthetic-only fixture, safe receipts and cleanup, and explicitly excludes production/Telegram claims, raw policies/configuration, audit bodies, credentials, field data and real user records.
-- [ ] Stage07-wide evidence remains incomplete: remaining Package 2/V1 and S3/S4/S5 Browser evidence, real provider proof, approved Telegram smoke, contract-gated Package 4 expansion and the final exit audit still require their own evidence.
+- [ ] Stage07-wide evidence remains incomplete: remaining Package 2/V1 and S3/S4/S5 Browser evidence, selected Team Bot UI-to-provider UX, contract-gated Package 4 expansion and the final exit audit still require their own evidence. The approved bounded provider and Telegram smokes are already recorded above.
+
+## 2026-07-15 Strict Audit Correction
+
+The earlier R0-R3 reconciliation aggregated evidence too broadly and must not supersede requirement-ID acceptance rows. [Stage07 Final Audit Report](STAGE_07_FINAL_AUDIT_REPORT.md) is the current decision.
+
+- [ ] R1 identity/session/revocation, Home queue-to-Draft Hub, cursor retry and V1 editor/invalid/F2 treatment retain the specific V1-A02/A05/A07/A08/A10 evidence gaps named by the final audit.
+- [ ] R2 governance, draft lifecycle, TD009 context discovery, TD010 lifecycle and TD011 Team Bot retain their owning BDD Browser/provider/role/failure evidence gaps.
+- [x] Existing real OpenRouter safe-route evidence and bounded isolated Telegram TD007/TD008 proof are retained; neither is rerun merely for test volume.
+- [x] Temporary R1/R2 loopback fixtures, servers and in-app Browser sessions were cleaned. The final fixture port `4181` is closed.
+- [ ] The Stage07 R0-R3 approved product scope is **not accepted** until the compatible original requirements listed in the final audit are resolved.
+- [ ] Production rollout, broad/group Telegram behavior, customer-facing group bindings, RAG/memory/files/public sharing and other contract-gated expansion are not Stage07 acceptance items. They require a new documented and user-approved decision.

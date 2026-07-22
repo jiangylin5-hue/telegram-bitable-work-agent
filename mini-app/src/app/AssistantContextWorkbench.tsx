@@ -63,10 +63,10 @@ export function AssistantContextWorkbench({
           </section>
         ) : (
           <div className="assistant-context-columns">
-            <section className="assistant-context-section">
+            <section className="assistant-context-section" aria-label="数字员工目录">
               <header>
-                <p>STEP 1</p>
-                <h3>选择数字员工</h3>
+                <p>ASSISTANTS</p>
+                <h3>数字员工</h3>
               </header>
               {contacts.length === 0 ? <p>当前没有可协作的数字员工。</p> : (
                 <ul className="assistant-context-contact-list">
@@ -82,10 +82,10 @@ export function AssistantContextWorkbench({
               )}
             </section>
 
-            <section className="assistant-context-section">
+            <section className="assistant-context-section" aria-label="当前已授权视图">
               <header>
-                <p>STEP 2</p>
-                <h3>选择可访问视图</h3>
+                <p>CONTEXT</p>
+                <h3>当前已授权视图</h3>
               </header>
               {!context ? <p>请选择数字员工和可访问视图，再开始协作。</p> : (
                 <>
@@ -106,10 +106,10 @@ export function AssistantContextWorkbench({
               )}
             </section>
 
-            <section className="assistant-context-section assistant-context-summary-section">
+            <section className="assistant-context-section assistant-context-summary-section" aria-label="摘要与审计">
               <header>
-                <p>STEP 3</p>
-                <h3>执行摘要</h3>
+                <p>REVIEW</p>
+                <h3>摘要与审计</h3>
               </header>
               {!selectedView ? <p>选定视图后，才会在执行前再次验证它的访问权限。</p> : (
                 <div className="assistant-context-invocation">

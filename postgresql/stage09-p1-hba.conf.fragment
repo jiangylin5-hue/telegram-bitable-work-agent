@@ -1,0 +1,4 @@
+# Stage09 P1 local-only PostgreSQL access.
+local   stage09_p1   stage09_p1                              scram-sha-256
+host    stage09_p1   stage09_p1   127.0.0.1/32               scram-sha-256
+host    stage09_p1   stage09_p1   ::1/128                    scram-sha-256

@@ -3,6 +3,7 @@
 ## Status
 
 - Status: TD005/TD006 implementation evidence is reconciled below. S5 remains `partial-local`: only rows whose stated local evidence is complete are marked `implemented-local`; Browser/provider-dependent rows remain explicitly partial.
+- Strict audit disposition: [Stage07 Final Audit Report](STAGE_07_FINAL_AUDIT_REPORT.md) keeps DE-A03/DE-A04 provider ownership, DE-A05 field-filtered Browser state, DE-A08 full failure matrix and DE-A09 four-width Hub path open. This BDD is not accepted by aggregate R0-R3 evidence.
 - Scope: safe S5 contact, explicit context, employee invocation, draft diff and terminal confirmation/rejection only.
 
 ## BDD Scenarios

@@ -1,0 +1,619 @@
+﻿# Stage08 Task 5 Fix Round 1 review package
+
+## Scoped tracked diff
+diff --git a/backend/app/main.py b/backend/app/main.py
+index 0da1779..d2a514c 100644
+--- a/backend/app/main.py
++++ b/backend/app/main.py
+@@ -16,20 +16,21 @@ from app.api.routes.stage07_governance_write import (
+ from app.api.routes.stage07_draft_employee_hub import (
+     router as stage07_draft_employee_hub_router,
+ )
+ from app.api.routes.stage07_digital_employee_management import (
+     router as stage07_digital_employee_management_router,
+ )
+ from app.api.routes.stage07_team_bot_knowledge import (
+     router as stage07_team_bot_knowledge_router,
+ )
+ from app.api.routes.stage07_telegram import router as stage07_telegram_router
++from app.api.routes.stage08_runtime import router as stage08_runtime_router
+ from app.api.routes.telegram_bindings import router as telegram_bindings_router
+ from app.api.routes.telegram_send_requests import (
+     router as telegram_send_requests_router,
+ )
+ from app.api.routes.telegram_webhook import router as telegram_webhook_router
+ from app.api.routes.views import router as views_router
+ from app.core.config import get_settings, validate_runtime_settings
+ 
+ 
+ def create_app() -> FastAPI:
+@@ -44,18 +45,19 @@ def create_app() -> FastAPI:
+     app.include_router(service_drafts_router)
+     app.include_router(stage06_platform_router)
+     app.include_router(stage06_runtime_router)
+     app.include_router(stage06_templates_router)
+     app.include_router(stage07_governance_router)
+     app.include_router(stage07_governance_write_router)
+     app.include_router(stage07_draft_employee_hub_router)
+     app.include_router(stage07_digital_employee_management_router)
+     app.include_router(stage07_team_bot_knowledge_router)
+     app.include_router(stage07_telegram_router)
++    app.include_router(stage08_runtime_router)
+     app.include_router(telegram_bindings_router)
+     app.include_router(telegram_send_requests_router)
+     app.include_router(telegram_webhook_router)
+     app.include_router(views_router)
+     return app
+ 
+ 
+ app = create_app()
+
+## Scoped new files
+diff --git a/backend/app/schemas/stage08_runtime.py b/backend/app/schemas/stage08_runtime.py
+new file mode 100644
+index 0000000..be91da9
+--- /dev/null
++++ b/backend/app/schemas/stage08_runtime.py
+@@ -0,0 +1,35 @@
++from typing import Literal
++
++from pydantic import BaseModel, ConfigDict, Field, StrictStr
++
++from app.runtime.stage08_contracts import (
++    ExecutionBudget,
++    ExecutionTicketState,
++    RedactedToolResult,
++    ToolInvocation,
++    ToolName,
++)
++
++
++class RuntimeExecutionPlanRequest(BaseModel):
++    model_config = ConfigDict(extra="forbid", strict=True)
++
++    workspace_id: StrictStr = Field(min_length=1, max_length=120)
++    employee_id: StrictStr = Field(min_length=1, max_length=120)
++    action: ToolName
++    trace_id: StrictStr = Field(min_length=1, max_length=120)
++    idempotency_key: StrictStr = Field(min_length=1, max_length=160)
++    budget: ExecutionBudget
++    invocations: list[ToolInvocation] = Field(min_length=1, max_length=7)
++
++
++class RuntimeExecutionPlanResponse(BaseModel):
++    model_config = ConfigDict(extra="forbid", strict=True)
++
++    ticket_id: StrictStr
++    status: Literal[
++        ExecutionTicketState.succeeded,
++        ExecutionTicketState.failed,
++        ExecutionTicketState.denied,
++    ]
++    tool_summary: list[RedactedToolResult]
+diff --git a/backend/app/api/routes/stage08_runtime.py b/backend/app/api/routes/stage08_runtime.py
+new file mode 100644
+index 0000000..269d255
+--- /dev/null
++++ b/backend/app/api/routes/stage08_runtime.py
+@@ -0,0 +1,132 @@
++from uuid import UUID, uuid4
++
++from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
++from fastapi.exceptions import RequestValidationError
++from fastapi.routing import APIRoute
++
++from app.api.deps import get_stage06_request_identity
++from app.api.routes.stage06_platform import get_stage06_platform_uow
++from app.core.errors import error_detail
++from app.runtime.stage08_contracts import ExecutionPlan, ExecutionTicketState
++from app.runtime.stage08_tool_gateway import Stage08ToolGateway, Stage08ToolGatewayError
++from app.schemas.stage08_runtime import (
++    RuntimeExecutionPlanRequest,
++    RuntimeExecutionPlanResponse,
++)
++from app.services.stage06_authorization import (
++    Stage06AuthorizationError,
++    authorize_workspace_action,
++)
++from app.services.stage06_identity import Stage06RequestIdentity
++from app.services.stage06_platform import PlatformValidationError, Stage06PlatformUnitOfWork
++from app.services.stage08_runtime import begin_execution_plan
++
++
++class _RedactedRuntimeValidationRoute(APIRoute):
++    def get_route_handler(self):
++        original_route_handler = super().get_route_handler()
++
++        async def redacted_route_handler(request: Request) -> Response:
++            try:
++                return await original_route_handler(request)
++            except RequestValidationError as exc:
++                raise HTTPException(
++                    status_code=422,
++                    detail=error_detail(
++                        "stage08_runtime_request_invalid",
++                        "stage08_runtime_request_invalid",
++                    ),
++                ) from exc
++
++        return redacted_route_handler
++
++
++router = APIRouter(
++    prefix="/api/stage08/runtime",
++    tags=["stage08-runtime"],
++    route_class=_RedactedRuntimeValidationRoute,
++)
++_TERMINAL_RESPONSE_STATES = frozenset({"succeeded", "failed", "denied"})
++
++
++@router.post(
++    "/execute-plan",
++    response_model=RuntimeExecutionPlanResponse,
++    status_code=status.HTTP_201_CREATED,
++)
++def execute_runtime_plan(
++    request: RuntimeExecutionPlanRequest,
++    response: Response,
++    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
++    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
++) -> RuntimeExecutionPlanResponse:
++    try:
++        workspace_id = UUID(request.workspace_id)
++        authorize_workspace_action(uow, identity, workspace_id, "digital_employee.invoke")
++        plan = ExecutionPlan(
++            ticket_id=str(uuid4()),
++            workspace_id=request.workspace_id,
++            employee_id=request.employee_id,
++            actor=f"user:{identity.user_id}",
++            action=request.action,
++            trace_id=request.trace_id,
++            idempotency_key=request.idempotency_key,
++            state=ExecutionTicketState.planned,
++            budget=request.budget,
++            invocations=request.invocations,
++        )
++        ticket = begin_execution_plan(uow, plan)
++        if ticket.status == ExecutionTicketState.planned.value:
++            ticket = Stage08ToolGateway().execute_plan(uow, ticket, request.invocations)
++        else:
++            response.status_code = status.HTTP_200_OK
++        _commit_if_sqlalchemy(uow)
++    except (PlatformValidationError, Stage06AuthorizationError, ValueError) as exc:
++        _rollback_if_sqlalchemy(uow)
++        raise _runtime_http_error(exc) from exc
++    except Stage08ToolGatewayError as exc:
++        _rollback_if_sqlalchemy(uow)
++        raise HTTPException(
++            status_code=422,
++            detail=error_detail(exc.code, exc.code),
++        ) from exc
++
++    if ticket.status not in _TERMINAL_RESPONSE_STATES:
++        raise HTTPException(
++            status_code=409,
++            detail=error_detail("stage08_ticket_not_terminal", "stage08_ticket_not_terminal"),
++        )
++    return RuntimeExecutionPlanResponse(
++        ticket_id=str(ticket.id),
++        status=ticket.status,
++        tool_summary=ticket.tool_summary,
++    )
++
++
++def _commit_if_sqlalchemy(uow: Stage06PlatformUnitOfWork) -> None:
++    session = getattr(uow, "session", None)
++    if session is not None:
++        session.commit()
++
++
++def _rollback_if_sqlalchemy(uow: Stage06PlatformUnitOfWork) -> None:
++    session = getattr(uow, "session", None)
++    if session is not None:
++        session.rollback()
++
++
++def _runtime_http_error(
++    exc: PlatformValidationError | Stage06AuthorizationError | ValueError,
++) -> HTTPException:
++    if isinstance(exc, Stage06AuthorizationError):
++        status_code = 404 if exc.code.endswith("_not_found") else 403
++    elif isinstance(exc, PlatformValidationError) and exc.code in {
++        "idempotency_conflict",
++        "idempotency_in_progress",
++        "stage08_trace_conflict",
++    }:
++        status_code = 409
++    else:
++        status_code = 422
++    code = getattr(exc, "code", "stage08_runtime_invalid")
++    return HTTPException(status_code=status_code, detail=error_detail(code, code))
+diff --git a/backend/tests/unit/test_stage08_runtime_api.py b/backend/tests/unit/test_stage08_runtime_api.py
+new file mode 100644
+index 0000000..c810e8e
+--- /dev/null
++++ b/backend/tests/unit/test_stage08_runtime_api.py
+@@ -0,0 +1,293 @@
++from __future__ import annotations
++
++import json
++from uuid import uuid4
++
++import pytest
++from fastapi.testclient import TestClient
++
++from app.api.routes.stage06_platform import get_stage06_platform_uow
++from app.main import create_app
++from app.services.permissions import Actor
++from app.services.stage06_digital_employees import create_digital_employee
++from app.services.stage06_platform import (
++    InMemoryStage06PlatformUnitOfWork,
++    create_base,
++    create_workspace,
++)
++
++
++def test_runtime_api_rejects_unknown_and_prompt_like_input_before_dispatch() -> None:
++    fixture = _api_fixture()
++
++    with fixture.client() as client:
++        unknown = client.post(
++            "/api/stage08/runtime/execute-plan",
++            json={**fixture.payload(), "actor": "user:forged"},
++        )
++        sensitive = client.post(
++            "/api/stage08/runtime/execute-plan",
++            json=fixture.payload(invocations=[{"tool_name": "tool_catalog.inspect", "input": {"nested": {"prompt": "secret"}}}]),
++        )
++
++    assert unknown.status_code == 422
++    assert sensitive.status_code == 422
++    assert fixture.uow.execution_tickets == []
++
++
++@pytest.mark.parametrize(
++    ("budget_field", "invalid_value"),
++    [
++        ("max_tool_calls", True),
++        ("max_tool_calls", 1.0),
++        ("max_retrieval_chunks", False),
++        ("max_retrieval_chunks", 0.0),
++        ("max_retrieval_chunks", "0"),
++    ],
++)
++def test_runtime_api_rejects_non_strict_nested_budget_values_before_dispatch(
++    budget_field: str,
++    invalid_value: object,
++) -> None:
++    fixture = _api_fixture()
++    budget = fixture.payload()["budget"]
++    assert isinstance(budget, dict)
++    budget[budget_field] = invalid_value
++
++    with fixture.client() as client:
++        response = client.post(
++            "/api/stage08/runtime/execute-plan",
++            json=fixture.payload(budget=budget),
++        )
++
++    assert response.status_code == 422
++    assert fixture.uow.execution_tickets == []
++
++
++def test_runtime_api_validation_response_redacts_raw_invalid_request_body() -> None:
++    fixture = _api_fixture()
++    sentinel = "RUNTIME_VALIDATION_SECRET"
++
++    with fixture.client() as client:
++        response = client.post(
++            "/api/stage08/runtime/execute-plan",
++            json=fixture.payload(
++                invocations=[{
++                    "tool_name": "tool_catalog.inspect",
++                    "input": {"nested": {"prompt": sentinel}},
++                }],
++            ),
++        )
++
++    assert response.status_code == 422
++    assert response.json() == {
++        "detail": {
++            "code": "stage08_runtime_request_invalid",
++            "message": "stage08_runtime_request_invalid",
++        }
++    }
++    response_text = response.text.casefold()
++    assert sentinel.casefold() not in response_text
++    assert '"body"' not in response_text
++    assert '"input"' not in response_text
++    assert '"ctx"' not in response_text
++    assert "prompt" not in response_text
++    assert "response" not in response_text
++    assert "token" not in response_text
++    assert "raw_text" not in response_text
++    assert fixture.uow.execution_tickets == []
++
++
++@pytest.mark.parametrize("forbidden_field", ["actor", "ticket_id", "state"])
++def test_runtime_api_derives_actor_ticket_and_state_server_side(forbidden_field: str) -> None:
++    fixture = _api_fixture()
++    forbidden_value = "user:forged" if forbidden_field == "actor" else "succeeded"
++    if forbidden_field == "ticket_id":
++        forbidden_value = str(uuid4())
++
++    with fixture.client() as client:
++        rejected = client.post(
++            "/api/stage08/runtime/execute-plan",
++            json={**fixture.payload(), forbidden_field: forbidden_value},
++        )
++        allowed = client.post("/api/stage08/runtime/execute-plan", json=fixture.payload())
++
++    assert rejected.status_code == 422
++    assert allowed.status_code == 201
++    ticket = fixture.uow.execution_tickets[0]
++    assert ticket.actor_id == "user:owner-1"
++    assert ticket.status == "succeeded"
++    assert allowed.json()["ticket_id"] == str(ticket.id)
++
++
++def test_runtime_api_rejects_wrong_workspace_before_ticket_or_gateway_dispatch() -> None:
++    fixture = _api_fixture()
++    foreign_workspace = create_workspace(
++        fixture.uow,
++        name="Foreign runtime",
++        owner_user_id="foreign-owner",
++        actor=fixture.owner,
++    )
++    foreign_base = create_base(fixture.uow, foreign_workspace.id, name="Foreign", actor=fixture.owner)
++    foreign_employee = create_digital_employee(
++        fixture.uow,
++        foreign_base.id,
++        name="Foreign employee",
++        description="Foreign scope",
++        telegram_alias=None,
++        accessible_tables=[],
++        accessible_views=[],
++        allowed_actions=["tool_catalog.inspect"],
++        actor=fixture.owner,
++    )
++
++    with fixture.client() as client:
++        response = client.post(
++            "/api/stage08/runtime/execute-plan",
++            json=fixture.payload(
++                workspace_id=str(foreign_workspace.id),
++                employee_id=str(foreign_employee.id),
++            ),
++        )
++
++    assert response.status_code == 403
++    assert fixture.uow.execution_tickets == []
++
++
++def test_runtime_api_executes_two_invocations_in_order_with_only_redacted_results() -> None:
++    fixture = _api_fixture(actions=["contact.resolve", "tool_catalog.inspect"])
++    raw_sentinel = "RUNTIME_INPUT_SECRET"
++
++    with fixture.client() as client:
++        response = client.post(
++            "/api/stage08/runtime/execute-plan",
++            json=fixture.payload(
++                action="contact.resolve",
++                invocations=[
++                    {
++                        "tool_name": "contact.resolve",
++                        "input": {"workspace_member_id": str(fixture.owner_member.id)},
++                    },
++                    {
++                        "tool_name": "tool_catalog.inspect",
++                        "input": {},
++                    },
++                ],
++                idempotency_key="two-invocation-key",
++                trace_id="two-invocation-trace",
++            ),
++        )
++
++    assert response.status_code == 201
++    body = response.json()
++    assert body["status"] == "succeeded"
++    assert [item["tool_name"] for item in body["tool_summary"]] == [
++        "contact.resolve",
++        "tool_catalog.inspect",
++    ]
++    ticket = fixture.uow.execution_tickets[0]
++    assert ticket.status == "succeeded"
++    assert ticket.tool_summary == body["tool_summary"]
++    persisted = json.dumps(ticket.tool_summary, sort_keys=True)
++    assert raw_sentinel not in response.text
++    assert raw_sentinel not in persisted
++    assert "workspace_member_id" not in response.text
++    assert "workspace_member_id" not in persisted
++
++
++def test_runtime_api_stops_after_first_denied_invocation() -> None:
++    fixture = _api_fixture(actions=["contact.resolve", "tool_catalog.inspect"])
++
++    with fixture.client() as client:
++        response = client.post(
++            "/api/stage08/runtime/execute-plan",
++            json=fixture.payload(
++                action="contact.resolve",
++                invocations=[
++                    {"tool_name": "contact.resolve", "input": {"workspace_member_id": "not-a-uuid"}},
++                    {"tool_name": "tool_catalog.inspect", "input": {}},
++                ],
++            ),
++        )
++
++    assert response.status_code == 201
++    assert response.json()["status"] == "denied"
++    assert response.json()["tool_summary"] == [{
++        "tool_name": "contact.resolve",
++        "status": "denied",
++        "entity_refs": [],
++        "visible_field_keys": [],
++        "counts": {},
++        "error_code": "invalid_input",
++    }]
++
++
++def test_runtime_api_replay_returns_terminal_ticket_without_reexecution() -> None:
++    fixture = _api_fixture()
++    payload = fixture.payload(idempotency_key="replay-key", trace_id="replay-trace")
++
++    with fixture.client() as client:
++        first = client.post("/api/stage08/runtime/execute-plan", json=payload)
++        audits_after_first = len(fixture.uow.audit_events)
++        replay = client.post("/api/stage08/runtime/execute-plan", json=payload)
++
++    assert first.status_code == 201
++    assert replay.status_code == 200
++    assert replay.json() == first.json()
++    assert len(fixture.uow.execution_tickets) == 1
++    assert len(fixture.uow.audit_events) == audits_after_first
++
++
++class _ApiFixture:
++    def __init__(self, *, actions: list[str] | None = None) -> None:
++        self.uow = InMemoryStage06PlatformUnitOfWork()
++        self.owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
++        self.workspace = create_workspace(
++            self.uow,
++            name="Stage08 runtime API",
++            owner_user_id=self.owner.actor_id,
++            actor=self.owner,
++        )
++        self.owner_member = self.uow.workspace_members[0]
++        self.base = create_base(self.uow, self.workspace.id, name="Runtime", actor=self.owner)
++        self.employee = create_digital_employee(
++            self.uow,
++            self.base.id,
++            name="Runtime employee",
++            description="Runs approved tools",
++            telegram_alias=None,
++            accessible_tables=[],
++            accessible_views=[],
++            allowed_actions=actions or ["tool_catalog.inspect"],
++            actor=self.owner,
++        )
++
++    def client(self) -> TestClient:
++        app = create_app()
++        app.dependency_overrides[get_stage06_platform_uow] = lambda: self.uow
++        client = TestClient(app)
++        client.headers["X-Stage06-User-Id"] = self.owner.actor_id
++        return client
++
++    def payload(self, **overrides: object) -> dict[str, object]:
++        payload: dict[str, object] = {
++            "workspace_id": str(self.workspace.id),
++            "employee_id": str(self.employee.id),
++            "action": "tool_catalog.inspect",
++            "trace_id": "runtime-trace",
++            "idempotency_key": "runtime-idempotency",
++            "budget": {
++                "max_tool_calls": 2,
++                "max_wall_time_ms": 100,
++                "max_graph_depth": 1,
++                "max_retries": 0,
++                "max_retrieval_chunks": 0,
++            },
++            "invocations": [{"tool_name": "tool_catalog.inspect", "input": {}}],
++        }
++        payload.update(overrides)
++        return payload
++
++
++def _api_fixture(*, actions: list[str] | None = None) -> _ApiFixture:
++    return _ApiFixture(actions=actions)
+diff --git a/project-docs/08-implementation/STAGE_08_RUNTIME_API_BDD_AND_ACCEPTANCE.md b/project-docs/08-implementation/STAGE_08_RUNTIME_API_BDD_AND_ACCEPTANCE.md
+new file mode 100644
+index 0000000..e836237
+--- /dev/null
++++ b/project-docs/08-implementation/STAGE_08_RUNTIME_API_BDD_AND_ACCEPTANCE.md
+@@ -0,0 +1,37 @@
++# Stage08 Runtime API BDD and Acceptance
++
++## Status
++
++- Scope: Package A Task 5 的受控 `POST /api/stage08/runtime/execute-plan` 与多 invocation 顺序执行。
++- Boundary: 仅执行既有 allowlist adapter；不引入 Memory、RAG、LangGraph、Provider、Telegram、通知或其他外部写入。
++
++## Behaviour
++
++### Request and identity
++
++- Given 一个经过验证的请求身份，When 请求包含 workspace、employee、action、trace、idempotency、budget 和 invocation，Then 服务端派生 actor、ticket ID 与 `planned` 初始状态。
++- Given 客户端提交未知字段、actor、ticket ID、ticket state 或任意嵌套 `prompt`-like key，When DTO 校验，Then 在 service dispatch 前以 `422` 拒绝。
++- Given 调用者不是目标 workspace 的有效 `digital_employee.invoke` 成员，When 请求执行，Then 在创建 ticket 或 gateway dispatch 前以 `403` 拒绝。
++
++### Execution ticket
++
++- Given PolicyGate 允许的 1–7 条 invocation 计划，When Runtime API 执行，Then 仅创建一张 ticket，并只进行一次 `planned -> executing` 转换。
++- Given 所有 adapter 成功，When 调用按请求顺序完成，Then ticket 进入 `succeeded`，并按相同顺序持久化一条 `RedactedToolResult` / 已尝试调用。
++- Given 首个 adapter 拒绝，When 后续调用仍在计划内，Then ticket 进入 `denied`、写入固定脱敏错误摘要且不调用后续 adapter。
++- Given 首个 adapter 出现未预期错误，When 后续调用仍在计划内，Then ticket 进入 `failed`、写入 `tool_execution_failed` 且不调用后续 adapter。
++- Given 相同语义的重放请求，When ticket 已终态，Then 返回同一 ticket 与安全摘要，状态为 HTTP `200`，不重复执行。
++
++## Acceptance criteria
++
++- 请求与响应 DTO 均 `extra=forbid`，响应没有 raw input/output、权限投影、字段白名单、Memory/retrieval 或 audit 内容。
++- 授权先使用既有 `digital_employee.invoke` workspace authorization；再由既有 PolicyGate 与 adapter 权限继续收敛。
++- `Stage08ToolGateway.execute()` 的单 invocation 行为不变；多 invocation 使用独立 `execute_plan()` 路径，且同一 ticket 只持有一次 transition lock。
++- 新增 API 与 gateway 聚焦用例，以及覆盖的 Runtime service/contract 回归全部通过。
++
++## Verification
++
++```powershell
++$env:PYTHONPATH='backend'; python -m pytest backend/tests/unit/test_stage08_runtime_api.py backend/tests/unit/test_stage08_tool_gateway.py backend/tests/unit/test_stage08_runtime_service.py backend/tests/unit/test_stage08_runtime_contracts.py -q
++```
++
++Expected result: `77 passed`.
+diff --git a/project-docs/08-implementation/evidence/stage08-runtime-api-task5.md b/project-docs/08-implementation/evidence/stage08-runtime-api-task5.md
+new file mode 100644
+index 0000000..b273161
+--- /dev/null
++++ b/project-docs/08-implementation/evidence/stage08-runtime-api-task5.md
+@@ -0,0 +1,41 @@
++# Stage08 Runtime API Task 5 Evidence
++
++## Scope
++
++Implemented the confirmed Package A Task 5 Runtime API contract and sequential multi-invocation ticket execution. No migration, schema persistence change, network call, Provider call, Telegram send, notification send, or deployment action was performed.
++
++## RED evidence
++
++Before production implementation:
++
++```powershell
++$env:PYTHONPATH='backend'; python -m pytest backend/tests/unit/test_stage08_runtime_api.py backend/tests/unit/test_stage08_tool_gateway.py -q
++```
++
++Result: `10 failed, 15 passed`.
++
++- API tests returned `404 Not Found` because `/api/stage08/runtime/execute-plan` was not registered.
++- Gateway plan tests raised `AttributeError` because `Stage08ToolGateway.execute_plan` did not exist.
++- Existing Task 4 single-invocation tests were already green (`15 passed`).
++
++## GREEN and regression evidence
++
++```powershell
++$env:PYTHONPATH='backend'; python -m pytest backend/tests/unit/test_stage08_runtime_api.py backend/tests/unit/test_stage08_tool_gateway.py backend/tests/unit/test_stage08_runtime_service.py backend/tests/unit/test_stage08_runtime_contracts.py -q
++```
++
++Result: `77 passed in 3.98s`.
++
++The focused API cases cover unknown/raw prompt-like input rejection, server-derived actor/ticket/state, pre-dispatch workspace authorization, ordered two-invocation redacted output, denial stop behavior and terminal idempotent replay. Gateway cases cover a single ticket transition into sequential success and stopping after a fixed failed summary without invoking the subsequent adapter.
++
++## Send-path scan
++
++```powershell
++rg -n -i "telegram|send_request|notification|provider|openrouter|requests\\.|httpx|urllib" backend/app/api/routes/stage08_runtime.py backend/app/runtime/stage08_tool_gateway.py backend/app/schemas/stage08_runtime.py
++```
++
++Result: no matches. The `main.py` registration was intentionally excluded because it contains pre-existing Telegram router registrations unrelated to this route.
++
++## Remaining risk
++
++This is synthetic in-memory/unit evidence only. PostgreSQL contention/transaction behavior and broader Stage08 acceptance remain out of this Task 5 scope.

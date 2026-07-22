@@ -41,6 +41,23 @@
 - The previous plan's `-m postgres` variant selects no cases because this existing integration file is not marked `postgres`; the file was run directly with the documented disposable PostgreSQL URL instead.
 - No staging, production, Telegram identity/deep-link, schema migration, permission-model change, new API route, template sharing/versioning/deletion, multi-file import, or non-scalar mapping was implemented.
 
+## 2026-07-16 Browser Focus and Responsive Addendum
+
+- Environment: current local Vite Mini App against local FastAPI and a disposable PostgreSQL fixture containing synthetic data only. This is local implementation evidence, not Telegram, staging, production or identity evidence.
+- Regression: closing the in-Base import dialog previously left focus on `body`. The cause was that the import flow did not preserve a stable trigger, unlike the View Builder and other panels.
+- Repair: the Base Canvas keeps the durable `更多 Base 操作` button reference, passes it to the existing App import opener, and the existing import close path restores it in a microtask after unmount. No schema, API, permission or external-system behavior changed.
+
+| Check | Reproducible command / observation | Actual result |
+| --- | --- | --- |
+| Red/green regression | `mini-app: npm.cmd test -- --run src/test/import-flow.test.tsx` | The new full-App focus assertion failed before the repair (`body` received focus) and passed after it. |
+| Focused regression | `mini-app: npm.cmd test -- --run src/test/import-flow.test.tsx src/test/base-template-actions.test.tsx` | `2` files, `3` tests passed. |
+| Literal Browser path | In the Codex in-app Browser, open a synthetic local Base, `更多 Base 操作` → `导入到当前 Base` → `关闭导入`. | The dialog rendered and focus returned to `BUTTON[aria-label="更多 Base 操作"]`. |
+| Four-width Browser path | Repeat the literal path at `1440×900`, `1280×900`, `430×844` and `390×844`. | All four widths rendered exactly one `导入数据表` dialog and returned focus to `更多 Base 操作`. |
+| Full client regression | `mini-app: npm.cmd test -- --run` | `63` files, `231` tests passed. |
+| Production bundle | `mini-app: npm.cmd run build` | exit `0`; TypeScript and Vite production bundle completed. |
+
+This direct Browser evidence permits only `TI-A08` to move to `evidenced-pending`. It does not satisfy the separate literal file-selection, preview or commit requirements in `TI-A04` or `TI-A06`: the available in-app Browser still exposes no supported local file-upload action.
+
 ## Cleanup
 
 Temporary synthetic seed/proxy scripts and local FastAPI/proxy processes are removed after this evidence capture. The disposable migration smoke is the final database reset in this package.

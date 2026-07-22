@@ -1,0 +1,16 @@
+services:
+  stage08-rag-postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: stage08_rag_test
+      POSTGRES_USER: stage08_rag
+      POSTGRES_PASSWORD: stage08_rag
+    ports:
+      - "127.0.0.1:55432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "psql -U stage08_rag -d stage08_rag_test -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION IF NOT EXISTS vector' > /dev/null && pg_isready -U stage08_rag -d stage08_rag_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 15

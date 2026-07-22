@@ -74,6 +74,35 @@ def test_assistant_context_catalog_returns_only_current_employee_view_intersecti
     assert "config" not in response.text
 
 
+def test_assistant_context_catalog_excludes_views_outside_employee_table_scope() -> None:
+    app, owner, employee, _base, table, allowed_view, _excluded_view = _assistant_context_fixture()
+    employee.accessible_tables = []
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = owner.actor_id
+        catalog = client.get(f"/mini-app/digital-employees/{employee.id}/assistant-context")
+        selected = client.get(
+            f"/mini-app/digital-employees/{employee.id}/assistant-context/views/{allowed_view.id}"
+        )
+
+    assert catalog.status_code == 200
+    assert catalog.json()["views"] == []
+    assert str(table.id) not in catalog.text
+    assert selected.status_code == 404
+
+
+def test_assistant_context_catalog_rejects_a_contact_without_summarize_authority() -> None:
+    app, owner, employee, _base, _table, _allowed_view, _excluded_view = _assistant_context_fixture()
+    employee.allowed_actions = ["draft_update"]
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = owner.actor_id
+        response = client.get(f"/mini-app/digital-employees/{employee.id}/assistant-context")
+
+    assert response.status_code == 404
+    assert "draft_update" not in response.text
+
+
 def test_assistant_context_selected_view_rereads_only_the_allowed_safe_view() -> None:
     app, owner, employee, base, _table, allowed_view, excluded_view = _assistant_context_fixture()
 

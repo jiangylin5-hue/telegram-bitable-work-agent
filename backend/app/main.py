@@ -23,6 +23,10 @@ from app.api.routes.stage07_team_bot_knowledge import (
     router as stage07_team_bot_knowledge_router,
 )
 from app.api.routes.stage07_telegram import router as stage07_telegram_router
+from app.api.routes.stage08_collaboration import router as stage08_collaboration_router
+from app.api.routes.stage08_runtime import router as stage08_runtime_router
+from app.api.routes.stage08_memory import router as stage08_memory_router
+from app.api.routes.stage08_retrieval import router as stage08_retrieval_router
 from app.api.routes.telegram_bindings import router as telegram_bindings_router
 from app.api.routes.telegram_send_requests import (
     router as telegram_send_requests_router,
@@ -51,6 +55,10 @@ def create_app() -> FastAPI:
     app.include_router(stage07_digital_employee_management_router)
     app.include_router(stage07_team_bot_knowledge_router)
     app.include_router(stage07_telegram_router)
+    app.include_router(stage08_collaboration_router)
+    app.include_router(stage08_memory_router)
+    app.include_router(stage08_retrieval_router)
+    app.include_router(stage08_runtime_router)
     app.include_router(telegram_bindings_router)
     app.include_router(telegram_send_requests_router)
     app.include_router(telegram_webhook_router)

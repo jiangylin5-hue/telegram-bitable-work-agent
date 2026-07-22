@@ -2,6 +2,8 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
+import pytest
+from pydantic import ValidationError
 
 from app.api.routes import stage07_draft_employee_hub as draft_employee_hub_routes
 from app.api.routes.stage06_platform import get_stage06_platform_uow
@@ -10,10 +12,12 @@ from app.main import create_app
 from app.models.stage06_platform import WorkspaceMember
 from app.models.stage06_runtime import RecordChangeDraft
 from app.schemas.stage06_platform import ViewInitializationRequest
+from app.schemas.stage07_draft_employee_hub import SafeEmployeeInvocationRequest
 from app.services.permissions import Actor
 from app.services.stage06_digital_employees import create_digital_employee
 from app.services.stage06_platform import (
     InMemoryStage06PlatformUnitOfWork,
+    PlatformValidationError,
     create_base,
     create_field,
     create_form_view,
@@ -78,6 +82,19 @@ def test_s5_contact_directory_returns_only_safe_active_contact_projection() -> N
     assert "ops_private" not in response.text
     assert "field_policy" not in response.text
     assert "accessible_tables" not in response.text
+
+
+def test_s5_invocation_instruction_is_server_bounded_to_the_visible_hub_limit() -> None:
+    payload = {
+        "intent": "summarize",
+        "base_id": str(uuid4()),
+        "view_id": str(uuid4()),
+        "instruction": "x" * 1000,
+    }
+
+    assert SafeEmployeeInvocationRequest.model_validate(payload).instruction == "x" * 1000
+    with pytest.raises(ValidationError):
+        SafeEmployeeInvocationRequest.model_validate({**payload, "instruction": "x" * 1001})
 
 
 def test_s5_draft_model_starts_with_terminal_revision_and_audit_reference() -> None:
@@ -465,6 +482,113 @@ def test_s5_draft_invocation_replays_the_same_safe_draft_pointer_once(
     assert first.json() == replay.json() == {"kind": "draft", "answer": None, "citations": [], "draft_id": str(draft_id), "status": "pending_confirmation"}
     assert calls == 1
     assert "do-not-forward" not in first.text
+
+
+def test_s5_failed_draft_invocation_releases_its_started_idempotency_reservation(
+    monkeypatch,
+) -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="S5 draft retry", owner_user_id=owner.actor_id, actor=owner)
+    base = create_base(uow, workspace.id, name="Operations", actor=owner)
+    table = create_table(uow, base.id, name="Tasks", key="tasks", actor=owner)
+    view = create_form_view(
+        uow, base.id, table.id, name="Task grid", view_type="grid", config={"fields": []}, actor=owner,
+    )
+    record = create_record(uow, table.id, values={}, actor=owner)
+    employee = create_digital_employee(
+        uow, base.id, name="Assistant", description="Safe", telegram_alias=None,
+        accessible_tables=[str(table.id)], accessible_views=[str(view.id)], allowed_actions=["draft_update"], actor=owner,
+    )
+    calls = 0
+
+    def runtime_unavailable(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        raise PlatformValidationError("openrouter_runtime_error", "private provider failure")
+
+    monkeypatch.setattr(draft_employee_hub_routes, "invoke_digital_employee", runtime_unavailable)
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_runtime_uow] = lambda: uow
+    payload = {
+        "intent": "draft_update",
+        "base_id": str(base.id),
+        "view_id": str(view.id),
+        "record_id": str(record.id),
+    }
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = owner.actor_id
+        first = client.post(
+            f"/mini-app/digital-employees/{employee.id}/invocations",
+            headers={"Idempotency-Key": "draft-retry-after-runtime-failure"},
+            json=payload,
+        )
+        retry = client.post(
+            f"/mini-app/digital-employees/{employee.id}/invocations",
+            headers={"Idempotency-Key": "draft-retry-after-runtime-failure"},
+            json=payload,
+        )
+
+    assert first.status_code == retry.status_code == 422
+    assert first.json()["detail"]["code"] == retry.json()["detail"]["code"] == "openrouter_runtime_error"
+    assert calls == 2
+    assert uow.idempotency_records == []
+    assert "private provider failure" not in (first.text + retry.text)
+
+
+def test_s5_unexpected_runtime_failure_also_releases_the_draft_invocation_key(
+    monkeypatch,
+) -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    owner = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(uow, name="S5 draft unexpected retry", owner_user_id=owner.actor_id, actor=owner)
+    base = create_base(uow, workspace.id, name="Operations", actor=owner)
+    table = create_table(uow, base.id, name="Tasks", key="tasks", actor=owner)
+    view = create_form_view(
+        uow, base.id, table.id, name="Task grid", view_type="grid", config={"fields": []}, actor=owner,
+    )
+    record = create_record(uow, table.id, values={}, actor=owner)
+    employee = create_digital_employee(
+        uow, base.id, name="Assistant", description="Safe", telegram_alias=None,
+        accessible_tables=[str(table.id)], accessible_views=[str(view.id)], allowed_actions=["draft_update"], actor=owner,
+    )
+    calls = 0
+
+    def unexpected_runtime_failure(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("private network failure")
+
+    monkeypatch.setattr(draft_employee_hub_routes, "invoke_digital_employee", unexpected_runtime_failure)
+    app = create_app()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_runtime_uow] = lambda: uow
+    payload = {
+        "intent": "draft_update",
+        "base_id": str(base.id),
+        "view_id": str(view.id),
+        "record_id": str(record.id),
+    }
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        client.headers["X-Stage06-User-Id"] = owner.actor_id
+        first = client.post(
+            f"/mini-app/digital-employees/{employee.id}/invocations",
+            headers={"Idempotency-Key": "draft-retry-after-unexpected-runtime-failure"},
+            json=payload,
+        )
+        retry = client.post(
+            f"/mini-app/digital-employees/{employee.id}/invocations",
+            headers={"Idempotency-Key": "draft-retry-after-unexpected-runtime-failure"},
+            json=payload,
+        )
+
+    assert first.status_code == retry.status_code == 500
+    assert calls == 2
+    assert uow.idempotency_records == []
+    assert "private network failure" not in (first.text + retry.text)
 
 
 def test_s5_summary_citations_keep_only_currently_visible_record_ids(

@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import get_stage06_request_identity
@@ -243,6 +244,7 @@ def invoke_safe_digital_employee(
         raise HTTPException(status_code=422, detail=error_detail("draft_context_required", "draft_context_required"))
     if request.intent == "draft_update" and idempotency_key is None:
         raise HTTPException(status_code=422, detail=error_detail("idempotency_key_required", "idempotency_key_required"))
+    invocation_decision = None
     try:
         if view_id is not None:
             view_payload = list_view_records(
@@ -261,7 +263,6 @@ def invoke_safe_digital_employee(
                 actor=actor,
                 view_payload=view_payload,
             )
-        invocation_decision = None
         if request.intent == "draft_update":
             assert idempotency_key is not None
             fingerprint = fingerprint_request({
@@ -300,14 +301,32 @@ def invoke_safe_digital_employee(
             prompt=request.instruction,
             actor=actor,
         )
+        if request.intent == "draft_update":
+            draft_id = result.get("draft_id")
+            if (
+                not isinstance(draft_id, str)
+                or result.get("status") != "pending_confirmation"
+            ):
+                raise PlatformValidationError(
+                    "safe_draft_result_unavailable",
+                    str(employee_id),
+                )
+            assert invocation_decision is not None
+            complete_idempotent_operation(
+                invocation_decision.record,
+                response_ref={"draft_id": draft_id},
+            )
     except PlatformValidationError as exc:
+        if invocation_decision is not None and invocation_decision.status == "started":
+            _discard_s5_idempotency_reservation(uow, invocation_decision.record)
         raise _platform_error(exc) from exc
+    except Exception:
+        if invocation_decision is not None and invocation_decision.status == "started":
+            _discard_s5_idempotency_reservation(uow, invocation_decision.record)
+        raise
     if request.intent == "draft_update":
-        draft_id = result.get("draft_id")
-        if not isinstance(draft_id, str) or result.get("status") != "pending_confirmation":
-            raise HTTPException(status_code=422, detail=error_detail("safe_draft_result_unavailable", "safe_draft_result_unavailable"))
+        draft_id = result["draft_id"]
         assert invocation_decision is not None
-        complete_idempotent_operation(invocation_decision.record, response_ref={"draft_id": draft_id})
         _commit_if_sqlalchemy(uow)
         return SafeEmployeeInvocationResponse(kind="draft", draft_id=draft_id, status="pending_confirmation")
     answer = result.get("answer")
@@ -500,7 +519,11 @@ def _resolve_assistant_context(
     identity: Stage06RequestIdentity,
 ):
     employee = uow.get_digital_employee(employee_id)
-    if employee is None or employee.status != "active":
+    if (
+        employee is None
+        or employee.status != "active"
+        or "summarize" not in set(employee.allowed_actions)
+    ):
         raise HTTPException(
             status_code=404,
             detail=error_detail("assistant_context_not_found", "assistant_context_not_found"),
@@ -522,9 +545,15 @@ def _resolve_assistant_context(
             detail=error_detail("assistant_context_not_found", "assistant_context_not_found"),
         )
     allowed_view_ids = set(employee.accessible_views)
+    allowed_table_ids = set(employee.accessible_tables)
     views = []
     for view in list_views_for_base(uow, employee.base_id, actor=actor):
-        if str(view.id) not in allowed_view_ids or view.view_type not in _SAFE_ASSISTANT_VIEW_TYPES:
+        if (
+            str(view.id) not in allowed_view_ids
+            or view.table_id is None
+            or str(view.table_id) not in allowed_table_ids
+            or view.view_type not in _SAFE_ASSISTANT_VIEW_TYPES
+        ):
             continue
         try:
             get_view_presentation(uow, view.id, actor=actor)
@@ -584,6 +613,22 @@ def _safe_summary_citations(
         safe_citations.append(SafeCitationResponse(record_id=record_id))
         seen_record_ids.add(record_id)
     return safe_citations
+
+
+def _discard_s5_idempotency_reservation(uow: Stage06PlatformUnitOfWork, record: object) -> None:
+    """Release a draft-invocation key only when no safe terminal result was produced."""
+    session = getattr(uow, "session", None)
+    if session is not None:
+        state = inspect(record)
+        if state.pending:
+            session.expunge(record)
+        elif state.persistent:
+            session.delete(record)
+        session.commit()
+        return
+    records = getattr(uow, "idempotency_records", None)
+    if isinstance(records, list) and record in records:
+        records.remove(record)
 
 
 def _begin_s5_idempotent_operation(

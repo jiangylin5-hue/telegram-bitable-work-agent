@@ -66,12 +66,12 @@ export function TeamBotWorkbench({
             <p>暂时无法读取团队知识上下文，请重新选择后重试。</p>
             <button type="button" onClick={onRetry}>重试</button>
           </section>
-        ) : (
-          <div className="assistant-context-columns">
-            <section className="assistant-context-section">
+        ) : null}
+        <div className="assistant-context-columns">
+            <section className="assistant-context-section" aria-label="团队助手目录">
               <header>
-                <p>STEP 1</p>
-                <h3>选择团队助手</h3>
+                <p>ASSISTANTS</p>
+                <h3>团队助手</h3>
               </header>
               {contacts.length === 0 ? <p>当前没有可用于团队汇总的数字员工。</p> : (
                 <ul className="assistant-context-contact-list">
@@ -87,10 +87,10 @@ export function TeamBotWorkbench({
               )}
             </section>
 
-            <section className="assistant-context-section">
+            <section className="assistant-context-section" aria-label="已授权视图">
               <header>
-                <p>STEP 2</p>
-                <h3>选择团队视图</h3>
+                <p>CONTEXT</p>
+                <h3>已授权视图</h3>
               </header>
               {!context ? <p>先选择团队助手，再选择当前可访问的已保存视图。</p> : (
                 <>
@@ -111,10 +111,10 @@ export function TeamBotWorkbench({
               )}
             </section>
 
-            <section className="assistant-context-section assistant-context-summary-section">
+            <section className="assistant-context-section assistant-context-summary-section" aria-label="团队摘要与审计">
               <header>
-                <p>STEP 3</p>
-                <h3>生成团队摘要</h3>
+                <p>REVIEW</p>
+                <h3>团队摘要与审计</h3>
               </header>
               {!selectedView ? <p>摘要前会重新验证团队助手、已保存视图及当前访问权限。</p> : (
                 <div className="assistant-context-invocation">
@@ -136,10 +136,8 @@ export function TeamBotWorkbench({
               ) : null}
               {selectedView ? <button type="button" className="assistant-context-open-base" onClick={onOpenBase}>打开 Base 继续处理</button> : null}
             </section>
-          </div>
-        )}
+        </div>
       </aside>
     </div>
   )
 }
-
