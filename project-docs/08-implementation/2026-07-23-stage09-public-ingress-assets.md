@@ -10,11 +10,17 @@
 
 ## Global Constraints
 
+### 2026-07-23 已证实的 Caddyfile 挂载边界
+
+真实服务器探针已证实：虽然 Docker inspect 显示历史 Caddy 的 `/etc/caddy/Caddyfile` 指向宿主机文件，但该文件绑定在容器启动时的旧 inode；后来宿主机路径对应的文件被替换后，两侧内容的 SHA-256 已不同，宿主机对该路径的追加不会进入运行中的容器。因此，不能再把“宿主机源文件可写”当作 Caddy 生效条件，也不能通过重启、重建或替换历史 Caddy 来刷新绑定。
+
+Stage09 的唯一受控做法改为：先从**运行中容器**读取其当前 Caddyfile 到仅 root 可读的临时备份；仅在这份内存候选文本末尾追加唯一的 `stage09-managed` host block；通过 `docker exec -i ... caddy validate --config - --adapter caddyfile` 和同样的 stdin `reload` 将候选配置送入 Caddy Admin API。失败时，使用同一 stdin 方式把读取到的原始运行时配置重新 reload。整个过程不写宿主机 Caddyfile、不改容器生命周期、不改已有 host，且临时文件在退出时清理。
+
 - 仅在用户提供 hostname、DNS 已解析、且明确授权后，activation script 才可在服务器执行。
 - 不监听 `0.0.0.0`、不改 80/443、不给 PostgreSQL/Redis 增加网络暴露。
 - Nginx bridge listener 必须只绑定已发现的私网 gateway，并只 `allow` Caddy 单 IP `/32`。
 - Caddy 只能追加一个带 `stage09-managed` marker 的 host block；原有 host 的字节内容不可修改。
-- Caddyfile 必须是容器 `/etc/caddy/Caddyfile` 的单一 host mount，且宿主机源文件必须可由本次 root activation 写入；容器内 bind mount 可以保持 read-only。发现 0 或多于 1 个公开 Caddy 容器即 fail closed。
+- Caddyfile 必须是容器 `/etc/caddy/Caddyfile` 的单一 host mount；它仅用于确认目标配置入口。激活必须从容器实际可见的运行时 Caddyfile 建立候选配置，并经 stdin reload；不得依赖、修改或替换宿主机源文件。容器内 bind mount 可以保持 read-only。发现 0 或多于 1 个公开 Caddy 容器即 fail closed。
 - 所有输出只可含状态、布尔值、artifact id 与 hostname；不得打印 token、runtime env、数据库 URL、Caddyfile 原文、bridge IP 或业务数据。
 - 真实公网、Caddy、Nginx、DNS、Telegram 写入不在本计划的本地实现阶段执行。
 - Git archive 中的脚本可保持仓库的 regular-file mode；服务器安装 release 时，必须在切换 `current` 前将 release tree 归属设为 `stage09-p1:stage09-p1`，并将 `deploy/stage09-native/scripts/*.sh` 设为 `750`，以满足 systemd 直接执行 `ExecStartPre` 的权限模型。

@@ -61,11 +61,11 @@ assert_activator_contract() {
 
     grep -Fq 'docker ps --format' "$activator" || fail activator-does-not-discover-caddy
     grep -Fq '/etc/caddy/Caddyfile' "$activator" || fail activator-does-not-locate-caddyfile
-    grep -Fq '[ -f "$caddyfile_host_path" ] && [ -w "$caddyfile_host_path" ]' "$activator" || fail activator-does-not-check-host-caddyfile-write
+    grep -Fq 'docker exec "$caddy_id" cat /etc/caddy/Caddyfile > "$caddy_backup"' "$activator" || fail activator-does-not-read-live-caddyfile
+    grep -Fq 'caddy validate --config - --adapter caddyfile' "$activator" || fail activator-does-not-validate-live-caddyfile
+    grep -Fq 'caddy reload --config - --adapter caddyfile' "$activator" || fail activator-does-not-reload-live-caddyfile
     grep -Fq 'STAGE09_P1_CADDY_SOURCE_CIDR' "$activator" || fail activator-does-not-restrict-bridge
     grep -Fq 'nginx -t' "$activator" || fail activator-does-not-validate-nginx
-    grep -Fq 'caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile' "$activator" || fail activator-does-not-validate-caddy
-    grep -Fq 'caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile' "$activator" || fail activator-does-not-reload-caddy
     grep -Fq 'getent ahostsv4' "$activator" || fail activator-does-not-check-dns
     grep -Fq 'https://$hostname/health' "$activator" || fail activator-does-not-check-public-health
     grep -Fq 'until curl --fail --silent --show-error --max-time 15 "https://$hostname/health"' "$activator" || fail activator-does-not-wait-for-tls
@@ -87,6 +87,12 @@ assert_activator_contract() {
     fi
     if grep -Fq "*'|true')" "$activator"; then
         fail activator-requires-container-writable-mount
+    fi
+    if grep -Fq '>> "$caddyfile_host_path"' "$activator"; then
+        fail activator-mutates-host-caddyfile
+    fi
+    if grep -Fq 'cp "$caddy_backup" "$caddyfile_host_path"' "$activator"; then
+        fail activator-restores-host-caddyfile
     fi
 }
 

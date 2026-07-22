@@ -67,8 +67,7 @@ rollback() {
     [ "$status" -eq 0 ] && exit 0
 
     if [ "${caddy_changed:-0}" -eq 1 ] && [ -n "${caddy_backup:-}" ] && [ -f "$caddy_backup" ]; then
-        cp "$caddy_backup" "$caddyfile_host_path" >/dev/null 2>&1 || :
-        docker exec "$caddy_id" caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1 || :
+        docker exec -i "$caddy_id" caddy reload --config - --adapter caddyfile < "$caddy_backup" >/dev/null 2>&1 || :
     fi
     if [ "${nginx_changed:-0}" -eq 1 ] && [ -n "${nginx_backup:-}" ] && [ -f "$nginx_backup" ]; then
         cp "$nginx_backup" "$nginx_available" >/dev/null 2>&1 || :
@@ -112,14 +111,13 @@ is_private_ipv4 "$caddy_gateway" || fail
 caddyfile_rows=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/etc/caddy/Caddyfile"}}{{printf "%s\n" .Source}}{{end}}{{end}}' "$caddy_id")
 [ "$(file_count "$caddyfile_rows")" -eq 1 ] || fail
 caddyfile_host_path=$caddyfile_rows
-[ -f "$caddyfile_host_path" ] && [ -w "$caddyfile_host_path" ] || fail
-grep -Fq "# stage09-managed: $hostname" "$caddyfile_host_path" && fail
-grep -Fq "$hostname {" "$caddyfile_host_path" && fail
+[ -f "$caddyfile_host_path" ] || fail
 
 umask 077
 backup_dir=$(mktemp -d /var/lib/stage09-p1/public-ingress.XXXXXX) || fail
 nginx_backup="$backup_dir/nginx.conf"
 caddy_backup="$backup_dir/Caddyfile"
+caddy_candidate="$backup_dir/Caddyfile.candidate"
 nginx_temp="$nginx_available.stage09-tmp"
 caddy_changed=0
 nginx_changed=0
@@ -142,11 +140,14 @@ rendered_block=$( \
     STAGE09_P1_CADDY_UPSTREAM_PORT=18090 \
     sh "$renderer"
 )
-cp "$caddyfile_host_path" "$caddy_backup"
+docker exec "$caddy_id" cat /etc/caddy/Caddyfile > "$caddy_backup"
+grep -Fq "# stage09-managed: $hostname" "$caddy_backup" && fail
+grep -Fq "$hostname {" "$caddy_backup" && fail
+cp "$caddy_backup" "$caddy_candidate"
+printf '\n%s\n' "$rendered_block" >> "$caddy_candidate"
 caddy_changed=1
-printf '\n%s\n' "$rendered_block" >> "$caddyfile_host_path"
-docker exec "$caddy_id" caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
-docker exec "$caddy_id" caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
+docker exec -i "$caddy_id" caddy validate --config - --adapter caddyfile < "$caddy_candidate" >/dev/null
+docker exec -i "$caddy_id" caddy reload --config - --adapter caddyfile < "$caddy_candidate" >/dev/null
 attempt=0
 until curl --fail --silent --show-error --max-time 15 "https://$hostname/health" >/dev/null; do
     attempt=$((attempt + 1))
