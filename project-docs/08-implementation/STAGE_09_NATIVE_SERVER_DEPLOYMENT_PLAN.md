@@ -2,6 +2,8 @@
 
 ## Status
 
+- Current Progress Update (2026-07-23, server local time): 已从已发布的 Stage08 验收源码树构建并真实激活 `stage09-p1-20260723-r5`。本机 `release-assets`、`runtime-preflight` 与 Mini App production build 通过；服务器端密封包校验、固定 `20260720_0032` 迁移、原子 release/venv/static 切换、systemd 服务和独立 root 回环检查均通过，上传临时目录已清理。完整脱敏证据见 `evidence/stage09-p1-native-r5-deployment-2026-07-23.md`。本条不代表公共 HTTPS、DNS、真实 Telegram 或 Provider 上线完成。
+
 - Current Progress Update (2026-07-23, server local time): P1-B 原生服务与内部 Nginx 已真实激活到 `stage09-p1-20260722-r4`（Git `bddf4e6`）。`20260720_0032` 迁移、Redis/API/worker/outbox、`127.0.0.1:18080` API 与 `127.0.0.1:18090` Nginx 静态/API 入口均有独立实测证据。该进度不代表公共 HTTPS、DNS、真实 Telegram 或 Provider 上线完成；公网入口仍是下一独立门禁。
 
 - Document status：active — 2026-07-22 用户确认，替代 Stage09 中所有“新建 Docker Compose/容器/卷”的 P1 实施路径。
