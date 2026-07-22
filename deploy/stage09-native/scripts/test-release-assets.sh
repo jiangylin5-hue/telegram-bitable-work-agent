@@ -136,6 +136,14 @@ artifact-id: unavailable' ] || fail crlf-shell-script-output
 tr -d '\r' < "$crlf_probe" > "$fixture_scripts/.crlf-cleaned" || fail crlf-probe-clean
 mv -f "$fixture_scripts/.crlf-cleaned" "$crlf_probe" || fail crlf-probe-clean
 
+crlf_unit_probe="$release_root/deploy/stage09-native/systemd/stage09-p1-api.service"
+printf '\r\n' >> "$crlf_unit_probe" || fail crlf-unit-probe-write
+crlf_unit_output=$(sh "$fixture_scripts/verify-release-layout.sh" "$release_root" "$artifact_id" 2>&1) && fail crlf-unit-accepted
+[ "$crlf_unit_output" = 'release-layout: fail
+artifact-id: unavailable' ] || fail crlf-unit-output
+tr -d '\r' < "$crlf_unit_probe" > "$fixture_scripts/.crlf-unit-cleaned" || fail crlf-unit-probe-clean
+mv -f "$fixture_scripts/.crlf-unit-cleaned" "$crlf_unit_probe" || fail crlf-unit-probe-clean
+
 manifest_one="$fixture_root/manifest-one.sha256"
 manifest_two="$fixture_root/manifest-two.sha256"
 manifest_one_output=$(sh "$fixture_scripts/create-release-manifest.sh" "$release_root" "$artifact_id" "$manifest_one" 2>&1) || fail manifest-first
