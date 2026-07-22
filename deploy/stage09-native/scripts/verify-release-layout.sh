@@ -58,7 +58,8 @@ done
 # Built frontend assets are deployed separately at /var/www/stage09-p1/<id>.
 # The source release must not pretend to contain P1-B static assets.
 forbidden=$(find "$release_root" \( \
-    -name '.env' -o -name '.env.*' -o -name 'runtime.env' -o \
+    \( -name '.env' -o -name '.env.*' \) ! -path "$release_root/backend/.env.example" -o \
+    -name 'runtime.env' -o \
     -name '.git' -o -name 'node_modules' -o -name 'secrets' \
 \) -print -quit)
 [ -z "$forbidden" ] || fail

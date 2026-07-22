@@ -140,6 +140,16 @@ artifact-id: unavailable' ] || fail private-env-output
 case "$private_output" in *fixture-secret-value*) fail private-env-leak ;; esac
 rm -f "$release_root/.env" || fail private-env-cleanup
 
+# The repository ships one documented backend example. It is not a runtime
+# secret and must remain admissible, while every other .env-style file stays
+# forbidden by the sealed-release gate.
+printf '%s\n' '# documented environment example' > "$release_root/backend/.env.example" || fail example-env-fixture
+example_env_output=$(sh "$fixture_scripts/verify-release-layout.sh" "$release_root" "$artifact_id" 2>&1) || fail example-env-accepted
+[ "$example_env_output" = "release-layout: pass
+artifact-id: $artifact_id
+static-assets: external-p1-b-required" ] || fail example-env-output
+rm -f "$release_root/backend/.env.example" || fail example-env-cleanup
+
 fake_marker="$fixture_root/fake-alembic.marker"
 {
     printf '%s\n' '#!/bin/sh'
