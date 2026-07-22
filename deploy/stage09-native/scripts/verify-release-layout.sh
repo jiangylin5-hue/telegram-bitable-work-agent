@@ -58,6 +58,18 @@ do
     [ -f "$release_root/$required" ] && [ ! -L "$release_root/$required" ] || fail
 done
 
+# systemd executes the isolation guard directly from the sealed release. Keep
+# every shipped deployment script executable so a Windows archive cannot turn
+# an otherwise valid release into a 203/EXEC startup failure.
+case "$(uname -s)" in
+    MINGW*|MSYS*) : ;; # Git-Bash fixtures cannot faithfully represent Unix x bits.
+    *)
+        for script in "$release_root"/deploy/stage09-native/scripts/*.sh; do
+            [ -f "$script" ] && [ -x "$script" ] || fail
+        done
+        ;;
+esac
+
 # Native service, SQL, Nginx and shell assets are all inspected by POSIX tools
 # on the target host. Reject CRLF anywhere in their sealed tree before a
 # release can become current: a CRLF unit or SQL file invalidates exact-line
