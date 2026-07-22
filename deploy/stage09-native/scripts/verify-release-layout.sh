@@ -13,7 +13,7 @@ fail() {
 release_root=${1:-}
 artifact_id=${2:-}
 [ "$#" -eq 2 ] || fail
-for utility in find grep realpath; do
+for utility in find grep od realpath; do
     command -v "$utility" >/dev/null 2>&1 || fail
 done
 printf '%s\n' "$artifact_id" | grep -Eq '^stage09-p1-[a-z0-9][a-z0-9._-]*$' || fail
@@ -56,6 +56,14 @@ for required in \
     deploy/stage09-native/scripts/test-public-ingress-assets.sh
 do
     [ -f "$release_root/$required" ] && [ ! -L "$release_root/$required" ] || fail
+done
+
+# Linux systemd executes these assets with POSIX sh. Reject CRLF before a
+# release can become current, because dash parses the trailing carriage return
+# as an invalid shell option.
+for script in "$release_root"/deploy/stage09-native/scripts/*.sh; do
+    [ -f "$script" ] || fail
+    od -An -tx1 "$script" | grep -Eq '(^|[[:space:]])0d([[:space:]]|$)' && fail
 done
 
 # Built frontend assets are deployed separately at /var/www/stage09-p1/<id>.
