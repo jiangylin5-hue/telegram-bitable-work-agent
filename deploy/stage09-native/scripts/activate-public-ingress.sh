@@ -109,12 +109,9 @@ caddy_gateway=${network_rows#*|}
 is_private_ipv4 "$caddy_address" || fail
 is_private_ipv4 "$caddy_gateway" || fail
 
-caddyfile_rows=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/etc/caddy/Caddyfile"}}{{printf "%s|%t\n" .Source .RW}}{{end}}{{end}}' "$caddy_id")
+caddyfile_rows=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/etc/caddy/Caddyfile"}}{{printf "%s\n" .Source}}{{end}}{{end}}' "$caddy_id")
 [ "$(file_count "$caddyfile_rows")" -eq 1 ] || fail
-case $caddyfile_rows in
-    *'|true') caddyfile_host_path=${caddyfile_rows%|true} ;;
-    *) fail ;;
-esac
+caddyfile_host_path=$caddyfile_rows
 [ -f "$caddyfile_host_path" ] && [ -w "$caddyfile_host_path" ] || fail
 grep -Fq "# stage09-managed: $hostname" "$caddyfile_host_path" && fail
 grep -Fq "$hostname {" "$caddyfile_host_path" && fail

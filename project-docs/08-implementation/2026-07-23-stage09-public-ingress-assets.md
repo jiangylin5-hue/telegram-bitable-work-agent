@@ -14,9 +14,10 @@
 - 不监听 `0.0.0.0`、不改 80/443、不给 PostgreSQL/Redis 增加网络暴露。
 - Nginx bridge listener 必须只绑定已发现的私网 gateway，并只 `allow` Caddy 单 IP `/32`。
 - Caddy 只能追加一个带 `stage09-managed` marker 的 host block；原有 host 的字节内容不可修改。
-- Caddyfile 必须是容器 `/etc/caddy/Caddyfile` 的可写 host mount；发现 0 或多于 1 个公开 Caddy 容器即 fail closed。
+- Caddyfile 必须是容器 `/etc/caddy/Caddyfile` 的单一 host mount，且宿主机源文件必须可由本次 root activation 写入；容器内 bind mount 可以保持 read-only。发现 0 或多于 1 个公开 Caddy 容器即 fail closed。
 - 所有输出只可含状态、布尔值、artifact id 与 hostname；不得打印 token、runtime env、数据库 URL、Caddyfile 原文、bridge IP 或业务数据。
 - 真实公网、Caddy、Nginx、DNS、Telegram 写入不在本计划的本地实现阶段执行。
+- Git archive 中的脚本可保持仓库的 regular-file mode；服务器安装 release 时，必须在切换 `current` 前将 release tree 归属设为 `stage09-p1:stage09-p1`，并将 `deploy/stage09-native/scripts/*.sh` 设为 `750`，以满足 systemd 直接执行 `ExecStartPre` 的权限模型。
 
 ---
 
@@ -98,7 +99,7 @@ git commit -m "feat: add Stage09 Caddy host renderer"
 
 - Consumes: 一个 positional `hostname`；现有 `/opt/stage09-p1/current`、`/etc/nginx/sites-available/stage09-p1.conf`、Docker Caddy container。
 - Produces: 成功时受限 Nginx bridge listener 和单一 Caddy host；失败时恢复两个原配置文件，并 reload 恢复服务。
-- Preconditions: hostname 与 `getent ahostsv4` 均有效；恰好一个公开 Caddy 容器；Caddyfile host mount 可写；Caddy 私网 IP/gateway 均存在；r5 内部 Nginx health 当前为 green。
+- Preconditions: hostname 与 `getent ahostsv4` 均有效；恰好一个公开 Caddy 容器；Caddyfile host mount 的宿主机源文件可写（容器内可保持 read-only）；Caddy 私网 IP/gateway 均存在；r5 内部 Nginx health 当前为 green。
 
 - [x] **Step 1: 为 fail-closed 静态合同写 failing tests**
 

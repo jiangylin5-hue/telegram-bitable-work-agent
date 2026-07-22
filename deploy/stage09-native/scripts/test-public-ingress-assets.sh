@@ -61,6 +61,7 @@ assert_activator_contract() {
 
     grep -Fq 'docker ps --format' "$activator" || fail activator-does-not-discover-caddy
     grep -Fq '/etc/caddy/Caddyfile' "$activator" || fail activator-does-not-locate-caddyfile
+    grep -Fq '[ -f "$caddyfile_host_path" ] && [ -w "$caddyfile_host_path" ]' "$activator" || fail activator-does-not-check-host-caddyfile-write
     grep -Fq 'STAGE09_P1_CADDY_SOURCE_CIDR' "$activator" || fail activator-does-not-restrict-bridge
     grep -Fq 'nginx -t' "$activator" || fail activator-does-not-validate-nginx
     grep -Fq 'caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile' "$activator" || fail activator-does-not-validate-caddy
@@ -81,6 +82,9 @@ assert_activator_contract() {
     fi
     if grep -Fq 'host.docker.internal' "$activator"; then
         fail activator-uses-host-docker-internal
+    fi
+    if grep -Fq "*'|true')" "$activator"; then
+        fail activator-requires-container-writable-mount
     fi
 }
 
