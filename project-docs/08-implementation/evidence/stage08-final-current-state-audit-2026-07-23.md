@@ -52,3 +52,37 @@
 - Stage09 公网 hostname / DNS / TLS、外网健康检查和回滚演练。
 - 在明确测试群和受控发送边界后，真实 Telegram 收消息、写审计、回执的 smoke。
 - Stage07 Mini App 浏览器视觉与端到端交互验收。
+
+## 后续当前提交复核（2026-07-23）
+
+### 做了什么
+
+在提交 `83c3a63` 上重新枚举并执行所有 `tests/unit/test_stage08_*.py` 与
+`tests/api/test_stage08_*.py`。Windows 不会将 pytest 文件通配符自动传给 Python，
+因此实际命令先由 PowerShell 枚举 26 个文件，再将其完整路径传给 pytest。
+
+```powershell
+$files = @(Get-ChildItem 'tests\\unit\\test_stage08_*.py' | ForEach-Object FullName) + @(Get-ChildItem 'tests\\api\\test_stage08_*.py' | ForEach-Object FullName)
+python -m pytest @files
+```
+
+### 改了什么
+
+- 不改动 Stage08 源码、迁移、依赖、运行时配置或生产数据库。
+- 已验证 `backend/` 相对提交 `83c3a63` 没有未提交差异；本次仅补充当前提交的
+  验收执行证据。
+
+### 验收结果
+
+- 收集：26 个 Stage08 单元/API 测试文件，796 项测试。
+- 结果：`796 passed in 47.68s`。
+- 覆盖范围：Runtime/Tool Gateway、Memory、Context/Group Context、RAG/pgvector
+  contracts、LangGraph Collaboration、OpenRouter adapter/evaluator 及 Stage08 API。
+
+### 本轮不做什么
+
+- 不用生产服务器数据库运行 disposable integration fixture。
+- 不发 Telegram、不修改 allowlist、不写入业务表、不调用 Provider。
+- PostgreSQL/pgvector integration 和真实 OpenRouter 的独立证据仍分别以本文件前文
+  的 2026-07-23 记录及 Stage09 r14 受控运行证据为准；本节不把 unit/API 结果扩大
+  表述为那些外部验证。
