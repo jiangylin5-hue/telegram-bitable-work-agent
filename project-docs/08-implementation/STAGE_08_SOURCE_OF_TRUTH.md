@@ -2,6 +2,8 @@
 
 ## Status
 
+- Current Progress Update (2026-07-23): Stage08 A–F 的当前提交复核再次通过 `796 passed in 47.68s`（26 个 Unit/API 测试文件），且 `backend/` 未偏离先前的全量 A–F 验收提交。Stage09 r14 的原生服务、公开 HTTPS 健康检查及受控真实 OpenRouter 12-case 已另外实际完成；Telegram webhook 已指向 Stage09，但测试聊天的绑定消息尚未到达，因此收发 allowlist、`restricted_test` 切换和一条真实回执仍未执行。此待办不影响 A–F 的开发收口，也不能以此宣称 Telegram 生产验收完成。证据见 `evidence/stage08-final-current-state-audit-2026-07-23.md`、`evidence/stage09-r14-real-runtime-and-provider-2026-07-23.md` 与 `2026-07-23-stage09-telegram-llm-real-smoke.md`。
+
 - Current Progress Update (2026-07-22): Stage08 A–F 已完成一次当前状态真实验收：`796 passed` Stage08 Unit/API、`79 passed` disposable PostgreSQL/pgvector integration，及受控真实 OpenRouter R4 `12/12 passed`（9 invoked / 9 completed / 8 usage-present / 0 timeout）。证据见 `evidence/stage08-final-current-state-audit-2026-07-22.md`；Telegram、公开 HTTPS、生产写入和 Stage07 UI 仍是独立后续门禁。
 
 - Current Progress Update (2026-07-22)：Package F 的 F1–F4 质量证据范围已关闭。最终独立审查 `PASS / 0 Critical / 0 Important / 0 Minor`；R3 的单批真实 OpenRouter 合成评测为 `12/12`、0 timeout、Provider `9 invoked / 9 completed / 8 usage-present`，并以 `analysis_action` enum 证明 general-advice/read-only/deny/none 合同。初版 F3 `11/12 HOLD` 与 R2 evidence 哈希均保持不变。`STAGE_08_PACKAGE_F_OPERATIONS_SLO_AND_MILVUS_DECISION.md` 记录当前无规模触发，继续 pgvector、不引入 Milvus。A–F 的开发与非生产质量证据现已完成；生产部署、真实 Telegram controlled smoke、服务器运维与 Stage07 UI 最终验收仍是后续独立门槛。
