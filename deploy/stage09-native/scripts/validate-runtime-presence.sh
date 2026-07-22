@@ -86,6 +86,28 @@ stage06_notification_allowed_chat_ids=$(value_for STAGE06_NOTIFICATION_ALLOWED_C
 [ -z "$telegram_allowed_user_ids" ] || fail "nonempty-telegram-user-allowlist"
 [ -z "$stage06_notification_allowed_chat_ids" ] || fail "nonempty-stage06-notification-allowlist"
 
+if ! awk -v mode="$telegram_send_mode" -F= '
+    /^[[:space:]]*($|#)/ { next }
+    /^[A-Za-z_][A-Za-z0-9_]*=/ {
+        key = $1
+        value = $0
+        sub(/^[^=]*=/, "", value)
+        sub(/^[[:space:]]+/, "", value)
+        sub(/[[:space:]]+$/, "", value)
+        if (key ~ /^TELEGRAM_.*ALLOW/ && value != "") {
+            if (mode == "restricted_test" &&
+                (key == "TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS" ||
+                 key == "TELEGRAM_ALLOWED_CHAT_IDS")) {
+                next
+            }
+            invalid = 1
+        }
+    }
+    END { exit invalid ? 1 : 0 }
+' "$runtime_file"; then
+    fail "nonempty-telegram-allowlist"
+fi
+
 case "$telegram_send_mode" in
     dry_run)
         [ -z "$telegram_test_send_allowed_chat_ids" ] && [ -z "$telegram_allowed_chat_ids" ] || \
