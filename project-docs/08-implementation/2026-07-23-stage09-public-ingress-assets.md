@@ -16,6 +16,10 @@
 
 Stage09 的唯一受控做法改为：先从**运行中容器**读取其当前 Caddyfile 到仅 root 可读的临时备份；仅在这份内存候选文本末尾追加唯一的 `stage09-managed` host block；通过 `docker exec -i ... caddy validate --config - --adapter caddyfile` 和同样的 stdin `reload` 将候选配置送入 Caddy Admin API。失败时，使用同一 stdin 方式把读取到的原始运行时配置重新 reload。整个过程不写宿主机 Caddyfile、不改容器生命周期、不改已有 host，且临时文件在退出时清理。
 
+### 2026-07-23 已证实的 Linux shell 换行边界
+
+真实 r9 密封包在服务器的 release-layout 预检阶段被拒绝：其中部分 `.sh` 文件含有 CRLF，而 Ubuntu 的 `/bin/sh`（dash）会把行尾 `CR` 解析为非法选项。该失败发生在 `current` 切换前，r8 服务未受影响。今后 release-layout 必须对 release 内全部 `deploy/stage09-native/scripts/*.sh` 逐字节扫描 `0d`，任何 CRLF 一律 fail closed；该检查既是服务器切换前的硬门禁，也是防止 Windows 工作树行尾再次进入生产包的回归用例。
+
 - 仅在用户提供 hostname、DNS 已解析、且明确授权后，activation script 才可在服务器执行。
 - 不监听 `0.0.0.0`、不改 80/443、不给 PostgreSQL/Redis 增加网络暴露。
 - Nginx bridge listener 必须只绑定已发现的私网 gateway，并只 `allow` Caddy 单 IP `/32`。

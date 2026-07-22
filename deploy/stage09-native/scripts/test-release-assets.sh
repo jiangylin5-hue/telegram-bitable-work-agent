@@ -18,6 +18,12 @@ for script in "$layout" "$manifest" "$migration" "$0"; do
     sh -n "$script" || fail shell-syntax
 done
 
+for script in "$script_dir"/*.sh; do
+    if grep -q "$(printf '\r')" "$script"; then
+        fail shell-script-crlf
+    fi
+done
+
 grep -Fq 'release_base=/opt/stage09-p1/releases' "$layout" || fail fixed-release-root
 grep -Fq 'static-assets: external-p1-b-required' "$layout" || fail external-static-assets
 grep -Fq "find \"\$release_root\" -type l" "$layout" || fail symlink-rejection
@@ -121,6 +127,14 @@ do
     mkdir -p "$(dirname -- "$fixture_asset")" || fail fixture-asset-directory
     printf '%s\n' '# fixed Stage09 release fixture asset' > "$fixture_asset" || fail fixture-asset
 done
+
+crlf_probe="$release_root/deploy/stage09-native/scripts/activate-public-ingress.sh"
+printf '\r\n' >> "$crlf_probe" || fail crlf-probe-write
+crlf_output=$(sh "$fixture_scripts/verify-release-layout.sh" "$release_root" "$artifact_id" 2>&1) && fail crlf-shell-script-accepted
+[ "$crlf_output" = 'release-layout: fail
+artifact-id: unavailable' ] || fail crlf-shell-script-output
+tr -d '\r' < "$crlf_probe" > "$fixture_scripts/.crlf-cleaned" || fail crlf-probe-clean
+mv -f "$fixture_scripts/.crlf-cleaned" "$crlf_probe" || fail crlf-probe-clean
 
 manifest_one="$fixture_root/manifest-one.sha256"
 manifest_two="$fixture_root/manifest-two.sha256"
