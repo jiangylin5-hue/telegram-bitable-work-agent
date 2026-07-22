@@ -50,7 +50,10 @@ for required in \
     deploy/stage09-native/scripts/create-release-manifest.sh \
     deploy/stage09-native/scripts/verify-fixed-migration-offline.sh \
     deploy/stage09-native/scripts/verify-release-assets.sh \
-    deploy/stage09-native/scripts/inspect-native-host-readiness.sh
+    deploy/stage09-native/scripts/inspect-native-host-readiness.sh \
+    deploy/stage09-native/scripts/render-caddy-stage09-host.sh \
+    deploy/stage09-native/scripts/activate-public-ingress.sh \
+    deploy/stage09-native/scripts/test-public-ingress-assets.sh
 do
     [ -f "$release_root/$required" ] && [ ! -L "$release_root/$required" ] || fail
 done

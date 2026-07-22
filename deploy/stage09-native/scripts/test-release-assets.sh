@@ -30,6 +30,9 @@ grep -Fq 'deploy/stage09-native/redis/redis-stage09-p1.conf' "$layout" || fail r
 grep -Fq 'deploy/stage09-native/systemd/stage09-p1-api.service' "$layout" || fail required-api-unit
 grep -Fq 'deploy/stage09-native/systemd/stage09-p1-migrate.service' "$layout" || fail required-migrate-unit
 grep -Fq 'deploy/stage09-native/scripts/inspect-native-host-readiness.sh' "$layout" || fail required-host-readiness
+grep -Fq 'deploy/stage09-native/scripts/render-caddy-stage09-host.sh' "$layout" || fail required-caddy-renderer
+grep -Fq 'deploy/stage09-native/scripts/activate-public-ingress.sh' "$layout" || fail required-public-ingress-activator
+grep -Fq 'deploy/stage09-native/scripts/test-public-ingress-assets.sh' "$layout" || fail required-public-ingress-test
 grep -Fq "offline_database_url='postgresql+psycopg://stage09_p1:offline-placeholder@127.0.0.1:5432/stage09_p1'" "$migration" || fail fixed-offline-database-url
 grep -Fq 'env -u DATABASE_URL "DATABASE_URL=$offline_database_url"' "$migration" || fail explicit-offline-database-url
 if grep -Eq 'runtime\.env|source[[:space:]]|ads_agent' "$migration"; then fail migration-secret-or-history; fi
@@ -109,7 +112,10 @@ for required_fixture_path in \
     deploy/stage09-native/scripts/create-release-manifest.sh \
     deploy/stage09-native/scripts/verify-fixed-migration-offline.sh \
     deploy/stage09-native/scripts/verify-release-assets.sh \
-    deploy/stage09-native/scripts/inspect-native-host-readiness.sh
+    deploy/stage09-native/scripts/inspect-native-host-readiness.sh \
+    deploy/stage09-native/scripts/render-caddy-stage09-host.sh \
+    deploy/stage09-native/scripts/activate-public-ingress.sh \
+    deploy/stage09-native/scripts/test-public-ingress-assets.sh
 do
     fixture_asset="$release_root/$required_fixture_path"
     mkdir -p "$(dirname -- "$fixture_asset")" || fail fixture-asset-directory
