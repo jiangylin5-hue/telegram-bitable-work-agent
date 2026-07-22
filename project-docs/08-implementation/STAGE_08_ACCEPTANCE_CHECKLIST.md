@@ -2,6 +2,8 @@
 
 ## Status
 
+- Current Acceptance Audit (2026-07-23): Stage08 A–F 的新鲜真实验收已执行通过：`796 passed in 46.80s` Unit/API、`79 passed` disposable PostgreSQL/pgvector、真实 OpenRouter `12/12`。逐项 Requirement ID 当前结论、命令、边界见 `evidence/stage08-final-current-state-audit-2026-07-23.md`；该条是当前状态，以下早期 `Current Progress Update` 保留为开发历史。
+
 - Current Acceptance Audit (2026-07-22): A–F 的初始 `planned` 单元已由 `evidence/stage08-final-current-state-audit-2026-07-22.md` 的逐项映射取代；新鲜证据为 `796 passed` Unit/API、`79 passed` disposable PostgreSQL/pgvector 和真实 OpenRouter 12/12 R4。该结论仅为 Stage08 本地非生产验收，不替代 Telegram、公开部署或 Stage07 UI 验收。
 
 - Current Progress Update (2026-07-22)：E-01 至 E-05 已由 Package E final re-review 标记为 `accepted`：`0 Critical / 0 Important / 0 Minor`、compact E `218 passed`、real loopback pgvector collaboration PostgreSQL `3 passed`、compileall/diff check 通过。E5 额外闭合 production fan-out、isolated-session/no-touch、cancel/deadline 实际执行；真实 Provider、Telegram 与部署不在本次 acceptance 内。

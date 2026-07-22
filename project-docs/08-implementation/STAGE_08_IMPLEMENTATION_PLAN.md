@@ -2,6 +2,8 @@
 
 ## Status
 
+- Current Progress Update (2026-07-23)：Stage08 A–F 已完成一次新鲜、实际执行的全量验收复跑：`796 passed in 46.80s` Unit/API、7 个真实 disposable PostgreSQL/pgvector integration 模块共 `79 passed`，以及真实 OpenRouter 12-case `12/12 passed`、0 timeout、9/9 invocation/completion。逐项 Requirement ID 映射和命令记录见 `evidence/stage08-final-current-state-audit-2026-07-23.md`；下一阶段仍为独立的生产就绪/部署，不由此自动替代 DNS/TLS、Telegram controlled smoke 或 Stage07 UI 验收。
+
 - Current Progress Update (2026-07-22)：Package F 已完成 F1–F4 质量证据收口。R3 final evidence 为单批真实 OpenRouter `12/12 passed`、0 timeout、9/9 Provider invocation/completion、8 usage presence，并含每 case 固定 action enum；最终 Package F review 为 `PASS / 0 Critical / 0 Important / 0 Minor`，152 项离线 F1/F2/E 聚焦回归（2 env-selector 专项测试按禁令 deselected）与 compile/diff 通过。Milvus decision 为 no-go：当前无生产规模触发，维持 pgvector。A–F 开发与非生产质量证据已完成；下一阶段是独立生产就绪/部署，不由本阶段自动开启。
 - Current Progress Update (2026-07-22)：Package F 终审发现 general-advice action 合同仍有一项 Important 缺口：`read_only + []` 可假通过、合法 `deny` 未纳入该 case terminal，且 R2 evidence 没有固定 action enum。`STAGE_08_F3_GENERAL_ADVICE_ACTION_CONTRACT_DECISION.md` 已授权最小 evaluator-only 修复；旧 F3/R2 evidence 不变，修复独立审查通过后才创建 F3 R3 single batch。
 - Current Progress Update (2026-07-22)：F3 初次真实 synthetic batch 已完成但为 `HOLD`：11/12 passed，唯一真实质量失败是 `general_advice` 非空 citation ordinal。独立 review 确认为 F1 prompt + adapter contract 缺口而非 evaluator defect；只读修复计划已记录于 `STAGE_08_F3_GENERAL_ADVICE_CITATION_CONTRACT_DECISION.md` 与 `2026-07-22-stage08-package-f-general-advice-citation-remediation.md`。旧 evidence 保留，修复复审通过后才运行一个版本化 F3 R2 批次。
