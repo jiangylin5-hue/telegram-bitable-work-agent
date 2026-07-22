@@ -3,8 +3,8 @@
 ## Status
 
 - Date: 2026-07-23
-- Scope: r14 原生 sealed release、真实 OpenRouter dry-run、12 case 评测、Telegram webhook 切换
-- Excluded: Telegram 真实发送、chat allowlist 绑定、业务 Provider 写入、draft 确认、Stage07 UI 验收
+- Scope: r14 原生 sealed release、真实 OpenRouter dry-run、12 case 评测、Telegram webhook 切换及单聊天受控真实回执
+- Excluded: 群发、第二个 Telegram 收件人、业务 Provider 写入、业务表写入、draft 确认、Stage07 UI 验收
 
 ## r14 部署结果
 
@@ -37,7 +37,37 @@
 - 服务器的 webhook secret 已以 root-only 临时 payload 同步、立即删除临时文件并重启验证；Telegram 保持 `dry_run`，所有 allowlist 仍为空。
 - 因受保护 env 的测试 chat list 为空，系统不会猜测 recipient。用户发出一次绑定 nonce 后，才会读取事实 chat ID、写入完全相同的 send/receive allowlist，并执行单条 `restricted_test` 回包。
 
+## Telegram 单聊天受控回执
+
+### 做了什么
+
+1. 用户向 bot 发送唯一绑定 nonce；Stage09 webhook 真实接收并持久化该消息，系统仅从该事实记录取得一个测试 chat。
+2. 运行时将 receive/send 两个 allowlist 原子改为同一个单一 chat，并改为 `restricted_test`；保留真实 LLM profile、禁止 Provider 业务写入及完整 prompt/response 保存。
+3. 通过既有受控 API 创建测试发送请求、显式确认，再由原生 outbox bridge 和 worker 调用 Telegram Bot API。
+
+### 改了什么
+
+- `/etc/stage09-p1/runtime.env` 仅增加既有 bot token、一个 receive allowlist 和完全相同的一个 send allowlist，并把发送模式改为 `restricted_test`。
+- API、worker、outbox bridge 被有界重启；native isolation validator 和 loopback `/health` 通过。任何转换/健康失败会还原 root-only runtime 备份。
+
+### 验收证据
+
+| 检查项 | 实测结果 |
+| --- | --- |
+| 绑定消息 | webhook 已持久化；不在证据中保留 chat/user/message 原始值 |
+| allowlist | receive=1、send=1，且两个集合相同 |
+| 发送状态 | `pending_confirmation` → `confirmed` → `sent` |
+| outbox | `processed`，`attempt_count=0` |
+| 审计 | `telegram.test_send.requested`、`telegram.test_send.confirmed`、`telegram.test_send.sent` |
+| 服务与健康 | API、worker、outbox bridge active；loopback health 成功 |
+
+### 不做什么
+
+- 不扩大 allowlist、不群发、不进行第二次发送；
+- 不写业务记录、不确认 draft、不进行 Provider 业务写入；
+- 不保存 nonce、chat ID、用户 ID、消息正文、Bot token、webhook secret、完整 prompt 或 response。
+
 ## 保留项与风险
 
 - r12/r13/r14 archive、失败 r13 release/venv 和 root-only runtime backups 暂保留为短期部署诊断与回滚证据；r11 是最近稳定回滚点。
-- 当前真实 LLM 已启用但 Telegram 无发送权限。下一步需要用户触发单一绑定消息；随后应验证 webhook ingest、allowlist 收敛、send-request → confirm → worker 的真实回包和审计记录。
+- 当前真实 LLM 与 Telegram 单聊天回执均已完成受控 smoke。运行时仍严格只允许该一项测试 chat；继续使用时必须保持 allowlist 收敛、走确认/outbox 路径，并在任何扩大目标或业务写入前另行定义和授权。

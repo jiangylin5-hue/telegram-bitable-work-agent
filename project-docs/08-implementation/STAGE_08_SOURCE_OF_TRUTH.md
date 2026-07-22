@@ -2,7 +2,7 @@
 
 ## Status
 
-- Current Progress Update (2026-07-23): Stage08 A–F 的当前提交复核再次通过 `796 passed in 47.68s`（26 个 Unit/API 测试文件），且 `backend/` 未偏离先前的全量 A–F 验收提交。Stage09 r14 的原生服务、公开 HTTPS 健康检查及受控真实 OpenRouter 12-case 已另外实际完成；Telegram webhook 已指向 Stage09，但测试聊天的绑定消息尚未到达，因此收发 allowlist、`restricted_test` 切换和一条真实回执仍未执行。此待办不影响 A–F 的开发收口，也不能以此宣称 Telegram 生产验收完成。证据见 `evidence/stage08-final-current-state-audit-2026-07-23.md`、`evidence/stage09-r14-real-runtime-and-provider-2026-07-23.md` 与 `2026-07-23-stage09-telegram-llm-real-smoke.md`。
+- Current Progress Update (2026-07-23): Stage08 A–F 的当前提交复核再次通过 `796 passed in 47.68s`（26 个 Unit/API 测试文件），且 `backend/` 未偏离先前的全量 A–F 验收提交。Stage09 r14 的原生服务、公开 HTTPS 健康检查及受控真实 OpenRouter 12-case 已另外实际完成；用户的唯一绑定消息已由 webhook 持久化，运行时仅为该单一事实 chat 开启相同的 receive/send allowlist 和 `restricted_test`，随后经 send-request → confirm → outbox bridge 发送一条明确测试回执。请求状态 `sent`、outbox `processed`、审计事件为 requested/confirmed/sent；未扩大名单、未写业务表、未确认 draft 或进行 Provider 业务写入。该结论是单聊天 Telegram smoke，不替代 Stage07 UI 验收。证据见 `evidence/stage08-final-current-state-audit-2026-07-23.md`、`evidence/stage09-r14-real-runtime-and-provider-2026-07-23.md` 与 `2026-07-23-stage09-telegram-llm-real-smoke.md`。
 
 - Current Progress Update (2026-07-22): Stage08 A–F 已完成一次当前状态真实验收：`796 passed` Stage08 Unit/API、`79 passed` disposable PostgreSQL/pgvector integration，及受控真实 OpenRouter R4 `12/12 passed`（9 invoked / 9 completed / 8 usage-present / 0 timeout）。证据见 `evidence/stage08-final-current-state-audit-2026-07-22.md`；Telegram、公开 HTTPS、生产写入和 Stage07 UI 仍是独立后续门禁。
 

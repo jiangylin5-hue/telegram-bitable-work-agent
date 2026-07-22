@@ -2,7 +2,7 @@
 
 ## Status
 
-- Current Acceptance Audit (2026-07-23): 本轮再次实际执行当前提交的 26 个 Stage08 Unit/API 文件，结果为 `796 passed in 47.68s`，且 `backend/` 未偏离本轮前的 Stage08 验收代码。A–F 的本地开发验收结论维持；Stage09 r14 已提供原生运行、公开 HTTPS 和受控真实 Provider 的独立运行证据。Telegram 受控收发仍待实际绑定消息，故尚未写 allowlist、发送测试消息或标记为生产 Telegram 通过；Stage07 UI 仍不在本矩阵结论内。
+- Current Acceptance Audit (2026-07-23): 本轮再次实际执行当前提交的 26 个 Stage08 Unit/API 文件，结果为 `796 passed in 47.68s`，且 `backend/` 未偏离本轮前的 Stage08 验收代码。A–F 的本地开发验收结论维持；Stage09 r14 已提供原生运行、公开 HTTPS、受控真实 Provider，以及一条经过事实绑定、双 allowlist、请求确认、outbox `processed` 与审计闭环的 Telegram 测试回执。该结论仅覆盖单聊天受控 Telegram smoke，未扩大接收人、未确认业务 draft；Stage07 UI 仍不在本矩阵结论内。
 
 - Current Acceptance Audit (2026-07-23): Stage08 A–F 的新鲜真实验收已执行通过：`796 passed in 46.80s` Unit/API、`79 passed` disposable PostgreSQL/pgvector、真实 OpenRouter `12/12`。逐项 Requirement ID 当前结论、命令、边界见 `evidence/stage08-final-current-state-audit-2026-07-23.md`；该条是当前状态，以下早期 `Current Progress Update` 保留为开发历史。
 
