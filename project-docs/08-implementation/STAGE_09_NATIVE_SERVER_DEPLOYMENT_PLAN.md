@@ -2,6 +2,8 @@
 
 ## Status
 
+- Current Progress Update (2026-07-23, read-only public-ingress audit): 当前 80/443 的唯一发布者是历史 Stage03 范围内的 Docker Caddy，不是可独立删除的 last30days 服务；宿主机 Caddy systemd 未运行。Caddy 的自定义私网、宿主机 bridge gateway 与 Caddy 单 IP 来源均已读取，现有 renderer 已实际接受“bridge bind + `/32` allowlist”候选，但尚未写入 Nginx。Stage09 runtime 与本机 ignored env 均没有独立 `hostname` / public base URL。未写入 Caddy、Nginx、DNS、Docker、runtime env 或 Telegram。完整脱敏审计见 `evidence/stage09-public-ingress-readiness-audit-2026-07-23.md`；下一步必须先取得独立 hostname 与其 DNS 指向，才可执行单 host 的 HTTPS 接入与 Telegram controlled smoke。
+
 - Current Progress Update (2026-07-23, server local time): 已从已发布的 Stage08 验收源码树构建并真实激活 `stage09-p1-20260723-r5`。本机 `release-assets`、`runtime-preflight` 与 Mini App production build 通过；服务器端密封包校验、固定 `20260720_0032` 迁移、原子 release/venv/static 切换、systemd 服务和独立 root 回环检查均通过，上传临时目录已清理。完整脱敏证据见 `evidence/stage09-p1-native-r5-deployment-2026-07-23.md`。本条不代表公共 HTTPS、DNS、真实 Telegram 或 Provider 上线完成。
 
 - Current Progress Update (2026-07-23, server local time): P1-B 原生服务与内部 Nginx 已真实激活到 `stage09-p1-20260722-r4`（Git `bddf4e6`）。`20260720_0032` 迁移、Redis/API/worker/outbox、`127.0.0.1:18080` API 与 `127.0.0.1:18090` Nginx 静态/API 入口均有独立实测证据。该进度不代表公共 HTTPS、DNS、真实 Telegram 或 Provider 上线完成；公网入口仍是下一独立门禁。
