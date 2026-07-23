@@ -88,6 +88,19 @@ test('preopens a controlled browser window synchronously before issuing a fragme
   expect(storageWrite).not.toHaveBeenCalled()
 })
 
+test('uses the Telegram host link bridge instead of a blocked browser popup when it is available', async () => {
+  const openLink = vi.fn()
+  const issueHandoff = vi.fn().mockResolvedValue(`${window.location.origin}/browser-handoff.html#ticket=opaque-ticket`)
+  const popupOpen = vi.spyOn(window, 'open')
+  ;(window as unknown as { Telegram?: { WebApp?: { openLink?: (url: string) => void } } }).Telegram = { WebApp: { openLink } }
+
+  render(<WorkspaceLaunchControls telegramState={{ kind: 'windowed' }} onOpenBrowser={issueHandoff} />)
+  fireEvent.click(screen.getByRole('button', { name: '在浏览器打开完整工作台' }))
+
+  await waitFor(() => expect(openLink).toHaveBeenCalledExactlyOnceWith(`${window.location.origin}/browser-handoff.html#ticket=opaque-ticket`))
+  expect(popupOpen).not.toHaveBeenCalled()
+})
+
 test.each([
   `${window.location.origin}/other.html#ticket=opaque-ticket`,
   `${window.location.origin}/browser-handoff.html?ticket=opaque-ticket`,

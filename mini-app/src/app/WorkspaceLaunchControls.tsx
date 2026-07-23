@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { exitTelegramMiniAppFullscreen, requestTelegramMiniAppFullscreen, type TelegramFullscreenState } from './telegram-mini-app'
+import { exitTelegramMiniAppFullscreen, hasTelegramMiniAppLinkBridge, openTelegramMiniAppLink, requestTelegramMiniAppFullscreen, type TelegramFullscreenState } from './telegram-mini-app'
 
 type WorkspaceLaunchControlsProps = {
   telegramState: TelegramFullscreenState | null
@@ -38,24 +38,29 @@ export function WorkspaceLaunchControls({ telegramState, onRequestFullscreen, on
 
   async function openBrowserWorkspaceFromClick(): Promise<void> {
     setFailed(false)
-    const browserWindow = window.open('about:blank', '_blank')
-    if (!browserWindow) {
-      setFailed(true)
-      return
-    }
-    try {
-      browserWindow.opener = null
-    } catch {
-      // The static handoff page repeats this isolation step when it loads.
+    const useTelegramBridge = hasTelegramMiniAppLinkBridge()
+    const browserWindow = useTelegramBridge ? null : window.open('about:blank', '_blank')
+    if (!useTelegramBridge && !browserWindow) return setFailed(true)
+    if (browserWindow) {
+      try {
+        browserWindow.opener = null
+      } catch {
+        // The static handoff page repeats this isolation step when it loads.
+      }
     }
     try {
       const handoffUrl = await issueBrowserHandoff()
       if (typeof handoffUrl !== 'string') throw new Error()
       const url = new URL(handoffUrl, window.location.origin)
-      if (!isBrowserHandoffUrl(url) || browserWindow.closed) throw new Error()
+      if (!isBrowserHandoffUrl(url)) throw new Error()
+      if (useTelegramBridge) {
+        if (!openTelegramMiniAppLink(url.toString())) throw new Error()
+        return
+      }
+      if (!browserWindow || browserWindow.closed) throw new Error()
       browserWindow.location.replace(url.toString())
     } catch {
-      closeWindow(browserWindow)
+      if (browserWindow) closeWindow(browserWindow)
       setFailed(true)
     }
   }

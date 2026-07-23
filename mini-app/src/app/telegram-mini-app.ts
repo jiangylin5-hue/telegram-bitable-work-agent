@@ -25,6 +25,7 @@ type TelegramWebApp = {
   isVersionAtLeast?: (version: string) => boolean
   requestFullscreen?: () => void
   exitFullscreen?: () => void
+  openLink?: (url: string) => void
   onEvent?: (event: TelegramFullscreenEvent, listener: TelegramFullscreenListener) => void
   offEvent?: (event: TelegramFullscreenEvent, listener: TelegramFullscreenListener) => void
 }
@@ -91,6 +92,30 @@ export function exitTelegramMiniAppFullscreen(): 'requested' | 'unsupported' | '
     return 'requested'
   } catch {
     return 'unsupported'
+  }
+}
+
+/**
+ * Telegram Desktop may reject a browser popup even when it was created from a
+ * click handler. Use the host bridge for the authenticated browser handoff
+ * whenever Telegram provides it; the caller still owns URL validation.
+ */
+export function hasTelegramMiniAppLinkBridge(): boolean {
+  try {
+    return typeof window !== 'undefined' && typeof window.Telegram?.WebApp?.openLink === 'function'
+  } catch {
+    return false
+  }
+}
+
+export function openTelegramMiniAppLink(url: string): boolean {
+  try {
+    const openLink = window.Telegram?.WebApp?.openLink
+    if (typeof openLink !== 'function') return false
+    openLink(url)
+    return true
+  } catch {
+    return false
   }
 }
 
