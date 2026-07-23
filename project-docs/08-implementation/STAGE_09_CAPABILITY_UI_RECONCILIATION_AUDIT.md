@@ -2,6 +2,7 @@
 
 ## Status
 
+- Latest Release Evidence: 2026-07-24 的 r28 已作为 Stage09 原生 current 发布；部署、健康检查、公开静态资源与未认证拒绝分支均有实测证据。真实 Telegram 身份下的交互式浏览器验收尚待重新交接，不能据此把 Stage07/Stage08 标为全量验收完成。完整记录见 `project-docs/08-implementation/evidence/stage09-workspace-reliability-remediation-2026-07-24.md`。
 - Document status: active implementation directive
 - Scope: 已实现的 Stage07 表格工作台与 Stage08 协作运行时，和当前 Mini App 的可发现、可操作、可验收程度对齐
 - Current Progress: 2026-07-24 已完成源码、路由、测试和现有页面的第一轮交叉审计，并完成本地真实浏览器的桌面（1440px）和移动（390px）交互复验：表格操作中心、Stage08 安全协作和记忆只读工作台均可从实际入口打开。r26 静态版本已原子发布；`stage09.jiangtest1.online` 是当前主域名，历史 Telegram Main Mini App 的 `stage07.jiangtest1.online` 作为兼容入口，以独立且匹配域名的 TLS 证书服务同一份 r26 静态页面和原生 API。Telegram Desktop 的浏览器交接已从被宿主拦截的 `window.open()` 改为官方 `WebApp.openLink()` bridge；完整 Mini App 回归与发布后两个域名的公网验证均通过。真实 FastAPI/PostgreSQL 授权查询、真实 LLM 或 Telegram 身份验收仍需独立证据，本文件不是整阶段验收通过声明。

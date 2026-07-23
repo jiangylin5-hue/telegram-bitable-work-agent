@@ -9,6 +9,12 @@
 - User authorization: 2026-07-24，允许删除 Base `22` 中经核对为失败导入遗留的空表和两个空字段；不触及该 Base 的其他表或任何已有记录
 - Current Progress: 已完成受授权的精确生产清理：Base `22` 中失败导入残留的空表 `42a1cfbf-09ae-42d3-bb35-097fa8df89b4` 及其 2 个空字段已删除，记录数复核为 0；import job 与其他业务数据未改动。Task 1–3 已完成并经独立审查通过：导入提交失败会回滚并提供安全、可恢复的中文提示；浏览器版不会渲染 Telegram 专属启动控件，任一可用导航会收起临时工作台并使在途请求失效，Team Bot 提供明确返回、加载、失败和空状态；桌面工作台具备 12px 留白、中文侧栏说明、真实表格操作入口及清晰的规划中边界。本轮尚未发布到生产或进行需要新建业务数据的真实浏览器导入提交；Task 4（发布和真实验收）进行中。
 
+## 2026-07-24 发布与验收续报
+
+- Current Progress: Task 1、Task 2、Task 3 已完成并经本地回归；Task 4 的授权数据清理、r28 原生部署、两个 HTTPS health、静态资产和未认证拒绝分支均已实际通过。r27 候选在 sealed 校验阶段被拒绝且已清理，r28 为 current，r26 静态版本保留为回退点。
+- Interactive Acceptance: 真实 Telegram 身份下的 Home/Bases/Home、Team Bot 返回和导入向导取消/409 恢复仍待浏览器会话重新交接；未创建新业务数据，也未伪造 Telegram 身份或把未认证页面当作完整验收。
+- Evidence: 详见 `project-docs/08-implementation/evidence/stage09-workspace-reliability-remediation-2026-07-24.md`。
+
 ## Goal
 
 让用户能从每个已实现的工作台返回、在桌面与 Telegram 中看见正确的入口、在导入冲突时得到可操作的提示；任何失败的导入均不得留下一张半成品表或转化为 500。
