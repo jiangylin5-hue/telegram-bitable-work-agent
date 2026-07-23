@@ -142,6 +142,7 @@ export function subscribeTelegramMiniAppFullscreen(onState: (state: TelegramFull
     if (changedSubscribed) {
       try {
         webApp?.offEvent?.('fullscreen_changed', fullscreenChanged)
+        changedSubscribed = false
       } catch {
         // Telegram host teardown must not escape React cleanup.
       }
@@ -149,6 +150,7 @@ export function subscribeTelegramMiniAppFullscreen(onState: (state: TelegramFull
     if (failedSubscribed) {
       try {
         webApp?.offEvent?.('fullscreen_failed', fullscreenFailed)
+        failedSubscribed = false
       } catch {
         // Telegram host teardown must not escape React cleanup.
       }
@@ -164,7 +166,10 @@ export function subscribeTelegramMiniAppFullscreen(onState: (state: TelegramFull
     failedSubscribed = true
     return unsubscribe
   } catch {
-    if (changedSubscribed) unsubscribe()
+    if (changedSubscribed) {
+      unsubscribe()
+      return unsubscribe
+    }
     return noop
   }
 }

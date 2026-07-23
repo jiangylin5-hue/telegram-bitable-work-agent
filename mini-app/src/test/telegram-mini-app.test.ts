@@ -182,6 +182,25 @@ describe('Telegram Mini App runtime adapter', () => {
     expect(offEvent).toHaveBeenCalledExactlyOnceWith('fullscreen_changed', expect.any(Function))
   })
 
+  it('retries partial fullscreen cleanup when its first Telegram offEvent call throws', () => {
+    const onEvent = vi.fn()
+      .mockImplementationOnce(() => undefined)
+      .mockImplementationOnce(() => { throw new Error('host event failure') })
+    const offEvent = vi.fn()
+      .mockImplementationOnce(() => { throw new Error('host cleanup failure') })
+      .mockImplementationOnce(() => undefined)
+    ;(window as TelegramWindow).Telegram = { WebApp: { onEvent, offEvent } }
+
+    const unsubscribe = subscribeTelegramMiniAppFullscreen(vi.fn())
+
+    expect(offEvent).toHaveBeenCalledExactlyOnceWith('fullscreen_changed', expect.any(Function))
+    expect(unsubscribe).not.toThrow()
+    expect(offEvent).toHaveBeenCalledTimes(2)
+    expect(offEvent.mock.calls.map(([event]) => event)).toEqual(['fullscreen_changed', 'fullscreen_changed'])
+    unsubscribe()
+    expect(offEvent).toHaveBeenCalledTimes(2)
+  })
+
   it('does not throw when Telegram offEvent throws during fullscreen cleanup', () => {
     const onEvent = vi.fn()
     const offEvent = vi.fn(() => { throw new Error('host cleanup failure') })
