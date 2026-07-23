@@ -2,9 +2,9 @@
 
 ## Status
 
-- Document status: functional-module specification awaiting review
+- Document status: implemented-local functional-module, pending production/browser reconciliation
 - Scope: one coherent Templates & Imports management surface and its existing-contract entry points
-- Implementation status: not started
+- Implementation status: implemented-local. The safe template shelf/install/save and CSV/XLSX preview-to-explicit-commit paths exist in source and automated local evidence. Native file chooser, real role/error matrix and deployed Mini App acceptance remain open; this document must not be read as whole-Stage07 acceptance.
 
 ## 1. Entry Map
 

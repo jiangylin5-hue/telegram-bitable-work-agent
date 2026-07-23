@@ -27,6 +27,8 @@ test('uses desktop and mobile Home/Base controls as route actions', () => {
   expect(mobileNavigation.getByRole('button', { name: '工作区：查看今日事项' })).toHaveClass('active')
   expect(desktopNavigation.getByRole('button', { name: '工作区：查看今日事项' })).toHaveAttribute('aria-current', 'page')
   expect(mobileNavigation.getByRole('button', { name: '工作区：查看今日事项' })).toHaveAttribute('aria-current', 'page')
+  expect(desktopNavigation.getByRole('button', { name: '待确认：即将上线' })).not.toHaveAttribute('aria-current')
+  expect(mobileNavigation.getByRole('button', { name: '更多：即将上线' })).not.toHaveAttribute('aria-current')
   fireEvent.click(desktopNavigation.getByRole('button', { name: 'Bases：浏览和打开多维表格' }))
   fireEvent.click(mobileNavigation.getByRole('button', { name: 'Bases：浏览和打开多维表格' }))
   fireEvent.click(desktopNavigation.getByRole('button', { name: '工作区：查看今日事项' }))
@@ -144,6 +146,36 @@ test('hides desktop governance and plans mobile More for non-managers', () => {
   expect(moreButton).toBeDisabled()
   fireEvent.click(moreButton)
   expect(onOpenGovernance).not.toHaveBeenCalled()
+})
+
+test('opens every additional supported workbench from the mobile More menu', () => {
+  const onOpenCollaboration = vi.fn()
+  const onOpenMemory = vi.fn()
+  render(<AppShell
+    workspace={{ ...workspace, capabilities: { ...workspace.capabilities, can_manage_workspace: false } }}
+    workspaces={[workspace]}
+    onWorkspaceChange={vi.fn()}
+    activeRoute="home"
+    onNavigate={vi.fn()}
+    onOpenCollaboration={onOpenCollaboration}
+    onOpenMemory={onOpenMemory}
+  >
+    <main>内容</main>
+  </AppShell>)
+
+  const mobileNavigation = within(screen.getByRole('navigation', { name: '移动导航' }))
+  const moreButton = mobileNavigation.getByRole('button', { name: '更多：打开其他工作台' })
+  expect(moreButton).toHaveAttribute('aria-expanded', 'false')
+  expect(moreButton).toHaveAttribute('aria-controls', 'mobile-more-menu')
+  fireEvent.click(moreButton)
+  expect(moreButton).toHaveAttribute('aria-expanded', 'true')
+  const moreMenu = within(screen.getByLabelText('更多工作台'))
+  fireEvent.click(moreMenu.getByRole('button', { name: '智能协作：基于受权业务、记忆和知识协作' }))
+  expect(onOpenCollaboration).toHaveBeenCalledOnce()
+
+  fireEvent.click(mobileNavigation.getByRole('button', { name: '更多：打开其他工作台' }))
+  fireEvent.click(within(screen.getByLabelText('更多工作台')).getByRole('button', { name: '记忆与知识：查看长期记忆与知识边界' }))
+  expect(onOpenMemory).toHaveBeenCalledOnce()
 })
 
 test.each([320, 375, 900])('puts the mobile header before in-flow fullscreen controls at %ipx', (width) => {

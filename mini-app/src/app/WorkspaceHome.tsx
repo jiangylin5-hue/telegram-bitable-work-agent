@@ -12,8 +12,11 @@ type WorkspaceHomeProps = {
   onOpenBase: (base: BaseSummary) => void
   onCreateBase?: () => void
   onOpenTemplateImport?: () => void
+  onOpenTableOperations?: (trigger: HTMLElement) => void
   onOpenDraftHub?: (trigger: HTMLElement, draftId?: string) => void
   onOpenAssistantContext?: (trigger: HTMLElement) => void
+  onOpenCollaboration?: (trigger: HTMLElement) => void
+  onOpenMemory?: (trigger: HTMLElement) => void
   onOpenTeamBot?: (trigger: HTMLElement) => void
   onOpenRecordReference?: (reference: BusinessRecordReference) => void
   onOpenEmployeeReference?: (trigger: HTMLElement, employee: BusinessEmployeeReference) => void
@@ -25,8 +28,11 @@ export function WorkspaceHome({
   onOpenBase,
   onCreateBase,
   onOpenTemplateImport,
+  onOpenTableOperations,
   onOpenDraftHub,
   onOpenAssistantContext,
+  onOpenCollaboration,
+  onOpenMemory,
   onOpenTeamBot,
   onOpenRecordReference,
   onOpenEmployeeReference,
@@ -42,6 +48,7 @@ export function WorkspaceHome({
           <p>{workspace.name} · 当前需处理的持久化事项</p>
         </div>
         <div className="toolbar-actions">
+          {onOpenTableOperations && <button type="button" onClick={(event) => onOpenTableOperations(event.currentTarget)}>表格操作</button>}
           {workspace.capabilities.can_manage_schema && onCreateBase && <button type="button" onClick={onCreateBase}><Plus size={17} /> 新建 Base</button>}
           {workspace.capabilities.can_manage_schema && onOpenTemplateImport && <button type="button" onClick={onOpenTemplateImport}>模板与导入</button>}
         </div>
@@ -73,6 +80,8 @@ export function WorkspaceHome({
       <p>你好，{workspace.name}</p>
       <span>需要时选择上下文，再开始协作。</span>
       {onOpenAssistantContext ? <button type="button" onClick={(event) => onOpenAssistantContext(event.currentTarget)}>智能汇总 <ChevronRight size={16} /></button> : null}
+      {onOpenCollaboration ? <button type="button" onClick={(event) => onOpenCollaboration(event.currentTarget)}>智能协作 <ChevronRight size={16} /></button> : null}
+      {onOpenMemory ? <button type="button" onClick={(event) => onOpenMemory(event.currentTarget)}>记忆与知识 <ChevronRight size={16} /></button> : null}
       {onOpenTeamBot ? <button type="button" aria-label="打开团队 Bot" onClick={(event) => onOpenTeamBot(event.currentTarget)}>团队 Bot <ChevronRight size={16} /></button> : null}
       {businessRelations.length > 0 && <section className="business-context-index" data-testid="business-context-index" aria-label="已授权业务关联">
         <header><span>业务关联</span><small>{businessRelations.length} 条已授权映射</small></header>

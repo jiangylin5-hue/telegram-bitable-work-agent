@@ -24,6 +24,19 @@ test('connects a queued draft to its loaded Base from the Home workbench', () =>
   expect(onOpenBase).toHaveBeenCalledWith({ id: 'base-1', name: '客户运营', source_type: 'blank' })
 })
 
+test('opens the operation center from the Home workbench without exposing a fake table action', () => {
+  const onOpenTableOperations = vi.fn()
+  render(<WorkspaceHome
+    workspace={{ id: 'workspace-1', name: '运营中心', slug: 'operations', role: 'owner', capabilities: { can_read_bases: true, can_manage_workspace: true, can_manage_schema: true, can_review_drafts: true } }}
+    home={{ workspace_id: 'workspace-1', recent_bases: [], queue: [] }}
+    onOpenBase={vi.fn()}
+    onOpenTableOperations={onOpenTableOperations}
+  />)
+
+  fireEvent.click(screen.getByRole('button', { name: '表格操作' }))
+  expect(onOpenTableOperations).toHaveBeenCalledOnce()
+})
+
 test('connects an authorized group relationship to employee, customer, project and context indexes', () => {
   const onOpenRecordReference = vi.fn()
   const onOpenEmployeeReference = vi.fn()

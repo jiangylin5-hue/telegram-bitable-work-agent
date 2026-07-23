@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import { App } from '../app/App'
@@ -37,7 +37,9 @@ test('opens the governance workbench from the server-hinted entry and reads a se
 
   render(<App />)
   const desktopTrigger = await screen.findByRole('button', { name: '成员与权限：管理成员与权限' })
-  expect(screen.getByRole('button', { name: '更多：管理成员与权限' })).toBeInTheDocument()
+  const mobileMore = screen.getByRole('button', { name: '更多：打开其他工作台' })
+  fireEvent.click(mobileMore)
+  expect(within(screen.getByLabelText('更多工作台')).getByRole('button', { name: '成员与权限：管理成员与权限' })).toBeInTheDocument()
   fireEvent.click(desktopTrigger)
   expect(await screen.findByRole('dialog', { name: '治理工作台' })).toBeVisible()
   expect(screen.getByText('owner-1')).toBeVisible()

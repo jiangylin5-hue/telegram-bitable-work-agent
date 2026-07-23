@@ -74,6 +74,8 @@ import type {
   ManagedEmployeeUpdateValues,
   ManagedEmployeeViewType,
 } from './digital-employee-management-types'
+import type { Stage08AssistantCitation, Stage08AssistantQuery, Stage08AssistantSafeView, Stage08AssistantStatus, Stage08CitationLabel, Stage08DegradationCode } from './stage08-collaboration-types'
+import type { Stage08MemoryItem, Stage08MemoryPage, Stage08MemoryType } from './stage08-memory-types'
 
 export type {
   SafeViewErrorCode,
@@ -660,6 +662,64 @@ function safeS5InvocationResult(value: unknown): S5InvocationResult {
     return { kind: 'draft', draftId: stringValue(record.draft_id), status: 'pending_confirmation' }
   }
   throw new Error('Invalid S5 response')
+}
+
+const stage08Statuses = new Set<Stage08AssistantStatus>(['completed', 'draft_pending', 'degraded', 'denied', 'failed', 'cancelled', 'timed_out'])
+const stage08CitationLabels = new Set<Stage08CitationLabel>(['business_data', 'confirmed_memory', 'group_context', 'retrieved_material', 'analysis_from_current_material', 'general_advice'])
+const stage08DegradationCodes = new Set<Stage08DegradationCode>(['context_unavailable', 'retrieval_unavailable', 'compression_unavailable', 'analysis_unavailable', 'no_evidence', 'policy_denied', 'cancelled', 'timed_out', 'internal_failure'])
+const stage08Intents = new Set<Stage08AssistantQuery['intent']>(['business_fact', 'memory_lookup', 'mixed', 'general_advice'])
+const stage08RequestedActions = new Set<Stage08AssistantQuery['requestedAction']>(['read_only', 'draft_update'])
+const privateIdentifierPattern = /(?<![0-9a-f])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?![0-9a-f])/i
+
+function safeStage08Citation(value: unknown): Stage08AssistantCitation {
+  const record = jsonRecord(value)
+  const ordinal = numberValue(record.ordinal)
+  const label = stringValue(record.label)
+  if (!Number.isInteger(ordinal) || ordinal < 1 || ordinal > 12 || !stage08CitationLabels.has(label as Stage08CitationLabel)) throw new Error('Invalid Stage08 collaboration response')
+  return { ordinal, label: label as Stage08CitationLabel }
+}
+
+function safeStage08AssistantSafeView(value: unknown): Stage08AssistantSafeView {
+  const record = jsonRecord(value)
+  const status = stringValue(record.status)
+  const answer = nullableStringValue(record.answer)
+  if (!stage08Statuses.has(status as Stage08AssistantStatus) || (answer !== null && (answer.length > 2000 || privateIdentifierPattern.test(answer))) || !Array.isArray(record.citations) || !Array.isArray(record.degradation_codes)) throw new Error('Invalid Stage08 collaboration response')
+  const citations = record.citations.map(safeStage08Citation)
+  const degradationCodes = record.degradation_codes.map((code) => {
+    if (typeof code !== 'string' || !stage08DegradationCodes.has(code as Stage08DegradationCode)) throw new Error('Invalid Stage08 collaboration response')
+    return code as Stage08DegradationCode
+  })
+  if (new Set(citations.map((citation) => citation.ordinal)).size !== citations.length || new Set(degradationCodes).size !== degradationCodes.length) throw new Error('Invalid Stage08 collaboration response')
+  const draftId = nullableStringValue(record.draft_id)
+  if ((status === 'draft_pending') !== Boolean(draftId)) throw new Error('Invalid Stage08 collaboration response')
+  return { status: status as Stage08AssistantStatus, answer, citations, degradationCodes, draftId }
+}
+
+const stage08MemoryTypes = new Set<Stage08MemoryType>(['decision', 'preference', 'risk', 'customer_fact', 'project_fact'])
+
+function safeStage08MemoryPayload(value: unknown): Record<string, unknown> {
+  const payload = jsonRecord(value)
+  if (Object.keys(payload).length > 32) throw new Error('Invalid Stage08 memory response')
+  for (const item of Object.values(payload)) {
+    if (typeof item === 'string' && item.length > 2000) throw new Error('Invalid Stage08 memory response')
+  }
+  return payload
+}
+
+function safeStage08MemoryItem(value: unknown): Stage08MemoryItem {
+  const record = jsonRecord(value)
+  const memoryType = stringValue(record.memory_type)
+  const status = stringValue(record.status)
+  const version = numberValue(record.version)
+  if (!stage08MemoryTypes.has(memoryType as Stage08MemoryType) || status !== 'active' || !Number.isInteger(version) || version < 1) throw new Error('Invalid Stage08 memory response')
+  const validUntil = nullableStringValue(record.valid_until)
+  return { memoryType: memoryType as Stage08MemoryType, status: 'active', version, payload: safeStage08MemoryPayload(record.payload), validUntil }
+}
+
+function safeStage08MemoryPage(value: unknown): Stage08MemoryPage {
+  const record = jsonRecord(value)
+  if (!Array.isArray(record.items) || record.items.length > 200) throw new Error('Invalid Stage08 memory response')
+  return { items: record.items.map(safeStage08MemoryItem) }
 }
 
 function assistantContextViewType(value: unknown): AssistantContextView['viewType'] {
@@ -1430,6 +1490,26 @@ export const api = {
       idempotencyKey ?? crypto.randomUUID(),
     ))
   },
+  queryStage08Assistant: async (request: Stage08AssistantQuery, idempotencyKey: string, init?: RequestInit): Promise<Stage08AssistantSafeView> => {
+    const query = request.query.trim()
+    const workspaceId = request.workspaceId.trim()
+    const employeeId = request.employeeId.trim()
+    const targetRecordId = request.targetRecordId?.trim() || null
+    if (!query || query.length > 600 || !workspaceId || workspaceId.length > 200 || !employeeId || employeeId.length > 200 || !idempotencyKey || !stage08Intents.has(request.intent) || !stage08RequestedActions.has(request.requestedAction)) throw new Error('Invalid Stage08 collaboration request')
+    if ((request.requestedAction === 'draft_update') !== Boolean(targetRecordId)) throw new Error('Invalid Stage08 collaboration request')
+    return safeStage08AssistantSafeView(await postJson<unknown>('/api/stage08/assistant/query', {
+      workspace_id: workspaceId,
+      employee_id: employeeId,
+      intent: request.intent,
+      query,
+      requested_action: request.requestedAction,
+      ...(targetRecordId ? { target_record_id: targetRecordId } : {}),
+      idempotency_key: idempotencyKey,
+    }, idempotencyKey, init))
+  },
+  listStage08Memory: async (workspaceId: string, init?: RequestInit): Promise<Stage08MemoryPage> => safeStage08MemoryPage(
+    await getJson<unknown>(`/api/stage08/memory?${new URLSearchParams({ workspace_id: workspaceId, status: 'active' }).toString()}`, init),
+  ),
   getS5Draft: async (draftId: string, init?: RequestInit): Promise<S5DraftDetail> => safeS5DraftDetail(
     await getJson<unknown>(`/mini-app/drafts/${encodeURIComponent(draftId)}`, init),
   ),
