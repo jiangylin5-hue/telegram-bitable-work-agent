@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import { App } from '../app/App'
@@ -28,6 +28,10 @@ const workspaceTwo = {
   slug: 'projects',
 }
 
+const basesNavigationName = 'Bases：浏览和打开多维表格'
+const desktopNavigation = () => within(screen.getByRole('complementary', { name: '主导航' }))
+const findDesktopBasesButton = async () => within(await screen.findByRole('complementary', { name: '主导航' })).getByRole('button', { name: basesNavigationName })
+
 afterEach(() => {
   vi.unstubAllGlobals()
 })
@@ -45,7 +49,7 @@ test('reads the safe Base directory, opens a selection, and lets Home leave the 
   vi.stubGlobal('fetch', fetchMock)
 
   render(<App />)
-  fireEvent.click(await screen.findByRole('button', { name: 'Base' }))
+  fireEvent.click(await findDesktopBasesButton())
 
   expect(await screen.findByRole('heading', { name: 'Bases' })).toBeInTheDocument()
   expect(screen.getByText('客户运营')).toBeInTheDocument()
@@ -54,7 +58,7 @@ test('reads the safe Base directory, opens a selection, and lets Home leave the 
   expect(await screen.findByRole('main', { name: 'Base 工作台' })).toBeInTheDocument()
   expect(fetchMock).toHaveBeenCalledWith('/bases/base-1/tables', expect.anything())
 
-  fireEvent.click(screen.getByRole('button', { name: '工作区' }))
+  fireEvent.click(desktopNavigation().getByRole('button', { name: '工作区：查看今日事项' }))
   expect(await screen.findByRole('main', { name: '工作区首页' })).toBeInTheDocument()
 })
 
@@ -69,7 +73,7 @@ test.each([401, 403])('fails closed when the Base directory request returns %i',
   vi.stubGlobal('fetch', fetchMock)
 
   render(<App />)
-  fireEvent.click(await screen.findByRole('button', { name: 'Base' }))
+  fireEvent.click(await findDesktopBasesButton())
 
   expect(await screen.findByRole('main', { name: '无工作区访问权限' })).toBeInTheDocument()
 })
@@ -85,10 +89,10 @@ test('returns Home instead of rendering a fabricated directory when the endpoint
   vi.stubGlobal('fetch', fetchMock)
 
   render(<App />)
-  fireEvent.click(await screen.findByRole('button', { name: 'Base' }))
+  fireEvent.click(await findDesktopBasesButton())
 
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/workspaces/workspace-1/bases', expect.anything()))
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Base' })).not.toHaveClass('active'))
+  await waitFor(() => expect(desktopNavigation().getByRole('button', { name: basesNavigationName })).not.toHaveClass('active'))
   expect(screen.getByRole('main', { name: '工作区首页' })).toBeInTheDocument()
 })
 
@@ -103,7 +107,7 @@ test('renders the fixed empty state for a permitted empty Base scope', async () 
   vi.stubGlobal('fetch', fetchMock)
 
   render(<App />)
-  fireEvent.click(await screen.findByRole('button', { name: 'Base' }))
+  fireEvent.click(await findDesktopBasesButton())
 
   expect(await screen.findByText('当前工作区没有可访问的 Base。')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /新建|创建|导入/ })).not.toBeInTheDocument()
@@ -120,7 +124,7 @@ test('renders fixed retry copy without the server error body for a 5xx directory
   vi.stubGlobal('fetch', fetchMock)
 
   render(<App />)
-  fireEvent.click(await screen.findByRole('button', { name: 'Base' }))
+  fireEvent.click(await findDesktopBasesButton())
 
   expect(await screen.findByText('暂时无法加载 Bases，请稍后重试。')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '重试' })).toBeInTheDocument()
@@ -143,7 +147,7 @@ test('discards an in-flight Base directory response after a workspace switch', a
   vi.stubGlobal('fetch', fetchMock)
 
   render(<App />)
-  fireEvent.click(await screen.findByRole('button', { name: 'Base' }))
+  fireEvent.click(await findDesktopBasesButton())
   fireEvent.change(screen.getByLabelText('切换工作区（桌面）'), { target: { value: 'workspace-2' } })
   expect(await screen.findByRole('link', { name: '项目跟踪' })).toBeInTheDocument()
 

@@ -34,7 +34,7 @@ test('opens governance write only from the existing server-hinted governance sur
   vi.stubGlobal('fetch', fetchMock)
 
   render(<App />)
-  fireEvent.click(await screen.findByRole('button', { name: '打开治理工作台' }))
+  fireEvent.click(await screen.findByRole('button', { name: '成员与权限：管理成员与权限' }))
   const settingsTrigger = await screen.findByRole('button', { name: '打开权限设置' })
   fireEvent.click(settingsTrigger)
 
@@ -61,7 +61,7 @@ test('keeps the workspace open when a selected governance-write Base is no longe
   vi.stubGlobal('fetch', fetchMock)
 
   render(<App />)
-  fireEvent.click(await screen.findByRole('button', { name: '打开治理工作台' }))
+  fireEvent.click(await screen.findByRole('button', { name: '成员与权限：管理成员与权限' }))
   fireEvent.click(await screen.findByRole('button', { name: '打开权限设置' }))
   const dialog = await screen.findByRole('dialog', { name: '权限设置' })
   fireEvent.change(within(dialog).getByLabelText('选择 Base'), { target: { value: 'base-1' } })
@@ -87,7 +87,7 @@ test.each([401, 403])('fails closed to the workspace boundary when governance-wr
   vi.stubGlobal('fetch', fetchMock)
 
   render(<App />)
-  fireEvent.click(await screen.findByRole('button', { name: '打开治理工作台' }))
+  fireEvent.click(await screen.findByRole('button', { name: '成员与权限：管理成员与权限' }))
   fireEvent.click(await screen.findByRole('button', { name: '打开权限设置' }))
 
   expect(await screen.findByRole('main', { name: '无工作区访问权限' })).toBeVisible()
@@ -120,7 +120,7 @@ test.each([401, 403, 404, 409])('does not let a delayed governance role mutation
   vi.stubGlobal('fetch', fetchMock)
 
   render(<App />)
-  fireEvent.click(await screen.findByRole('button', { name: '打开治理工作台' }))
+  fireEvent.click(await screen.findByRole('button', { name: '成员与权限：管理成员与权限' }))
   fireEvent.click(await screen.findByRole('button', { name: '打开权限设置' }))
   fireEvent.change(await screen.findByLabelText('成员 operator-1 的角色'), { target: { value: 'builder' } })
   fireEvent.click(await screen.findByRole('button', { name: '确认改为 builder' }))
@@ -162,7 +162,7 @@ test.each([401, 403, 404, 409])('does not let a delayed governance field-policy 
   vi.stubGlobal('fetch', fetchMock)
 
   render(<App />)
-  fireEvent.click(await screen.findByRole('button', { name: '打开治理工作台' }))
+  fireEvent.click(await screen.findByRole('button', { name: '成员与权限：管理成员与权限' }))
   fireEvent.click(await screen.findByRole('button', { name: '打开权限设置' }))
   const dialog = await screen.findByRole('dialog', { name: '权限设置' })
   fireEvent.change(within(dialog).getByLabelText('选择 Base'), { target: { value: 'base-1' } })

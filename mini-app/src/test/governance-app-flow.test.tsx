@@ -36,8 +36,8 @@ test('opens the governance workbench from the server-hinted entry and reads a se
   vi.stubGlobal('fetch', fetchMock)
 
   render(<App />)
-  const desktopTrigger = await screen.findByRole('button', { name: '打开治理工作台' })
-  expect(screen.getByRole('button', { name: '打开治理工作台（移动端）' })).toBeInTheDocument()
+  const desktopTrigger = await screen.findByRole('button', { name: '成员与权限：管理成员与权限' })
+  expect(screen.getByRole('button', { name: '更多：管理成员与权限' })).toBeInTheDocument()
   fireEvent.click(desktopTrigger)
   expect(await screen.findByRole('dialog', { name: '治理工作台' })).toBeVisible()
   expect(screen.getByText('owner-1')).toBeVisible()
