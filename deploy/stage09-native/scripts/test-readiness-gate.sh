@@ -1,161 +1,242 @@
 #!/bin/sh
-# Focused contract tests for the bounded Stage09 activation readiness gate.
+# Focused contract tests for the bounded, fail-closed activation readiness gate.
 set -eu
 
-script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-verifier="$script_dir/verify-activation-readiness.sh"
-
 fail() {
-    printf '%s\n' "$1: FAIL" >&2
+    printf '%s\n' "readiness-test: FAIL: $1" >&2
     exit 1
 }
 
-[ -x "$verifier" ] || fail readiness-script-missing
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd) || fail path
+verifier="$script_dir/verify-activation-readiness.sh"
+[ -f "$verifier" ] || fail verifier-missing
+grep -Fqx 'max_retry_attempts=20' "$verifier" >/dev/null || fail retry-budget-contract
+grep -Fqx 'interval_seconds=2' "$verifier" >/dev/null || fail retry-interval-contract
+grep -Fqx 'total_deadline_seconds=40' "$verifier" >/dev/null || fail deadline-contract
+grep -Fqx 'retry_attempt=0' "$verifier" >/dev/null || fail immediate-attempt-contract
+grep -Fqx '    [ "$retry_attempt" -lt "$max_retry_attempts" ] || break' "$verifier" >/dev/null || fail retry-cap-contract
+grep -Fqx '    sleep "$interval_seconds" || fail' "$verifier" >/dev/null || fail retry-sleep-contract
+grep -Fqx '    retry_attempt=$((retry_attempt + 1))' "$verifier" >/dev/null || fail retry-increment-contract
+grep -Fqx 'deadline_epoch=$((start_epoch + total_deadline_seconds))' "$verifier" >/dev/null || fail deadline-start-contract
+grep -Fq 'remaining=$(seconds_remaining) || break' "$verifier" || fail deadline-loop-contract
+grep -Fq -- '--connect-timeout "$curl_timeout" --max-time "$curl_timeout"' "$verifier" || fail curl-bound-contract
 
 fixture_root=$(mktemp -d "${TMPDIR:-/tmp}/stage09-readiness.XXXXXX") || fail fixture-create
-cleanup() { rm -rf "$fixture_root"; }
-trap cleanup EXIT HUP INT TERM
+trap 'rm -rf "$fixture_root"' EXIT HUP INT TERM
+fixture_state="$fixture_root/state"
+mkdir -p "$fixture_state" || fail fixture-state
+helper="$fixture_root/helpers.sh"
+normal_runner="$fixture_root/verify-normal.sh"
+fast_runner="$fixture_root/verify-fast.sh"
+cp "$verifier" "$normal_runner" || fail runner-copy
+sed 's/^max_retry_attempts=20$/max_retry_attempts=0/' "$verifier" > "$fast_runner" || fail runner-fast-copy
+chmod 700 "$normal_runner" "$fast_runner" || fail runner-mode
 
-fixture_bin="$fixture_root/bin"
-fixture_verifier="$fixture_root/verify-activation-readiness.sh"
-mkdir -p "$fixture_bin" || fail fixture-bin
+printf '%s\n' \
+'fixture_increment() {' \
+'    name=$1' \
+'    file="$FIXTURE_STATE_DIR/$name"' \
+'    value=$(sed -n "1p" "$file" 2>/dev/null || printf "0")' \
+'    case "$value" in ""|*[!0-9]*) value=0 ;; esac' \
+'    value=$((value + 1))' \
+'    printf "%s\n" "$value" > "$file"' \
+'    printf "%s\n" "$value"' \
+'}' \
+'date() {' \
+'    current=$(sed -n "1p" "$FIXTURE_STATE_DIR/epoch")' \
+'    printf "%s\\n" "$current" > "$FIXTURE_STATE_DIR/last_now"' \
+'    printf "%s\\n" "$current"' \
+'    if [ "$FIXTURE_DATE_STEP" -gt 0 ]; then printf "%s\\n" "$((current + FIXTURE_DATE_STEP))" > "$FIXTURE_STATE_DIR/epoch"; fi' \
+'}' \
+'timeout() {' \
+'    duration=$1' \
+'    shift' \
+'    "$@"' \
+'}' \
+'systemctl() {' \
+'    [ "$1" = "is-active" ] && [ "$2" = "--quiet" ] || return 2' \
+'    [ "$3" = "$FIXTURE_INACTIVE_UNIT" ] && return 3' \
+'    return 0' \
+'}' \
+'curl() {' \
+'    target=' \
+'    for argument in "$@"; do target=$argument; done' \
+'    case "$target" in' \
+'        http://127.0.0.1:18080/health)' \
+'            count=$(fixture_increment loopback_count)' \
+'            if [ "$FIXTURE_LOOPBACK_FORCE_STATUS" != "0" ]; then printf "%s" "$FIXTURE_LOOPBACK_FORCE_STATUS"' \
+'            elif [ "$count" -le "$FIXTURE_LOOPBACK_FAILS" ]; then printf "%s" "$FIXTURE_LOOPBACK_FAIL_STATUS"' \
+'            else printf "200"; fi' \
+'            ;;' \
+'        https://fixture.example.test/health) printf "%s" "$FIXTURE_HTTPS_HEALTH_STATUS" ;;' \
+'        https://fixture.example.test/) printf "%s" "$FIXTURE_HTTPS_ROOT_STATUS" ;;' \
+'        https://fixture.example.test/index.html) printf "%s" "$FIXTURE_HTTPS_STATIC_STATUS" ;;' \
+'        http://fixture.example.test/) printf "%s" "$FIXTURE_HTTP_REDIRECT_STATUS" ;;' \
+'        http://fixture.example.test/.well-known/acme-challenge/probe) printf "%s" "$FIXTURE_ACME_STATUS" ;;' \
+'        *) return 2 ;;' \
+'    esac' \
+'}' \
+'ss() {' \
+'    case "$FIXTURE_LISTENER_MODE" in' \
+'        safe)' \
+'            printf "%s\n" "LISTEN 0 511 0.0.0.0:80 0.0.0.0:* users:((\"nginx\",pid=11,fd=6))"' \
+'            printf "%s\n" "LISTEN 0 511 0.0.0.0:443 0.0.0.0:* users:((\"nginx\",pid=11,fd=7))"' \
+'            printf "%s\n" "LISTEN 0 128 127.0.0.1:5432 0.0.0.0:* users:((\"postgres\",pid=12,fd=8))"' \
+'            ;;' \
+'        http-non-nginx)' \
+'            printf "%s\n" "LISTEN 0 511 0.0.0.0:80 0.0.0.0:* users:((\"caddy\",pid=21,fd=6))"' \
+'            printf "%s\n" "LISTEN 0 511 0.0.0.0:443 0.0.0.0:* users:((\"nginx\",pid=11,fd=7))"' \
+'            ;;' \
+'        http-extra)' \
+'            printf "%s\n" "LISTEN 0 511 0.0.0.0:80 0.0.0.0:* users:((\"nginx\",pid=11,fd=6),(\"caddy\",pid=21,fd=7))"' \
+'            printf "%s\n" "LISTEN 0 511 0.0.0.0:443 0.0.0.0:* users:((\"nginx\",pid=11,fd=8))"' \
+'            ;;' \
+'        https-non-nginx)' \
+'            printf "%s\n" "LISTEN 0 511 0.0.0.0:80 0.0.0.0:* users:((\"nginx\",pid=11,fd=6))"' \
+'            printf "%s\n" "LISTEN 0 511 0.0.0.0:443 0.0.0.0:* users:((\"caddy\",pid=21,fd=7))"' \
+'            ;;' \
+'        https-extra)' \
+'            printf "%s\n" "LISTEN 0 511 0.0.0.0:80 0.0.0.0:* users:((\"nginx\",pid=11,fd=6))"' \
+'            printf "%s\n" "LISTEN 0 511 0.0.0.0:443 0.0.0.0:* users:((\"nginx\",pid=11,fd=7),(\"caddy\",pid=21,fd=8))"' \
+'            ;;' \
+'        db-public)' \
+'            printf "%s\n" "LISTEN 0 511 0.0.0.0:80 0.0.0.0:* users:((\"nginx\",pid=11,fd=6))"' \
+'            printf "%s\n" "LISTEN 0 511 0.0.0.0:443 0.0.0.0:* users:((\"nginx\",pid=11,fd=7))"' \
+'            printf "%s\n" "LISTEN 0 128 0.0.0.0:5432 0.0.0.0:* users:((\"postgres\",pid=12,fd=8))"' \
+'            ;;' \
+'        redis-public)' \
+'            printf "%s\n" "LISTEN 0 511 0.0.0.0:80 0.0.0.0:* users:((\"nginx\",pid=11,fd=6))"' \
+'            printf "%s\n" "LISTEN 0 511 0.0.0.0:443 0.0.0.0:* users:((\"nginx\",pid=11,fd=7))"' \
+'            printf "%s\n" "LISTEN 0 128 0.0.0.0:6379 0.0.0.0:* users:((\"redis-server\",pid=13,fd=9))"' \
+'            ;;' \
+'        *) return 2 ;;' \
+'    esac' \
+'}' \
+'sleep() {' \
+'    fixture_increment sleep_count >/dev/null' \
+'}' \
+'awk() {' \
+'    /usr/bin/awk "$@"' \
+'}' \
+> "$helper" || fail helper-write
 
-# The production verifier fixes PATH. Only this copied fixture replaces that
-# fixed value, allowing deterministic command simulations without creating a
-# production test mode or waiting for real time to pass.
-sed "s|^PATH=/usr/sbin:/usr/bin:/sbin:/bin$|PATH=$fixture_bin|" \
-    "$verifier" > "$fixture_verifier" || fail fixture-copy
-chmod 700 "$fixture_verifier" || fail fixture-copy-mode
-
-write_fake() {
-    command_name=$1
-    shift
-    {
-        printf '%s\n' '#!/bin/sh'
-        printf '%s\n' "$@"
-    } > "$fixture_bin/$command_name" || fail "fake-$command_name"
-    chmod 700 "$fixture_bin/$command_name" || fail "fake-$command_name-mode"
+reset_fixture() {
+    printf '%s\n' 1000 > "$fixture_state/epoch"
+    printf '%s\n' 1000 > "$fixture_state/last_now"
+    printf '%s\n' 0 > "$fixture_state/loopback_count"
+    printf '%s\n' 0 > "$fixture_state/sleep_count"
+    FIXTURE_STATE_DIR=$fixture_state
+    FIXTURE_INACTIVE_UNIT=
+    FIXTURE_LOOPBACK_FAILS=0
+    FIXTURE_LOOPBACK_FAIL_STATUS=503
+    FIXTURE_LOOPBACK_FORCE_STATUS=0
+    FIXTURE_HTTPS_HEALTH_STATUS=200
+    FIXTURE_HTTPS_ROOT_STATUS=200
+    FIXTURE_HTTPS_STATIC_STATUS=200
+    FIXTURE_HTTP_REDIRECT_STATUS=308
+    FIXTURE_ACME_STATUS=200
+    FIXTURE_LISTENER_MODE=safe
+    FIXTURE_DATE_STEP=0
+    export FIXTURE_STATE_DIR FIXTURE_INACTIVE_UNIT FIXTURE_LOOPBACK_FAILS
+    export FIXTURE_LOOPBACK_FAIL_STATUS FIXTURE_LOOPBACK_FORCE_STATUS
+    export FIXTURE_HTTPS_HEALTH_STATUS FIXTURE_HTTPS_ROOT_STATUS
+    export FIXTURE_HTTPS_STATIC_STATUS FIXTURE_HTTP_REDIRECT_STATUS
+    export FIXTURE_ACME_STATUS FIXTURE_LISTENER_MODE FIXTURE_DATE_STEP
 }
 
-write_fake systemctl \
-    'if [ "${FIXTURE_SERVICE_STATE:-active}" = active ]; then exit 0; fi' \
-    'exit 3'
-
-write_fake curl \
-    'target=' \
-    'for argument in "$@"; do target=$argument; done' \
-    'case "$target" in' \
-    '    http://127.0.0.1:18080/health)' \
-    '        count_file="$FIXTURE_STATE_DIR/loopback-count"' \
-    '        count=0; [ -r "$count_file" ] && IFS= read -r count < "$count_file"' \
-    '        count=$((count + 1)); printf "%s" "$count" > "$count_file"' \
-    '        ready_after=${FIXTURE_HEALTH_READY_AFTER:-0}' \
-    '        if [ "$count" -le "$ready_after" ]; then printf "%s" "${FIXTURE_LOOPBACK_STATUS:-503}"; else printf "200"; fi' \
-    '        ;;' \
-    '    https://*/health)' \
-    '        count=0; IFS= read -r count < "$FIXTURE_STATE_DIR/loopback-count"' \
-    '        ready_after=${FIXTURE_HEALTH_READY_AFTER:-0}' \
-    '        if [ "$count" -le "$ready_after" ]; then printf "%s" "${FIXTURE_PUBLIC_HEALTH_STATUS:-503}"; else printf "%s" "${FIXTURE_PUBLIC_HEALTH_STATUS_AFTER_READY:-200}"; fi' \
-    '        ;;' \
-    '    https://*/index.html) printf "%s" "${FIXTURE_STATIC_STATUS:-200}" ;;' \
-    '    https://*/) printf "%s" "${FIXTURE_ROOT_STATUS:-200}" ;;' \
-    '    http://*/.well-known/acme-challenge/*) printf "%s" "${FIXTURE_ACME_STATUS:-200}" ;;' \
-    '    http://*/) printf "%s" "${FIXTURE_HTTP_ROOT_STATUS:-308}" ;;' \
-    '    *) printf "000" ;;' \
-    'esac'
-
-write_fake ss \
-    'if [ "${FIXTURE_LISTENER_STATE:-valid}" = valid ]; then' \
-    '    printf "%s\\n" "LISTEN 0 511 0.0.0.0:80 0.0.0.0:* users:((\\\"nginx\\\",pid=1,fd=1))"' \
-    '    printf "%s\\n" "LISTEN 0 511 0.0.0.0:443 0.0.0.0:* users:((\\\"nginx\\\",pid=1,fd=2))"' \
-    '    printf "%s\\n" "LISTEN 0 511 127.0.0.1:5432 0.0.0.0:* users:((\\\"postgres\\\",pid=2,fd=1))"' \
-    'else' \
-    '    printf "%s\\n" "LISTEN 0 511 0.0.0.0:5432 0.0.0.0:* users:((\\\"postgres\\\",pid=2,fd=1))"' \
-    'fi'
-
-write_fake sleep \
-    'printf "%s\\n" "$1" >> "$FIXTURE_STATE_DIR/sleeps"'
-
 run_gate() {
-    state_dir=$1
-    shift
-    env \
-        PATH="$fixture_bin" \
-        FIXTURE_STATE_DIR="$state_dir" \
-        STAGE09_P1_READINESS_HOSTNAME=portal.example.test \
-        STAGE09_P1_READINESS_ACME_PATH=/.well-known/acme-challenge/fixture-ready \
-        "$@" \
-        "$fixture_verifier" --verify
+    runner=$1
+    set +e
+    gate_output=$(TEST_HELPERS="$helper" STAGE09_P1_READINESS_HOSTNAME=fixture.example.test STAGE09_P1_READINESS_ACME_PATH=/.well-known/acme-challenge/probe /bin/sh -c '
+runner=$1
+. "$TEST_HELPERS"
+set -- --verify
+. "$runner"
+' readiness-test "$runner" 2>&1)
+    gate_status=$?
+    set -e
 }
 
 assert_pass() {
     label=$1
-    state_dir=$2
-    shift 2
-    output=$(run_gate "$state_dir" "$@" 2>&1) || {
-        printf '%s\n' "$output" >&2
-        fail "$label-status"
-    }
-    [ "$output" = 'readiness-gate: pass' ] || fail "$label-output"
-    printf '%s\n' "$label: PASS"
+    [ "$gate_status" -eq 0 ] || fail "$label-status"
+    [ "$gate_output" = 'readiness-gate: pass' ] || fail "$label-output"
+    printf '%s\n' "assert_pass $label"
 }
 
 assert_redacted_failure() {
     label=$1
-    state_dir=$2
-    shift 2
-    status=0
-    output=$(run_gate "$state_dir" "$@" 2>&1) || status=$?
-    [ "$status" -ne 0 ] || fail "$label-status"
-    [ "$output" = 'readiness-gate: fail' ] || fail "$label-output"
-    case "$output" in
-        *fixture-secret-value*|*sensitive.example.test*|*fixture-ready*) fail "$label-leak" ;;
+    [ "$gate_status" -ne 0 ] || fail "$label-status"
+    [ "$gate_output" = 'readiness-gate: fail' ] || fail "$label-output"
+    case "$gate_output" in
+        *fixture-secret-value*|*fixture.example.test*|*fixture-ready*) fail "$label-redaction" ;;
     esac
-    printf '%s\n' "$label: PASS"
+    printf '%s\n' "assert_redacted_failure $label"
 }
 
-immediate_dir="$fixture_root/immediate"
-mkdir -p "$immediate_dir" || fail immediate-fixture
-assert_pass immediate-success "$immediate_dir" \
-    FIXTURE_SERVICE_STATE=active \
-    FIXTURE_HEALTH_READY_AFTER=0
-[ ! -s "$immediate_dir/sleeps" ] || fail immediate-success-slept
+assert_count() {
+    name=$1
+    expected=$2
+    actual=$(sed -n "1p" "$fixture_state/$name")
+    [ "$actual" = "$expected" ] || fail "$name-count"
+}
 
-delayed_dir="$fixture_root/delayed"
-mkdir -p "$delayed_dir" || fail delayed-fixture
-assert_pass delayed-success "$delayed_dir" \
-    FIXTURE_SERVICE_STATE=active \
-    FIXTURE_HEALTH_READY_AFTER=2
-[ "$(wc -l < "$delayed_dir/sleeps")" -eq 2 ] || fail delayed-success-retries
-[ "$(tr '\n' ' ' < "$delayed_dir/sleeps")" = '2 2 ' ] || fail delayed-success-interval
+reset_fixture
+run_gate "$normal_runner"
+assert_pass immediate-success
+assert_count loopback_count 1
+assert_count sleep_count 0
 
-timeout_dir="$fixture_root/timeout"
-mkdir -p "$timeout_dir" || fail timeout-fixture
-assert_redacted_failure timeout "$timeout_dir" \
-    FIXTURE_SERVICE_STATE=active \
-    FIXTURE_HEALTH_READY_AFTER=99 \
-    STAGE09_P1_READINESS_ACME_PATH=/.well-known/acme-challenge/fixture-secret-value \
-    STAGE09_P1_READINESS_HOSTNAME=sensitive.example.test
-[ "$(wc -l < "$timeout_dir/sleeps")" -eq 19 ] || fail timeout-retries
+for inactive_unit in stage09-p1-api stage09-p1-worker stage09-p1-outbox-bridge stage09-p1-redis nginx; do
+    reset_fixture
+    FIXTURE_INACTIVE_UNIT=$inactive_unit
+    export FIXTURE_INACTIVE_UNIT
+    run_gate "$fast_runner"
+    assert_redacted_failure "service-$inactive_unit"
+done
 
-inactive_dir="$fixture_root/inactive"
-mkdir -p "$inactive_dir" || fail inactive-fixture
-assert_redacted_failure service-inactive "$inactive_dir" \
-    FIXTURE_SERVICE_STATE=inactive \
-    FIXTURE_HEALTH_READY_AFTER=0
+reset_fixture
+FIXTURE_LOOPBACK_FORCE_STATUS=503
+export FIXTURE_LOOPBACK_FORCE_STATUS
+run_gate "$fast_runner"
+assert_redacted_failure loopback-health
 
-health_dir="$fixture_root/health"
-mkdir -p "$health_dir" || fail health-fixture
-assert_redacted_failure health-non-200 "$health_dir" \
-    FIXTURE_SERVICE_STATE=active \
-    FIXTURE_HEALTH_READY_AFTER=0 \
-    FIXTURE_PUBLIC_HEALTH_STATUS_AFTER_READY=502
+reset_fixture
+FIXTURE_HTTPS_HEALTH_STATUS=503
+export FIXTURE_HTTPS_HEALTH_STATUS
+run_gate "$fast_runner"
+assert_redacted_failure https-health
 
-boundary_dir="$fixture_root/boundary"
-mkdir -p "$boundary_dir" || fail boundary-fixture
-assert_redacted_failure listener-or-data-boundary "$boundary_dir" \
-    FIXTURE_SERVICE_STATE=active \
-    FIXTURE_HEALTH_READY_AFTER=0 \
-    FIXTURE_LISTENER_STATE=invalid
+reset_fixture
+FIXTURE_HTTPS_ROOT_STATUS=503
+export FIXTURE_HTTPS_ROOT_STATUS
+run_gate "$fast_runner"
+assert_redacted_failure https-root
 
-printf '%s\n' 'readiness-gate: PASS'
+reset_fixture
+FIXTURE_HTTPS_STATIC_STATUS=503
+export FIXTURE_HTTPS_STATIC_STATUS
+run_gate "$fast_runner"
+assert_redacted_failure https-static
+
+reset_fixture
+FIXTURE_HTTP_REDIRECT_STATUS=200
+export FIXTURE_HTTP_REDIRECT_STATUS
+run_gate "$fast_runner"
+assert_redacted_failure http-redirect
+
+reset_fixture
+FIXTURE_ACME_STATUS=503
+export FIXTURE_ACME_STATUS
+run_gate "$fast_runner"
+assert_redacted_failure acme
+
+for listener_mode in http-non-nginx http-extra https-non-nginx https-extra db-public redis-public; do
+    reset_fixture
+    FIXTURE_LISTENER_MODE=$listener_mode
+    export FIXTURE_LISTENER_MODE
+    run_gate "$fast_runner"
+    assert_redacted_failure "$listener_mode"
+done
+
+printf '%s\n' 'readiness-test: pass'
