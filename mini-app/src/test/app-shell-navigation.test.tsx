@@ -93,6 +93,59 @@ test('opens real supported destinations and has Chinese usage hints', () => {
   }
 })
 
+test.each([
+  { missingEntry: 'Draft Hub', missingButton: '待确认：即将上线', availableButton: '团队 Bot：使用已授权团队助手' },
+  { missingEntry: 'Team Bot', missingButton: '团队 Bot：即将上线', availableButton: '待确认：查看待处理草稿' },
+])('plans and disables a missing $missingEntry action without disabling the other real action', ({ missingEntry, missingButton, availableButton }) => {
+  const onNavigate = vi.fn()
+  const onOpenDraftHub = missingEntry === 'Team Bot' ? vi.fn() : undefined
+  const onOpenTeamBot = missingEntry === 'Draft Hub' ? vi.fn() : undefined
+  render(<AppShell workspace={workspace} workspaces={[workspace]} onWorkspaceChange={vi.fn()} activeRoute="home" onNavigate={onNavigate} onOpenDraftHub={onOpenDraftHub} onOpenTeamBot={onOpenTeamBot}><main>内容</main></AppShell>)
+
+  const desktopNavigation = within(screen.getByRole('complementary', { name: '主导航' }))
+  const mobileNavigation = within(screen.getByRole('navigation', { name: '移动导航' }))
+  const missingButtons = [
+    desktopNavigation.getByRole('button', { name: missingButton }),
+    mobileNavigation.getByRole('button', { name: missingButton }),
+  ]
+
+  for (const button of missingButtons) {
+    expect(button).toHaveAttribute('data-availability', 'planned')
+    expect(button).toBeDisabled()
+    fireEvent.click(button)
+  }
+
+  expect(desktopNavigation.getByRole('button', { name: availableButton })).not.toBeDisabled()
+  expect(mobileNavigation.getByRole('button', { name: availableButton })).not.toBeDisabled()
+  expect(onNavigate).not.toHaveBeenCalled()
+})
+
+test('hides desktop governance and plans mobile More for non-managers', () => {
+  const onOpenGovernance = vi.fn()
+  render(
+    <AppShell
+      workspace={{ ...workspace, capabilities: { ...workspace.capabilities, can_manage_workspace: false } }}
+      workspaces={[workspace]}
+      onWorkspaceChange={vi.fn()}
+      activeRoute="home"
+      onNavigate={vi.fn()}
+      onOpenGovernance={onOpenGovernance}
+    >
+      <main>内容</main>
+    </AppShell>,
+  )
+
+  const desktopNavigation = within(screen.getByRole('complementary', { name: '主导航' }))
+  const mobileNavigation = within(screen.getByRole('navigation', { name: '移动导航' }))
+  expect(desktopNavigation.queryByRole('button', { name: '成员与权限：管理成员与权限' })).not.toBeInTheDocument()
+
+  const moreButton = mobileNavigation.getByRole('button', { name: '更多：即将上线' })
+  expect(moreButton).toHaveAttribute('data-availability', 'planned')
+  expect(moreButton).toBeDisabled()
+  fireEvent.click(moreButton)
+  expect(onOpenGovernance).not.toHaveBeenCalled()
+})
+
 test.each([320, 375, 900])('puts the mobile header before in-flow fullscreen controls at %ipx', (width) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
   const rendered = render(<AppShell workspace={workspace} workspaces={[workspace]} onWorkspaceChange={vi.fn()} activeRoute="home" onNavigate={vi.fn()} telegramState={{ kind: 'windowed' }} onOpenBrowser={vi.fn()}><main>内容</main></AppShell>)
