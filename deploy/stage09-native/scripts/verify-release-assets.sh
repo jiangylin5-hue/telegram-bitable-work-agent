@@ -8,8 +8,12 @@ layout="$script_dir/verify-release-layout.sh"
 manifest="$script_dir/create-release-manifest.sh"
 migration="$script_dir/verify-fixed-migration-offline.sh"
 test_script="$script_dir/test-release-assets.sh"
+renderer="$script_dir/render-native-public-nginx.sh"
+ingress_test="$script_dir/test-native-public-ingress-assets.sh"
+http_template="$script_dir/../nginx/stage09-p1-public-http.conf.template"
+https_template="$script_dir/../nginx/stage09-p1-public-https.conf.template"
 
-for script in "$layout" "$manifest" "$migration" "$test_script" "$0"; do sh -n "$script" || fail; done
+for script in "$layout" "$manifest" "$migration" "$test_script" "$renderer" "$ingress_test" "$0"; do sh -n "$script" || fail; done
 grep -Fq 'release_base=/opt/stage09-p1/releases' "$layout" || fail
 grep -Fq 'static-assets: external-p1-b-required' "$layout" || fail
 grep -Fq "find \"\$release_root\" -type l" "$layout" || fail
@@ -19,6 +23,8 @@ for required_path in \
     backend/alembic/versions/20260720_0032_stage08_knowledge_indexing.py \
     deploy/stage09-native/runtime/runtime.env.example \
     deploy/stage09-native/nginx/stage09-p1.conf.template \
+    deploy/stage09-native/nginx/stage09-p1-public-http.conf.template \
+    deploy/stage09-native/nginx/stage09-p1-public-https.conf.template \
     deploy/stage09-native/postgresql/stage09-p1-bootstrap.sql \
     deploy/stage09-native/postgresql/stage09-p1-hba.conf.fragment \
     deploy/stage09-native/redis/redis-stage09-p1.conf \
@@ -35,7 +41,9 @@ for required_path in \
     deploy/stage09-native/scripts/create-release-manifest.sh \
     deploy/stage09-native/scripts/verify-fixed-migration-offline.sh \
     deploy/stage09-native/scripts/verify-release-assets.sh \
-    deploy/stage09-native/scripts/inspect-native-host-readiness.sh
+    deploy/stage09-native/scripts/inspect-native-host-readiness.sh \
+    deploy/stage09-native/scripts/render-native-public-nginx.sh \
+    deploy/stage09-native/scripts/test-native-public-ingress-assets.sh
 do
     grep -Fq "$required_path" "$layout" || fail
 done
@@ -70,4 +78,14 @@ grep -Fq 'missing-critical-unit-layout-accepted' "$test_script" || fail
 grep -Fq 'missing-critical-unit-manifest-accepted' "$test_script" || fail
 grep -Fq 'stage09-p1-api.service' "$test_script" || fail
 if grep -Eq 'cat[[:space:]]*>|<<' "$test_script"; then fail; fi
+grep -Fq 'native-public-nginx: fail' "$renderer" || fail
+grep -Fq 'STAGE09_P1_PUBLIC_HOSTNAME' "$renderer" || fail
+grep -Fq 'STAGE09_P1_CERTIFICATE_PATH' "$renderer" || fail
+grep -Fq 'STAGE09_P1_CERTIFICATE_KEY_PATH' "$renderer" || fail
+grep -Fq 'listen 80;' "$http_template" || fail
+grep -Fq 'root /var/www/stage09-p1/acme;' "$http_template" || fail
+grep -Fq 'return 308 https://$host$request_uri;' "$http_template" || fail
+grep -Fq 'listen 443 ssl http2;' "$https_template" || fail
+grep -Fq 'proxy_pass http://127.0.0.1:18080;' "$https_template" || fail
+if grep -Eiq 'allow|deny|docker|caddy|stage03|stage07|5432|6379' "$http_template" "$https_template"; then fail; fi
 printf '%s\n' 'release-assets: pass'

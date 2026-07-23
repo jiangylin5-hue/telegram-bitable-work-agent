@@ -1,0 +1,13 @@
+server {
+    listen 80;
+    server_name {{STAGE09_P1_PUBLIC_HOSTNAME}};
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/stage09-p1/acme;
+        try_files $uri =404;
+    }
+
+    location / {
+        return 308 https://$host$request_uri;
+    }
+}

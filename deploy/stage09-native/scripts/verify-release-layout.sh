@@ -34,6 +34,8 @@ for required in \
     backend/alembic/versions/20260720_0032_stage08_knowledge_indexing.py \
     deploy/stage09-native/runtime/runtime.env.example \
     deploy/stage09-native/nginx/stage09-p1.conf.template \
+    deploy/stage09-native/nginx/stage09-p1-public-http.conf.template \
+    deploy/stage09-native/nginx/stage09-p1-public-https.conf.template \
     deploy/stage09-native/postgresql/stage09-p1-bootstrap.sql \
     deploy/stage09-native/postgresql/stage09-p1-hba.conf.fragment \
     deploy/stage09-native/redis/redis-stage09-p1.conf \
@@ -53,7 +55,9 @@ for required in \
     deploy/stage09-native/scripts/inspect-native-host-readiness.sh \
     deploy/stage09-native/scripts/render-caddy-stage09-host.sh \
     deploy/stage09-native/scripts/activate-public-ingress.sh \
-    deploy/stage09-native/scripts/test-public-ingress-assets.sh
+    deploy/stage09-native/scripts/test-public-ingress-assets.sh \
+    deploy/stage09-native/scripts/render-native-public-nginx.sh \
+    deploy/stage09-native/scripts/test-native-public-ingress-assets.sh
 do
     [ -f "$release_root/$required" ] && [ ! -L "$release_root/$required" ] || fail
 done

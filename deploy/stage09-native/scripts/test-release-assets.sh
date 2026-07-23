@@ -32,6 +32,8 @@ grep -Fq 'realpath "$release_root"' "$layout" || fail canonical-release-root
 grep -Fq 'backend/alembic/versions/20260720_0032_stage08_knowledge_indexing.py' "$layout" || fail required-migration
 grep -Fq 'deploy/stage09-native/runtime/runtime.env.example' "$layout" || fail required-runtime-example
 grep -Fq 'deploy/stage09-native/nginx/stage09-p1.conf.template' "$layout" || fail required-nginx-template
+grep -Fq 'deploy/stage09-native/nginx/stage09-p1-public-http.conf.template' "$layout" || fail required-public-http-template
+grep -Fq 'deploy/stage09-native/nginx/stage09-p1-public-https.conf.template' "$layout" || fail required-public-https-template
 grep -Fq 'deploy/stage09-native/postgresql/stage09-p1-bootstrap.sql' "$layout" || fail required-postgres-bootstrap
 grep -Fq 'deploy/stage09-native/redis/redis-stage09-p1.conf' "$layout" || fail required-redis-config
 grep -Fq 'deploy/stage09-native/systemd/stage09-p1-api.service' "$layout" || fail required-api-unit
@@ -40,6 +42,8 @@ grep -Fq 'deploy/stage09-native/scripts/inspect-native-host-readiness.sh' "$layo
 grep -Fq 'deploy/stage09-native/scripts/render-caddy-stage09-host.sh' "$layout" || fail required-caddy-renderer
 grep -Fq 'deploy/stage09-native/scripts/activate-public-ingress.sh' "$layout" || fail required-public-ingress-activator
 grep -Fq 'deploy/stage09-native/scripts/test-public-ingress-assets.sh' "$layout" || fail required-public-ingress-test
+grep -Fq 'deploy/stage09-native/scripts/render-native-public-nginx.sh' "$layout" || fail required-native-public-renderer
+grep -Fq 'deploy/stage09-native/scripts/test-native-public-ingress-assets.sh' "$layout" || fail required-native-public-ingress-test
 grep -Fq "offline_database_url='postgresql+psycopg://stage09_p1:offline-placeholder@127.0.0.1:5432/stage09_p1'" "$migration" || fail fixed-offline-database-url
 grep -Fq 'env -u DATABASE_URL "DATABASE_URL=$offline_database_url"' "$migration" || fail explicit-offline-database-url
 if grep -Eq 'runtime\.env|source[[:space:]]|ads_agent' "$migration"; then fail migration-secret-or-history; fi
@@ -103,6 +107,8 @@ for required_fixture_path in \
     backend/alembic/versions/20260720_0032_stage08_knowledge_indexing.py \
     deploy/stage09-native/runtime/runtime.env.example \
     deploy/stage09-native/nginx/stage09-p1.conf.template \
+    deploy/stage09-native/nginx/stage09-p1-public-http.conf.template \
+    deploy/stage09-native/nginx/stage09-p1-public-https.conf.template \
     deploy/stage09-native/postgresql/stage09-p1-bootstrap.sql \
     deploy/stage09-native/postgresql/stage09-p1-hba.conf.fragment \
     deploy/stage09-native/redis/redis-stage09-p1.conf \
@@ -122,7 +128,9 @@ for required_fixture_path in \
     deploy/stage09-native/scripts/inspect-native-host-readiness.sh \
     deploy/stage09-native/scripts/render-caddy-stage09-host.sh \
     deploy/stage09-native/scripts/activate-public-ingress.sh \
-    deploy/stage09-native/scripts/test-public-ingress-assets.sh
+    deploy/stage09-native/scripts/test-public-ingress-assets.sh \
+    deploy/stage09-native/scripts/render-native-public-nginx.sh \
+    deploy/stage09-native/scripts/test-native-public-ingress-assets.sh
 do
     fixture_asset="$release_root/$required_fixture_path"
     mkdir -p "$(dirname -- "$fixture_asset")" || fail fixture-asset-directory
