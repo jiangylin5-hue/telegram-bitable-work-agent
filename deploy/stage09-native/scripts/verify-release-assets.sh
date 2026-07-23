@@ -84,10 +84,16 @@ grep -Fq 'stage09-p1-api.service' "$test_script" || fail
 if grep -Eq 'cat[[:space:]]*>|<<' "$test_script"; then fail; fi
 grep -Fqx 'project_name=telegram-bitable-stage03' "$retire" || fail
 grep -Fqx 'PATH=/usr/sbin:/usr/bin:/sbin:/bin' "$retire" || fail
+grep -Fqx 'required_owner_uid=0' "$retire" || fail
+grep -Fq 'RETIRE_LEGACY_TEST_' "$retire" && fail
 grep -Fq 'docker system prune' "$retire" && fail
-grep -Fq 'load_ready_archive || return 1' "$retire" || fail
+grep -Fq 'load_ready_archive || return 2' "$retire" || fail
 grep -Fq 'write_ready_marker' "$retire" || fail
 grep -Fq 'pg_restore -l' "$retire" || fail
+grep -Fq 'python3 -m json.tool' "$retire" || fail
+grep -Fq 'secure_archive_file' "$retire" || fail
+grep -Fq 'all_images=$(docker images' "$retire" || fail
+grep -Fq 'failed_retire_receipt' "$retire" || fail
 grep -Fq 'custom_image_bytes_before' "$retire" || fail
 grep -Fq 'released_bytes' "$retire" && fail
 grep -Fq 'telegram-bitable-stage03-' "$retire" || fail

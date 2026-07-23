@@ -50,10 +50,16 @@ grep -Fq 'deploy/stage09-native/scripts/retire-legacy-stage03-docker.sh' "$layou
 grep -Fq 'deploy/stage09-native/scripts/test-retire-legacy-stage03-docker.sh' "$layout" || fail required-legacy-retire-test
 grep -Fqx 'project_name=telegram-bitable-stage03' "$retire" || fail retire-fixed-project
 grep -Fqx 'PATH=/usr/sbin:/usr/bin:/sbin:/bin' "$retire" || fail retire-fixed-path
+grep -Fqx 'required_owner_uid=0' "$retire" || fail retire-fixed-root-owner
+grep -Fq 'RETIRE_LEGACY_TEST_' "$retire" && fail retire-production-test-mode
 grep -Fq 'docker system prune' "$retire" && fail retire-global-prune
 grep -Fq 'load_ready_archive' "$retire" || fail retire-ready-archive
 grep -Fq 'write_ready_marker' "$retire" || fail retire-ready-marker
 grep -Fq 'pg_restore -l' "$retire" || fail retire-postgres-verification
+grep -Fq 'python3 -m json.tool' "$retire" || fail retire-caddy-json-verification
+grep -Fq 'secure_archive_file' "$retire" || fail retire-archive-metadata-verification
+grep -Fq 'all_images=$(docker images' "$retire" || fail retire-image-enumeration-status
+grep -Fq 'failed_retire_receipt' "$retire" || fail retire-failed-receipt
 grep -Fq 'sha256sum' "$retire" || fail retire-manifest
 grep -Fq 'custom_image_bytes_before' "$retire" || fail retire-image-byte-semantics
 grep -Fq 'released_bytes' "$retire" && fail retire-released-bytes

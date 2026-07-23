@@ -5,7 +5,7 @@
 - Document status: approved design
 - Approved at: 2026-07-23
 - Scope: 将服务器上遗留的 `telegram-bitable-stage03` Docker 栈下线；由现有原生 Stage09 服务接管唯一仍需保留的 Mini App 公网入口。
-- Current Progress: 已完成只读盘点和仓库内下线脚本安全修复；repository-only fake Docker/pg_restore 与完整 Stage09 shell suite 已通过。尚未 SSH、停止容器、变更 Nginx、申请新证书或删除任何真实数据。
+- Current Progress: 已完成只读盘点和仓库内下线脚本安全修复；production root/PATH 隔离、失败回执、枚举 fail-closed、资源漂移与归档元数据 focused suite 及完整 Stage09 repository-only shell suite 均已通过。尚未 SSH、停止容器、变更 Nginx、申请新证书或删除任何真实数据。
 
 ## 1. 背景与已验证事实
 
@@ -80,7 +80,7 @@ Nginx 只为确切 hostname 提供服务：
 - 容器、镜像、网络、volume 名称与 SHA-256 manifest（只记录名称、大小、摘要和时间，不记录数据正文）；
 - 原生 Nginx 旧配置备份和当前 Stage09 symlink 目标。
 
-归档成功条件：每项存在、非空、其 SHA-256 位于 manifest；PostgreSQL dump 可列出目录、Redis RDB 可通过本地工具读取 header。归档失败时不停止任何 Docker 容器。
+归档成功条件：archive root 与目录归 root 所有且为 `0700`，ready marker 与每个文件归 root 所有且为 `0600`；每项存在、非空、其 SHA-256 位于 manifest；PostgreSQL dump 可列出目录、Redis RDB 可通过本地工具读取 header，Caddy runtime JSON 可由本地 JSON parser 解析。归档失败时不停止任何 Docker 容器。
 
 归档必须在旧 Caddy 仍运行时完成。全部 artifact 和校验通过后，先原子发布归档目录，再原子写入唯一 ready marker；未写入 marker、存在多个候选 marker、artifact 不完整或校验失败时，该归档不得进入删除阶段。后续 `retire` 只读取并重新严格验证这个既有 ready archive，不重新调用容器生成归档，也不依赖已停止的 Caddy。
 
@@ -100,7 +100,7 @@ Nginx 只为确切 hostname 提供服务：
 2. 删除其专属 network、image 与 volume；
 3. 保留 Docker daemon 本身，不影响服务器其他可能的 Docker 用户；
 4. 删除未被 `current`、`current-venv`、`current.previous` 或 systemd 引用的 Stage09 source/venv/static release，只保留 `stage09-p1-20260723-r22` 与 `stage09-p1-20260723-r19`；
-5. 写入脱敏操作 receipt：仅记录 ready manifest 状态、各类资源实际完成的删除计数和删除前 custom image 字节数 `custom_image_bytes_before`；不得把删除前镜像大小误称为已释放字节数。若部分删除失败，receipt 为 `status=partial` 并以非零状态退出。
+5. 写入脱敏操作 receipt：仅记录 ready manifest 状态、各类资源实际完成的删除计数和删除前 custom image 字节数 `custom_image_bytes_before`；不得把删除前镜像大小误称为已释放字节数。任何删除前校验或资源枚举失败均返回固定 `status=failed` 和全零完成计数，且不删除资源；若部分删除失败，receipt 为 `status=partial` 并以非零状态退出。
 
 ## 6. 回滚
 

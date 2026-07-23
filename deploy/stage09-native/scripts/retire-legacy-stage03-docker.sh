@@ -5,6 +5,7 @@ set -eu
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 
+required_owner_uid=0
 project_name=telegram-bitable-stage03
 archive_root=/var/backups/stage09-p1/legacy-stage03
 nginx_config=/etc/nginx/sites-available/stage09-p1.conf
@@ -13,7 +14,6 @@ venv_link=/opt/stage09-p1/current-venv
 static_link=/var/www/stage09-p1/current
 archive_work_dir=
 ready_work_file=
-repository_fixture=0
 
 receipt() {
     printf '%s=%s\n' "$1" "$2"
@@ -23,6 +23,8 @@ fail() {
     receipt status failed
     exit 1
 }
+
+[ "$(id -u)" -eq "$required_owner_uid" ] || fail
 
 cleanup() {
     if [ -n "$ready_work_file" ]; then
@@ -74,7 +76,8 @@ select_volumes() {
 }
 
 select_custom_images() {
-    docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null |
+    all_images=$(docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null) || return 1
+    printf '%s\n' "$all_images" |
         awk 'index($0, "telegram-bitable-stage03-") == 1'
 }
 
@@ -91,11 +94,7 @@ service_container() {
 
 expected_link_exists() {
     link_path=$1
-    if [ "$repository_fixture" -eq 1 ]; then
-        [ -e "$link_path" ]
-    else
-        [ -L "$link_path" ]
-    fi
+    [ -L "$link_path" ]
 }
 
 write_inventory_record() {
@@ -177,18 +176,28 @@ stage09-venv.target
 stage09-static.target
 state'
 
+secure_archive_directory() {
+    directory=$1
+    [ -d "$directory" ] && [ ! -L "$directory" ] || return 1
+    [ "$(stat -c '%u:%a' -- "$directory" 2>/dev/null)" = "$required_owner_uid:700" ]
+}
+
+secure_archive_file() {
+    file=$1
+    [ -f "$file" ] && [ ! -L "$file" ] || return 1
+    [ "$(stat -c '%u:%a' -- "$file" 2>/dev/null)" = "$required_owner_uid:600" ]
+}
+
 verify_archive_dir() {
     archive_dir=$1
-    [ -d "$archive_dir" ] && [ ! -L "$archive_dir" ] || return 1
-    [ -f "$archive_dir/manifest.sha256" ] &&
-        [ ! -L "$archive_dir/manifest.sha256" ] &&
-        [ -s "$archive_dir/manifest.sha256" ] || return 1
+    secure_archive_directory "$archive_dir" || return 1
+    secure_archive_file "$archive_dir/manifest.sha256" || return 1
+    [ -s "$archive_dir/manifest.sha256" ] || return 1
     [ "$(wc -l < "$archive_dir/manifest.sha256")" -eq 11 ] || return 1
 
     for artifact in $required_artifacts; do
-        [ -f "$archive_dir/$artifact" ] &&
-            [ ! -L "$archive_dir/$artifact" ] &&
-            [ -s "$archive_dir/$artifact" ] || return 1
+        secure_archive_file "$archive_dir/$artifact" || return 1
+        [ -s "$archive_dir/$artifact" ] || return 1
         awk -v artifact="$artifact" '
             $2 == artifact && length($1) == 64 && $1 ~ /^[0-9a-f]+$/ { count += 1 }
             END { exit count == 1 ? 0 : 1 }
@@ -200,6 +209,7 @@ verify_archive_dir() {
     ) || return 1
     pg_restore -l "$archive_dir/postgres.dump" >/dev/null 2>&1 || return 1
     [ "$(dd if="$archive_dir/redis.rdb" bs=5 count=1 2>/dev/null)" = REDIS ] || return 1
+    python3 -m json.tool "$archive_dir/caddy-runtime.json" >/dev/null 2>&1 || return 1
 }
 
 ready_marker_files() {
@@ -214,13 +224,16 @@ write_ready_marker() {
     ready_work_file=$(mktemp "$archive_root/.ready.XXXXXX" 2>/dev/null) || return 1
     printf '%s\n' "$archive_name" > "$ready_work_file" || return 1
     chmod 600 "$ready_work_file" 2>/dev/null || return 1
+    secure_archive_file "$ready_work_file" || return 1
     mv -f -- "$ready_work_file" "$archive_root/ready" 2>/dev/null || return 1
     ready_work_file=
 }
 
 archive_legacy_runtime() {
+    [ ! -L "$archive_root" ] || return 1
     mkdir -p "$archive_root" 2>/dev/null || return 1
     chmod 700 "$archive_root" 2>/dev/null || return 1
+    secure_archive_directory "$archive_root" || return 1
     markers=$(ready_marker_files) || return 1
     [ "$(line_count "$markers")" -eq 0 ] || return 1
 
@@ -250,6 +263,7 @@ archive_legacy_runtime() {
 
     archive_work_dir=$(mktemp -d "$archive_root/.archive.XXXXXX" 2>/dev/null) || return 1
     chmod 700 "$archive_work_dir" 2>/dev/null || return 1
+    secure_archive_directory "$archive_work_dir" || return 1
 
     cp -- "$compose_dir/compose.yml" "$archive_work_dir/compose.yml" 2>/dev/null || return 1
     cp -- "$nginx_config" "$archive_work_dir/nginx-stage09-p1.conf" 2>/dev/null || return 1
@@ -312,12 +326,11 @@ state_value() {
 }
 
 load_ready_archive() {
-    [ -d "$archive_root" ] && [ ! -L "$archive_root" ] || return 1
+    secure_archive_directory "$archive_root" || return 1
     markers=$(ready_marker_files) || return 1
     [ "$(line_count "$markers")" -eq 1 ] || return 1
-    [ "$markers" = "$archive_root/ready" ] &&
-        [ -f "$archive_root/ready" ] &&
-        [ ! -L "$archive_root/ready" ] || return 1
+    [ "$markers" = "$archive_root/ready" ] || return 1
+    secure_archive_file "$archive_root/ready" || return 1
     archive_name=$(awk '
         { count += 1; value = $0 }
         END {
@@ -364,9 +377,19 @@ custom_image_bytes() {
     printf '%s\n' "$total"
 }
 
+failed_retire_receipt() {
+    receipt status failed
+    receipt archive_manifest unavailable
+    receipt custom_image_bytes_before 0
+    receipt container_deleted_count 0
+    receipt network_deleted_count 0
+    receipt volume_deleted_count 0
+    receipt image_deleted_count 0
+}
+
 retire_ready_runtime() {
-    load_ready_archive || return 1
-    custom_image_bytes_before=$(custom_image_bytes "$images") || return 1
+    load_ready_archive || return 2
+    custom_image_bytes_before=$(custom_image_bytes "$images") || return 2
 
     container_deleted_count=0
     network_deleted_count=0
@@ -421,35 +444,12 @@ retire_ready_runtime() {
     [ "$partial" -eq 0 ]
 }
 
-case "${RETIRE_LEGACY_TEST_MODE-}" in
-    repository-fixture)
-        [ -n "${RETIRE_LEGACY_TEST_ROOT-}" ] &&
-            [ -d "${RETIRE_LEGACY_TEST_ROOT-}" ] &&
-            [ -n "${RETIRE_LEGACY_TEST_BIN-}" ] &&
-            [ -d "${RETIRE_LEGACY_TEST_BIN-}" ] || fail
-        PATH="$RETIRE_LEGACY_TEST_BIN:$PATH"
-        export PATH
-        repository_fixture=1
-        archive_root="$RETIRE_LEGACY_TEST_ROOT/archives"
-        nginx_config="$RETIRE_LEGACY_TEST_ROOT/nginx/stage09-p1.conf"
-        source_link="$RETIRE_LEGACY_TEST_ROOT/links/source-current"
-        venv_link="$RETIRE_LEGACY_TEST_ROOT/links/venv-current"
-        static_link="$RETIRE_LEGACY_TEST_ROOT/links/static-current"
-        ;;
-    '')
-        [ "$(id -u)" -eq 0 ] || fail
-        ;;
-    *)
-        fail
-        ;;
-esac
-
 case "${1:-}" in
     archive|retire) mode=$1 ;;
     *) fail ;;
 esac
 [ "$#" -eq 1 ] || fail
-for utility in awk cat chmod cp date dd docker du find grep id mkdir mktemp mv pg_restore readlink rm sha256sum sort wc; do
+for utility in awk cat chmod cp date dd docker du find grep id mkdir mktemp mv pg_restore python3 readlink rm sha256sum sort stat wc; do
     command -v "$utility" >/dev/null 2>&1 || fail
 done
 
@@ -466,5 +466,13 @@ if [ "$mode" = archive ]; then
     receipt image_count "$image_count"
     receipt custom_image_bytes_before 0
 else
-    retire_ready_runtime || exit 1
+    if retire_ready_runtime; then
+        :
+    else
+        retire_status=$?
+        if [ "$retire_status" -eq 2 ]; then
+            failed_retire_receipt
+        fi
+        exit 1
+    fi
 fi
