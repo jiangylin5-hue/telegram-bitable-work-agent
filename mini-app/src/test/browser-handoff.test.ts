@@ -47,10 +47,10 @@ describe('browser workspace handoff', () => {
   it('exchanges only the fragment ticket, clears it, and then navigates to the workspace root', async () => {
     const html = readFileSync(handoffPagePath, 'utf8')
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }))
-    const replaceState = vi.spyOn(history, 'replaceState')
     const navigate = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
     history.replaceState(null, '', '/browser-handoff.html#ticket=opaque-ticket')
+    const replaceState = vi.spyOn(history, 'replaceState')
 
     runHandoffScript(html, navigate)
 
@@ -60,24 +60,36 @@ describe('browser workspace handoff', () => {
       credentials: 'same-origin',
       body: JSON.stringify({ ticket: 'opaque-ticket' }),
     }))
-    expect(replaceState).toHaveBeenCalledWith(null, '', '/browser-handoff.html')
+    expect(replaceState).toHaveBeenCalledExactlyOnceWith(null, '', '/browser-handoff.html')
+    expect(replaceState.mock.invocationCallOrder[0]).toBeLessThan(fetchMock.mock.invocationCallOrder[0])
     expect(document.body.textContent).not.toContain('opaque-ticket')
   })
 
-  it('uses no-referrer and no-store page directives and shows only generic recovery copy after exchange failure', async () => {
+  it('clears the fragment before a failed exchange and shows only generic recovery copy', async () => {
     const html = readFileSync(handoffPagePath, 'utf8')
     const navigate = vi.fn()
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 401 })))
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 401 }))
+    vi.stubGlobal('fetch', fetchMock)
     history.replaceState(null, '', '/browser-handoff.html#ticket=opaque-ticket')
+    const replaceState = vi.spyOn(history, 'replaceState')
 
     runHandoffScript(html, navigate)
 
     await vi.waitFor(() => expect(document.querySelector<HTMLParagraphElement>('#handoff-error')?.hidden).toBe(false))
+    expect(replaceState).toHaveBeenCalledExactlyOnceWith(null, '', '/browser-handoff.html')
+    expect(replaceState.mock.invocationCallOrder[0]).toBeLessThan(fetchMock.mock.invocationCallOrder[0])
+    expect(window.location.hash).toBe('')
     expect(html).toContain('<meta name="referrer" content="no-referrer">')
     expect(html).toContain('<meta http-equiv="Cache-Control" content="no-store">')
     expect(document.querySelector('#handoff-error')?.textContent).toBe('无法打开工作台，请返回 Telegram 后重试。')
     expect(document.body.textContent).not.toContain('401')
     expect(document.body.textContent).not.toContain('opaque-ticket')
     expect(navigate).not.toHaveBeenCalled()
+  })
+
+  it('disconnects a supported opener without reading data from it', () => {
+    const html = readFileSync(handoffPagePath, 'utf8')
+
+    expect(html).toContain('window.opener = null')
   })
 })

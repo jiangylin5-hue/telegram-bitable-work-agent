@@ -15,6 +15,11 @@
   </main>
   <script>
     (() => {
+      try {
+        window.opener = null
+      } catch {
+        // The browser may prohibit changing opener; this page never reads it.
+      }
       const error = document.getElementById('handoff-error')
       const status = document.getElementById('handoff-status')
       const showRecovery = () => {
@@ -25,6 +30,7 @@
         }
       }
       const ticket = new URLSearchParams(window.location.hash.slice(1)).get('ticket')
+      window.history.replaceState(null, '', '/browser-handoff.html')
       if (!ticket) {
         showRecovery()
         return
@@ -37,7 +43,6 @@
       })
         .then((response) => {
           if (!response.ok) throw new Error()
-          window.history.replaceState(null, '', '/browser-handoff.html')
           window.location.replace('/')
         })
         .catch(showRecovery)

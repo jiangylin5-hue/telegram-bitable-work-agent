@@ -16,20 +16,42 @@ export function WorkspaceLaunchControls({ telegramState, onOpenBrowser }: Worksp
   if (telegramState?.kind !== 'fullscreenFailed' || telegramState.error !== 'UNSUPPORTED' || !onOpenBrowser) return null
   const issueBrowserHandoff = onOpenBrowser
 
+  function isBrowserHandoffUrl(url: URL): boolean {
+    if (url.origin !== window.location.origin || url.pathname !== '/browser-handoff.html' || url.search) return false
+    const fragment = url.hash.slice(1)
+    const parameters = new URLSearchParams(fragment)
+    const ticket = parameters.get('ticket')
+    return ticket !== null && ticket.length > 0 && parameters.size === 1 && fragment === new URLSearchParams({ ticket }).toString()
+  }
+
+  function closeWindow(browserWindow: Window): void {
+    try {
+      if (!browserWindow.closed) browserWindow.close()
+    } catch {
+      // A closed or inaccessible window must not expose handoff details.
+    }
+  }
+
   async function openBrowserWorkspaceFromClick(): Promise<void> {
     setFailed(false)
+    const browserWindow = window.open('about:blank', '_blank')
+    if (!browserWindow) {
+      setFailed(true)
+      return
+    }
+    try {
+      browserWindow.opener = null
+    } catch {
+      // The static handoff page repeats this isolation step when it loads.
+    }
     try {
       const handoffUrl = await issueBrowserHandoff()
-      if (typeof handoffUrl !== 'string') return
+      if (typeof handoffUrl !== 'string') throw new Error()
       const url = new URL(handoffUrl, window.location.origin)
-      if (url.origin !== window.location.origin || url.search || !url.hash.startsWith('#ticket=')) throw new Error()
-      const openLink = (window as unknown as { Telegram?: { WebApp?: { openLink?: (value: string) => void } } }).Telegram?.WebApp?.openLink
-      if (openLink) {
-        openLink(url.toString())
-        return
-      }
-      if (!window.open(url.toString(), '_blank', 'noopener,noreferrer')) throw new Error()
+      if (!isBrowserHandoffUrl(url) || browserWindow.closed) throw new Error()
+      browserWindow.location.replace(url.toString())
     } catch {
+      closeWindow(browserWindow)
       setFailed(true)
     }
   }

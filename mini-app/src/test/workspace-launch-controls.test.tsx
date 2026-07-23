@@ -1,10 +1,24 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { expect, test, vi } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 
 import { WorkspaceLaunchControls } from '../app/WorkspaceLaunchControls'
 
+function browserWindow() {
+  return {
+    closed: false,
+    close: vi.fn(),
+    location: { replace: vi.fn() },
+  } as unknown as Window
+}
+
+afterEach(() => {
+  delete (window as unknown as { Telegram?: unknown }).Telegram
+  vi.restoreAllMocks()
+})
+
 test('renders the browser workspace action after Telegram reports fullscreen unsupported', () => {
   const onOpenBrowser = vi.fn()
+  vi.spyOn(window, 'open').mockReturnValue(browserWindow())
 
   render(<WorkspaceLaunchControls telegramState={{ kind: 'fullscreenFailed', error: 'UNSUPPORTED' }} onOpenBrowser={onOpenBrowser} />)
 
@@ -18,20 +32,46 @@ test('does not render a browser workspace action without a real handoff callback
   expect(screen.queryByRole('button', { name: '在浏览器打开工作台' })).not.toBeInTheDocument()
 })
 
-test('opens an issued same-origin fragment URL from the click handler without writing browser storage', async () => {
-  const openLink = vi.fn()
+test('preopens a controlled browser window synchronously before issuing a fragment-only handoff', async () => {
+  const popup = browserWindow()
   const issueHandoff = vi.fn().mockResolvedValue(`${window.location.origin}/browser-handoff.html#ticket=opaque-ticket`)
   const storageWrite = vi.spyOn(Storage.prototype, 'setItem')
-  ;(window as unknown as { Telegram?: { WebApp?: { openLink?: (url: string) => void } } }).Telegram = { WebApp: { openLink } }
+  const openBrowser = vi.spyOn(window, 'open').mockReturnValue(popup)
 
   render(<WorkspaceLaunchControls telegramState={{ kind: 'fullscreenFailed', error: 'UNSUPPORTED' }} onOpenBrowser={issueHandoff} />)
 
   fireEvent.click(screen.getByRole('button', { name: '在浏览器打开工作台' }))
 
-  await waitFor(() => expect(openLink).toHaveBeenCalledTimes(1))
-  const [url] = openLink.mock.calls[0] as [string]
-  expect(url).toContain('#ticket=opaque-ticket')
-  expect(url).not.toContain('?ticket=')
+  expect(openBrowser).toHaveBeenCalledExactlyOnceWith('about:blank', '_blank')
+  expect(openBrowser.mock.invocationCallOrder[0]).toBeLessThan(issueHandoff.mock.invocationCallOrder[0])
+  await waitFor(() => expect(popup.location.replace).toHaveBeenCalledWith(`${window.location.origin}/browser-handoff.html#ticket=opaque-ticket`))
+  expect(issueHandoff.mock.invocationCallOrder[0]).toBeLessThan((popup.location.replace as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0])
   expect(storageWrite).not.toHaveBeenCalled()
-  delete (window as unknown as { Telegram?: unknown }).Telegram
+})
+
+test.each([
+  `${window.location.origin}/other.html#ticket=opaque-ticket`,
+  `${window.location.origin}/browser-handoff.html?ticket=opaque-ticket`,
+  `${window.location.origin}/browser-handoff.html#ticket=opaque-ticket&next=1`,
+  `${window.location.origin}/browser-handoff.html#ticket=`,
+])('rejects a handoff URL outside the exact fragment contract: %s', async (invalidUrl) => {
+  const popup = browserWindow()
+  vi.spyOn(window, 'open').mockReturnValue(popup)
+
+  render(<WorkspaceLaunchControls telegramState={{ kind: 'fullscreenFailed', error: 'UNSUPPORTED' }} onOpenBrowser={() => invalidUrl} />)
+  fireEvent.click(screen.getByRole('button', { name: '在浏览器打开工作台' }))
+
+  await waitFor(() => expect(popup.close).toHaveBeenCalledTimes(1))
+  expect(popup.location.replace).not.toHaveBeenCalled()
+})
+
+test('closes the preopened browser window when ticket issuance fails without showing the ticket', async () => {
+  const popup = browserWindow()
+  vi.spyOn(window, 'open').mockReturnValue(popup)
+
+  render(<WorkspaceLaunchControls telegramState={{ kind: 'fullscreenFailed', error: 'UNSUPPORTED' }} onOpenBrowser={() => Promise.reject(new Error('opaque-ticket'))} />)
+  fireEvent.click(screen.getByRole('button', { name: '在浏览器打开工作台' }))
+
+  await waitFor(() => expect(popup.close).toHaveBeenCalledTimes(1))
+  expect(screen.getByRole('alert')).not.toHaveTextContent('opaque-ticket')
 })
