@@ -57,7 +57,9 @@ for required in \
     deploy/stage09-native/scripts/activate-public-ingress.sh \
     deploy/stage09-native/scripts/test-public-ingress-assets.sh \
     deploy/stage09-native/scripts/render-native-public-nginx.sh \
-    deploy/stage09-native/scripts/test-native-public-ingress-assets.sh
+    deploy/stage09-native/scripts/test-native-public-ingress-assets.sh \
+    deploy/stage09-native/scripts/retire-legacy-stage03-docker.sh \
+    deploy/stage09-native/scripts/test-retire-legacy-stage03-docker.sh
 do
     [ -f "$release_root/$required" ] && [ ! -L "$release_root/$required" ] || fail
 done

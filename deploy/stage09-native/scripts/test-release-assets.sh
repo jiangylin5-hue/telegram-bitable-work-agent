@@ -8,6 +8,8 @@ script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 layout="$script_dir/verify-release-layout.sh"
 manifest="$script_dir/create-release-manifest.sh"
 migration="$script_dir/verify-fixed-migration-offline.sh"
+retire="$script_dir/retire-legacy-stage03-docker.sh"
+retire_test="$script_dir/test-retire-legacy-stage03-docker.sh"
 
 fail() {
     printf '%s\n' "$1: FAIL" >&2
@@ -44,6 +46,12 @@ grep -Fq 'deploy/stage09-native/scripts/activate-public-ingress.sh' "$layout" ||
 grep -Fq 'deploy/stage09-native/scripts/test-public-ingress-assets.sh' "$layout" || fail required-public-ingress-test
 grep -Fq 'deploy/stage09-native/scripts/render-native-public-nginx.sh' "$layout" || fail required-native-public-renderer
 grep -Fq 'deploy/stage09-native/scripts/test-native-public-ingress-assets.sh' "$layout" || fail required-native-public-ingress-test
+grep -Fq 'deploy/stage09-native/scripts/retire-legacy-stage03-docker.sh' "$layout" || fail required-legacy-retire-script
+grep -Fq 'deploy/stage09-native/scripts/test-retire-legacy-stage03-docker.sh' "$layout" || fail required-legacy-retire-test
+grep -Fqx 'project_name=telegram-bitable-stage03' "$retire" || fail retire-fixed-project
+grep -Fq 'docker system prune' "$retire" && fail retire-global-prune
+grep -Fq 'docker volume rm' "$retire" || fail retire-volume-removal
+grep -Fq 'sha256sum' "$retire" || fail retire-manifest
 grep -Fq "offline_database_url='postgresql+psycopg://stage09_p1:offline-placeholder@127.0.0.1:5432/stage09_p1'" "$migration" || fail fixed-offline-database-url
 grep -Fq 'env -u DATABASE_URL "DATABASE_URL=$offline_database_url"' "$migration" || fail explicit-offline-database-url
 if grep -Eq 'runtime\.env|source[[:space:]]|ads_agent' "$migration"; then fail migration-secret-or-history; fi
@@ -130,7 +138,9 @@ for required_fixture_path in \
     deploy/stage09-native/scripts/activate-public-ingress.sh \
     deploy/stage09-native/scripts/test-public-ingress-assets.sh \
     deploy/stage09-native/scripts/render-native-public-nginx.sh \
-    deploy/stage09-native/scripts/test-native-public-ingress-assets.sh
+    deploy/stage09-native/scripts/test-native-public-ingress-assets.sh \
+    deploy/stage09-native/scripts/retire-legacy-stage03-docker.sh \
+    deploy/stage09-native/scripts/test-retire-legacy-stage03-docker.sh
 do
     fixture_asset="$release_root/$required_fixture_path"
     mkdir -p "$(dirname -- "$fixture_asset")" || fail fixture-asset-directory

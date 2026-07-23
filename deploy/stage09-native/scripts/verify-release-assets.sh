@@ -10,10 +10,12 @@ migration="$script_dir/verify-fixed-migration-offline.sh"
 test_script="$script_dir/test-release-assets.sh"
 renderer="$script_dir/render-native-public-nginx.sh"
 ingress_test="$script_dir/test-native-public-ingress-assets.sh"
+retire="$script_dir/retire-legacy-stage03-docker.sh"
+retire_test="$script_dir/test-retire-legacy-stage03-docker.sh"
 http_template="$script_dir/../nginx/stage09-p1-public-http.conf.template"
 https_template="$script_dir/../nginx/stage09-p1-public-https.conf.template"
 
-for script in "$layout" "$manifest" "$migration" "$test_script" "$renderer" "$ingress_test" "$0"; do sh -n "$script" || fail; done
+for script in "$layout" "$manifest" "$migration" "$test_script" "$renderer" "$ingress_test" "$retire" "$retire_test" "$0"; do sh -n "$script" || fail; done
 grep -Fq 'release_base=/opt/stage09-p1/releases' "$layout" || fail
 grep -Fq 'static-assets: external-p1-b-required' "$layout" || fail
 grep -Fq "find \"\$release_root\" -type l" "$layout" || fail
@@ -43,7 +45,9 @@ for required_path in \
     deploy/stage09-native/scripts/verify-release-assets.sh \
     deploy/stage09-native/scripts/inspect-native-host-readiness.sh \
     deploy/stage09-native/scripts/render-native-public-nginx.sh \
-    deploy/stage09-native/scripts/test-native-public-ingress-assets.sh
+    deploy/stage09-native/scripts/test-native-public-ingress-assets.sh \
+    deploy/stage09-native/scripts/retire-legacy-stage03-docker.sh \
+    deploy/stage09-native/scripts/test-retire-legacy-stage03-docker.sh
 do
     grep -Fq "$required_path" "$layout" || fail
 done
@@ -78,6 +82,13 @@ grep -Fq 'missing-critical-unit-layout-accepted' "$test_script" || fail
 grep -Fq 'missing-critical-unit-manifest-accepted' "$test_script" || fail
 grep -Fq 'stage09-p1-api.service' "$test_script" || fail
 if grep -Eq 'cat[[:space:]]*>|<<' "$test_script"; then fail; fi
+grep -Fqx 'project_name=telegram-bitable-stage03' "$retire" || fail
+grep -Fq 'docker system prune' "$retire" && fail
+grep -Fq 'archive_legacy_runtime || fail' "$retire" || fail
+grep -Fq '[ -s "$archive_dir/manifest.sha256" ] || return 1' "$retire" || fail
+grep -Fq 'docker volume rm $volumes' "$retire" || fail
+grep -Fq 'telegram-bitable-stage03-' "$retire" || fail
+grep -Fq 'retire-assets: PASS' "$retire_test" || fail
 grep -Fq 'native-public-nginx: fail' "$renderer" || fail
 grep -Fq 'STAGE09_P1_PUBLIC_HOSTNAME' "$renderer" || fail
 grep -Fq 'STAGE09_P1_CERTIFICATE_PATH' "$renderer" || fail
