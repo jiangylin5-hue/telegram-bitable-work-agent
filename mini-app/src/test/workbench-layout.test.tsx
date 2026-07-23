@@ -55,15 +55,18 @@ test('offers a factual continue-working path for drafts, bases and team collabor
 
   const continueSection = screen.getByRole('region', { name: '继续处理' })
   fireEvent.click(within(continueSection).getByRole('button', { name: '继续处理待确认草稿' }))
-  fireEvent.click(within(continueSection).getByRole('button', { name: '继续打开最近 Base 客户运营' }))
+  fireEvent.click(within(continueSection).getByRole('button', { name: '打开可访问 Base 客户运营' }))
   fireEvent.click(within(continueSection).getByRole('button', { name: '继续使用团队 Bot' }))
 
   expect(onOpenDraftHub).toHaveBeenCalledOnce()
   expect(onOpenBase).toHaveBeenCalledWith({ id: 'base-1', name: '客户运营', source_type: 'blank' })
   expect(onOpenTeamBot).toHaveBeenCalledOnce()
+  expect(screen.getByRole('heading', { name: '可访问 Base' })).toBeVisible()
+  expect(screen.queryByText(/最近 Base/)).not.toBeInTheDocument()
 })
 
 test('guides an unselected Team Bot through three actionable steps', () => {
+  const onSelectContact = vi.fn()
   render(<TeamBotWorkbench
     contacts={[{ id: 'employee-1', baseId: 'base-1', name: '项目助手', description: '安全汇总', availableIntents: ['summarize'] as const }]}
     context={null}
@@ -71,7 +74,7 @@ test('guides an unselected Team Bot through three actionable steps', () => {
     summary={null}
     loading={false}
     failed={false}
-    onSelectContact={vi.fn()}
+    onSelectContact={onSelectContact}
     onSelectView={vi.fn()}
     onSummarize={vi.fn().mockResolvedValue(undefined)}
     onOpenBase={vi.fn()}
@@ -83,6 +86,8 @@ test('guides an unselected Team Bot through three actionable steps', () => {
   expect(guide).toHaveTextContent('1选择团队助手')
   expect(guide).toHaveTextContent('2选择已授权视图')
   expect(guide).toHaveTextContent('3生成摘要并继续处理')
+  fireEvent.click(within(guide).getByRole('button', { name: '选择' }))
+  expect(onSelectContact).toHaveBeenCalledWith('employee-1')
 })
 
 test('connects an authorized group relationship to employee, customer, project and context indexes', () => {

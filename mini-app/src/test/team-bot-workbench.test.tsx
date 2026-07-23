@@ -90,3 +90,54 @@ test('bounds one-shot instruction and renders only safe receipt details', async 
   expect(screen.getByText('审计回执')).toBeVisible()
   expect(screen.getByText('audit-1')).toBeVisible()
 })
+
+test('shows only a loading state before team assistants are available', () => {
+  render(
+    <TeamBotWorkbench
+      contacts={[]}
+      context={null}
+      selectedView={null}
+      summary={null}
+      loading
+      failed={false}
+      onSelectContact={vi.fn()}
+      onSelectView={vi.fn()}
+      onSummarize={vi.fn()}
+      onOpenBase={vi.fn()}
+      onRetry={vi.fn()}
+      onClose={vi.fn()}
+    />,
+  )
+
+  expect(screen.getByRole('status')).toHaveTextContent('正在读取团队助手')
+  expect(screen.queryByText('当前没有可用助手')).not.toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: '团队 Bot 使用步骤' })).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('团队助手目录')).not.toBeInTheDocument()
+})
+
+test('shows only the retry state when team assistant loading fails', () => {
+  const onRetry = vi.fn()
+  render(
+    <TeamBotWorkbench
+      contacts={[]}
+      context={null}
+      selectedView={null}
+      summary={null}
+      loading={false}
+      failed
+      onSelectContact={vi.fn()}
+      onSelectView={vi.fn()}
+      onSummarize={vi.fn()}
+      onOpenBase={vi.fn()}
+      onRetry={onRetry}
+      onClose={vi.fn()}
+    />,
+  )
+
+  expect(screen.getByRole('alert')).toHaveTextContent('暂时无法读取团队知识上下文')
+  expect(screen.queryByText('当前没有可用助手')).not.toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: '团队 Bot 使用步骤' })).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('团队助手目录')).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '重试' }))
+  expect(onRetry).toHaveBeenCalledOnce()
+})

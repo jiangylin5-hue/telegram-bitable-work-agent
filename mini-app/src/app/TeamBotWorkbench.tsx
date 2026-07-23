@@ -75,8 +75,9 @@ export function TeamBotWorkbench({
             <button type="button" onClick={onRetry}>重试</button>
           </section>
         ) : null}
-        {businessContextRelations.length > 0 ? <section className="team-bot-business-context" data-testid="team-bot-business-context" aria-label="团队 Bot 的已授权业务关联"><header><p>BUSINESS CONTEXT</p><h3>已授权业务关联</h3></header><div>{businessContextRelations.map((relation) => <article key={`${relation.group.id}:${relation.mapping_version}`}><strong>{relation.employee.name}</strong><span>{relation.group.label}</span><span>客户 · {relation.customer.label}</span><span>项目 · {relation.project.label}</span></article>)}</div></section> : null}
-        {!context ? <section className="team-bot-onboarding" aria-label="团队 Bot 使用步骤">
+        {loading && !failed && !context ? <section className="assistant-context-state" role="status"><p>正在读取团队助手…</p></section> : null}
+        {!loading && (!failed || context) && businessContextRelations.length > 0 ? <section className="team-bot-business-context" data-testid="team-bot-business-context" aria-label="团队 Bot 的已授权业务关联"><header><p>BUSINESS CONTEXT</p><h3>已授权业务关联</h3></header><div>{businessContextRelations.map((relation) => <article key={`${relation.group.id}:${relation.mapping_version}`}><strong>{relation.employee.name}</strong><span>{relation.group.label}</span><span>客户 · {relation.customer.label}</span><span>项目 · {relation.project.label}</span></article>)}</div></section> : null}
+        {!loading && !failed && !context ? <section className="team-bot-onboarding" aria-label="团队 Bot 使用步骤">
           <header><span>从已授权数据开始</span><strong>三步生成可追溯的团队摘要</strong></header>
           <ol>
             <li className={contacts.length > 0 ? 'ready' : 'blocked'}>
@@ -96,7 +97,7 @@ export function TeamBotWorkbench({
             </li>
           </ol>
         </section> : null}
-        <div className="assistant-context-columns">
+        {(!failed || context) && (!loading || context) ? <div className="assistant-context-columns">
             <section className="assistant-context-section" aria-label="团队助手目录">
               <header>
                 <p>ASSISTANTS</p>
@@ -168,7 +169,7 @@ export function TeamBotWorkbench({
                 <button type="button" className="assistant-context-open-base" onClick={onOpenBase}>打开 Base 继续处理</button>
               </>}
             </section>
-        </div>
+        </div> : null}
       </section>
     </div>
   )

@@ -40,10 +40,10 @@ export function WorkspaceHome({
   const basesById = new Map(home.recent_bases.map((base) => [base.id, base]))
   const businessRelations = home.business_context_relations ?? []
   const nextDraft = home.queue[0]
-  const nextBase = home.recent_bases[0]
+  const accessibleBase = home.recent_bases[0]
   const canContinue = Boolean(
     (nextDraft && onOpenDraftHub)
-    || nextBase
+    || accessibleBase
     || onOpenTeamBot,
   )
 
@@ -68,9 +68,9 @@ export function WorkspaceHome({
             <span><strong>待确认草稿</strong><small>{home.queue.length} 个待处理</small></span>
             <ArrowUpRight size={15} />
           </button> : null}
-          {nextBase ? <button type="button" aria-label={`继续打开最近 Base ${nextBase.name}`} onClick={() => onOpenBase(nextBase)}>
+          {accessibleBase ? <button type="button" aria-label={`打开可访问 Base ${accessibleBase.name}`} onClick={() => onOpenBase(accessibleBase)}>
             <span className="continue-work-icon"><FolderOpen size={17} /></span>
-            <span><strong>{nextBase.name}</strong><small>继续最近 Base</small></span>
+            <span><strong>{accessibleBase.name}</strong><small>打开可访问 Base</small></span>
             <ChevronRight size={15} />
           </button> : null}
           {onOpenTeamBot ? <button type="button" aria-label="继续使用团队 Bot" onClick={(event) => onOpenTeamBot(event.currentTarget)}>
@@ -97,8 +97,8 @@ export function WorkspaceHome({
       })}</div> : <div className="empty-queue">没有待确认的变更。</div>}
     </section>
 
-    <aside className="base-rail" aria-labelledby="recent-bases-heading">
-      <div className="rail-heading"><h2 id="recent-bases-heading">最近 Base</h2><span>{home.recent_bases.length} 个可访问</span></div>
+    <aside className="base-rail" aria-labelledby="accessible-bases-heading">
+      <div className="rail-heading"><h2 id="accessible-bases-heading">可访问 Base</h2><span>{home.recent_bases.length} 个可访问</span></div>
       <div className="base-list">{home.recent_bases.map((base, index) => <a className="base-preview" href={`#base/${base.id}`} key={base.id} aria-label={base.name} onClick={(event) => { event.preventDefault(); onOpenBase(base) }}><div className="base-preview-title"><span className={`base-glyph glyph-${index % 3}`}>▣</span><strong>{base.name}</strong></div><span className="base-kind">{base.source_type === 'blank' ? '多维表格' : base.source_type}</span><div className="preview-grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></div></a>)}</div>
     </aside>
 
