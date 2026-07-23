@@ -41,12 +41,16 @@ declare global {
  * the API and the server verifies it before resolving an identity.
  */
 export function prepareTelegramMiniAppViewport(): boolean {
-  if (typeof window === 'undefined') return false
-  const webApp = window.Telegram?.WebApp
-  if (!webApp) return false
-  webApp.ready?.()
-  webApp.expand?.()
-  return true
+  try {
+    if (typeof window === 'undefined') return false
+    const webApp = window.Telegram?.WebApp
+    if (!webApp) return false
+    webApp.ready?.()
+    webApp.expand?.()
+    return true
+  } catch {
+    return false
+  }
 }
 
 function isVersionAtLeast(webApp: TelegramWebApp, required: string): boolean {
@@ -95,8 +99,12 @@ export function exitTelegramMiniAppFullscreen(): 'requested' | 'unsupported' | '
  * change. Initializing a Mini App must remain windowed unless the user asks.
  */
 export function readTelegramMiniAppFullscreenState(): TelegramFullscreenState {
-  if (typeof window === 'undefined' || !window.Telegram?.WebApp) return { kind: 'fullscreenFailed', error: 'UNSUPPORTED' }
-  return window.Telegram.WebApp.isFullscreen ? { kind: 'fullscreen' } : { kind: 'windowed' }
+  try {
+    if (typeof window === 'undefined' || !window.Telegram?.WebApp) return { kind: 'fullscreenFailed', error: 'UNSUPPORTED' }
+    return window.Telegram.WebApp.isFullscreen ? { kind: 'fullscreen' } : { kind: 'windowed' }
+  } catch {
+    return { kind: 'fullscreenFailed', error: 'UNSUPPORTED' }
+  }
 }
 
 /**
@@ -104,37 +112,75 @@ export function readTelegramMiniAppFullscreenState(): TelegramFullscreenState {
  * host listeners cannot survive an unmounted app shell.
  */
 export function subscribeTelegramMiniAppFullscreen(onState: (state: TelegramFullscreenState) => void): () => void {
-  if (typeof window === 'undefined') return () => undefined
-  const webApp = window.Telegram?.WebApp
-  if (!webApp?.onEvent || !webApp.offEvent) return () => undefined
+  const noop = () => undefined
+  if (typeof window === 'undefined') return noop
+  let webApp: TelegramWebApp | undefined
+  let changedSubscribed = false
+  let failedSubscribed = false
   const fullscreenChanged: TelegramFullscreenListener = (payload) => {
-    const isFullscreen = typeof payload === 'object' && payload !== null && 'is_fullscreen' in payload
-      ? (payload as { is_fullscreen?: unknown }).is_fullscreen === true
-      : webApp.isFullscreen === true
-    onState({ kind: isFullscreen ? 'fullscreen' : 'windowed' })
+    try {
+      const isFullscreen = typeof payload === 'object' && payload !== null && 'is_fullscreen' in payload
+        ? (payload as { is_fullscreen?: unknown }).is_fullscreen === true
+        : webApp?.isFullscreen === true
+      onState({ kind: isFullscreen ? 'fullscreen' : 'windowed' })
+    } catch {
+      onState({ kind: 'fullscreenFailed', error: 'UNSUPPORTED' })
+    }
   }
   const fullscreenFailed: TelegramFullscreenListener = (payload) => {
-    const error = typeof payload === 'object' && payload !== null && 'error' in payload
-      ? (payload as { error?: unknown }).error
-      : undefined
-    onState({ kind: 'fullscreenFailed', error: typeof error === 'string' ? error : 'UNKNOWN' })
+    try {
+      const error = typeof payload === 'object' && payload !== null && 'error' in payload
+        ? (payload as { error?: unknown }).error
+        : undefined
+      onState({ kind: 'fullscreenFailed', error: typeof error === 'string' ? error : 'UNKNOWN' })
+    } catch {
+      onState({ kind: 'fullscreenFailed', error: 'UNSUPPORTED' })
+    }
   }
-  webApp.onEvent('fullscreen_changed', fullscreenChanged)
-  webApp.onEvent('fullscreen_failed', fullscreenFailed)
-  return () => {
-    webApp.offEvent?.('fullscreen_changed', fullscreenChanged)
-    webApp.offEvent?.('fullscreen_failed', fullscreenFailed)
+
+  const unsubscribe = () => {
+    if (changedSubscribed) {
+      try {
+        webApp?.offEvent?.('fullscreen_changed', fullscreenChanged)
+      } catch {
+        // Telegram host teardown must not escape React cleanup.
+      }
+    }
+    if (failedSubscribed) {
+      try {
+        webApp?.offEvent?.('fullscreen_failed', fullscreenFailed)
+      } catch {
+        // Telegram host teardown must not escape React cleanup.
+      }
+    }
+  }
+
+  try {
+    webApp = window.Telegram?.WebApp
+    if (!webApp?.onEvent || !webApp.offEvent) return noop
+    webApp.onEvent('fullscreen_changed', fullscreenChanged)
+    changedSubscribed = true
+    webApp.onEvent('fullscreen_failed', fullscreenFailed)
+    failedSubscribed = true
+    return unsubscribe
+  } catch {
+    if (changedSubscribed) unsubscribe()
+    return noop
   }
 }
 
 export function readTelegramMiniAppLaunch(): TelegramMiniAppLaunch | null {
-  if (typeof window === 'undefined') return null
-  const webApp = window.Telegram?.WebApp
-  const initData = webApp?.initData?.trim()
-  if (!initData) return null
-  const startParam = webApp?.initDataUnsafe?.start_param
-  return {
-    initData,
-    startParam: typeof startParam === 'string' && startParam.trim() ? startParam.trim() : null,
+  try {
+    if (typeof window === 'undefined') return null
+    const webApp = window.Telegram?.WebApp
+    const initData = webApp?.initData?.trim()
+    if (!initData) return null
+    const startParam = webApp?.initDataUnsafe?.start_param
+    return {
+      initData,
+      startParam: typeof startParam === 'string' && startParam.trim() ? startParam.trim() : null,
+    }
+  } catch {
+    return null
   }
 }

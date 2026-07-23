@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api, setTelegramInitData } from '../app/api'
 import { App } from '../app/App'
-import { exitTelegramMiniAppFullscreen, prepareTelegramMiniAppViewport, readTelegramMiniAppLaunch, requestTelegramMiniAppFullscreen, subscribeTelegramMiniAppFullscreen } from '../app/telegram-mini-app'
+import { exitTelegramMiniAppFullscreen, prepareTelegramMiniAppViewport, readTelegramMiniAppFullscreenState, readTelegramMiniAppLaunch, requestTelegramMiniAppFullscreen, subscribeTelegramMiniAppFullscreen } from '../app/telegram-mini-app'
 
 type TelegramWindow = Window & {
   Telegram?: {
@@ -43,6 +43,24 @@ describe('Telegram Mini App runtime adapter', () => {
 
   it('does nothing when the page is opened outside Telegram', () => {
     expect(prepareTelegramMiniAppViewport()).toBe(false)
+  })
+
+  it.each(['ready', 'expand'] as const)('fails closed when Telegram %s throws synchronously', (method) => {
+    const webApp = { ready: vi.fn(), expand: vi.fn() }
+    webApp[method].mockImplementation(() => { throw new Error('host failure') })
+    ;(window as TelegramWindow).Telegram = { WebApp: webApp }
+
+    expect(prepareTelegramMiniAppViewport()).toBe(false)
+  })
+
+  it('fails closed when the Telegram WebApp getter throws during App mount', () => {
+    Object.defineProperty(window, 'Telegram', {
+      configurable: true,
+      get: () => { throw new Error('host getter failure') },
+    })
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => undefined)))
+
+    expect(() => render(createElement(App))).not.toThrow()
   })
 
   it('does not request Telegram fullscreen when the application mounts', () => {
@@ -124,6 +142,17 @@ describe('Telegram Mini App runtime adapter', () => {
     expect(exitFullscreen).not.toHaveBeenCalled()
   })
 
+  it('returns a fail-closed fullscreen state when Telegram isFullscreen throws', () => {
+    const webApp = {} as TelegramWindow['Telegram'] extends { WebApp?: infer T } ? T : never
+    Object.defineProperty(webApp, 'isFullscreen', {
+      configurable: true,
+      get: () => { throw new Error('host state failure') },
+    })
+    ;(window as TelegramWindow).Telegram = { WebApp: webApp }
+
+    expect(readTelegramMiniAppFullscreenState()).toEqual({ kind: 'fullscreenFailed', error: 'UNSUPPORTED' })
+  })
+
   it('subscribes to fullscreen events and removes the same listeners on cleanup', () => {
     const onEvent = vi.fn()
     const offEvent = vi.fn()
@@ -140,6 +169,26 @@ describe('Telegram Mini App runtime adapter', () => {
       ['fullscreen_changed', 'function'],
       ['fullscreen_failed', 'function'],
     ])
+  })
+
+  it('cleans up a partially registered fullscreen listener when Telegram onEvent throws', () => {
+    const onEvent = vi.fn()
+      .mockImplementationOnce(() => undefined)
+      .mockImplementationOnce(() => { throw new Error('host event failure') })
+    const offEvent = vi.fn()
+    ;(window as TelegramWindow).Telegram = { WebApp: { onEvent, offEvent } }
+
+    expect(subscribeTelegramMiniAppFullscreen(vi.fn())).not.toThrow()
+    expect(offEvent).toHaveBeenCalledExactlyOnceWith('fullscreen_changed', expect.any(Function))
+  })
+
+  it('does not throw when Telegram offEvent throws during fullscreen cleanup', () => {
+    const onEvent = vi.fn()
+    const offEvent = vi.fn(() => { throw new Error('host cleanup failure') })
+    ;(window as TelegramWindow).Telegram = { WebApp: { onEvent, offEvent } }
+
+    const unsubscribe = subscribeTelegramMiniAppFullscreen(vi.fn())
+    expect(unsubscribe).not.toThrow()
   })
 
   it('reads only raw initData and the untrusted start transport hint from memory', () => {

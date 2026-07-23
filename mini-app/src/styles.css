@@ -951,15 +951,6 @@ select:focus-visible {
 }
 
 @media (max-width: 900px) {
-  .app-content {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .mobile-header {
-    order: -1;
-  }
-
   .workspace-launch-controls {
     position: static;
     z-index: auto;
