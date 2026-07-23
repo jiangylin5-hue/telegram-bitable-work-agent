@@ -227,6 +227,7 @@ def provision_first_workspace(
         actor=actor,
         response_style={"language": "zh-CN", "format": "action_list"},
     )
+    uow.session.flush()
     binding = bind_telegram_context(
         uow,
         workspace.id,
