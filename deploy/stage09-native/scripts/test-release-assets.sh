@@ -10,13 +10,15 @@ manifest="$script_dir/create-release-manifest.sh"
 migration="$script_dir/verify-fixed-migration-offline.sh"
 retire="$script_dir/retire-legacy-stage03-docker.sh"
 retire_test="$script_dir/test-retire-legacy-stage03-docker.sh"
+readiness="$script_dir/verify-activation-readiness.sh"
+readiness_test="$script_dir/test-readiness-gate.sh"
 
 fail() {
     printf '%s\n' "$1: FAIL" >&2
     exit 1
 }
 
-for script in "$layout" "$manifest" "$migration" "$0"; do
+for script in "$layout" "$manifest" "$migration" "$readiness" "$readiness_test" "$0"; do
     sh -n "$script" || fail shell-syntax
 done
 
@@ -46,6 +48,8 @@ grep -Fq 'deploy/stage09-native/scripts/activate-public-ingress.sh' "$layout" ||
 grep -Fq 'deploy/stage09-native/scripts/test-public-ingress-assets.sh' "$layout" || fail required-public-ingress-test
 grep -Fq 'deploy/stage09-native/scripts/render-native-public-nginx.sh' "$layout" || fail required-native-public-renderer
 grep -Fq 'deploy/stage09-native/scripts/test-native-public-ingress-assets.sh' "$layout" || fail required-native-public-ingress-test
+grep -Fq 'deploy/stage09-native/scripts/verify-activation-readiness.sh' "$layout" || fail required-readiness-verifier
+grep -Fq 'deploy/stage09-native/scripts/test-readiness-gate.sh' "$layout" || fail required-readiness-test
 grep -Fq 'deploy/stage09-native/scripts/retire-legacy-stage03-docker.sh' "$layout" || fail required-legacy-retire-script
 grep -Fq 'deploy/stage09-native/scripts/test-retire-legacy-stage03-docker.sh' "$layout" || fail required-legacy-retire-test
 grep -Fqx 'project_name=telegram-bitable-stage03' "$retire" || fail retire-fixed-project
@@ -150,6 +154,8 @@ for required_fixture_path in \
     deploy/stage09-native/scripts/test-public-ingress-assets.sh \
     deploy/stage09-native/scripts/render-native-public-nginx.sh \
     deploy/stage09-native/scripts/test-native-public-ingress-assets.sh \
+    deploy/stage09-native/scripts/verify-activation-readiness.sh \
+    deploy/stage09-native/scripts/test-readiness-gate.sh \
     deploy/stage09-native/scripts/retire-legacy-stage03-docker.sh \
     deploy/stage09-native/scripts/test-retire-legacy-stage03-docker.sh
 do

@@ -226,21 +226,19 @@ Install/verify Certbot, write the HTTP-only candidate, run `nginx -t`, stop only
 
 - [ ] **Step 3: Activate HTTPS and r23**
 
-Write the HTTPS candidate, `nginx -t`, reload Nginx, atomically repoint the three Stage09 `current` symlinks to r23 and restart only Stage09 API/worker/outbox services. Keep r19 intact.
+Write the HTTPS candidate, `nginx -t`, reload Nginx, atomically repoint the three Stage09 `current` symlinks to r23 and restart only Stage09 API/worker/outbox services. Keep r19 intact. Immediately invoke the sealed `verify-activation-readiness.sh --verify` with the protected hostname and fixed ACME probe-path contract. The verifier itself is read-only: it makes one immediate ready check and then at most `20` checks at `2`-second intervals; every ready check requires API/worker/outbox/Redis/Nginx active plus loopback/public HTTPS health `200`. Only after ready does it validate HTTPS root/static, HTTP `308`, ACME `200`, Nginx HTTP/TLS ownership and PostgreSQL/Redis non-public boundaries.
+
+If the gate exits nonzero, atomically restore all three saved r22 targets, restart only API/worker/outbox, and invoke the **same** verifier for r22. If r22 also fails its bounded gate, stop and record only the redacted failure receipt; do not attempt a second r23 switch, retire legacy Docker, or remove release artifacts.
 
 - [ ] **Step 4: Fresh automated production checks**
 
-Run and retain only status/count evidence:
+The bounded verifier replaces the old one-shot health bundle. Retain only source release (`r23` or restored `r22`), verifier exit status, and aggregate pass/fail evidence. Do not record hostname, probe path, endpoint body, listener rows, runtime environment or data-plane details. A verifier `pass` is the single automated evidence for:
 
-```sh
-systemctl is-active stage09-p1-api stage09-p1-worker stage09-p1-outbox-bridge stage09-p1-redis nginx
-curl --fail --silent http://127.0.0.1:18080/health
-curl --fail --silent https://stage07.jiangtest1.online/health
-curl --fail --silent https://stage07.jiangtest1.online/
-ss -ltnp | grep -E ':(80|443|5432)\\b'
-```
-
-Expected: all five units active; health/root HTTP 200; native Nginx owns 80/443; PostgreSQL remains loopback-only; Docker owns neither 80 nor 443.
+- five required units active;
+- loopback and public HTTPS health `200` in the same attempt;
+- HTTPS root/static and ACME `200`, HTTP root `308`;
+- native Nginx owns HTTP/TLS listeners;
+- PostgreSQL and Redis have no public TCP listener.
 
 - [ ] **Step 5: Telegram Mini App acceptance**
 

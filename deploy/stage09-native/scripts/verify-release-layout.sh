@@ -58,6 +58,8 @@ for required in \
     deploy/stage09-native/scripts/test-public-ingress-assets.sh \
     deploy/stage09-native/scripts/render-native-public-nginx.sh \
     deploy/stage09-native/scripts/test-native-public-ingress-assets.sh \
+    deploy/stage09-native/scripts/verify-activation-readiness.sh \
+    deploy/stage09-native/scripts/test-readiness-gate.sh \
     deploy/stage09-native/scripts/retire-legacy-stage03-docker.sh \
     deploy/stage09-native/scripts/test-retire-legacy-stage03-docker.sh
 do

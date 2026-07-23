@@ -10,12 +10,14 @@ migration="$script_dir/verify-fixed-migration-offline.sh"
 test_script="$script_dir/test-release-assets.sh"
 renderer="$script_dir/render-native-public-nginx.sh"
 ingress_test="$script_dir/test-native-public-ingress-assets.sh"
+readiness="$script_dir/verify-activation-readiness.sh"
+readiness_test="$script_dir/test-readiness-gate.sh"
 retire="$script_dir/retire-legacy-stage03-docker.sh"
 retire_test="$script_dir/test-retire-legacy-stage03-docker.sh"
 http_template="$script_dir/../nginx/stage09-p1-public-http.conf.template"
 https_template="$script_dir/../nginx/stage09-p1-public-https.conf.template"
 
-for script in "$layout" "$manifest" "$migration" "$test_script" "$renderer" "$ingress_test" "$retire" "$retire_test" "$0"; do sh -n "$script" || fail; done
+for script in "$layout" "$manifest" "$migration" "$test_script" "$renderer" "$ingress_test" "$readiness" "$readiness_test" "$retire" "$retire_test" "$0"; do sh -n "$script" || fail; done
 grep -Fq 'release_base=/opt/stage09-p1/releases' "$layout" || fail
 grep -Fq 'static-assets: external-p1-b-required' "$layout" || fail
 grep -Fq "find \"\$release_root\" -type l" "$layout" || fail
@@ -46,6 +48,8 @@ for required_path in \
     deploy/stage09-native/scripts/inspect-native-host-readiness.sh \
     deploy/stage09-native/scripts/render-native-public-nginx.sh \
     deploy/stage09-native/scripts/test-native-public-ingress-assets.sh \
+    deploy/stage09-native/scripts/verify-activation-readiness.sh \
+    deploy/stage09-native/scripts/test-readiness-gate.sh \
     deploy/stage09-native/scripts/retire-legacy-stage03-docker.sh \
     deploy/stage09-native/scripts/test-retire-legacy-stage03-docker.sh
 do
@@ -110,4 +114,17 @@ grep -Fq 'return 308 https://$host$request_uri;' "$http_template" || fail
 grep -Fq 'listen 443 ssl http2;' "$https_template" || fail
 grep -Fq 'proxy_pass http://127.0.0.1:18080;' "$https_template" || fail
 if grep -Eiq 'allow|deny|docker|caddy|stage03|stage07|5432|6379' "$http_template" "$https_template"; then fail; fi
+grep -Fqx 'PATH=/usr/sbin:/usr/bin:/sbin:/bin' "$readiness" || fail
+grep -Fqx 'max_attempts=20' "$readiness" || fail
+grep -Fqx 'interval_seconds=2' "$readiness" || fail
+grep -Fq 'stage09-p1-api' "$readiness" || fail
+grep -Fq 'stage09-p1-worker' "$readiness" || fail
+grep -Fq 'stage09-p1-outbox-bridge' "$readiness" || fail
+grep -Fq 'stage09-p1-redis' "$readiness" || fail
+grep -Fq 'readiness-gate: fail' "$readiness" || fail
+grep -Fq 'assert_pass immediate-success' "$readiness_test" || fail
+grep -Fq 'assert_pass delayed-success' "$readiness_test" || fail
+grep -Fq 'assert_redacted_failure timeout' "$readiness_test" || fail
+grep -Fq 'assert_redacted_failure service-inactive' "$readiness_test" || fail
+grep -Fq 'assert_redacted_failure health-non-200' "$readiness_test" || fail
 printf '%s\n' 'release-assets: pass'
