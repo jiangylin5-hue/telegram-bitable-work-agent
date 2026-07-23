@@ -4,8 +4,8 @@
 
 - Date: 2026-07-23
 - Scope: 结构化 LLM 输出、`draft_update` 语义、Stage08 OpenRouter 运行时装配、Home 授权业务关联索引。
-- External writes: 无 Telegram、webhook、通知、业务记录确认或部署写入。
-- Real Provider: 本地工作树未发现可用于 Stage08 真实调用的环境文件；本次未伪造真实 Provider 结果。部署环境在 `LLM_ENABLED=true` 且 `AGENT_WORKFLOW_MODE=real_openrouter` 时才会启用该 Provider。
+- External writes: 已在用户授权下发布 Stage09 原生 r15/r16/r17 release，完成固定迁移与受限 systemd 服务重启；未发送 Telegram、未确认草稿、未写业务记录或 Provider 业务端。
+- Real Provider: 本地工作树无 Stage08 Provider 环境文件；真实复测已改在服务器受控运行时完成。评测临时读取三项 Provider 配置到一次性受限文件，结束即删除；不记录密钥、完整 prompt 或完整 response。
 
 ## 已完成实现
 
@@ -20,13 +20,20 @@
 
 | 命令 | 结果 |
 | --- | --- |
-| `python -m pytest tests/unit/test_llm_adapters.py tests/unit/test_stage06_live_digital_employee_runtime.py tests/unit/test_stage07_mini_app_api.py tests/unit/test_stage08_openrouter_analysis_provider.py tests/unit/test_stage08_runtime_configuration.py -q` | `44 passed in 14.30s` |
+| `python -m pytest tests/unit/test_llm_adapters.py tests/unit/test_stage06_live_digital_employee_runtime.py tests/unit/test_stage07_mini_app_api.py tests/unit/test_stage08_openrouter_analysis_provider.py tests/unit/test_stage08_runtime_configuration.py tests/unit/test_stage08_real_provider_evaluation.py -q` | `93 passed in 56.92s` |
 | `npm.cmd run test:run` | `65 files, 238 tests passed` |
 | `npm.cmd run build` | TypeScript + Vite production build passed |
 | `git diff --check -- backend mini-app project-docs docs` | passed |
 
+## 真实服务器复测与发布
+
+- Stage09 r17 的 sealed release、部署资产、固定迁移离线校验、运行时 preflight 和原子切换均通过；`current`、`current-venv`、静态站点均指向 r17。
+- API、worker、outbox bridge、Nginx 均为 `active`；API 回环 `/health`、外部 HTTPS `/health` 与首页均实际返回成功。
+- 初始真实评测揭示两项评测契约遗漏：无有效群上下文时模型 `deny` 是合格安全答案；`draft_update` 是已支持的待确认草稿动作。修正后，另一轮评测暴露 OpenRouter 自动路由的偶发语义漂移，因此 Provider 新增“仅对 HTTP 成功但结构/语义无效的结果重试一次”。网络、HTTP 或超时错误仍不重试并失败闭合。
+- 最终 r17 真实评测：`case_count=12`、`passed_count=12`、`failed_count=0`、`timed_out_count=0`、`all_gates_passed=true`；9 次 Provider 调用均完成，8 次带 usage metadata。隐藏字段、撤权、群上下文生命周期、RAG 生命周期、拒绝、草稿压力、取消、安全重放与中英混合场景均通过；未产生 Telegram 发送、业务记录写入或草稿确认。
+
 ## 未完成或未执行
 
 - `python -m pytest -q` 两次运行均超过 5 分钟且无完成结果，已人工终止；不能计入全后端回归通过。聚焦回归已通过。
-- 新实现尚未使用真实 OpenRouter 做复测，原因是当前本地工作树不存在可用的 Stage08 Provider 环境文件。该复测应在部署后使用已配置环境执行，并以脱敏报告记录。
+- 全后端 `python -m pytest -q` 两次运行超过 5 分钟未完成，未计入通过；其余上述聚焦、Mini App 和真实服务器证据均独立记录。
 - 本任务没有新增独立的群聊详情页；群聊索引明确跳转到现有受控上下文工作台。

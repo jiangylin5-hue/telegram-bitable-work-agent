@@ -6,7 +6,7 @@
 - Date: 2026-07-23
 - Scope: 修复真实业务 Prompt 评测中暴露的结构化输出、能力选择和草稿措辞问题；把已经存在的授权群聊—客户—项目—数字员工映射投影到 Mini App。
 - Non-goals: 不新增数据库表或迁移；不扩大权限；不读取历史群聊原文；不自动确认草稿；不发送 Telegram、webhook 或通知；不改变 Stage03。
-- Current Progress: 2026-07-23 已完成实现。Stage08 只会在 `LLM_ENABLED=true` 且 `AGENT_WORKFLOW_MODE=real_openrouter` 时按单请求 30 秒总时限接入 OpenRouter；无该组合时仍使用不可用 Provider 安全降级。尚未在本次代码变更中运行新的真实 Provider 复测。
+- Current Progress: 2026-07-23 已完成实现并部署到 Stage09 原生 r17 release。Stage08 只会在 `LLM_ENABLED=true` 且 `AGENT_WORKFLOW_MODE=real_openrouter` 时按单请求 30 秒总时限接入 OpenRouter；无该组合时仍使用不可用 Provider 安全降级。服务器已完成脱敏真实 OpenRouter 12 Case 复测，12/12 通过、9 次实际 Provider 调用完成；Telegram 在评测期间强制为 `dry_run`，没有发送消息、确认草稿或写入业务表。
 
 ## 1. 目标
 
