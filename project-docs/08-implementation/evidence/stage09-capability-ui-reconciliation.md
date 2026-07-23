@@ -4,7 +4,7 @@
 
 - Date: 2026-07-24
 - Scope: Stage07 表格能力可发现性、Stage08 安全协作和长期记忆的 Mini App 接入。
-- Result: 本地源码、全量 Mini App 自动化回归和受控浏览器交互均已完成；真实 FastAPI/PostgreSQL、真实 LLM、Telegram Mini App 与生产域名验收尚未执行，不能以本文件替代。
+- Result: 本地源码、全量 Mini App 自动化回归、受控浏览器交互、真实 Stage09 静态版本发布和公网 HTTPS 页面资源验收均已完成；真实 FastAPI/PostgreSQL 授权查询、真实 LLM 协作结果和 Telegram Mini App 身份链路仍待用户侧受控验收，不能以本文件替代。
 
 ## 1. 自动化验证
 
@@ -59,7 +59,17 @@ npm.cmd run build
 
 这一轮确认了此前手机宽度下右侧助理栏隐藏导致的新能力无入口的问题已被处理；它不意味着所有桌面功能在 Telegram 容器中已经验收。
 
-## 3. 未被掩盖的后续缺口
+## 3. r25 原生静态发布与公网 HTTPS 验证
+
+- Source commit：`28c05eb`（`feat(mini-app): expose stage08 workspace capabilities`）。
+- 发布方式：只发布 `mini-app/dist` 到服务器不可变目录 `stage09-p1-20260724-r25`，原子切换 `/var/www/stage09-p1/current`；r24 作为 `current.previous` 保留。
+- 上传包 SHA-256：`c2af224c625b40db5099c43f7e37df6c10d04ddef6c211598e897de2cbc67cd3`，服务器端复算一致；Nginx 配置检查通过后才切换。
+- 发现并处理既有 ingress 缺口：静态目录已是 Stage09，但服务器 Nginx 仍写着 `stage07.jiangtest1.online` 及其证书，导致 `stage09.jiangtest1.online` 的正常 TLS 校验失败。通过现有 release 内的 Nginx renderer 将 host 切至 Stage09，使用既有 ACME webroot 申请对应 Let’s Encrypt 证书，再通过 `nginx -t` 和 reload 生效。
+- 公网正常 TLS 验证：`https://stage09.jiangtest1.online/` 为 `200`，`/health` 为 `200`，r25 的 CSS/JS 静态资源均为 `200`。真实 Chrome 载入首页并请求两个 r25 asset；没有 Telegram `initData` 的普通浏览器收到 `/mini-app/bootstrap` 的预期 `401`，页面正确显示无可访问工作区，而不是伪造身份或数据。
+- 本次发布未迁移数据库、未重启 API/worker/outbox/Redis、未改 Telegram webhook/allowlist、未调用 LLM、未写业务记录，也未触碰 Stage03。
+- 本地和服务器 `/tmp` 的上传压缩包均已在验证后清理；r24 静态目录、r25 当前静态目录及 Nginx 配置前备份保留为回退证据。
+
+## 4. 未被掩盖的后续缺口
 
 | 项目 | 现状 | 下一步 |
 | --- | --- | --- |
@@ -67,8 +77,8 @@ npm.cmd run build
 | 批量编辑/删除、CSV/XLSX/View 导出 | 没有产品级 API | 先定义字段脱敏、异步任务、下载权限与审计 |
 | 记忆撤销 | 安全列表没有稳定 item/candidate 标识 | 后端补安全版本化列表 contract 后接入明确确认操作 |
 | RAG 重建 | 后端没有安全知识源目录 projection | 补授权 source-directory API、幂等 ticket 与审计后接入 |
-| 真实运行时 | 未跑真实 FastAPI/PostgreSQL、OpenRouter 或 Telegram | 在部署后按同样路径完成一条只读、无原文群聊泄露的真实闭环 |
+| 真实授权运行时 | 公网页面与静态资源已验证；未用真实 Telegram `initData` 调用 FastAPI/PostgreSQL 或 OpenRouter | 从 Telegram 打开 Mini App，以受控只读问题完成一条无原文群聊泄露的真实闭环 |
 
-## 4. 验收结论
+## 5. 验收结论
 
-本包证明“已有能力在 UI 中能被发现、可以走入既有受控流程，并在桌面和手机浏览器中可交互”。它没有把尚未实现的生命周期、导出、批量、RAG 重建或生产环境能力伪装成已交付。下一道门是提交、部署到现有原生服务后，使用真实业务数据完成等价的只读闭环。
+本包证明“已有能力在 UI 中能被发现、可以走入既有受控流程，并在桌面和手机浏览器中可交互”，而且新版前端已经部署到 Stage09 公网域名。它没有把尚未实现的生命周期、导出、批量、RAG 重建或真实 Telegram/LLM 授权调用伪装成已交付。下一道门是从 Telegram 打开已部署的 Mini App，以真实身份和现有授权工作区完成等价的只读闭环。

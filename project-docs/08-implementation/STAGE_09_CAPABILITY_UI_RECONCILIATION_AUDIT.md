@@ -4,7 +4,7 @@
 
 - Document status: active implementation directive
 - Scope: 已实现的 Stage07 表格工作台与 Stage08 协作运行时，和当前 Mini App 的可发现、可操作、可验收程度对齐
-- Current Progress: 2026-07-24 已完成源码、路由、测试和现有页面的第一轮交叉审计，并完成本地真实浏览器的桌面（1440px）和移动（390px）交互复验：表格操作中心、Stage08 安全协作和记忆只读工作台均可从实际入口打开。浏览器验收使用受控 API fixture，不等同于真实 FastAPI/PostgreSQL、真实 LLM 或 Telegram 生产验收；这些证据仍待下一轮部署验收。本文件不是整阶段验收通过声明。
+- Current Progress: 2026-07-24 已完成源码、路由、测试和现有页面的第一轮交叉审计，并完成本地真实浏览器的桌面（1440px）和移动（390px）交互复验：表格操作中心、Stage08 安全协作和记忆只读工作台均可从实际入口打开。r25 静态版本已原子发布至 `stage09.jiangtest1.online`，并修正遗留的 Stage07 TLS host/certificate 配置后完成公网首页、健康检查和新版静态资源验证。浏览器功能验收使用受控 API fixture；真实 FastAPI/PostgreSQL 授权查询、真实 LLM 或 Telegram 身份验收仍需独立证据。本文件不是整阶段验收通过声明。
 - Evidence levels:
   - `implemented-local`：受控服务/API、前端代码和自动化测试存在；未必已在真实 Telegram/生产浏览器验收。
   - `partial-local`：路径存在，但关键角色、失败分支或浏览器交互仍缺证据。
