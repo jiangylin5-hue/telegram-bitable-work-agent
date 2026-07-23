@@ -60,6 +60,7 @@ ProviderEvent: TypeAlias = Literal[
 ProviderAnalysisAction: TypeAlias = Literal[
     "read_only", "draft_update", "general_advice", "deny"
 ]
+_MAX_SEMANTIC_OUTPUT_ATTEMPTS = 2
 
 
 class _OpenRouterDraftPayload(BaseModel):
@@ -133,12 +134,6 @@ class OpenRouterStage08AnalysisProvider:
             return self._complete(_unavailable("analysis_provider_unavailable"))
 
         try:
-            timeout_seconds = _bounded_timeout_seconds(
-                self._remaining_deadline_seconds,
-                validated_budget,
-            )
-            if timeout_seconds <= 0:
-                return self._complete(_unavailable("analysis_provider_unavailable"))
             prompt, evidence_count, command_intent = _build_prompt(material, command)
             requested_action = _command_snapshot(command).requested_action
         except Exception:
@@ -155,46 +150,57 @@ class OpenRouterStage08AnalysisProvider:
         if not self._prompt_is_allowed(prompt):
             return self._complete(_unavailable("invalid_input"))
 
-        try:
-            response = self._post(
-                json_body=json_body,
-                timeout=httpx.Timeout(timeout_seconds),
-            )
-            response.raise_for_status()
-            if _response_has_usage_metadata(response):
-                self._notify("usage_metadata_present")
-        except (httpx.TimeoutException, httpx.HTTPError):
-            return self._complete(_unavailable("analysis_provider_unavailable"))
-        except Exception:
-            return self._complete(_unavailable("analysis_provider_unavailable"))
+        for _ in range(_MAX_SEMANTIC_OUTPUT_ATTEMPTS):
+            try:
+                timeout_seconds = _bounded_timeout_seconds(
+                    self._remaining_deadline_seconds,
+                    validated_budget,
+                )
+                if timeout_seconds <= 0:
+                    return self._complete(
+                        _unavailable("analysis_provider_unavailable")
+                    )
+                response = self._post(
+                    json_body=json_body,
+                    timeout=httpx.Timeout(timeout_seconds),
+                )
+                response.raise_for_status()
+                if _response_has_usage_metadata(response):
+                    self._notify("usage_metadata_present")
+            except (httpx.TimeoutException, httpx.HTTPError):
+                return self._complete(_unavailable("analysis_provider_unavailable"))
+            except Exception:
+                return self._complete(_unavailable("analysis_provider_unavailable"))
 
-        try:
-            content = _response_content(response)
-            payload = _OpenRouterAnalysisPayload.model_validate_json(content)
-            draft_intent = _validate_payload(
-                payload,
-                command_intent=command_intent,
-                requested_action=requested_action,
-                evidence_count=evidence_count,
-            )
-            decision = validate_analysis_decision(
-                AnalysisDecision(
-                    answer=payload.answer,
-                    citation_ordinals=payload.citation_ordinals,
-                    action=payload.action,
-                    draft_intent=draft_intent,
+            try:
+                content = _response_content(response)
+                payload = _OpenRouterAnalysisPayload.model_validate_json(content)
+                draft_intent = _validate_payload(
+                    payload,
+                    command_intent=command_intent,
+                    requested_action=requested_action,
+                    evidence_count=evidence_count,
                 )
-            )
-            self._notify_action(payload.action)
-            return self._complete(
-                AnalysisProviderOutcome(
-                    status="available",
-                    reason_code="none",
-                    decision=decision,
+                decision = validate_analysis_decision(
+                    AnalysisDecision(
+                        answer=payload.answer,
+                        citation_ordinals=payload.citation_ordinals,
+                        action=payload.action,
+                        draft_intent=draft_intent,
+                    )
                 )
-            )
-        except Exception:
-            return self._complete(_unavailable("invalid_input"))
+                self._notify_action(payload.action)
+                return self._complete(
+                    AnalysisProviderOutcome(
+                        status="available",
+                        reason_code="none",
+                        decision=decision,
+                    )
+                )
+            except Exception:
+                continue
+
+        return self._complete(_unavailable("invalid_input"))
 
     def _prompt_is_allowed(self, prompt: str) -> bool:
         if self._outbound_prompt_guard is None:

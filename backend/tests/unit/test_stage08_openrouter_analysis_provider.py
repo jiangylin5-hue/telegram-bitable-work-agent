@@ -448,6 +448,75 @@ def test_business_fact_request_cannot_downgrade_to_uncited_general_advice() -> N
     assert outcome.decision is None
 
 
+def test_invalid_semantic_payload_retries_once_before_failing_closed() -> None:
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            payload = _response_payload(
+                answer="Use a generic checklist.",
+                citation_ordinals=(),
+                action="general_advice",
+            )
+        else:
+            payload = _response_payload(
+                answer="Use the authorised customer fact.",
+                citation_ordinals=(1,),
+                action="read_only",
+            )
+        return httpx.Response(200, request=request, json=payload)
+
+    provider, client = _provider(handler)
+    try:
+        outcome = provider.analyse(
+            _provider_input("Synthetic business evidence."),
+            _command(intent="business_fact"),
+            budget=CollaborationBudget(),
+        )
+    finally:
+        client.close()
+
+    assert calls == 2
+    assert outcome.status == "available"
+    assert outcome.reason_code == "none"
+    assert outcome.decision is not None
+    assert outcome.decision.action == "read_only"
+
+
+def test_second_invalid_semantic_payload_fails_closed_after_one_retry() -> None:
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(
+            200,
+            request=request,
+            json=_response_payload(
+                answer="Use a generic checklist.",
+                citation_ordinals=(),
+                action="general_advice",
+            ),
+        )
+
+    provider, client = _provider(handler)
+    try:
+        outcome = provider.analyse(
+            _provider_input("Synthetic business evidence."),
+            _command(intent="business_fact"),
+            budget=CollaborationBudget(),
+        )
+    finally:
+        client.close()
+
+    assert calls == 2
+    assert outcome.status == "unavailable"
+    assert outcome.reason_code == "invalid_input"
+    assert outcome.decision is None
+
+
 def test_general_advice_nonempty_citations_fail_closed() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
