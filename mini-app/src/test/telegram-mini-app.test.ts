@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api, setTelegramInitData } from '../app/api'
-import { prepareTelegramMiniAppViewport, readTelegramMiniAppLaunch } from '../app/telegram-mini-app'
+import { prepareTelegramMiniAppViewport, readTelegramMiniAppLaunch, requestTelegramMiniAppFullscreen, subscribeTelegramMiniAppFullscreen } from '../app/telegram-mini-app'
 
 type TelegramWindow = Window & {
   Telegram?: {
@@ -10,6 +10,12 @@ type TelegramWindow = Window & {
       initDataUnsafe?: { start_param?: unknown; user?: { id: unknown } }
       ready?: () => void
       expand?: () => void
+      version?: string
+      isFullscreen?: boolean
+      isVersionAtLeast?: (version: string) => boolean
+      requestFullscreen?: () => void
+      onEvent?: (event: string, listener: (payload?: unknown) => void) => void
+      offEvent?: (event: string, listener: (payload?: unknown) => void) => void
     }
   }
 }
@@ -33,6 +39,34 @@ describe('Telegram Mini App runtime adapter', () => {
 
   it('does nothing when the page is opened outside Telegram', () => {
     expect(prepareTelegramMiniAppViewport()).toBe(false)
+  })
+
+  it('requests fullscreen exactly once on a version-8 Telegram runtime', () => {
+    const requestFullscreen = vi.fn()
+    ;(window as TelegramWindow).Telegram = {
+      WebApp: { version: '8.0', requestFullscreen },
+    }
+
+    expect(requestTelegramMiniAppFullscreen()).toBe('requested')
+    expect(requestFullscreen).toHaveBeenCalledTimes(1)
+  })
+
+  it('subscribes to fullscreen events and removes the same listeners on cleanup', () => {
+    const onEvent = vi.fn()
+    const offEvent = vi.fn()
+    ;(window as TelegramWindow).Telegram = {
+      WebApp: { onEvent, offEvent },
+    }
+
+    const unsubscribe = subscribeTelegramMiniAppFullscreen(vi.fn())
+
+    expect(onEvent).toHaveBeenCalledTimes(2)
+    unsubscribe()
+    expect(offEvent).toHaveBeenCalledTimes(2)
+    expect(offEvent.mock.calls.map(([event, listener]) => [event, typeof listener])).toEqual([
+      ['fullscreen_changed', 'function'],
+      ['fullscreen_failed', 'function'],
+    ])
   })
 
   it('reads only raw initData and the untrusted start transport hint from memory', () => {

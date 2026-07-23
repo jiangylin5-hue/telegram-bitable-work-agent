@@ -22,7 +22,7 @@ import { TemplateImportHub } from './TemplateImportHub'
 import { ViewBuilderPanel } from './ViewBuilderPanel'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
 import { clearAllProtectedQueries, clearAssistantContextQueries, clearDigitalEmployeeManagementQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTeamBotQueries, clearTelegramDeepLinkQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, digitalEmployeeManagementKeys, draftEmployeeKeys, governanceKeys, governanceWriteKeys, navigationKeys, protectedQueryKey, relationCandidateQueryKey, teamBotKeys, templateImportKeys, viewBuilderKeys } from './protectedQuery'
-import { prepareTelegramMiniAppViewport, readTelegramMiniAppLaunch, type TelegramMiniAppLaunch } from './telegram-mini-app'
+import { prepareTelegramMiniAppViewport, readTelegramMiniAppLaunch, requestTelegramMiniAppFullscreen, subscribeTelegramMiniAppFullscreen, type TelegramFullscreenState, type TelegramMiniAppLaunch } from './telegram-mini-app'
 import type { GovernanceAuditPage, GovernanceMemberPage } from './governance-types'
 import type { GovernanceEditableMemberPage, GovernanceFieldPermissionPage, GovernanceFieldPermissionPolicy } from './governance-write-types'
 import type { AssistantContextPage, AssistantSelectedView, CurrentCanvasInvocationContext, S5Contact, S5DraftDetail, S5InvocationRequest, S5InvocationResult } from './draft-employee-types'
@@ -170,8 +170,17 @@ export function App() {
 function AppContent() {
   const queryClient = useQueryClient()
   const [state, setState] = useState<AppState>({ status: 'loading' })
+  const [telegramFullscreenState, setTelegramFullscreenState] = useState<TelegramFullscreenState | null>(null)
   useEffect(() => {
     prepareTelegramMiniAppViewport()
+    const unsubscribe = subscribeTelegramMiniAppFullscreen(setTelegramFullscreenState)
+    const result = requestTelegramMiniAppFullscreen()
+    setTelegramFullscreenState(result === 'requested'
+      ? { kind: 'fullscreenRequested' }
+      : result === 'already_fullscreen'
+        ? { kind: 'fullscreen' }
+        : { kind: 'fullscreenFailed', error: 'UNSUPPORTED' })
+    return unsubscribe
   }, [])
   const telegramLaunch = useRef<TelegramMiniAppLaunch | null | undefined>(undefined)
   if (telegramLaunch.current === undefined) {
@@ -2879,5 +2888,5 @@ function AppContent() {
       onClose={closeGovernanceWrite}
     />
     : null
-  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} activeRoute={navigationRoute} onNavigate={selectNavigation} onOpenGovernance={(trigger) => { void openGovernance(trigger) }}>{content}{builderOverlay}{templateImportOverlay}{draftEmployeeOverlay}{assistantContextOverlay}{teamBotOverlay}{digitalEmployeeManagementOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
+  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} activeRoute={navigationRoute} onNavigate={selectNavigation} onOpenGovernance={(trigger) => { void openGovernance(trigger) }} telegramState={telegramFullscreenState}>{content}{builderOverlay}{templateImportOverlay}{draftEmployeeOverlay}{assistantContextOverlay}{teamBotOverlay}{digitalEmployeeManagementOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
 }
