@@ -110,8 +110,8 @@ git commit -m "feat(stage09): add native public nginx renderer"
 **Interfaces：**
 
 - Consumes: root execution and a single argument `archive` or `retire`.
-- Produces: only aggregate receipt fields: `status`, `archive_manifest`, `container_count`, `volume_count`, `image_count`, `released_bytes`. It does not print archive paths, Docker inspect JSON, environment values or data contents.
-- `archive` never stops a container. `retire` calls the same archive routine, requires a nonempty SHA-256 manifest, then removes only the fixed compose project’s resources.
+- Produces: only aggregate receipt fields. `archive` reports `status`, `archive_manifest`, resource counts and `custom_image_bytes_before=0`; `retire` reports `status`, `archive_manifest`, `custom_image_bytes_before` and completed delete counts for containers, networks, volumes and custom images. It does not print archive paths, Docker inspect JSON, environment values, resource names or data contents.
+- `archive` runs while Caddy is still available, never stops or removes a container, validates the complete root-only archive and atomically publishes a single ready marker. `retire` never creates a new archive and never calls `docker exec`; it strictly reloads the existing ready archive, revalidates every required artifact, manifest, PostgreSQL catalog, Redis header and archived resource set, then removes only the fixed compose project’s resources.
 
 - [ ] **Step 1: Write the failing safety test**
 
@@ -148,13 +148,13 @@ docker exec "$postgres_id" sh -c 'pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB"
 docker exec "$redis_id" sh -c 'redis-cli --rdb /tmp/legacy.rdb >/dev/null && cat /tmp/legacy.rdb && rm -f /tmp/legacy.rdb' > "$archive_dir/redis.rdb"
 ```
 
-The script obtains the Caddyfile mount and Caddy Admin runtime config through narrowly formatted Docker calls, writes file hashes to `manifest.sha256`, and verifies nonempty dumps before any stop operation. In `retire` mode it removes label-scoped containers/networks/volumes and only custom images prefixed `telegram-bitable-stage03-`; base `caddy`, `redis` and `pgvector` images remain. Every failure before deletion exits without resource removal.
+The script obtains the compose working directory and Caddy Admin runtime config through narrowly formatted Docker calls, archives compose/Caddy/Nginx configuration, the three Stage09 symlink targets, PostgreSQL custom-format dump, Redis RDB and a name/size/time/digest resource inventory, then seals every required artifact in `manifest.sha256`. `pg_restore -l` and the Redis header must be readable before the ready marker is atomically published. In `retire` mode it consumes only that ready archive, removes label-scoped containers/networks/volumes and only custom images prefixed `telegram-bitable-stage03-`; base `caddy`, `redis` and `pgvector` images remain. Missing, ambiguous, incomplete or invalid ready evidence exits before any deletion. A deletion failure produces `status=partial`, a nonzero exit and only aggregate completed delete counts.
 
 - [ ] **Step 4: Verify GREEN**
 
 Run: `cd deploy/stage09-native && sh scripts/test-retire-legacy-stage03-docker.sh`
 
-Expected: `shell-syntax: PASS`, `fixed-project: PASS`, `global-prune-forbidden: PASS`, `archive-before-stop: PASS`, `generic-image-retention: PASS`, `retire-assets: PASS`.
+Expected: `shell-syntax: PASS`, `ready-archive-lifecycle: PASS`, `archive-completeness: PASS`, `labelled-retirement: PASS`, `partial-receipt: PASS`, `retire-assets: PASS`.
 
 - [ ] **Step 5: Seal and commit**
 

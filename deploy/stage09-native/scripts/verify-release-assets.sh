@@ -83,11 +83,16 @@ grep -Fq 'missing-critical-unit-manifest-accepted' "$test_script" || fail
 grep -Fq 'stage09-p1-api.service' "$test_script" || fail
 if grep -Eq 'cat[[:space:]]*>|<<' "$test_script"; then fail; fi
 grep -Fqx 'project_name=telegram-bitable-stage03' "$retire" || fail
+grep -Fqx 'PATH=/usr/sbin:/usr/bin:/sbin:/bin' "$retire" || fail
 grep -Fq 'docker system prune' "$retire" && fail
-grep -Fq 'archive_legacy_runtime || fail' "$retire" || fail
-grep -Fq '[ -s "$archive_dir/manifest.sha256" ] || return 1' "$retire" || fail
-grep -Fq 'docker volume rm $volumes' "$retire" || fail
+grep -Fq 'load_ready_archive || return 1' "$retire" || fail
+grep -Fq 'write_ready_marker' "$retire" || fail
+grep -Fq 'pg_restore -l' "$retire" || fail
+grep -Fq 'custom_image_bytes_before' "$retire" || fail
+grep -Fq 'released_bytes' "$retire" && fail
 grep -Fq 'telegram-bitable-stage03-' "$retire" || fail
+grep -Fq 'ready-archive-lifecycle: PASS' "$retire_test" || fail
+grep -Fq 'partial-receipt: PASS' "$retire_test" || fail
 grep -Fq 'retire-assets: PASS' "$retire_test" || fail
 grep -Fq 'native-public-nginx: fail' "$renderer" || fail
 grep -Fq 'STAGE09_P1_PUBLIC_HOSTNAME' "$renderer" || fail

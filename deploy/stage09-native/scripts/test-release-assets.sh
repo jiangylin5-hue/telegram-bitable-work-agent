@@ -49,9 +49,14 @@ grep -Fq 'deploy/stage09-native/scripts/test-native-public-ingress-assets.sh' "$
 grep -Fq 'deploy/stage09-native/scripts/retire-legacy-stage03-docker.sh' "$layout" || fail required-legacy-retire-script
 grep -Fq 'deploy/stage09-native/scripts/test-retire-legacy-stage03-docker.sh' "$layout" || fail required-legacy-retire-test
 grep -Fqx 'project_name=telegram-bitable-stage03' "$retire" || fail retire-fixed-project
+grep -Fqx 'PATH=/usr/sbin:/usr/bin:/sbin:/bin' "$retire" || fail retire-fixed-path
 grep -Fq 'docker system prune' "$retire" && fail retire-global-prune
-grep -Fq 'docker volume rm' "$retire" || fail retire-volume-removal
+grep -Fq 'load_ready_archive' "$retire" || fail retire-ready-archive
+grep -Fq 'write_ready_marker' "$retire" || fail retire-ready-marker
+grep -Fq 'pg_restore -l' "$retire" || fail retire-postgres-verification
 grep -Fq 'sha256sum' "$retire" || fail retire-manifest
+grep -Fq 'custom_image_bytes_before' "$retire" || fail retire-image-byte-semantics
+grep -Fq 'released_bytes' "$retire" && fail retire-released-bytes
 grep -Fq "offline_database_url='postgresql+psycopg://stage09_p1:offline-placeholder@127.0.0.1:5432/stage09_p1'" "$migration" || fail fixed-offline-database-url
 grep -Fq 'env -u DATABASE_URL "DATABASE_URL=$offline_database_url"' "$migration" || fail explicit-offline-database-url
 if grep -Eq 'runtime\.env|source[[:space:]]|ads_agent' "$migration"; then fail migration-secret-or-history; fi
