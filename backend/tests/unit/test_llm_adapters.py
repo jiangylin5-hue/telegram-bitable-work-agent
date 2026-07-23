@@ -63,7 +63,14 @@ def test_openrouter_adapter_uses_injected_http_client_and_parses_json_response()
     assert result.model_provider == "openrouter"
     assert http_client.calls[0]["url"] == "https://openrouter.ai/api/v1/chat/completions"
     assert http_client.calls[0]["headers"]["Authorization"] == "Bearer test-key"
-    assert http_client.calls[0]["json"]["response_format"] == {"type": "json_object"}
+    assert http_client.calls[0]["json"]["response_format"] == {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "structured_llm_response",
+            "strict": True,
+            "schema": {"type": "object"},
+        },
+    }
 
 
 def test_agent_run_record_captures_model_name_and_prompt_version() -> None:

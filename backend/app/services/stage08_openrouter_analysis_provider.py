@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from collections.abc import Callable
 from typing import Literal, TypeAlias
 
@@ -12,6 +13,7 @@ from app.runtime.stage08_collaboration_contracts import (
     AnalysisDecision,
     AnalysisProviderOutcome,
     CollaborationBudget,
+    Stage08CollaborationContractFactory,
     _Stage08CompressedDigest,
     _Stage08PrivateMaterial,
     _command_snapshot,
@@ -36,20 +38,35 @@ _STRICT_OUTPUT_CONFIG = ConfigDict(
 _SYSTEM_PROMPT = (
     "You are a table-bound digital employee analysis provider. "
     "Use only the numbered evidence supplied by the caller. "
-    "Return exactly one JSON object with answer, citation_ordinals, and action. "
-    "Allowed actions are read_only, general_advice, and deny. "
+    "Return exactly one JSON object with answer, citation_ordinals, action, and draft. "
+    "Allowed actions are read_only, draft_update, general_advice, and deny. "
     "When the input intent is general_advice, use action general_advice or deny "
     "and return citation_ordinals as an empty array []. "
     "A deny action must also return citation_ordinals as an empty array []. "
-    "Never propose a draft field, draft value, direct write, or external send. "
-    "If a requested action would require a write, use deny."
+    "Use draft_update only when requested_action is draft_update. It requires one "
+    "draft object with exactly field_key and value, plus at least one evidence citation. "
+    "For every other action, draft must be null. Never claim that a record was "
+    "written, created, updated, sent, or completed: a draft is only a proposal "
+    "awaiting confirmation."
+)
+_WRITE_COMPLETION_CLAIM_RE = re.compile(
+    r"(?:已(?:写入|创建|执行|更新|提交|发送|完成)|已经(?:写入|创建|执行|更新|提交|发送|完成)|"
+    r"\b(?:wrote|written|created|executed|updated|submitted|sent|completed)\b)",
+    re.IGNORECASE,
 )
 ProviderEvent: TypeAlias = Literal[
     "invoked", "completed", "usage_metadata_present"
 ]
 ProviderAnalysisAction: TypeAlias = Literal[
-    "read_only", "general_advice", "deny"
+    "read_only", "draft_update", "general_advice", "deny"
 ]
+
+
+class _OpenRouterDraftPayload(BaseModel):
+    model_config = _STRICT_OUTPUT_CONFIG
+
+    field_key: StrictStr = Field(min_length=1, max_length=120)
+    value: object
 
 
 class _OpenRouterAnalysisPayload(BaseModel):
@@ -57,7 +74,8 @@ class _OpenRouterAnalysisPayload(BaseModel):
 
     answer: StrictStr = Field(min_length=1, max_length=2000)
     citation_ordinals: tuple[StrictInt, ...] = Field(max_length=12)
-    action: Literal["read_only", "general_advice", "deny"]
+    action: Literal["read_only", "draft_update", "general_advice", "deny"]
+    draft: _OpenRouterDraftPayload | None = None
 
 
 class OpenRouterStage08AnalysisProvider:
@@ -122,6 +140,7 @@ class OpenRouterStage08AnalysisProvider:
             if timeout_seconds <= 0:
                 return self._complete(_unavailable("analysis_provider_unavailable"))
             prompt, evidence_count, command_intent = _build_prompt(material, command)
+            requested_action = _command_snapshot(command).requested_action
         except Exception:
             return self._complete(_unavailable("invalid_input"))
 
@@ -131,7 +150,7 @@ class OpenRouterStage08AnalysisProvider:
                 {"role": "system", "content": _SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
             ),
-            "response_format": {"type": "json_object"},
+            "response_format": _strict_response_format(),
         }
         if not self._prompt_is_allowed(prompt):
             return self._complete(_unavailable("invalid_input"))
@@ -152,25 +171,18 @@ class OpenRouterStage08AnalysisProvider:
         try:
             content = _response_content(response)
             payload = _OpenRouterAnalysisPayload.model_validate_json(content)
-            if command_intent == "general_advice" and payload.action not in {
-                "general_advice",
-                "deny",
-            }:
-                raise ValueError("stage08_provider_action_invalid")
-            if payload.citation_ordinals and (
-                command_intent == "general_advice" or payload.action == "deny"
-            ):
-                raise ValueError("stage08_provider_citation_invalid")
-            if any(
-                ordinal > evidence_count for ordinal in payload.citation_ordinals
-            ):
-                raise ValueError("stage08_provider_citation_invalid")
+            draft_intent = _validate_payload(
+                payload,
+                command_intent=command_intent,
+                requested_action=requested_action,
+                evidence_count=evidence_count,
+            )
             decision = validate_analysis_decision(
                 AnalysisDecision(
                     answer=payload.answer,
                     citation_ordinals=payload.citation_ordinals,
                     action=payload.action,
-                    draft_intent=None,
+                    draft_intent=draft_intent,
                 )
             )
             self._notify_action(payload.action)
@@ -250,6 +262,96 @@ def _bounded_timeout_seconds(
     return min(
         max(0.0, float(remaining)),
         budget.max_provider_time_ms / 1000,
+    )
+
+
+def _strict_response_format() -> dict[str, object]:
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "stage08_analysis_response",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["answer", "citation_ordinals", "action", "draft"],
+                "properties": {
+                    "answer": {"type": "string", "minLength": 1, "maxLength": 2000},
+                    "citation_ordinals": {
+                        "type": "array",
+                        "maxItems": 12,
+                        "items": {"type": "integer"},
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": [
+                            "read_only",
+                            "draft_update",
+                            "general_advice",
+                            "deny",
+                        ],
+                    },
+                    "draft": {
+                        "anyOf": [
+                            {"type": "null"},
+                            {
+                                "type": "object",
+                                "additionalProperties": False,
+                                "required": ["field_key", "value"],
+                                "properties": {
+                                    "field_key": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 120,
+                                    },
+                                    "value": {},
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        },
+    }
+
+
+def _validate_payload(
+    payload: _OpenRouterAnalysisPayload,
+    *,
+    command_intent: str,
+    requested_action: str,
+    evidence_count: int,
+) -> object | None:
+    if command_intent == "general_advice" and payload.action not in {
+        "general_advice",
+        "deny",
+    }:
+        raise ValueError("stage08_provider_action_invalid")
+    if command_intent != "general_advice" and payload.action == "general_advice":
+        raise ValueError("stage08_provider_action_invalid")
+    if any(ordinal > evidence_count for ordinal in payload.citation_ordinals):
+        raise ValueError("stage08_provider_citation_invalid")
+    if payload.action in {"general_advice", "deny"}:
+        if payload.citation_ordinals or payload.draft is not None:
+            raise ValueError("stage08_provider_citation_invalid")
+        return None
+    if payload.action == "read_only":
+        if (
+            requested_action != "read_only"
+            or not payload.citation_ordinals
+            or payload.draft is not None
+        ):
+            raise ValueError("stage08_provider_action_invalid")
+        return None
+    if requested_action != "draft_update" or payload.draft is None:
+        raise ValueError("stage08_provider_action_invalid")
+    if not payload.citation_ordinals:
+        raise ValueError("stage08_provider_citation_invalid")
+    if _WRITE_COMPLETION_CLAIM_RE.search(payload.answer):
+        raise ValueError("stage08_provider_completion_claim_invalid")
+    return Stage08CollaborationContractFactory.draft_intent(
+        field_key=payload.draft.field_key,
+        value=payload.draft.value,
     )
 
 

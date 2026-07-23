@@ -36,7 +36,7 @@ class OpenRouterStructuredLLMClient:
             json={
                 "model": model_name,
                 "messages": [_message_payload(message) for message in request.messages],
-                "response_format": {"type": "json_object"},
+                "response_format": _strict_response_format(request.response_schema),
             },
         )
         response.raise_for_status()
@@ -55,6 +55,19 @@ class OpenRouterStructuredLLMClient:
 
 def _message_payload(message: LLMMessage) -> dict[str, str]:
     return {"role": message.role, "content": message.content}
+
+
+def _strict_response_format(schema: dict[str, object]) -> dict[str, object]:
+    if not isinstance(schema, dict):
+        raise TypeError("Structured LLM response_schema must be an object")
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "structured_llm_response",
+            "strict": True,
+            "schema": schema,
+        },
+    }
 
 
 def _parse_json_object(raw_text: str) -> dict[str, object]:

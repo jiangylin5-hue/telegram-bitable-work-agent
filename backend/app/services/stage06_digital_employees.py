@@ -402,6 +402,10 @@ def _invoke_live_digital_employee(
         )
         response.update(
             {
+                # The model only proposes a change.  The backend has now created the
+                # persisted pending draft, so use a stable acknowledgement instead of
+                # echoing language that could imply a direct record write occurred.
+                "answer": "已提出一个待确认草稿。",
                 "draft_id": draft_response["draft_id"],
                 "status": draft_response["status"],
                 "record_id": draft_response["record_id"],

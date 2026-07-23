@@ -281,6 +281,19 @@ def _create_stage08_runtime_control(
     )
 
 
+def create_stage08_runtime_control() -> Stage08CollaborationRuntimeControl:
+    """Create the single deadline carrier shared by one API invocation and provider."""
+
+    return _create_stage08_runtime_control()
+
+
+def remaining_stage08_runtime_seconds(
+    control: Stage08CollaborationRuntimeControl,
+) -> float:
+    snapshot = _runtime_control_snapshot(control)
+    return max(0.0, snapshot.deadline_at - _runtime_now(control))
+
+
 def _runtime_control_snapshot(value: object) -> _RuntimeControlSnapshot:
     if type(value) is not Stage08CollaborationRuntimeControl:
         raise TypeError("stage08_collaboration_runtime_control_private")
@@ -1201,7 +1214,7 @@ def run_stage08_collaboration(
         if not _valid_collaboration_dependencies(deps):
             raise TypeError("collaboration_dependencies_invalid")
         control = (
-            _create_stage08_runtime_control()
+            create_stage08_runtime_control()
             if runtime_control is None
             else runtime_control
         )

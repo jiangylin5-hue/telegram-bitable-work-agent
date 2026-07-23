@@ -4,9 +4,19 @@ from fastapi.testclient import TestClient
 
 from app.api.routes.stage06_platform import get_stage06_platform_uow
 from app.main import create_app
-from app.models.stage06_platform import WorkspaceMember
+from app.models.stage06_platform import Stage06TelegramBinding, WorkspaceMember
 from app.models.stage06_runtime import RecordChangeDraft
+from app.models.stage08_group_context import Stage08GroupBusinessContextBinding
+from app.services.permissions import Actor
+from app.services.stage06_digital_employees import create_digital_employee
 from app.services.stage06_platform import InMemoryStage06PlatformUnitOfWork
+from app.services.stage06_platform import (
+    create_base,
+    create_field,
+    create_record,
+    create_table,
+    create_workspace,
+)
 
 
 def test_mini_app_bootstrap_only_returns_active_memberships_for_identity() -> None:
@@ -116,6 +126,119 @@ def test_workspace_home_returns_safe_base_and_draft_queue_models() -> None:
         }
     ]
     assert "sensitive" not in response.text
+
+
+def test_workspace_home_returns_authorized_employee_group_customer_project_index() -> None:
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    actor = Actor(actor_type="user", actor_id="owner-1", role="owner")
+    workspace = create_workspace(
+        uow,
+        name="Acme",
+        owner_user_id=actor.actor_id,
+        actor=actor,
+    )
+    member = uow.list_workspace_members(workspace.id)[0]
+    base = create_base(uow, workspace.id, name="CRM", actor=actor)
+    customers = create_table(uow, base.id, name="Customers", key="customers", actor=actor)
+    projects = create_table(uow, base.id, name="Projects", key="projects", actor=actor)
+    create_field(uow, customers.id, name="Name", key="name", field_type="text", actor=actor)
+    create_field(uow, projects.id, name="Title", key="title", field_type="text", actor=actor)
+    customer = create_record(uow, customers.id, values={"name": "Acme Co"}, actor=actor)
+    project = create_record(uow, projects.id, values={"title": "Renewal"}, actor=actor)
+    employee = create_digital_employee(
+        uow,
+        base.id,
+        name="Customer Success",
+        description="Controlled customer follow-up",
+        telegram_alias="cs",
+        accessible_tables=[str(customers.id), str(projects.id)],
+        accessible_views=[],
+        allowed_actions=["query", "summarize", "draft_update"],
+        actor=actor,
+    )
+    binding = Stage06TelegramBinding(
+        id=uuid4(),
+        workspace_id=workspace.id,
+        workspace_member_id=member.id,
+        telegram_chat_id="-1001234567",
+        telegram_user_id="telegram-owner-1",
+        binding_type="chat_user",
+        default_base_id=base.id,
+        default_digital_employee_id=employee.id,
+        scope_policy={},
+        status="active",
+    )
+    uow.add_telegram_binding(binding)
+    uow.add_group_business_context_binding(
+        Stage08GroupBusinessContextBinding(
+            id=uuid4(),
+            workspace_id=workspace.id,
+            telegram_binding_id=binding.id,
+            customer_record_id=customer.id,
+            project_record_id=project.id,
+            mapping_version=1,
+            status="active",
+        )
+    )
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = actor.actor_id
+        response = client.get(f"/workspaces/{workspace.id}/home")
+        second_binding = Stage06TelegramBinding(
+            id=uuid4(),
+            workspace_id=workspace.id,
+            workspace_member_id=member.id,
+            telegram_chat_id="-1007654321",
+            telegram_user_id="telegram-owner-1",
+            binding_type="chat_user",
+            default_base_id=base.id,
+            default_digital_employee_id=employee.id,
+            scope_policy={},
+            status="active",
+        )
+        uow.add_telegram_binding(second_binding)
+        uow.add_group_business_context_binding(
+            Stage08GroupBusinessContextBinding(
+                id=uuid4(),
+                workspace_id=workspace.id,
+                telegram_binding_id=second_binding.id,
+                customer_record_id=customer.id,
+                project_record_id=project.id,
+                mapping_version=1,
+                status="active",
+            )
+        )
+        ambiguous_response = client.get(f"/workspaces/{workspace.id}/home")
+
+    assert response.status_code == 200
+    assert response.json()["business_context_relations"] == [
+        {
+            "employee": {
+                "id": str(employee.id),
+                "name": "Customer Success",
+                "base_id": str(base.id),
+                "base_name": "CRM",
+            },
+            "group": {"id": f"group_context:{binding.id}", "label": "已授权群聊 1"},
+            "customer": {
+                "id": str(customer.id),
+                "base_id": str(base.id),
+                "label": "Acme Co",
+            },
+            "project": {
+                "id": str(project.id),
+                "base_id": str(base.id),
+                "label": "Renewal",
+            },
+            "mapping_version": 1,
+        }
+    ]
+    assert "-1001234567" not in response.text
+    assert "telegram-owner-1" not in response.text
+    assert ambiguous_response.status_code == 200
+    assert ambiguous_response.json()["business_context_relations"] == []
 
 
 def test_workspace_home_denies_non_members() -> None:

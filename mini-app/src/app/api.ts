@@ -172,6 +172,14 @@ export type TelegramDeepLinkResolution =
   | { outcome: 'resolved'; destination: TelegramDeepLinkDestination }
   | { outcome: 'recovery' }
 
+export type BusinessContextRelation = {
+  employee: { id: string; name: string; base_id: string; base_name: string }
+  group: { id: string; label: string }
+  customer: { id: string; base_id: string; label: string }
+  project: { id: string; base_id: string; label: string }
+  mapping_version: number
+}
+
 export type WorkspaceHome = {
   workspace_id: string
   recent_bases: { id: string; name: string; source_type: string }[]
@@ -183,6 +191,7 @@ export type WorkspaceHome = {
     destination: { base_id: string; draft_id: string }
     action_availability: { can_confirm: boolean; can_reject: boolean }
   }[]
+  business_context_relations?: BusinessContextRelation[]
 }
 
 export type BaseSummary = { id: string; name: string; source_type: string; status?: string }

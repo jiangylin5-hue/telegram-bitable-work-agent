@@ -322,7 +322,10 @@ def test_zero_remaining_deadline_returns_without_transport() -> None:
 
 
 def test_valid_output_is_a_strict_safe_analysis_decision() -> None:
+    captured_body: dict[str, object] = {}
+
     def handler(request: httpx.Request) -> httpx.Response:
+        captured_body.update(json.loads(request.content))
         return httpx.Response(200, request=request, json=_response_payload())
 
     provider, client = _provider(handler)
@@ -342,6 +345,44 @@ def test_valid_output_is_a_strict_safe_analysis_decision() -> None:
     assert outcome.decision.citation_ordinals == (1,)
     assert outcome.decision.action == "read_only"
     assert outcome.decision.draft_intent is None
+    assert captured_body["response_format"] == {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "stage08_analysis_response",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["answer", "citation_ordinals", "action", "draft"],
+                "properties": {
+                    "answer": {"type": "string", "minLength": 1, "maxLength": 2000},
+                    "citation_ordinals": {
+                        "type": "array",
+                        "maxItems": 12,
+                        "items": {"type": "integer"},
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": ["read_only", "draft_update", "general_advice", "deny"],
+                    },
+                    "draft": {
+                        "anyOf": [
+                            {"type": "null"},
+                            {
+                                "type": "object",
+                                "additionalProperties": False,
+                                "required": ["field_key", "value"],
+                                "properties": {
+                                    "field_key": {"type": "string", "minLength": 1, "maxLength": 120},
+                                    "value": {},
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        },
+    }
 
 
 def test_general_advice_contract_is_explicit_and_empty_citations_are_valid() -> None:
@@ -378,6 +419,33 @@ def test_general_advice_contract_is_explicit_and_empty_citations_are_valid() -> 
     assert outcome.decision is not None
     assert outcome.decision.citation_ordinals == ()
     assert outcome.decision.action == "general_advice"
+
+
+def test_business_fact_request_cannot_downgrade_to_uncited_general_advice() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            request=request,
+            json=_response_payload(
+                answer="Use a short next-action checklist.",
+                citation_ordinals=(),
+                action="general_advice",
+            ),
+        )
+
+    provider, client = _provider(handler)
+    try:
+        outcome = provider.analyse(
+            _provider_input("Synthetic business evidence."),
+            _command(intent="business_fact"),
+            budget=CollaborationBudget(),
+        )
+    finally:
+        client.close()
+
+    assert outcome.status == "unavailable"
+    assert outcome.reason_code == "invalid_input"
+    assert outcome.decision is None
 
 
 def test_general_advice_nonempty_citations_fail_closed() -> None:
@@ -482,21 +550,84 @@ def test_deny_never_fabricates_citations(citation_ordinals: tuple[int, ...]) -> 
         assert outcome.decision.action == "deny"
 
 
+def test_draft_update_returns_one_sealed_draft_intent() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            request=request,
+            json=_response_payload(
+                answer="已提出一个待确认草稿。",
+                citation_ordinals=(1,),
+                action="draft_update",
+                extra={"draft": {"field_key": "status", "value": "in_progress"}},
+            ),
+        )
+
+    provider, client = _provider(handler)
+    try:
+        outcome = provider.analyse(
+            _provider_input("[1] visible synthetic fact"),
+            _command(requested_action="draft_update"),
+            budget=CollaborationBudget(),
+        )
+    finally:
+        client.close()
+
+    assert outcome.status == "available"
+    assert outcome.decision is not None
+    assert outcome.decision.action == "draft_update"
+    assert outcome.decision.citation_ordinals == (1,)
+    assert outcome.decision.draft_intent is not None
+
+
 @pytest.mark.parametrize(
     "payload",
     [
         _response_payload(action="draft_update"),
+        _response_payload(
+            action="draft_update",
+            citation_ordinals=(),
+            extra={"draft": {"field_key": "status", "value": "in_progress"}},
+        ),
         _response_payload(citation_ordinals=(2,)),
         _response_payload(
             answer="identifier 30000000-0000-4000-8000-000000000003"
         ),
     ],
 )
-def test_model_cannot_form_draft_or_invalid_safe_output(
+def test_draft_update_requires_citation_and_one_draft_intent(
     payload: dict[str, object],
 ) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, request=request, json=payload)
+
+    provider, client = _provider(handler)
+    try:
+        outcome = provider.analyse(
+            _provider_input("[1] visible synthetic fact"),
+            _command(requested_action="draft_update"),
+            budget=CollaborationBudget(),
+        )
+    finally:
+        client.close()
+
+    assert outcome.status == "unavailable"
+    assert outcome.reason_code == "invalid_input"
+    assert outcome.decision is None
+
+
+def test_draft_update_rejects_claim_that_a_write_already_completed() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            request=request,
+            json=_response_payload(
+                answer="已写入客户状态。",
+                citation_ordinals=(1,),
+                action="draft_update",
+                extra={"draft": {"field_key": "status", "value": "in_progress"}},
+            ),
+        )
 
     provider, client = _provider(handler)
     try:

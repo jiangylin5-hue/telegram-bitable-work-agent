@@ -402,6 +402,117 @@ select:focus-visible {
   margin-top: 30px;
 }
 
+.business-context-index {
+  margin-top: 22px;
+  border-top: 1px solid var(--line-subtle);
+  padding-top: 16px;
+}
+
+.business-context-index header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.business-context-index header small {
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.business-context-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 10px;
+}
+
+.business-context-relation {
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-control);
+  background: #fff;
+  padding: 10px;
+}
+
+.business-context-route,
+.business-context-records {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.business-context-route {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.business-context-route button,
+.business-context-records button {
+  display: inline;
+  width: auto;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--accent-azure);
+  font: inherit;
+  text-decoration: none;
+}
+
+.business-context-route button:hover,
+.business-context-records button:hover {
+  border: 0;
+  background: transparent;
+  color: #075fc5;
+  text-decoration: underline;
+}
+
+.business-context-employee {
+  max-width: 92px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary) !important;
+  font-weight: 600 !important;
+}
+
+.business-context-group {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.business-context-records {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+@media (max-width: 1240px) {
+  .assistant-dock:has(.business-context-index) {
+    display: block;
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--line-subtle);
+    border-left: 0;
+    padding: 20px 24px 28px;
+  }
+
+  .assistant-dock:has(.business-context-index) > .assistant-title,
+  .assistant-dock:has(.business-context-index) > p,
+  .assistant-dock:has(.business-context-index) > span,
+  .assistant-dock:has(.business-context-index) > button {
+    display: none;
+  }
+}
+
 .base-canvas {
   background: var(--surface-canvas);
 }
@@ -963,6 +1074,55 @@ select:focus-visible {
   color: var(--text-secondary);
   font-size: 11px;
   line-height: 1.65;
+}
+
+.workbench-business-context,
+.team-bot-business-context {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line-subtle);
+  background: #fbfcfe;
+  padding: 18px 22px;
+}
+
+.workbench-business-context header p,
+.team-bot-business-context header p {
+  margin: 0 0 3px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+
+.workbench-business-context h2,
+.team-bot-business-context h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.workbench-business-context > div,
+.team-bot-business-context > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 14px;
+}
+
+.workbench-business-context > div > *,
+.team-bot-business-context article > * {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.workbench-business-context strong,
+.team-bot-business-context strong {
+  color: var(--text-primary);
+}
+
+.team-bot-business-context article {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
 }
 
 /* Conversation Desk and Digital Employee Workbench use the approved full-canvas desktop grammar. */

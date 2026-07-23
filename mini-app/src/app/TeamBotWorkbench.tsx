@@ -1,6 +1,9 @@
 import { useState } from 'react'
 
 import type {
+  BusinessContextRelation,
+} from './api'
+import type {
   TeamBotContact,
   TeamBotKnowledgeContextPage,
   TeamBotSelectedView,
@@ -14,6 +17,7 @@ type TeamBotWorkbenchProps = {
   summary: TeamBotSummary | null
   loading: boolean
   failed: boolean
+  businessContextRelations?: BusinessContextRelation[]
   onSelectContact: (employeeId: string) => void
   onSelectView: (viewId: string) => void
   onSummarize: (instruction?: string) => Promise<void>
@@ -29,6 +33,7 @@ export function TeamBotWorkbench({
   summary,
   loading,
   failed,
+  businessContextRelations = [],
   onSelectContact,
   onSelectView,
   onSummarize,
@@ -67,6 +72,7 @@ export function TeamBotWorkbench({
             <button type="button" onClick={onRetry}>重试</button>
           </section>
         ) : null}
+        {businessContextRelations.length > 0 ? <section className="team-bot-business-context" data-testid="team-bot-business-context" aria-label="团队 Bot 的已授权业务关联"><header><p>BUSINESS CONTEXT</p><h3>已授权业务关联</h3></header><div>{businessContextRelations.map((relation) => <article key={`${relation.group.id}:${relation.mapping_version}`}><strong>{relation.employee.name}</strong><span>{relation.group.label}</span><span>客户 · {relation.customer.label}</span><span>项目 · {relation.project.label}</span></article>)}</div></section> : null}
         <div className="assistant-context-columns">
             <section className="assistant-context-section" aria-label="团队助手目录">
               <header>

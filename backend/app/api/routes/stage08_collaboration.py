@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import get_stage06_request_identity
 from app.api.routes.stage06_platform import get_stage06_platform_uow
+from app.core.config import Settings, get_settings
 from app.core.errors import error_detail
 from app.runtime.stage08_collaboration_contracts import (
     AssistantQuerySafeCitation,
@@ -40,7 +41,15 @@ from app.services.stage06_platform import (
 from app.services.stage07_digital_employee_management import (
     is_member_eligible_for_employee,
 )
-from app.services.stage08_collaboration import run_stage08_collaboration
+from app.services.stage08_collaboration import (
+    Stage08CollaborationDependencies,
+    create_stage08_runtime_control,
+    remaining_stage08_runtime_seconds,
+    run_stage08_collaboration,
+)
+from app.services.stage08_openrouter_analysis_provider import (
+    OpenRouterStage08AnalysisProvider,
+)
 
 
 _OPERATION = "stage08.assistant.query"
@@ -134,11 +143,14 @@ def query_assistant(
         ) from exc
 
     try:
+        dependencies, runtime_control = _stage08_runtime_dependencies(get_settings())
         result = run_stage08_collaboration(
             uow,
             command,
             actor,
+            deps=dependencies,
             now=datetime.now(UTC),
+            runtime_control=runtime_control,
         )
         safe_view = validate_assistant_query_safe_view(result)
         complete_idempotent_operation(
@@ -259,6 +271,30 @@ def _query_fingerprint(request: AssistantQueryRequest, actor_user_id: str) -> st
             "requested_action": request.requested_action,
             "target_record_id": request.target_record_id,
         }
+    )
+
+
+def _stage08_runtime_dependencies(
+    settings: Settings,
+) -> tuple[Stage08CollaborationDependencies, object]:
+    runtime_control = create_stage08_runtime_control()
+    if not (
+        settings.llm_enabled
+        and settings.agent_workflow_mode == "real_openrouter"
+    ):
+        return Stage08CollaborationDependencies(), runtime_control
+    return (
+        Stage08CollaborationDependencies(
+            analysis_provider=OpenRouterStage08AnalysisProvider(
+                api_key=settings.openrouter_api_key,
+                base_url=settings.openrouter_base_url,
+                model_name=settings.openrouter_model,
+                remaining_deadline_seconds=lambda: remaining_stage08_runtime_seconds(
+                    runtime_control
+                ),
+            )
+        ),
+        runtime_control,
     )
 
 

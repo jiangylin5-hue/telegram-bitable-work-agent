@@ -79,10 +79,37 @@ class MiniAppQueueItemResponse(BaseModel):
     action_availability: MiniAppQueueActionAvailabilityResponse
 
 
+class MiniAppBusinessContextEmployeeResponse(BaseModel):
+    id: str
+    name: str
+    base_id: str
+    base_name: str
+
+
+class MiniAppBusinessContextGroupResponse(BaseModel):
+    id: str
+    label: str
+
+
+class MiniAppBusinessContextRecordResponse(BaseModel):
+    id: str
+    base_id: str
+    label: str
+
+
+class MiniAppBusinessContextRelationResponse(BaseModel):
+    employee: MiniAppBusinessContextEmployeeResponse
+    group: MiniAppBusinessContextGroupResponse
+    customer: MiniAppBusinessContextRecordResponse
+    project: MiniAppBusinessContextRecordResponse
+    mapping_version: int
+
+
 class MiniAppWorkspaceHomeResponse(BaseModel):
     workspace_id: str
     recent_bases: list[MiniAppBaseSummaryResponse]
     queue: list[MiniAppQueueItemResponse]
+    business_context_relations: list[MiniAppBusinessContextRelationResponse]
 
 
 class CreateBaseRequest(BaseModel):

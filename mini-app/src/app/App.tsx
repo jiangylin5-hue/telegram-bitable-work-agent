@@ -45,6 +45,7 @@ type BaseCanvasState = {
   createForm?: CreateForm
   loadingMore?: boolean
   loadMoreError?: boolean
+  businessContextRelations?: BusinessContextRelation[]
 }
 
 type AppState =
@@ -54,6 +55,7 @@ type AppState =
   | { status: 'ready'; bootstrap: BootstrapResponse; home: WorkspaceHome; canvas?: BaseCanvasState; canvasLoading?: boolean }
 
 type BaseDirectoryData = { state: BaseDirectoryState; bases: BaseSummary[] }
+type BusinessContextRelation = NonNullable<WorkspaceHome['business_context_relations']>[number]
 
 type CanvasTarget = { tableId?: string; viewId?: string; recordId?: string; openViewBuilder?: boolean }
 type BuilderPanel =
@@ -501,6 +503,7 @@ function AppContent() {
     if (!target) setBuilderPanel(undefined)
     const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId: homeOverride.workspace_id }
     const canvasState = { status: 'ready' as const, bootstrap: readyState.bootstrap, home: homeOverride }
+    const businessContextRelations = homeOverride.business_context_relations ?? []
     const isCurrent = () => !sessionInvalidated.current && canvasRequestVersion.current === requestVersion && builderRequestVersion.current === builderVersion && activeWorkspaceId.current === homeOverride.workspace_id
     setState({ ...canvasState, canvasLoading: true, canvas: undefined })
     try {
@@ -517,7 +520,7 @@ function AppContent() {
         : table ? views.find((item) => item.table_id === table.id) ?? null : null
       if (!table || !view) {
         if (target?.openViewBuilder) setBuilderPanel(undefined)
-        setState({ ...canvasState, canvas: { base, tables, views, table, view, schema: null, records: null, presentation: null } })
+        setState({ ...canvasState, canvas: { base, tables, views, table, view, schema: null, records: null, presentation: null, businessContextRelations } })
         return true
       }
       const [schema, presentation, records, builder, builderContext, detail] = await Promise.all([
@@ -534,7 +537,7 @@ function AppContent() {
       ])
       if (!isCurrent()) return false
       if (detail && detail.table_id !== table.id) return false
-      setState({ ...canvasState, canvas: { base, tables, views, table, view, schema, presentation: builder ? canvasPresentationFromV1Builder(builder) : presentation, serverQuerySummary: builder ? v1ServerQuerySummary(builder) : undefined, records, ...(detail ? { detail } : {}) } })
+      setState({ ...canvasState, canvas: { base, tables, views, table, view, schema, presentation: builder ? canvasPresentationFromV1Builder(builder) : presentation, serverQuerySummary: builder ? v1ServerQuerySummary(builder) : undefined, records, businessContextRelations, ...(detail ? { detail } : {}) } })
       if (target?.openViewBuilder) setBuilderPanel(builder && builderContext
         ? { mode: 'view', tableId: table.id, context: builderContext, builder }
         : undefined)
@@ -551,6 +554,24 @@ function AppContent() {
       }
       return false
     }
+  }
+
+  function openBusinessRecordReference(reference: { id: string; base_id: string; label: string }): void {
+    const base = readyState.home.recent_bases.find((item) => item.id === reference.base_id)
+    if (base) void openBase(base, { recordId: reference.id })
+  }
+
+  function openBusinessEmployeeReference(
+    trigger: HTMLElement,
+    employee: { id: string; name: string; base_id: string; base_name: string },
+  ): void {
+    const base = readyState.home.recent_bases.find((item) => item.id === employee.base_id)
+    if (!base) return
+    void (async () => {
+      if (await openBase(base)) {
+        await openDigitalEmployeeManagementForBase(trigger, base, employee.id)
+      }
+    })()
   }
 
   async function recoverTelegramDeepLink(destination?: TelegramDeepLinkDestination) {
@@ -680,8 +701,16 @@ function AppContent() {
   async function openDigitalEmployeeManagement(trigger: HTMLElement): Promise<void> {
     const base = readyState.canvas?.base
     if (!base) return
+    await openDigitalEmployeeManagementForBase(trigger, base, null)
+  }
+
+  async function openDigitalEmployeeManagementForBase(
+    trigger: HTMLElement,
+    base: BaseSummary,
+    selectedEmployeeId: string | null,
+  ): Promise<void> {
     digitalEmployeeManagementReturnFocus.current = trigger
-    await refreshDigitalEmployeeManagement(base.id, null)
+    await refreshDigitalEmployeeManagement(base.id, selectedEmployeeId)
   }
 
   async function refreshDigitalEmployeeManagement(baseId: string, selectedEmployeeId: string | null): Promise<void> {
@@ -691,7 +720,6 @@ function AppContent() {
     const isCurrent = () => !sessionInvalidated.current
       && digitalEmployeeManagementRequestVersion.current === requestVersion
       && activeWorkspaceId.current === workspaceId
-      && readyState.canvas?.base.id === baseId
     setDigitalEmployeeManagementPanel({ baseId, context: null, directory: null, detail: null, selectedEmployeeId, loading: true, failed: false })
     try {
       const [context, directory] = await Promise.all([
@@ -2707,7 +2735,7 @@ function AppContent() {
     ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} canCreateRecords={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role)} canManageDigitalEmployees={selectedWorkspace.capabilities.can_manage_digital_employees === true} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; closeDigitalEmployeeManagement(); abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={readyState.canvas.schema?.fields.length ? openCreateRecord : undefined} onCreateTable={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: canvas.table.id, viewId: canvas.view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (!canvas?.table) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id, canvas.view.id) }} onSaveTemplate={() => setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base })} onImportIntoBase={(trigger) => openBaseImport(readyState.canvas!.base, trigger)} onOpenDraftHub={(trigger) => { void openDraftEmployeeHub(trigger) }} onOpenDigitalEmployeeManagement={(trigger) => { void openDigitalEmployeeManagement(trigger) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
       : navigationRoute === 'bases'
         ? <BaseDirectory state={baseDirectory.state} bases={baseDirectory.bases} onOpenBase={(base) => { void openBase(base) }} onHome={() => selectNavigation('home')} onRetry={() => { void loadBaseDirectory() }} />
-        : <>{telegramRecoveryNotice}<WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={() => { void openTemplateImportHub() }} onOpenDraftHub={(trigger, draftId) => { void openDraftEmployeeHub(trigger, draftId) }} onOpenAssistantContext={(trigger) => { void openAssistantContext(trigger) }} onOpenTeamBot={(trigger) => { void openTeamBot(trigger) }} /></>
+        : <>{telegramRecoveryNotice}<WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={() => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={() => { void openTemplateImportHub() }} onOpenDraftHub={(trigger, draftId) => { void openDraftEmployeeHub(trigger, draftId) }} onOpenAssistantContext={(trigger) => { void openAssistantContext(trigger) }} onOpenTeamBot={(trigger) => { void openTeamBot(trigger) }} onOpenRecordReference={openBusinessRecordReference} onOpenEmployeeReference={openBusinessEmployeeReference} /></>
   const builderOverlay = builderPanel?.mode === 'base'
     ? <BuilderCreatePanel mode="base" onSubmit={(values, idempotencyKey) => createBase(values as { baseName: string; tableName: string }, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
     : builderPanel?.mode === 'table'
@@ -2768,6 +2796,7 @@ function AppContent() {
   const teamBotOverlay = teamBotPanel
     ? <TeamBotWorkbench
       contacts={teamBotPanel.contacts}
+      businessContextRelations={readyState.home.business_context_relations ?? []}
       context={teamBotPanel.context}
       selectedView={teamBotPanel.selectedView}
       summary={teamBotPanel.summary}

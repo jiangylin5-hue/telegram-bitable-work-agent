@@ -121,7 +121,7 @@ def test_stage06_live_draft_update_creates_draft_without_direct_record_write() -
     )
 
     assert response["action"] == "draft_update"
-    assert response["answer"] == "I prepared a status update draft."
+    assert response["answer"] == "已提出一个待确认草稿。"
     assert response["draft_id"] == str(uow.record_change_drafts[0].id)
     assert response["status"] == "pending_confirmation"
     assert record.values["status"] == "open"
