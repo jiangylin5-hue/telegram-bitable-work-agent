@@ -57,11 +57,11 @@
 
 ### Task 4: Seal, deploy, configure Bot main entry and accept
 
-**Files:** Modify `deploy/stage09-native/scripts/verify-release-layout.sh`, `deploy/stage09-native/scripts/verify-release-assets.sh`, `deploy/stage09-native/scripts/test-release-assets.sh`, `project-docs/08-implementation/STAGE_09_NATIVE_SERVER_DEPLOYMENT_PLAN.md`; create `project-docs/08-implementation/evidence/stage09-desktop-workspace-handoff-2026-07-23.md`.
+**Files:** Modify `deploy/stage09-native/nginx/stage09-p1-public-https.conf.template`, `deploy/stage09-native/scripts/test-native-public-ingress-assets.sh`, `deploy/stage09-native/scripts/verify-release-layout.sh`, `deploy/stage09-native/scripts/verify-release-assets.sh`, `deploy/stage09-native/scripts/test-release-assets.sh`, `project-docs/08-implementation/STAGE_09_NATIVE_SERVER_DEPLOYMENT_PLAN.md`; create `project-docs/08-implementation/evidence/stage09-desktop-workspace-handoff-2026-07-23.md`.
 
 **Interfaces:** release verifier requires `mini-app/dist/browser-handoff.html` and rejects embedded credential literals; runtime evidence stores only status/count/boolean results.
 
-- [ ] **Step 1: Write failing release check.** Require the handoff static asset and reject `tgWebAppData`/`ticket=` literals. Run `cd deploy/stage09-native && sh scripts/test-release-assets.sh`; expected failure before asset sealing.
+- [ ] **Step 1: Write failing release and ingress checks.** Require the handoff static asset and reject `tgWebAppData`/`ticket=` literals. Require an exact Nginx `browser-handoff.html` static route that returns `Cache-Control: no-store` and `Referrer-Policy: no-referrer`, rather than proxying the page to FastAPI. Run `cd deploy/stage09-native && sh scripts/test-release-assets.sh && sh scripts/test-native-public-ingress-assets.sh`; expected failure before asset sealing and route/header implementation.
 - [ ] **Step 2: Seal and deploy.** Build immutable native release, apply migration, activate through bounded readiness gate, then run real Mini App issue/exchange/browser-bootstrap smoke using only the bound user. Do not send messages, confirm drafts, invoke LLM, alter webhook or retire Docker.
 - [ ] **Step 3: Configure Bot entry.** Update only the single Bot menu button/Main Mini App URL/text. No webhook, allowlist, group membership or message write. Record a redacted configuration receipt.
 - [ ] **Step 4: Human acceptance.** User tests `全屏工作区` and `在浏览器打开工作台` in Telegram Desktop, then verifies browser-width Base, digital employee and customer-group navigation.

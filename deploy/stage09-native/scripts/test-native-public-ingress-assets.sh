@@ -41,6 +41,16 @@ assert_contains https-listen '    listen 443 ssl http2;' "$https_output"
 assert_contains https-certificate '    ssl_certificate /etc/letsencrypt/live/stage07.jiangtest1.online/fullchain.pem;' "$https_output"
 assert_contains https-certificate-key '    ssl_certificate_key /etc/letsencrypt/live/stage07.jiangtest1.online/privkey.pem;' "$https_output"
 assert_contains api-loopback '        proxy_pass http://127.0.0.1:18080;' "$https_output"
+assert_contains handoff-location '    location = /browser-handoff.html {' "$https_output"
+assert_contains handoff-static '        try_files /browser-handoff.html =404;' "$https_output"
+assert_contains handoff-no-store '        add_header Cache-Control "no-store" always;' "$https_output"
+assert_contains handoff-no-referrer '        add_header Referrer-Policy "no-referrer" always;' "$https_output"
+handoff_block=$(printf '%s\n' "$https_output" | awk '
+    /^    location = \/browser-handoff\.html \{$/ { in_block = 1; next }
+    in_block && /^    \}$/ { exit }
+    in_block { print }
+')
+printf '%s\n' "$handoff_block" | grep -Fq 'proxy_pass' && fail handoff-proxied-to-api
 printf '%s\n' 'https-render: PASS'
 
 assert_failure invalid-hostname env \

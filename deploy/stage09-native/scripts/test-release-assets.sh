@@ -34,6 +34,9 @@ grep -Fq 'static-assets: external-p1-b-required' "$layout" || fail external-stat
 grep -Fq "find \"\$release_root\" -type l" "$layout" || fail symlink-rejection
 grep -Fq 'realpath "$release_root"' "$layout" || fail canonical-release-root
 grep -Fq 'backend/alembic/versions/20260720_0032_stage08_knowledge_indexing.py' "$layout" || fail required-migration
+grep -Fq 'mini-app/dist/browser-handoff.html' "$layout" || fail required-browser-handoff
+grep -Fq 'handoff_asset="$release_root/mini-app/dist/browser-handoff.html"' "$layout" || fail browser-handoff-asset-binding
+grep -Fq "grep -Eq 'tgWebAppData|ticket=' \"\$handoff_asset\"" "$layout" || fail browser-handoff-credential-scan
 grep -Fq 'deploy/stage09-native/runtime/runtime.env.example' "$layout" || fail required-runtime-example
 grep -Fq 'deploy/stage09-native/nginx/stage09-p1.conf.template' "$layout" || fail required-nginx-template
 grep -Fq 'deploy/stage09-native/nginx/stage09-p1-public-http.conf.template' "$layout" || fail required-public-http-template
@@ -169,6 +172,14 @@ do
     esac
 done
 
+# The browser handoff page is a separately deployed static artifact.  Give
+# this dynamic fixture a safe copy so the assertions below prove that the
+# sealed-release validator rejects both its absence and credential-like
+# literals, instead of merely checking validator source text.
+handoff_asset="$release_root/mini-app/dist/browser-handoff.html"
+mkdir -p "$(dirname -- "$handoff_asset")" || fail handoff-asset-directory
+printf '%s\n' '<!doctype html><meta name="referrer" content="no-referrer">' > "$handoff_asset" || fail handoff-asset
+
 crlf_probe="$release_root/deploy/stage09-native/scripts/activate-public-ingress.sh"
 printf '\r\n' >> "$crlf_probe" || fail crlf-probe-write
 crlf_output=$(sh "$fixture_scripts/verify-release-layout.sh" "$release_root" "$artifact_id" 2>&1) && fail crlf-shell-script-accepted
@@ -190,6 +201,18 @@ clean_layout_output=$(sh "$fixture_scripts/verify-release-layout.sh" "$release_r
 [ "$clean_layout_output" = "release-layout: pass
 artifact-id: $artifact_id
 static-assets: external-p1-b-required" ] || fail clean-layout-output
+
+rm -f "$handoff_asset" || fail handoff-asset-remove
+missing_handoff_output=$(sh "$fixture_scripts/verify-release-layout.sh" "$release_root" "$artifact_id" 2>&1) && fail missing-browser-handoff-accepted
+[ "$missing_handoff_output" = 'release-layout: fail
+artifact-id: unavailable' ] || fail missing-browser-handoff-output
+
+printf '%s\n' '<!doctype html><meta name="referrer" content="no-referrer">' > "$handoff_asset" || fail handoff-asset-restore
+printf '%s\n' 'ticket=' >> "$handoff_asset" || fail handoff-literal-write
+credential_handoff_output=$(sh "$fixture_scripts/verify-release-layout.sh" "$release_root" "$artifact_id" 2>&1) && fail credential-browser-handoff-accepted
+[ "$credential_handoff_output" = 'release-layout: fail
+artifact-id: unavailable' ] || fail credential-browser-handoff-output
+printf '%s\n' '<!doctype html><meta name="referrer" content="no-referrer">' > "$handoff_asset" || fail handoff-asset-clean
 
 manifest_one="$fixture_root/manifest-one.sha256"
 manifest_two="$fixture_root/manifest-two.sha256"

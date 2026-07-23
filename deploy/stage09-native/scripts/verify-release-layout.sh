@@ -32,6 +32,7 @@ resolved_release_root=$(realpath "$release_root") || fail
 for required in \
     backend/alembic.ini \
     backend/alembic/versions/20260720_0032_stage08_knowledge_indexing.py \
+    mini-app/dist/browser-handoff.html \
     deploy/stage09-native/runtime/runtime.env.example \
     deploy/stage09-native/nginx/stage09-p1.conf.template \
     deploy/stage09-native/nginx/stage09-p1-public-http.conf.template \
@@ -65,6 +66,14 @@ for required in \
 do
     [ -f "$release_root/$required" ] && [ ! -L "$release_root/$required" ] || fail
 done
+
+# The browser handoff is a static page, not an API response.  Its sealed
+# production artifact must never embed Telegram init-data or a ticket-shaped
+# credential literal.
+handoff_asset="$release_root/mini-app/dist/browser-handoff.html"
+if grep -Eq 'tgWebAppData|ticket=' "$handoff_asset"; then
+    fail
+fi
 
 # systemd executes the isolation guard directly from the sealed release. Keep
 # every shipped deployment script executable so a Windows archive cannot turn

@@ -25,6 +25,7 @@ grep -Fq 'realpath "$release_root"' "$layout" || fail
 for required_path in \
     backend/alembic.ini \
     backend/alembic/versions/20260720_0032_stage08_knowledge_indexing.py \
+    mini-app/dist/browser-handoff.html \
     deploy/stage09-native/runtime/runtime.env.example \
     deploy/stage09-native/nginx/stage09-p1.conf.template \
     deploy/stage09-native/nginx/stage09-p1-public-http.conf.template \
@@ -55,6 +56,8 @@ for required_path in \
 do
     grep -Fq "$required_path" "$layout" || fail
 done
+grep -Fq 'handoff_asset="$release_root/mini-app/dist/browser-handoff.html"' "$layout" || fail
+grep -Fq "grep -Eq 'tgWebAppData|ticket=' \"\$handoff_asset\"" "$layout" || fail
 grep -Fq -- "-name '.env'" "$layout" || fail
 grep -Fq -- "-name 'runtime.env'" "$layout" || fail
 grep -Fq -- "-name '.git'" "$layout" || fail
@@ -113,6 +116,10 @@ grep -Fq 'root /var/www/stage09-p1/acme;' "$http_template" || fail
 grep -Fq 'return 308 https://$host$request_uri;' "$http_template" || fail
 grep -Fq 'listen 443 ssl http2;' "$https_template" || fail
 grep -Fq 'proxy_pass http://127.0.0.1:18080;' "$https_template" || fail
+grep -Fq 'location = /browser-handoff.html {' "$https_template" || fail
+grep -Fq 'try_files /browser-handoff.html =404;' "$https_template" || fail
+grep -Fq 'add_header Cache-Control "no-store" always;' "$https_template" || fail
+grep -Fq 'add_header Referrer-Policy "no-referrer" always;' "$https_template" || fail
 if grep -Eiq 'allow|deny|docker|caddy|stage03|stage07|5432|6379' "$http_template" "$https_template"; then fail; fi
 grep -Fqx 'PATH=/usr/sbin:/usr/bin:/sbin:/bin' "$readiness" || fail
 grep -Fqx 'max_retry_attempts=20' "$readiness" || fail
