@@ -69,6 +69,14 @@ npm.cmd run build
 - 本次发布未迁移数据库、未重启 API/worker/outbox/Redis、未改 Telegram webhook/allowlist、未调用 LLM、未写业务记录，也未触碰 Stage03。
 - 本地和服务器 `/tmp` 的上传压缩包均已在验证后清理；r24 静态目录、r25 当前静态目录及 Nginx 配置前备份保留为回退证据。
 
+### 3.1 Telegram 历史入口兼容与 TLS 修复
+
+- 用户实际 Telegram 按钮仍通过 BotFather 的 Main Mini App 配置打开 `stage07.jiangtest1.online`。这不是旧前端版本仍在运行；它是 Telegram 入口域名尚未迁移，而 r25 原生 Nginx 在上一轮只保留了 `stage09.jiangtest1.online` 的 TLS server block。
+- 因此 Telegram 在加载任何 JavaScript 之前就收到 `NET::ERR_CERT_COMMON_NAME_INVALID`：`stage07` 请求错误地拿到了 `stage09` 证书。此时页面无法调用 `Telegram.WebApp.ready()`、`expand()` 或浏览器交接，窗口看起来仍是 Telegram 的紧凑容器。
+- 已保留当前 r25 静态目录和 API 反向代理，并使用 release 内的既有 renderer 为两个域名分别生成 HTTP/HTTPS server block：`stage09` 使用它自己的 Let’s Encrypt 证书，`stage07` 使用它自己的 Let’s Encrypt 证书。两者服务同一套 `/var/www/stage09-p1/current` 和 `127.0.0.1:18080`，不恢复 Stage07 容器、数据库或历史代码。
+- 变更前已保存 root-only Nginx 配置备份；新配置先通过 `nginx -t` 再 reload，临时渲染文件已清理。公网复验结果：`https://stage07.jiangtest1.online/`、`https://stage07.jiangtest1.online/health`、`https://stage09.jiangtest1.online/`、`https://stage09.jiangtest1.online/health` 均为 TLS 正常校验的 `200`；每个 SNI 返回的 CN/SAN 均与请求域名一致。
+- 这修复了历史 Bot 按钮的可用性，但不把“真实 Telegram initData 登录、浏览器交接与业务查询”描述为已验收。该最后一段必须由用户重新打开 Mini App 后在真实 Telegram 客户端完成。
+
 ## 4. 未被掩盖的后续缺口
 
 | 项目 | 现状 | 下一步 |
