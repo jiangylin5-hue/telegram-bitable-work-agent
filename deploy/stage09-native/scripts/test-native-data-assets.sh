@@ -13,6 +13,8 @@ fail() {
     exit 1
 }
 
+grep -Fqx 'ExecStart=/opt/stage09-p1/current-venv/bin/alembic upgrade 20260723_0033' "$asset_root/systemd/stage09-p1-migrate.service" || fail migration-browser-handoff-target
+
 copy_assets() {
     destination=$1
     mkdir -p "$destination"
@@ -94,7 +96,7 @@ printf '%s\n' 'UMask=' >> "$tmpdir/redis-empty-reset/systemd/stage09-p1-redis.se
 assert_verifier_rejects 'redis-empty-reset' "$tmpdir/redis-empty-reset"
 
 copy_assets "$tmpdir/migration-head"
-sed -i 's/upgrade 20260720_0032/upgrade head/' "$tmpdir/migration-head/systemd/stage09-p1-migrate.service"
+sed -i 's/upgrade 20260723_0033/upgrade head/' "$tmpdir/migration-head/systemd/stage09-p1-migrate.service"
 assert_verifier_rejects 'migration-head' "$tmpdir/migration-head"
 
 copy_assets "$tmpdir/stage03"
