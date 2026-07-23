@@ -88,3 +88,25 @@
 | Telegram/LLM/Provider call | `0` |
 
 下一步必须由用户在 Telegram 中关闭现有 Mini App 后重新点击“打开工作区”，确认工作区可见且关系导航可用。该人工验收成功后，才可单独决定是否激活 r23；旧资源 retirement 和任何回收仍需要后续独立步骤，不能由本次 HTTPS 恢复自动触发。
+
+## 6. 独立复核更正与最小修复
+
+独立复核正确指出本证据此前没有单独断言 HTTP listener，且此前写入站点文件时仅保留 HTTPS renderer 输出。因此修复前，原生 Nginx 仅监听 `443`，外部 HTTP root 与 ACME probe 都为 `000`；此前“native TLS listener”不能替代“HTTP/ACME 可用”的证据。
+
+复核还提出 source/venv `current` 目标可能不存在。该项经新的只读、严格解析检查后**未被证实**：三个链接均可解析到实际存在的同一 r22，r22 source layout、venv Python、static index 均存在，且三个 Stage09 unit 都引用 `current-venv`。因此没有猜测性重链，也没有为此重启服务。
+
+根因是站点文件在 HTTP-only 证书签发后被 HTTPS-only renderer 输出覆盖。最小修复是使用已有 renderer 分别生成 HTTP 和 HTTPS server block，并在同一个站点文件中按 HTTP、HTTPS 顺序组合；不改变 renderer、release、unit 或业务运行时。
+
+| Check | 修复前 | 修复后 |
+| --- | --- | --- |
+| r22 source/venv/static target 真实存在且同版本 | 未以严格解析证据记录 | `true` |
+| Nginx HTTP `80` listener | `false` | `true` |
+| Nginx HTTPS `443` listener | `true` | `true` |
+| 外部 HTTP root | `000` | `308` |
+| 外部 HTTP ACME probe | `000` | `200` |
+| 公网 HTTPS health | `200` | `200` |
+| 公网 HTTPS root/static asset | `200` / `200` | `200` / `200` |
+| Stage09 API/worker/outbox/Redis/Nginx | `active` | `active` |
+| r23 switch / legacy resource deletion | `0` / `0` | `0` / `0` |
+
+此修复的命令账本为：只读 link/release/unit/listener/HTTP 状态检查 `0`；combined config `nginx -t`、reload 与所有修复后 HTTP/HTTPS 检查均为 `0`。ACME probe 保持固定、非敏感内容并由 Nginx worker 可读。仍未执行 r23 activation、retirement、release cleanup、数据库/Redis 写入或 Telegram/LLM/Provider 调用。
