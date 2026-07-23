@@ -4,7 +4,7 @@
 # runtime URL or a config-module fallback.  The placeholder is not a secret.
 set -eu
 
-target_revision=20260720_0032
+target_revision=20260723_0033
 offline_database_url='postgresql+psycopg://stage09_p1:offline-placeholder@127.0.0.1:5432/stage09_p1'
 
 fail() {

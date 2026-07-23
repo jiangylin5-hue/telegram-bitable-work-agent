@@ -32,6 +32,7 @@ resolved_release_root=$(realpath "$release_root") || fail
 for required in \
     backend/alembic.ini \
     backend/alembic/versions/20260720_0032_stage08_knowledge_indexing.py \
+    backend/alembic/versions/20260723_0033_mini_app_browser_handoffs.py \
     mini-app/dist/browser-handoff.html \
     deploy/stage09-native/runtime/runtime.env.example \
     deploy/stage09-native/nginx/stage09-p1.conf.template \

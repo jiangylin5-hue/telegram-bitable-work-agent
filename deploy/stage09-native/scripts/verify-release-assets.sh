@@ -25,6 +25,7 @@ grep -Fq 'realpath "$release_root"' "$layout" || fail
 for required_path in \
     backend/alembic.ini \
     backend/alembic/versions/20260720_0032_stage08_knowledge_indexing.py \
+    backend/alembic/versions/20260723_0033_mini_app_browser_handoffs.py \
     mini-app/dist/browser-handoff.html \
     deploy/stage09-native/runtime/runtime.env.example \
     deploy/stage09-native/nginx/stage09-p1.conf.template \
@@ -73,6 +74,7 @@ grep -Fq 'python_bin="$venv_root/bin/python"' "$migration" || fail
 grep -Fq 'resolved_python=$(realpath "$python_bin") || fail' "$migration" || fail
 grep -Fq '"$venv_root"/*|/usr/bin/python3|/usr/bin/python3.12' "$migration" || fail
 grep -Fq 'for utility in env grep mktemp mv realpath rm; do' "$migration" || fail
+grep -Fqx 'target_revision=20260723_0033' "$migration" || fail
 if grep -Fq '[ ! -L "$python_bin" ]' "$migration"; then fail; fi
 if grep -Fq 'python_bin="$resolved_python"' "$migration"; then fail; fi
 if grep -Eq 'runtime\.env|source[[:space:]]|ads_agent' "$migration"; then fail; fi
@@ -88,6 +90,7 @@ grep -Fq 'migration-external-python-symlink-output-created' "$test_script" || fa
 grep -Fq 'missing-critical-unit-layout-accepted' "$test_script" || fail
 grep -Fq 'missing-critical-unit-manifest-accepted' "$test_script" || fail
 grep -Fq 'stage09-p1-api.service' "$test_script" || fail
+grep -Fqx 'ExecStart=/opt/stage09-p1/current-venv/bin/alembic upgrade 20260723_0033' "$script_dir/../systemd/stage09-p1-migrate.service" || fail
 if grep -Eq 'cat[[:space:]]*>|<<' "$test_script"; then fail; fi
 grep -Fqx 'project_name=telegram-bitable-stage03' "$retire" || fail
 grep -Fqx 'PATH=/usr/sbin:/usr/bin:/sbin:/bin' "$retire" || fail
