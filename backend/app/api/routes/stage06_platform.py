@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any, TypeVar
 from uuid import UUID
 
@@ -9,8 +10,11 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_stage06_request_identity
 from app.core.database import get_session
+from app.core.config import get_settings
 from app.core.errors import error_detail
 from app.schemas.stage06_platform import (
+    BrowserHandoffExchangeRequest,
+    BrowserHandoffIssueResponse,
     BaseResponse,
     BaseListResponse,
     BaseSummaryResponse,
@@ -66,7 +70,13 @@ from app.services.stage06_authorization import (
     workspace_id_for_table,
     workspace_id_for_view,
 )
-from app.services.stage06_identity import Stage06RequestIdentity
+from app.services.stage06_identity import Stage06IdentityError, Stage06RequestIdentity
+from app.services.stage09_browser_handoffs import (
+    BrowserHandoffError,
+    HANDOFF_TTL,
+    exchange_browser_handoff,
+    issue_browser_handoff,
+)
 from app.services.stage06_pagination import Stage06PaginationError
 from app.services.stage06_platform import (
     PlatformValidationError,
@@ -129,6 +139,52 @@ def mini_app_bootstrap_endpoint(
     uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
 ) -> MiniAppBootstrapResponse:
     return MiniAppBootstrapResponse(**get_mini_app_bootstrap(uow, identity))
+
+
+@router.post(
+    "/mini-app/browser-handoffs",
+    response_model=BrowserHandoffIssueResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def issue_browser_handoff_endpoint(
+    identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> BrowserHandoffIssueResponse:
+    now = datetime.now(UTC)
+    try:
+        ticket = issue_browser_handoff(uow, identity, now)
+        _commit_if_sqlalchemy(uow)
+    except (Stage06IdentityError, BrowserHandoffError) as exc:
+        _rollback_if_sqlalchemy(uow)
+        raise _http_error(exc) from exc
+    return BrowserHandoffIssueResponse(ticket=ticket, expires_at=now + HANDOFF_TTL)
+
+
+@router.post(
+    "/mini-app/browser-handoff-exchanges",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def exchange_browser_handoff_endpoint(
+    request: BrowserHandoffExchangeRequest,
+    response: Response,
+    uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
+) -> None:
+    try:
+        token = exchange_browser_handoff(uow, request.ticket, datetime.now(UTC))
+        _commit_if_sqlalchemy(uow)
+    except BrowserHandoffError as exc:
+        _rollback_if_sqlalchemy(uow)
+        raise _http_error(exc) from exc
+    response.set_cookie(
+        key=get_settings().mini_app_browser_session_cookie_name,
+        value=token,
+        secure=True,
+        httponly=True,
+        samesite="lax",
+        path="/",
+    )
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Referrer-Policy"] = "no-referrer"
 
 
 @router.get(

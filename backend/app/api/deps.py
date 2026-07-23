@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.core.database import get_session
@@ -21,6 +21,10 @@ from app.services.stage07_telegram_mini_app_identity import (
     ValidatedTelegramMiniAppLaunch,
     resolve_telegram_request_identity,
     validate_telegram_mini_app_init_data,
+)
+from app.services.stage09_browser_handoffs import (
+    BrowserHandoffError,
+    resolve_browser_session_identity,
 )
 
 
@@ -74,6 +78,7 @@ def get_required_telegram_mini_app_launch(
 
 
 def get_stage06_request_identity(
+    request: Request,
     x_stage06_user_id: str | None = Header(
         default=None,
         alias="X-Stage06-User-Id",
@@ -87,11 +92,20 @@ def get_stage06_request_identity(
         settings = get_settings()
         if launch is not None:
             return resolve_telegram_request_identity(uow, launch)
+        browser_session_token = request.cookies.get(
+            settings.mini_app_browser_session_cookie_name
+        )
+        if browser_session_token is not None:
+            return resolve_browser_session_identity(
+                uow,
+                browser_session_token,
+                datetime.now(UTC),
+            )
         return resolve_stage06_request_identity(
             settings,
             development_user_id=x_stage06_user_id,
         )
-    except Stage06IdentityError as exc:
+    except (Stage06IdentityError, BrowserHandoffError) as exc:
         raise HTTPException(
             status_code=getattr(exc, "status_code", 401),
             detail=error_detail(exc.code, str(exc)),

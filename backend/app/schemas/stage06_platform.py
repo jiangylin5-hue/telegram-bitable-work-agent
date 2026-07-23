@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat, StrictInt, StrictStr, model_validator
@@ -52,6 +53,15 @@ class MiniAppWorkspaceResponse(BaseModel):
 class MiniAppBootstrapResponse(BaseModel):
     identity: MiniAppIdentityResponse
     workspaces: list[MiniAppWorkspaceResponse]
+
+
+class BrowserHandoffIssueResponse(BaseModel):
+    ticket: str
+    expires_at: datetime
+
+
+class BrowserHandoffExchangeRequest(BaseModel):
+    ticket: str = Field(min_length=1, max_length=256)
 
 
 class MiniAppBaseSummaryResponse(BaseModel):

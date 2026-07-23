@@ -8,6 +8,7 @@ Stage06IdentitySource = Literal[
     "development_header",
     "verified_adapter",
     "telegram_binding",
+    "browser_session",
 ]
 
 

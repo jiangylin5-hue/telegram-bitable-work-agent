@@ -1,7 +1,9 @@
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
 
+from app.api import deps
 from app.api.routes.stage06_platform import get_stage06_platform_uow
 from app.main import create_app
 from app.models.stage06_platform import Stage06TelegramBinding, WorkspaceMember
@@ -17,14 +19,17 @@ from app.services.stage06_platform import (
     create_table,
     create_workspace,
 )
+from app.services.stage06_identity import Stage06RequestIdentity
+from app.services.stage09_browser_handoffs import issue_browser_handoff
 
 
 def test_mini_app_bootstrap_only_returns_active_memberships_for_identity() -> None:
     app = create_app()
     uow = InMemoryStage06PlatformUnitOfWork()
     app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[deps.get_stage06_identity_uow] = lambda: uow
 
-    with TestClient(app) as client:
+    with TestClient(app, base_url="https://testserver") as client:
         client.headers["X-Stage06-User-Id"] = "owner-1"
         workspace_id = client.post(
             "/workspaces",
@@ -66,6 +71,43 @@ def test_mini_app_bootstrap_only_returns_active_memberships_for_identity() -> No
                 },
             }
         ],
+    }
+
+
+def test_browser_handoff_exchange_sets_secure_cookie_and_bootstrap_uses_it() -> None:
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[deps.get_stage06_identity_uow] = lambda: uow
+    ticket = issue_browser_handoff(
+        uow,
+        Stage06RequestIdentity(
+            user_id="owner-1",
+            source="telegram_binding",
+            telegram_user_id="telegram-owner-1",
+        ),
+        datetime.now(UTC),
+    )
+
+    with TestClient(app, base_url="https://testserver") as client:
+        response = client.post(
+            "/mini-app/browser-handoff-exchanges",
+            json={"ticket": ticket},
+        )
+        bootstrap = client.get("/mini-app/bootstrap")
+
+    assert response.status_code == 204
+    assert "Secure" in response.headers["set-cookie"]
+    assert "HttpOnly" in response.headers["set-cookie"]
+    assert "samesite=lax" in response.headers["set-cookie"].lower()
+    assert "Path=/" in response.headers["set-cookie"]
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["referrer-policy"] == "no-referrer"
+    assert ticket not in response.text
+    assert bootstrap.status_code == 200
+    assert bootstrap.json()["identity"] == {
+        "user_id": "owner-1",
+        "source": "browser_session",
     }
 
 

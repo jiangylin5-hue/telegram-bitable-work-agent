@@ -113,3 +113,36 @@ class Stage07TelegramDeepLinkDelivery(UuidPrimaryKeyMixin, TimestampMixin, Base)
     )
     telegram_message_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     outcome_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+
+
+class MiniAppBrowserHandoff(UuidPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "mini_app_browser_handoffs"
+    __table_args__ = (
+        UniqueConstraint(
+            "ticket_hash",
+            name="uq_mini_app_browser_handoffs_ticket_hash",
+        ),
+    )
+
+    ticket_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    telegram_user_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class MiniAppBrowserSession(UuidPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "mini_app_browser_sessions"
+    __table_args__ = (
+        UniqueConstraint(
+            "token_hash",
+            name="uq_mini_app_browser_sessions_token_hash",
+        ),
+    )
+
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    telegram_user_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -25,6 +25,7 @@ class Settings:
     )
     telegram_bot_token: str | None = None
     telegram_mini_app_init_max_age_seconds: int = 300
+    mini_app_browser_session_cookie_name: str = "mini_app_browser_session"
     telegram_webhook_secret: str | None = None
     telegram_allowed_chat_ids: tuple[str, ...] = ()
     telegram_allowed_user_ids: tuple[str, ...] = ()
