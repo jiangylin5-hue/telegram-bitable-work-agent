@@ -137,10 +137,10 @@ def provision_first_workspace(
         owner_user_id=member_user_id,
         actor=actor,
     )
-    owner_member = next(
-        member
-        for member in uow.list_workspace_members(workspace.id)
-        if member.user_id == member_user_id and member.status == "active"
+    owner_member = _created_owner_member(
+        uow,
+        workspace_id=workspace.id,
+        member_user_id=member_user_id,
     )
     base = create_base(
         uow,
@@ -396,6 +396,23 @@ def _opaque_member_user_id(telegram_user_id: str) -> str:
 
 def _workspace_exists(uow: SqlAlchemyStage06PlatformUnitOfWork) -> bool:
     return uow.session.scalar(select(Workspace.id).limit(1)) is not None
+
+
+def _created_owner_member(
+    uow: SqlAlchemyStage06PlatformUnitOfWork,
+    *,
+    workspace_id: UUID,
+    member_user_id: str,
+):
+    uow.session.flush()
+    members = [
+        member
+        for member in uow.list_workspace_members(workspace_id)
+        if member.user_id == member_user_id and member.status == "active"
+    ]
+    if len(members) != 1:
+        raise ProvisioningTargetError("created_owner_member_unavailable")
+    return members[0]
 
 
 def main() -> int:

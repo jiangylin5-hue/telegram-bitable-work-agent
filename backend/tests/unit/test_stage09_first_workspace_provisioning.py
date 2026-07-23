@@ -1,5 +1,6 @@
 from scripts.stage09_first_workspace_provisioning import (
     ProvisioningTargetError,
+    _created_owner_member,
     _workspace_exists,
     build_provisioning_receipt,
     parse_single_private_target,
@@ -21,6 +22,29 @@ class _WorkspaceProbeUow:
         self.session = _WorkspaceProbeSession(value)
 
 
+class _FlushProbeSession:
+    def __init__(self) -> None:
+        self.flush_calls = 0
+
+    def flush(self) -> None:
+        self.flush_calls += 1
+
+
+class _Member:
+    def __init__(self, user_id: str, status: str) -> None:
+        self.user_id = user_id
+        self.status = status
+
+
+class _MemberProbeUow:
+    def __init__(self, members: list[_Member]) -> None:
+        self.session = _FlushProbeSession()
+        self.members = members
+
+    def list_workspace_members(self, workspace_id: object) -> list[_Member]:
+        return self.members
+
+
 def test_workspace_existence_probe_uses_sqlalchemy_session_not_a_nonexistent_uow_list_method() -> None:
     empty = _WorkspaceProbeUow(None)
     occupied = _WorkspaceProbeUow(object())
@@ -29,6 +53,14 @@ def test_workspace_existence_probe_uses_sqlalchemy_session_not_a_nonexistent_uow
     assert _workspace_exists(occupied) is True
     assert empty.session.calls == 1
     assert occupied.session.calls == 1
+
+
+def test_created_owner_member_flushes_the_pending_workspace_member_before_reading() -> None:
+    owner = _Member("owner-1", "active")
+    uow = _MemberProbeUow([owner])
+
+    assert _created_owner_member(uow, workspace_id=object(), member_user_id="owner-1") is owner
+    assert uow.session.flush_calls == 1
 
 
 def test_parse_single_private_target_accepts_one_persisted_private_marker() -> None:
