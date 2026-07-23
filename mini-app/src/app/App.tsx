@@ -22,7 +22,7 @@ import { TemplateImportHub } from './TemplateImportHub'
 import { ViewBuilderPanel } from './ViewBuilderPanel'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
 import { clearAllProtectedQueries, clearAssistantContextQueries, clearDigitalEmployeeManagementQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTeamBotQueries, clearTelegramDeepLinkQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, digitalEmployeeManagementKeys, draftEmployeeKeys, governanceKeys, governanceWriteKeys, navigationKeys, protectedQueryKey, relationCandidateQueryKey, teamBotKeys, templateImportKeys, viewBuilderKeys } from './protectedQuery'
-import { readTelegramMiniAppLaunch, type TelegramMiniAppLaunch } from './telegram-mini-app'
+import { prepareTelegramMiniAppViewport, readTelegramMiniAppLaunch, type TelegramMiniAppLaunch } from './telegram-mini-app'
 import type { GovernanceAuditPage, GovernanceMemberPage } from './governance-types'
 import type { GovernanceEditableMemberPage, GovernanceFieldPermissionPage, GovernanceFieldPermissionPolicy } from './governance-write-types'
 import type { AssistantContextPage, AssistantSelectedView, CurrentCanvasInvocationContext, S5Contact, S5DraftDetail, S5InvocationRequest, S5InvocationResult } from './draft-employee-types'
@@ -170,6 +170,9 @@ export function App() {
 function AppContent() {
   const queryClient = useQueryClient()
   const [state, setState] = useState<AppState>({ status: 'loading' })
+  useEffect(() => {
+    prepareTelegramMiniAppViewport()
+  }, [])
   const telegramLaunch = useRef<TelegramMiniAppLaunch | null | undefined>(undefined)
   if (telegramLaunch.current === undefined) {
     telegramLaunch.current = readTelegramMiniAppLaunch()

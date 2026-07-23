@@ -1,13 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api, setTelegramInitData } from '../app/api'
-import { readTelegramMiniAppLaunch } from '../app/telegram-mini-app'
+import { prepareTelegramMiniAppViewport, readTelegramMiniAppLaunch } from '../app/telegram-mini-app'
 
 type TelegramWindow = Window & {
   Telegram?: {
     WebApp?: {
       initData?: string
       initDataUnsafe?: { start_param?: unknown; user?: { id: unknown } }
+      ready?: () => void
+      expand?: () => void
     }
   }
 }
@@ -19,6 +21,20 @@ afterEach(() => {
 })
 
 describe('Telegram Mini App runtime adapter', () => {
+  it('expands the Telegram host viewport without treating host data as identity', () => {
+    const ready = vi.fn()
+    const expand = vi.fn()
+    ;(window as TelegramWindow).Telegram = { WebApp: { ready, expand } }
+
+    expect(prepareTelegramMiniAppViewport()).toBe(true)
+    expect(ready).toHaveBeenCalledTimes(1)
+    expect(expand).toHaveBeenCalledTimes(1)
+  })
+
+  it('does nothing when the page is opened outside Telegram', () => {
+    expect(prepareTelegramMiniAppViewport()).toBe(false)
+  })
+
   it('reads only raw initData and the untrusted start transport hint from memory', () => {
     ;(window as TelegramWindow).Telegram = {
       WebApp: {
