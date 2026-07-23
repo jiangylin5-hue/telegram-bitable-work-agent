@@ -247,8 +247,14 @@ def commit_import_endpoint(
             response_ref=response.model_dump(),
         )
     except (PlatformValidationError, Stage06AuthorizationError) as exc:
-        _commit_if_sqlalchemy(uow)
+        _rollback_if_sqlalchemy(uow)
         raise _http_error(exc) from exc
+    except IntegrityError as exc:
+        _rollback_if_sqlalchemy(uow)
+        raise HTTPException(
+            status_code=409,
+            detail=error_detail("import_table_key_conflict", "import_table_key_conflict"),
+        ) from exc
     _commit_if_sqlalchemy(uow)
     return response
 
@@ -308,6 +314,12 @@ def _commit_if_sqlalchemy(uow: Stage06TemplateImportUnitOfWork) -> None:
         session.commit()
 
 
+def _rollback_if_sqlalchemy(uow: Stage06TemplateImportUnitOfWork) -> None:
+    session = getattr(uow, "session", None)
+    if session is not None:
+        session.rollback()
+
+
 def _begin_and_reserve(
     uow: Stage06TemplateImportUnitOfWork,
     *,
@@ -354,7 +366,11 @@ def _http_error(exc: Exception) -> HTTPException:
     code = exc.code if isinstance(exc, PlatformValidationError) else "invalid_request"
     if code.endswith("_not_found"):
         status_code = 404
-    elif code in {"idempotency_conflict", "idempotency_in_progress"}:
+    elif code in {
+        "idempotency_conflict",
+        "idempotency_in_progress",
+        "import_table_key_conflict",
+    }:
         status_code = 409
     else:
         status_code = 422

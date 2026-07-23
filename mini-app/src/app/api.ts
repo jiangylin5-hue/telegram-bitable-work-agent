@@ -263,6 +263,7 @@ export type SafeApiErrorCode =
   | 'unsupported_field_type'
   | 'resource_scope_mismatch'
   | 'import_job_invalid_state'
+  | 'import_table_key_conflict'
   | 'template_not_found'
   | 'idempotency_conflict'
   | 'idempotency_in_progress'
@@ -316,6 +317,7 @@ const safeApiErrorCodes = new Set<SafeApiErrorCode>([
   'unsupported_field_type',
   'resource_scope_mismatch',
   'import_job_invalid_state',
+  'import_table_key_conflict',
   'template_not_found',
   'idempotency_conflict',
   'idempotency_in_progress',

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { expect, test, vi } from 'vitest'
 
+import { ApiError } from '../app/api'
 import { ImportWizard } from '../app/ImportWizard'
 
 test('sends CSV text, renders only server preview and commits scalar mapping', async () => {
@@ -39,4 +40,52 @@ test('rejects unsupported file names before content leaves the browser', async (
 
   expect(await screen.findByRole('alert')).toHaveTextContent('仅支持 CSV 或 XLSX 文件。')
   expect(onCreatePreview).not.toHaveBeenCalled()
+})
+
+test('keeps the preview editable after a table-key conflict', async () => {
+  const file = new File(['Name\nAda\n'], 'customers.csv', { type: 'text/csv' })
+  Object.defineProperty(file, 'text', { value: () => Promise.resolve('Name\nAda\n') })
+  const onCreatePreview = vi.fn().mockResolvedValue({
+    id: 'job-1', workspaceId: 'workspace-1', baseId: 'base-1', sourceType: 'csv', status: 'awaiting_confirmation',
+    detectedSchema: [{ key: 'name', name: 'Name', fieldType: 'text' }],
+    previewRows: [{ name: 'Ada' }],
+    mapping: [{ sourceKey: 'name', targetKey: 'name', fieldType: 'text' }],
+  })
+  const onCommit = vi.fn().mockRejectedValue(new ApiError(409, 'import_table_key_conflict'))
+  render(<ImportWizard target={{ kind: 'base', workspaceId: 'workspace-1', baseId: 'base-1', baseName: 'CRM' }} onCreatePreview={onCreatePreview} onCommit={onCommit} onClose={vi.fn()} />)
+
+  fireEvent.change(screen.getByLabelText('选择导入文件'), { target: { files: [file] } })
+  fireEvent.click(screen.getByRole('button', { name: '生成预览' }))
+  await screen.findByText('Ada')
+  fireEvent.change(screen.getByLabelText('数据表名称'), { target: { value: 'Customers' } })
+  fireEvent.change(screen.getByLabelText('数据表 key'), { target: { value: 'customers' } })
+  fireEvent.click(screen.getByRole('button', { name: '确认创建数据表' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('数据表 key 已存在')
+  expect(screen.getByLabelText('数据表 key')).toBeEnabled()
+  expect(screen.queryByText('已创建数据表')).not.toBeInTheDocument()
+})
+
+test('shows a recoverable message for a generic import conflict', async () => {
+  const file = new File(['Name\nAda\n'], 'customers.csv', { type: 'text/csv' })
+  Object.defineProperty(file, 'text', { value: () => Promise.resolve('Name\nAda\n') })
+  const onCreatePreview = vi.fn().mockRejectedValue(new ApiError(409))
+  render(<ImportWizard target={{ kind: 'workspace', workspaceId: 'workspace-1' }} onCreatePreview={onCreatePreview} onCommit={vi.fn()} onClose={vi.fn()} />)
+
+  fireEvent.change(screen.getByLabelText('选择导入文件'), { target: { files: [file] } })
+  fireEvent.click(screen.getByRole('button', { name: '生成预览' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('请求发生冲突，请刷新后重试。')
+})
+
+test('shows a known import validation reason without raw API details', async () => {
+  const file = new File(['Name\nAda\n'], 'customers.csv', { type: 'text/csv' })
+  Object.defineProperty(file, 'text', { value: () => Promise.resolve('Name\nAda\n') })
+  const onCreatePreview = vi.fn().mockRejectedValue(new ApiError(422, 'import_missing_header'))
+  render(<ImportWizard target={{ kind: 'workspace', workspaceId: 'workspace-1' }} onCreatePreview={onCreatePreview} onCommit={vi.fn()} onClose={vi.fn()} />)
+
+  fireEvent.change(screen.getByLabelText('选择导入文件'), { target: { files: [file] } })
+  fireEvent.click(screen.getByRole('button', { name: '生成预览' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('导入文件缺少表头。')
 })

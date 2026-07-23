@@ -139,6 +139,70 @@ def test_stage06_template_import_api_imports_excel_after_preview_confirmation() 
     assert uow.records[0].values == {"title": "Launch", "due": "2026-07-10"}
 
 
+def test_stage06_template_import_commit_rejects_duplicate_table_key_without_new_resources() -> None:
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_template_import_uow] = lambda: uow
+    app.dependency_overrides[get_system_actor] = lambda: Actor(
+        actor_type="user",
+        actor_id="owner-1",
+        role="owner",
+    )
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "owner-1"
+        client.headers["Idempotency-Key"] = "duplicate-table-key"
+        workspace_id = client.post(
+            "/workspaces",
+            json={"name": "Acme", "owner_user_id": "owner-1"},
+        ).json()["id"]
+        base_response = client.post(
+            f"/workspaces/{workspace_id}/base-initializations",
+            json={"base_name": "CRM", "table_name": "Leads"},
+        )
+        base_id = base_response.json()["base"]["id"]
+        existing_table_response = client.post(
+            f"/bases/{base_id}/tables",
+            json={"name": "Customers", "key": "customers"},
+        )
+        import_response = client.post(
+            f"/workspaces/{workspace_id}/imports",
+            json={
+                "source_type": "csv",
+                "file_name": "customers.csv",
+                "content": "Name,Score\nAda,10\n",
+                "created_by_user_id": "owner-1",
+                "base_id": base_id,
+            },
+        )
+
+        tables_before = len(uow.tables)
+        fields_before = len(uow.fields)
+        records_before = len(uow.records)
+        commit_response = client.post(
+            f"/imports/{import_response.json()['id']}/commit",
+            json={
+                "base_name": "CRM",
+                "table_name": "Imported customers",
+                "table_key": "customers",
+                "field_mapping": [
+                    {"source_key": "name", "target_key": "name", "field_type": "text"},
+                    {"source_key": "score", "target_key": "score", "field_type": "number"},
+                ],
+            },
+        )
+
+    assert base_response.status_code == 201
+    assert existing_table_response.status_code == 200
+    assert import_response.status_code == 200
+    assert commit_response.status_code == 409
+    assert commit_response.json()["detail"]["code"] == "import_table_key_conflict"
+    assert len(uow.tables) == tables_before
+    assert len(uow.fields) == fields_before
+    assert len(uow.records) == records_before
+
+
 def _simple_xlsx_bytes(rows: list[list[str]]) -> bytes:
     sheet_rows = []
     for row_number, row in enumerate(rows, start=1):

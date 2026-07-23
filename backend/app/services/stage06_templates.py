@@ -282,6 +282,8 @@ def commit_import_job(
         if job.base_id is None
         else read_base(uow, job.base_id)
     )
+    if any(table.key == table_key for table in uow.list_tables(base.id)):
+        raise PlatformValidationError("import_table_key_conflict", table_key)
     table = create_table(uow, base.id, name=table_name, key=table_key, actor=actor)
     for item in mapping:
         create_field(
