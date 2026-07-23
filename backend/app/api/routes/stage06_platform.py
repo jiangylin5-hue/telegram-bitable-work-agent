@@ -174,7 +174,7 @@ def exchange_browser_handoff_endpoint(
         _commit_if_sqlalchemy(uow)
     except BrowserHandoffError as exc:
         _rollback_if_sqlalchemy(uow)
-        raise _http_error(exc) from exc
+        raise _browser_handoff_exchange_error() from exc
     response.set_cookie(
         key=get_settings().mini_app_browser_session_cookie_name,
         value=token,
@@ -1245,3 +1245,13 @@ def _http_error(
         status_code = 422
     message = exc.code if exc.code.startswith("view_") else str(exc)
     return HTTPException(status_code=status_code, detail=error_detail(exc.code, message))
+
+
+def _browser_handoff_exchange_error() -> HTTPException:
+    return HTTPException(
+        status_code=401,
+        detail=error_detail(
+            "browser_handoff_exchange_invalid",
+            "browser_handoff_exchange_invalid",
+        ),
+    )

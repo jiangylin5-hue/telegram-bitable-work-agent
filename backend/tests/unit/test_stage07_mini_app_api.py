@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
@@ -20,7 +20,10 @@ from app.services.stage06_platform import (
     create_workspace,
 )
 from app.services.stage06_identity import Stage06RequestIdentity
-from app.services.stage09_browser_handoffs import issue_browser_handoff
+from app.services.stage09_browser_handoffs import (
+    exchange_browser_handoff,
+    issue_browser_handoff,
+)
 
 
 def test_mini_app_bootstrap_only_returns_active_memberships_for_identity() -> None:
@@ -109,6 +112,55 @@ def test_browser_handoff_exchange_sets_secure_cookie_and_bootstrap_uses_it() -> 
         "user_id": "owner-1",
         "source": "browser_session",
     }
+
+
+def test_browser_handoff_exchange_hides_ticket_lifecycle_state() -> None:
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    identity = Stage06RequestIdentity(
+        user_id="owner-1",
+        source="telegram_binding",
+        telegram_user_id="telegram-owner-1",
+    )
+    now = datetime.now(UTC)
+    consumed_ticket = issue_browser_handoff(uow, identity, now)
+    exchange_browser_handoff(uow, consumed_ticket, now)
+    revoked_ticket = issue_browser_handoff(uow, identity, now)
+    uow._stage09_browser_handoffs[-1].revoked_at = now
+    expired_ticket = issue_browser_handoff(uow, identity, now)
+    uow._stage09_browser_handoffs[-1].expires_at = now - timedelta(seconds=1)
+
+    with TestClient(app) as client:
+        responses = [
+            client.post(
+                "/mini-app/browser-handoff-exchanges",
+                json={"ticket": ticket},
+            )
+            for ticket in (
+                consumed_ticket,
+                revoked_ticket,
+                expired_ticket,
+                "not-a-real-browser-handoff-ticket",
+            )
+        ]
+
+    expected_body = {
+        "detail": {
+            "code": "browser_handoff_exchange_invalid",
+            "message": "browser_handoff_exchange_invalid",
+        }
+    }
+    assert [response.status_code for response in responses] == [401, 401, 401, 401]
+    assert [response.json() for response in responses] == [expected_body] * 4
+    for response in responses:
+        for internal_code in (
+            "browser_handoff_consumed",
+            "browser_handoff_revoked",
+            "browser_handoff_expired",
+            "browser_handoff_invalid",
+        ):
+            assert internal_code not in response.text
 
 
 def test_workspace_home_returns_safe_base_and_draft_queue_models() -> None:
