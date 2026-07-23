@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import { WorkspaceLaunchControls } from '../app/WorkspaceLaunchControls'
+import '../styles.css'
 
 function browserWindow() {
   return {
@@ -48,6 +49,20 @@ test('exits fullscreen only from an explicit user click', () => {
   expect(onExitFullscreen).not.toHaveBeenCalled()
   fireEvent.click(screen.getByRole('button', { name: '退出全屏' }))
   expect(onExitFullscreen).toHaveBeenCalledTimes(1)
+})
+
+test.each([320, 375, 900])('keeps fullscreen controls in the mobile document flow and operable at %ipx', (width) => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
+  const onRequestFullscreen = vi.fn()
+  render(<WorkspaceLaunchControls telegramState={{ kind: 'windowed' }} onRequestFullscreen={onRequestFullscreen} onOpenBrowser={vi.fn()} />)
+
+  const requestButton = screen.getByRole('button', { name: '进入专注全屏' })
+  expect(requestButton).toBeVisible()
+  expect(screen.getByRole('button', { name: '在浏览器打开完整工作台' })).toBeVisible()
+  const controls = screen.getByRole('complementary', { name: '工作台打开方式' })
+  expect(getComputedStyle(controls).position).toBe('static')
+  fireEvent.click(requestButton)
+  expect(onRequestFullscreen).toHaveBeenCalledOnce()
 })
 
 test('does not render a browser workspace action without a real handoff callback', () => {

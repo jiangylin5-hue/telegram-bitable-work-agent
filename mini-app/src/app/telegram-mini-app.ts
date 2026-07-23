@@ -61,12 +61,16 @@ function isVersionAtLeast(webApp: TelegramWebApp, required: string): boolean {
  * presentation request, never a navigation, identity, or browser handoff.
  */
 export function requestTelegramMiniAppFullscreen(): 'requested' | 'unsupported' | 'already_fullscreen' {
-  if (typeof window === 'undefined') return 'unsupported'
-  const webApp = window.Telegram?.WebApp
-  if (!webApp?.requestFullscreen || !isVersionAtLeast(webApp, '8.0')) return 'unsupported'
-  if (webApp.isFullscreen) return 'already_fullscreen'
-  webApp.requestFullscreen()
-  return 'requested'
+  try {
+    if (typeof window === 'undefined') return 'unsupported'
+    const webApp = window.Telegram?.WebApp
+    if (!webApp?.requestFullscreen || !isVersionAtLeast(webApp, '8.0')) return 'unsupported'
+    if (webApp.isFullscreen) return 'already_fullscreen'
+    webApp.requestFullscreen()
+    return 'requested'
+  } catch {
+    return 'unsupported'
+  }
 }
 
 /**
@@ -74,12 +78,16 @@ export function requestTelegramMiniAppFullscreen(): 'requested' | 'unsupported' 
  * host exposes its versioned fullscreen exit capability.
  */
 export function exitTelegramMiniAppFullscreen(): 'requested' | 'unsupported' | 'already_windowed' {
-  if (typeof window === 'undefined') return 'unsupported'
-  const webApp = window.Telegram?.WebApp
-  if (!webApp?.exitFullscreen || !isVersionAtLeast(webApp, '8.0')) return 'unsupported'
-  if (!webApp.isFullscreen) return 'already_windowed'
-  webApp.exitFullscreen()
-  return 'requested'
+  try {
+    if (typeof window === 'undefined') return 'unsupported'
+    const webApp = window.Telegram?.WebApp
+    if (!webApp?.exitFullscreen || !isVersionAtLeast(webApp, '8.0')) return 'unsupported'
+    if (!webApp.isFullscreen) return 'already_windowed'
+    webApp.exitFullscreen()
+    return 'requested'
+  } catch {
+    return 'unsupported'
+  }
 }
 
 /**

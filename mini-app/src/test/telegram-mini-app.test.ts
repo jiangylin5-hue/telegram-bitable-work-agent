@@ -71,6 +71,16 @@ describe('Telegram Mini App runtime adapter', () => {
     expect(requestFullscreen).toHaveBeenCalledTimes(1)
   })
 
+  it('returns unsupported when Telegram fullscreen request throws synchronously', () => {
+    const requestFullscreen = vi.fn(() => { throw new Error('host failure') })
+    ;(window as TelegramWindow).Telegram = {
+      WebApp: { version: '8.0', requestFullscreen },
+    }
+
+    expect(requestTelegramMiniAppFullscreen()).toBe('unsupported')
+    expect(requestFullscreen).toHaveBeenCalledTimes(1)
+  })
+
   it('exits fullscreen exactly once on a capable fullscreen Telegram runtime', () => {
     const exitFullscreen = vi.fn()
     ;(window as TelegramWindow).Telegram = {
@@ -79,6 +89,29 @@ describe('Telegram Mini App runtime adapter', () => {
 
     expect(exitTelegramMiniAppFullscreen()).toBe('requested')
     expect(exitFullscreen).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns unsupported when Telegram fullscreen exit throws synchronously', () => {
+    const exitFullscreen = vi.fn(() => { throw new Error('host failure') })
+    ;(window as TelegramWindow).Telegram = {
+      WebApp: { version: '8.0', isFullscreen: true, exitFullscreen },
+    }
+
+    expect(exitTelegramMiniAppFullscreen()).toBe('unsupported')
+    expect(exitFullscreen).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['request', () => requestTelegramMiniAppFullscreen()],
+    ['exit', () => exitTelegramMiniAppFullscreen()],
+  ])('returns unsupported when Telegram fullscreen version check throws for %s', (_operation, invoke) => {
+    const isVersionAtLeast = vi.fn(() => { throw new Error('host version failure') })
+    ;(window as TelegramWindow).Telegram = {
+      WebApp: { isFullscreen: true, isVersionAtLeast, requestFullscreen: vi.fn(), exitFullscreen: vi.fn() },
+    }
+
+    expect(invoke()).toBe('unsupported')
+    expect(isVersionAtLeast).toHaveBeenCalledWith('8.0')
   })
 
   it('does not exit when Telegram is already windowed', () => {

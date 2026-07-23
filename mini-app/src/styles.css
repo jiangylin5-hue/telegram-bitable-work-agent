@@ -950,6 +950,31 @@ select:focus-visible {
   background: #f7fbff;
 }
 
+@media (max-width: 900px) {
+  .app-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-header {
+    order: -1;
+  }
+
+  .workspace-launch-controls {
+    position: static;
+    z-index: auto;
+    width: 100%;
+    margin-top: 8px;
+    padding: 0 16px;
+    flex-wrap: wrap;
+  }
+
+  .workspace-launch-controls button {
+    flex: 1 1 140px;
+    min-height: 40px;
+  }
+}
+
 .visual-fixture-switcher button {
   border: 0;
   background: #000;
