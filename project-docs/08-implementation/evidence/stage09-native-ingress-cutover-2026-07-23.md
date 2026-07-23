@@ -152,3 +152,49 @@ API unit 的 `Type=simple`，`ExecStartPost` 为空，且不使用 systemd readi
 4. 任一项在上限内未通过，立即原子回退三个 target 到保存的 r22，重启同三项应用服务，并以相同 `20 × 2` 秒上限证明 r22 恢复；若 r22 也未恢复，停止并报告，不进行第二次 r23 切换或任何删除。
 
 该 gate 既不改变数据库状态，也不扩大外部调用权限；它只补足已有 `Type=simple` restart 与 HTTP ready 之间缺失的同步证据。
+
+## 8. r23 有界门禁复试、权限修复与成功激活
+
+### 8.1 范围
+
+本节记录第二次失败受控 activation 后的只读诊断、经授权的最小权限修复，以及第三次成功 activation。整个过程不执行 legacy Docker retirement、容器/卷/镜像删除、release/venv/static cleanup、数据库或 Redis 写入，也不调用 Telegram、LLM 或 Provider。
+
+用于 activation 的 verifier 来自已提交且独立复核的 bounded readiness gate（Git `28285c9`）；上传前完成摘要核验，且在 r22 运行版本上先实测通过。gate 固定上限为 `40` 秒，r23 失败时只允许恢复三条 r22 target、只重启 API/worker/outbox，并用相同 gate 确认 r22。
+
+### 8.2 第二次尝试的失败与自动恢复
+
+第二次 r23 activation 未在 gate 上限内达到 ready，failure trap 已自动恢复 r22；随后同一 gate 在 r22 上通过。该次失败后没有再次立即重试，也没有清理或删除任何工件。
+
+| Check | Result |
+| --- | --- |
+| r22 activation 前 baseline gate | `pass` |
+| r23 第二次 bounded gate | `fail` |
+| 自动恢复后的 r22 bounded gate | `pass` |
+| legacy Docker / release / 数据层删除 | `0` |
+| Telegram / LLM / Provider 调用 | `0` |
+
+### 8.3 根因与受限修复
+
+只读对照确认：r23 source 与 backend 对服务账号可访问，但新建 r23 venv 及其 Python/Uvicorn 入口不可 traverse 或执行；r22 对应项均可访问。r23 在隔离回环 API 预检中也仅出现 permission 类失败。另一方面，release layout/assets、isolation guard、依赖导入、API/worker/outbox import 与只读 migration 的 root 预检均通过，因此根因是 r23 venv 的部署权限，不是 schema、迁移、应用 import 或公网入口。
+
+在用户授权后，仅修复 r23 新建 venv 及其内容：将 owner 收敛为 Stage09 服务账号，并设为仅该账号可读/执行的权限；没有改动 r22、source、static、父目录、Docker 或数据层。修复后，服务账号的 isolation guard、依赖导入、API/worker/outbox import、只读 migration 和隔离回环 API health 均通过；隔离进程在检查后停止且未留下监听。
+
+### 8.4 第三次 activation 与独立复验
+
+第三次 activation 使用与前次完全相同的原子 target 切换、服务 restart 范围、40 秒 gate 与 r22 failure trap。r23 在 gate 内通过，因此保留为 active release。随后进行独立公网与边界复验。
+
+| Check | Result |
+| --- | --- |
+| r23 三条 `current` target | `true` |
+| r22 回退 source / venv / static 工件 | retained |
+| 同一 bounded readiness gate | `pass` |
+| HTTP root / 固定 ACME / HTTPS health / HTTPS root / HTTPS static | `308` / `200` / `200` / `200` / `200` |
+| API/worker/outbox/Redis/Nginx | `active` |
+| HTTP/TLS listener ownership | Nginx only |
+| PostgreSQL / Redis public listener | absent |
+| legacy Docker resources | retained, deletion `0` |
+| 临时 verifier/orchestration | cleaned |
+
+### 8.5 后续门禁
+
+r23 已通过自动化运行时与公网入口检查，但尚未完成用户可见的 Telegram Mini App 验收。用户应关闭已有 Mini App 窗口，再点击 Bot 的“打开工作区”，确认工作区可见且关系导航可用。该人工验收通过前，legacy Docker retirement 和任何 release cleanup 继续禁止执行。
