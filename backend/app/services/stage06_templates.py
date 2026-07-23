@@ -689,7 +689,12 @@ def _default_field_mapping(schema: list[dict[str, Any]]) -> list[dict[str, Any]]
 def _validate_field_mapping(mapping: list[dict[str, Any]]) -> None:
     target_keys: set[str] = set()
     for item in mapping:
-        if item.get("field_type") not in STAGE06_FIELD_TYPES:
+        field_type = item.get("field_type")
+        if (
+            not isinstance(field_type, str)
+            or not field_type
+            or field_type not in STAGE06_FIELD_TYPES
+        ):
             raise PlatformValidationError("unsupported_field_type", str(item))
         source_key = item.get("source_key")
         target_key = item.get("target_key")
@@ -700,6 +705,9 @@ def _validate_field_mapping(mapping: list[dict[str, Any]]) -> None:
             or not target_key
             or target_key in target_keys
         ):
+            raise PlatformValidationError("invalid_import_mapping", str(item))
+        name = item["name"] if "name" in item else _titleize(target_key)
+        if not isinstance(name, str) or not name:
             raise PlatformValidationError("invalid_import_mapping", str(item))
         target_keys.add(target_key)
 

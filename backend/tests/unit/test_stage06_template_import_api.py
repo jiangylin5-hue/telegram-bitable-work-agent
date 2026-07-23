@@ -2,6 +2,7 @@ import base64
 from io import BytesIO
 from zipfile import ZIP_DEFLATED, ZipFile
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.api.deps import get_system_actor
@@ -280,6 +281,47 @@ def test_stage06_template_import_commit_rejects_object_source_key_without_new_re
                 "source_key": {"unexpected": "key"},
                 "target_key": "customer",
                 "field_type": "text",
+            }
+        ]
+    )
+
+    assert import_response.status_code == 200
+    assert commit_response.status_code == 422
+    assert commit_response.json()["detail"]["code"] == "invalid_import_mapping"
+    assert (len(uow.tables), len(uow.fields), len(uow.records)) == counts_before
+
+
+@pytest.mark.parametrize("field_type", [["text"], {"type": "text"}, None, ""])
+def test_stage06_template_import_commit_rejects_non_string_or_empty_field_type_without_new_resources(
+    field_type: object,
+) -> None:
+    uow, import_response, commit_response, counts_before = _commit_import_with_mapping(
+        [
+            {
+                "source_key": "name",
+                "target_key": "customer",
+                "field_type": field_type,
+            }
+        ]
+    )
+
+    assert import_response.status_code == 200
+    assert commit_response.status_code == 422
+    assert commit_response.json()["detail"]["code"] == "unsupported_field_type"
+    assert (len(uow.tables), len(uow.fields), len(uow.records)) == counts_before
+
+
+@pytest.mark.parametrize("name", [{"display": "Customer"}, ["Customer"], None, ""])
+def test_stage06_template_import_commit_rejects_non_string_or_empty_field_name_without_new_resources(
+    name: object,
+) -> None:
+    uow, import_response, commit_response, counts_before = _commit_import_with_mapping(
+        [
+            {
+                "source_key": "name",
+                "target_key": "customer",
+                "field_type": "text",
+                "name": name,
             }
         ]
     )
