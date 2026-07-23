@@ -28,9 +28,10 @@
 
 ## 验收标准
 
-1. Mini App 首次打开不会调用 `requestFullscreen()`；仍调用 `ready()` 和 `expand()`。
+1. Mini App 首次打开不会调用 `requestFullscreen()`；仍调用受控的 `ready()` 和 `expand()`。Telegram SDK 的 getter、初始化、状态读取、事件订阅或全屏方法若同步抛错，页面必须降级而不能崩溃。
 2. 已处于全屏时可退出；非全屏时可由用户明确点击进入专注全屏。
 3. 只要已经验证 Telegram 身份，浏览器工作台入口始终可见；现有 fragment-only handoff 安全边界不变。
 4. 左栏每个可见图标都有明确状态：已实现入口打开真实功能；未来入口为不可点击的“即将上线”按钮。不存在 `#home`、`#bots`、`#management` 这类无处理占位跳转。
 5. 图标悬停或键盘聚焦时显示中文名称和用途说明。
+6. 在 320px、375px 和 900px 宽度下，移动标题栏、全屏/浏览器控制条均在正常文档流中排列且可点击，不会互相遮挡。
 6. 聚焦测试、Mini App 构建和现有 handoff 安全测试通过；部署后由用户在 Telegram Desktop 验收窗口切换和左栏真实跳转。

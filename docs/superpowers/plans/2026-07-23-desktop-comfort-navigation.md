@@ -22,6 +22,7 @@
 **Files:**
 - Modify: `mini-app/src/app/telegram-mini-app.ts`
 - Modify: `mini-app/src/app/App.tsx`
+- Modify: `mini-app/src/app/AppShell.tsx`
 - Modify: `mini-app/src/app/WorkspaceLaunchControls.tsx`
 - Modify: `mini-app/src/styles.css`
 - Test: `mini-app/src/test/telegram-mini-app.test.ts`
@@ -64,7 +65,7 @@ setTelegramFullscreenState(readTelegramMiniAppFullscreenState())
 return unsubscribe
 ```
 
-在控件中只从明确的 `onClick` 调用全屏请求或退出；保留现有浏览器 handoff click 流。为 `.app-shell`、`.desktop-sidebar` 和 `.app-content` 添加 12px 视觉留白、圆角和窄窗口回退规则。
+Telegram SDK 的 `ready`、`expand`、version/state getter、`onEvent`、`offEvent`、request 和 exit 调用均以受控边界捕获同步异常。控件中只从明确的 `onClick` 调用全屏请求或退出；保留现有浏览器 handoff click 流。移动端让 `mobile-header` 在 DOM 中位于控制条之前，并在真实 `AppShell` 排布测试中验证 320px、375px、900px 不重叠。为 `.app-shell`、`.desktop-sidebar` 和 `.app-content` 添加 12px 视觉留白、圆角和窄窗口回退规则。
 
 - [ ] **Step 4: 验证 GREEN。**
 
@@ -79,7 +80,7 @@ Expected: 测试和 TypeScript/Vite 构建通过。
 - [ ] **Step 5: 提交。**
 
 ```text
-git add mini-app/src/app/telegram-mini-app.ts mini-app/src/app/App.tsx mini-app/src/app/WorkspaceLaunchControls.tsx mini-app/src/styles.css mini-app/src/test/telegram-mini-app.test.ts mini-app/src/test/workspace-launch-controls.test.tsx
+git add mini-app/src/app/telegram-mini-app.ts mini-app/src/app/App.tsx mini-app/src/app/AppShell.tsx mini-app/src/app/WorkspaceLaunchControls.tsx mini-app/src/styles.css mini-app/src/test/telegram-mini-app.test.ts mini-app/src/test/workspace-launch-controls.test.tsx
 git commit -m "fix(mini-app): make fullscreen optional"
 ```
 
