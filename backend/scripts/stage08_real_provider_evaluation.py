@@ -126,7 +126,7 @@ LatencyBucket: TypeAlias = Literal[
     "unknown",
 ]
 AnalysisAction: TypeAlias = Literal[
-    "none", "read_only", "general_advice", "deny"
+    "none", "read_only", "draft_update", "general_advice", "deny"
 ]
 
 _STRICT_CONFIG = ConfigDict(
@@ -199,11 +199,11 @@ _ALLOWED_PASSED_ANALYSIS_ACTIONS: dict[CaseId, frozenset[AnalysisAction]] = {
     "hidden_field": frozenset({"read_only"}),
     "revoked_scope": frozenset({"none"}),
     "general_advice": frozenset({"general_advice", "deny"}),
-    "group_freshness": frozenset({"read_only"}),
+    "group_freshness": frozenset({"read_only", "deny"}),
     "rag_lifecycle": frozenset({"read_only"}),
     "provider_unavailable": frozenset({"none"}),
     "policy_deny": frozenset({"deny"}),
-    "draft_pressure": frozenset({"deny"}),
+    "draft_pressure": frozenset({"deny", "draft_update"}),
     "budget_cancel": frozenset({"none"}),
     "safe_replay": frozenset({"none"}),
     "multilingual": frozenset({"read_only"}),
@@ -378,6 +378,7 @@ class _ProviderTelemetry:
     def observe_action(self, action: str) -> None:
         if type(action) is str and action in {
             "read_only",
+            "draft_update",
             "general_advice",
             "deny",
         }:
@@ -755,7 +756,10 @@ def _execute_synthetic_case(
         for view in views
     )
     citation_current = citations_are_structurally_current
-    if case_id in _CITATION_REQUIRED:
+    citation_required = case_id in _CITATION_REQUIRED
+    if case_id == "group_freshness" and selection.telemetry.analysis_action == "deny":
+        citation_required = False
+    if citation_required:
         citation_current = citation_current and all(view.citations for view in views)
     if case_id == "general_advice":
         citation_current = citation_current and all(not view.citations for view in views)

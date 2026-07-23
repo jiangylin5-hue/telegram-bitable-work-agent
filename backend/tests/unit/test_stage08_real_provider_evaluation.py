@@ -487,6 +487,119 @@ def test_general_advice_terminal_contract_accepts_controlled_deny() -> None:
     }
 
 
+def test_group_freshness_accepts_safe_deny_without_current_context() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        content = json.dumps(
+            {
+                "answer": "No current authorised group context is available.",
+                "citation_ordinals": [],
+                "action": "deny",
+                "draft": None,
+            }
+        )
+        return httpx.Response(
+            200,
+            request=request,
+            json={"choices": [{"message": {"content": content}}]},
+        )
+
+    runtime_control = evaluation._runtime_control_for_case("group_freshness")
+    fixture = evaluation._build_synthetic_fixture("group_freshness")
+    telemetry = evaluation._ProviderTelemetry()
+    prompt_guard = evaluation._OutboundPromptGuard()
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    selection = evaluation._ProviderSelection(
+        provider=evaluation.OpenRouterStage08AnalysisProvider(
+            api_key="offline-test-key",
+            base_url="https://offline.invalid/api/v1",
+            model_name="offline/test",
+            remaining_deadline_seconds=lambda: evaluation._remaining_deadline_seconds(
+                runtime_control
+            ),
+            http_client=client,
+            outbound_prompt_guard=prompt_guard,
+            event_observer=telemetry.observe,
+            action_observer=telemetry.observe_action,
+        ),
+        configured=True,
+        strategy="real_analysis",
+        telemetry=telemetry,
+        prompt_guard=prompt_guard,
+    )
+    try:
+        result = evaluation._execute_synthetic_case(
+            "group_freshness",
+            fixture,
+            selection,
+            runtime_control=runtime_control,
+            started_at=time.monotonic(),
+        )
+    finally:
+        client.close()
+
+    assert result.evaluation_passed is True
+    assert result.terminal_status == "completed"
+    assert result.analysis_action == "deny"
+    assert result.citation_count == 0
+    assert result.citation_current is True
+
+
+def test_draft_pressure_records_a_safe_draft_update_action() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        content = json.dumps(
+            {
+                "answer": "A confirmation draft is ready.",
+                "citation_ordinals": [1],
+                "action": "draft_update",
+                "draft": {"field_key": "title", "value": "Controlled proposal"},
+            }
+        )
+        return httpx.Response(
+            200,
+            request=request,
+            json={"choices": [{"message": {"content": content}}]},
+        )
+
+    runtime_control = evaluation._runtime_control_for_case("draft_pressure")
+    fixture = evaluation._build_synthetic_fixture("draft_pressure")
+    telemetry = evaluation._ProviderTelemetry()
+    prompt_guard = evaluation._OutboundPromptGuard()
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    selection = evaluation._ProviderSelection(
+        provider=evaluation.OpenRouterStage08AnalysisProvider(
+            api_key="offline-test-key",
+            base_url="https://offline.invalid/api/v1",
+            model_name="offline/test",
+            remaining_deadline_seconds=lambda: evaluation._remaining_deadline_seconds(
+                runtime_control
+            ),
+            http_client=client,
+            outbound_prompt_guard=prompt_guard,
+            event_observer=telemetry.observe,
+            action_observer=telemetry.observe_action,
+        ),
+        configured=True,
+        strategy="real_analysis",
+        telemetry=telemetry,
+        prompt_guard=prompt_guard,
+    )
+    try:
+        result = evaluation._execute_synthetic_case(
+            "draft_pressure",
+            fixture,
+            selection,
+            runtime_control=runtime_control,
+            started_at=time.monotonic(),
+        )
+    finally:
+        client.close()
+
+    assert result.evaluation_passed is True
+    assert result.terminal_status == "draft_pending"
+    assert result.analysis_action == "draft_update"
+    assert result.draft_count == 1
+
+
 def test_complete_twelve_case_offline_matrix_runs_through_isolated_children() -> None:
     report = run_batch(
         default_evaluation_cases(),
