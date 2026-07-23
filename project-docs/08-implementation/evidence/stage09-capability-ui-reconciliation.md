@@ -77,6 +77,15 @@ npm.cmd run build
 - 变更前已保存 root-only Nginx 配置备份；新配置先通过 `nginx -t` 再 reload，临时渲染文件已清理。公网复验结果：`https://stage07.jiangtest1.online/`、`https://stage07.jiangtest1.online/health`、`https://stage09.jiangtest1.online/`、`https://stage09.jiangtest1.online/health` 均为 TLS 正常校验的 `200`；每个 SNI 返回的 CN/SAN 均与请求域名一致。
 - 这修复了历史 Bot 按钮的可用性，但不把“真实 Telegram initData 登录、浏览器交接与业务查询”描述为已验收。该最后一段必须由用户重新打开 Mini App 后在真实 Telegram 客户端完成。
 
+### 3.2 Telegram Desktop 浏览器交接修复与 r26 发布
+
+- 用户在真实 Telegram Desktop 中重新打开工作区后，已确认 Mini App 身份和工作区加载恢复；但点击“在浏览器打开完整工作台”立即显示通用失败提示。服务器的 API 日志没有出现对应的 `/mini-app/browser-handoffs` 请求，说明故障发生在票据签发之前。
+- 根因是 `WorkspaceLaunchControls` 用 `window.open('about:blank')` 预开浏览器窗口。Telegram Desktop 的 Mini App 容器会拦截这个普通网页弹窗，因此永远到不了签发一次性交接票据的请求。
+- 修复后的前端在 Telegram bridge 存在时，先签发并严格校验同源、仅含 `#ticket=` 的 handoff URL，再调用官方 `Telegram.WebApp.openLink()`；不再调用会被 Telegram 拦截的 `window.open()`。普通浏览器或缺少 bridge 的宿主仍保留原先的受控预开窗口兜底。交接票据仍只位于 URL fragment，静态交换页继续以 `Cache-Control: no-store` 和 `Referrer-Policy: no-referrer` 响应。
+- 新增回归测试先在旧实现下失败，随后通过。完整 Mini App 回归为 `73` files / `295` tests passed，生产 build 通过。
+- r26 仅替换 `mini-app/dist`：归档 SHA-256 为 `3be9d841e723513d497e10052ebe82a948a900dcff11195bac42ecc2a0f33252`，原子切换 `/var/www/stage09-p1/current` 到 `stage09-p1-20260724-r26`，r25 保留为 `current.previous`。未修改数据库、未重启 API/worker/outbox/Redis、未修改 Telegram webhook/allowlist、未发送消息或写业务记录。
+- 发布后 `stage07` 和 `stage09` 的首页、健康检查与 r26 JS 资源均返回 TLS 正常校验的 `200`；`stage07/browser-handoff.html` 返回 `200`、`Cache-Control: no-store` 与 `Referrer-Policy: no-referrer`。Nginx、API、worker、outbox bridge 与 Redis 均为 `active`。真实 Telegram Desktop 的再次点击仍是最后待用户完成的验收动作。
+
 ## 4. 未被掩盖的后续缺口
 
 | 项目 | 现状 | 下一步 |

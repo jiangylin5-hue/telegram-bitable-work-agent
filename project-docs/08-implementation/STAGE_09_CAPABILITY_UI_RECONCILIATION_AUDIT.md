@@ -4,7 +4,7 @@
 
 - Document status: active implementation directive
 - Scope: 已实现的 Stage07 表格工作台与 Stage08 协作运行时，和当前 Mini App 的可发现、可操作、可验收程度对齐
-- Current Progress: 2026-07-24 已完成源码、路由、测试和现有页面的第一轮交叉审计，并完成本地真实浏览器的桌面（1440px）和移动（390px）交互复验：表格操作中心、Stage08 安全协作和记忆只读工作台均可从实际入口打开。r25 静态版本已原子发布；`stage09.jiangtest1.online` 是当前主域名，历史 Telegram Main Mini App 的 `stage07.jiangtest1.online` 作为兼容入口，以独立且匹配域名的 TLS 证书服务同一份 r25 静态页面和原生 API。两个公网首页与健康检查均已验证。浏览器功能验收使用受控 API fixture；真实 FastAPI/PostgreSQL 授权查询、真实 LLM 或 Telegram 身份验收仍需独立证据。本文件不是整阶段验收通过声明。
+- Current Progress: 2026-07-24 已完成源码、路由、测试和现有页面的第一轮交叉审计，并完成本地真实浏览器的桌面（1440px）和移动（390px）交互复验：表格操作中心、Stage08 安全协作和记忆只读工作台均可从实际入口打开。r26 静态版本已原子发布；`stage09.jiangtest1.online` 是当前主域名，历史 Telegram Main Mini App 的 `stage07.jiangtest1.online` 作为兼容入口，以独立且匹配域名的 TLS 证书服务同一份 r26 静态页面和原生 API。Telegram Desktop 的浏览器交接已从被宿主拦截的 `window.open()` 改为官方 `WebApp.openLink()` bridge；完整 Mini App 回归与发布后两个域名的公网验证均通过。真实 FastAPI/PostgreSQL 授权查询、真实 LLM 或 Telegram 身份验收仍需独立证据，本文件不是整阶段验收通过声明。
 - Evidence levels:
   - `implemented-local`：受控服务/API、前端代码和自动化测试存在；未必已在真实 Telegram/生产浏览器验收。
   - `partial-local`：路径存在，但关键角色、失败分支或浏览器交互仍缺证据。
