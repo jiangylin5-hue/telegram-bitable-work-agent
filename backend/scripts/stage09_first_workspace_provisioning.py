@@ -14,7 +14,10 @@ from dataclasses import dataclass
 from typing import Final, Iterable, Mapping
 from uuid import UUID, uuid4
 
+from sqlalchemy import select
+
 from app.core.database import get_session_factory
+from app.models.stage06_platform import Workspace
 from app.models.stage08_group_context import Stage08GroupBusinessContextBinding
 from app.models.telegram import Message
 from app.services.audit import record_audit_event
@@ -123,7 +126,7 @@ def provision_first_workspace(
             status="existing",
         )
 
-    if uow.list_workspaces():
+    if _workspace_exists(uow):
         raise ProvisioningTargetError("workspace_exists_without_owner_binding")
 
     member_user_id = _opaque_member_user_id(telegram_user_id)
@@ -389,6 +392,10 @@ def _opaque_member_user_id(telegram_user_id: str) -> str:
         f"stage09-telegram-member-v1:{telegram_user_id}".encode("utf-8")
     ).hexdigest()
     return f"tg_member_{digest[:32]}"
+
+
+def _workspace_exists(uow: SqlAlchemyStage06PlatformUnitOfWork) -> bool:
+    return uow.session.scalar(select(Workspace.id).limit(1)) is not None
 
 
 def main() -> int:
