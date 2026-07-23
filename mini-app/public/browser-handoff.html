@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <meta http-equiv="Pragma" content="no-cache">
+  <title>正在打开工作台</title>
+</head>
+<body>
+  <main>
+    <p id="handoff-status">正在安全打开工作台…</p>
+    <p id="handoff-error" role="alert" hidden></p>
+  </main>
+  <script>
+    (() => {
+      const error = document.getElementById('handoff-error')
+      const status = document.getElementById('handoff-status')
+      const showRecovery = () => {
+        if (status) status.hidden = true
+        if (error) {
+          error.textContent = '无法打开工作台，请返回 Telegram 后重试。'
+          error.hidden = false
+        }
+      }
+      const ticket = new URLSearchParams(window.location.hash.slice(1)).get('ticket')
+      if (!ticket) {
+        showRecovery()
+        return
+      }
+      fetch('/mini-app/browser-handoff-exchanges', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket }),
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error()
+          window.history.replaceState(null, '', '/browser-handoff.html')
+          window.location.replace('/')
+        })
+        .catch(showRecovery)
+    })()
+  </script>
+</body>
+</html>

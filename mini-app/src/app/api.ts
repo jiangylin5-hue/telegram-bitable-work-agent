@@ -172,6 +172,11 @@ export type TelegramDeepLinkResolution =
   | { outcome: 'resolved'; destination: TelegramDeepLinkDestination }
   | { outcome: 'recovery' }
 
+export type BrowserHandoff = {
+  ticket: string
+  expiresAt: string
+}
+
 export type BusinessContextRelation = {
   employee: { id: string; name: string; base_id: string; base_name: string }
   group: { id: string; label: string }
@@ -440,6 +445,24 @@ function numberValue(value: unknown): number {
 function nullableStringValue(value: unknown): string | null {
   if (value === null) return null
   return stringValue(value)
+}
+
+function safeBrowserHandoff(value: unknown): BrowserHandoff {
+  const record = jsonRecord(value)
+  const ticket = stringValue(record.ticket).trim()
+  const expiresAt = stringValue(record.expires_at).trim()
+  if (!ticket || !expiresAt) throw new Error('Invalid browser handoff response')
+  return { ticket, expiresAt }
+}
+
+/**
+ * Builds the handoff location without a query string. Callers must keep the
+ * ticket in their local call frame and must not persist or render it.
+ */
+export function buildBrowserHandoffUrl(ticket: string): string {
+  const url = new URL('/browser-handoff.html', window.location.origin)
+  url.hash = new URLSearchParams({ ticket }).toString()
+  return url.toString()
 }
 
 const importScalarFieldTypes = new Set<ImportScalarFieldType>(['text', 'number', 'date', 'checkbox'])
@@ -1174,6 +1197,9 @@ export function toSafeViewError(error: unknown): string {
 export const api = {
   setTelegramInitData,
   bootstrap: (init?: RequestInit) => getJson<BootstrapResponse>('/mini-app/bootstrap', init),
+  createBrowserHandoff: async (): Promise<BrowserHandoff> => safeBrowserHandoff(
+    await getJson<unknown>('/mini-app/browser-handoffs', { method: 'POST' }),
+  ),
   resolveTelegramDeepLink: async (startParam: string, init?: RequestInit): Promise<TelegramDeepLinkResolution> => safeTelegramDeepLinkResolution(
     await getJson<unknown>('/mini-app/telegram/deep-links/resolve', {
       ...init,

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { isCancelledError, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { ApiError, api, type BaseSummary, type BootstrapResponse, type CreateForm, type PlatformTable, type RecordDetail, type TableSchema, type TelegramDeepLinkDestination, type ViewPresentation, type ViewRecords, type ViewSummary, type WorkspaceHome } from './api'
+import { ApiError, api, buildBrowserHandoffUrl, type BaseSummary, type BootstrapResponse, type CreateForm, type PlatformTable, type RecordDetail, type TableSchema, type TelegramDeepLinkDestination, type ViewPresentation, type ViewRecords, type ViewSummary, type WorkspaceHome } from './api'
 import { AppShell, type AppShellRoute } from './AppShell'
 import { AssistantContextWorkbench } from './AssistantContextWorkbench'
 import { TeamBotWorkbench } from './TeamBotWorkbench'
@@ -2888,5 +2888,10 @@ function AppContent() {
       onClose={closeGovernanceWrite}
     />
     : null
-  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} activeRoute={navigationRoute} onNavigate={selectNavigation} onOpenGovernance={(trigger) => { void openGovernance(trigger) }} telegramState={telegramFullscreenState}>{content}{builderOverlay}{templateImportOverlay}{draftEmployeeOverlay}{assistantContextOverlay}{teamBotOverlay}{digitalEmployeeManagementOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
+  async function createBrowserHandoffUrl(): Promise<string> {
+    const { ticket } = await api.createBrowserHandoff()
+    return buildBrowserHandoffUrl(ticket)
+  }
+
+  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} activeRoute={navigationRoute} onNavigate={selectNavigation} onOpenGovernance={(trigger) => { void openGovernance(trigger) }} telegramState={telegramFullscreenState} onOpenBrowser={createBrowserHandoffUrl}>{content}{builderOverlay}{templateImportOverlay}{draftEmployeeOverlay}{assistantContextOverlay}{teamBotOverlay}{digitalEmployeeManagementOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
 }
