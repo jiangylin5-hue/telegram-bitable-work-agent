@@ -256,6 +256,85 @@ def test_stage06_template_import_commit_rejects_duplicate_mapping_targets_withou
     assert len(uow.records) == records_before
 
 
+def test_stage06_template_import_commit_rejects_array_target_key_without_new_resources() -> None:
+    uow, import_response, commit_response, counts_before = _commit_import_with_mapping(
+        [
+            {
+                "source_key": "name",
+                "target_key": ["customer"],
+                "field_type": "text",
+            }
+        ]
+    )
+
+    assert import_response.status_code == 200
+    assert commit_response.status_code == 422
+    assert commit_response.json()["detail"]["code"] == "invalid_import_mapping"
+    assert (len(uow.tables), len(uow.fields), len(uow.records)) == counts_before
+
+
+def test_stage06_template_import_commit_rejects_object_source_key_without_new_resources() -> None:
+    uow, import_response, commit_response, counts_before = _commit_import_with_mapping(
+        [
+            {
+                "source_key": {"unexpected": "key"},
+                "target_key": "customer",
+                "field_type": "text",
+            }
+        ]
+    )
+
+    assert import_response.status_code == 200
+    assert commit_response.status_code == 422
+    assert commit_response.json()["detail"]["code"] == "invalid_import_mapping"
+    assert (len(uow.tables), len(uow.fields), len(uow.records)) == counts_before
+
+
+def _commit_import_with_mapping(
+    field_mapping: list[dict[str, object]],
+) -> tuple[InMemoryStage06PlatformUnitOfWork, object, object, tuple[int, int, int]]:
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_template_import_uow] = lambda: uow
+    app.dependency_overrides[get_system_actor] = lambda: Actor(
+        actor_type="user",
+        actor_id="owner-1",
+        role="owner",
+    )
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "owner-1"
+        client.headers["Idempotency-Key"] = "invalid-mapping-import"
+        workspace_id = client.post(
+            "/workspaces",
+            json={"name": "Acme", "owner_user_id": "owner-1"},
+        ).json()["id"]
+        client.headers["Idempotency-Key"] = "invalid-mapping-import-job"
+        import_response = client.post(
+            f"/workspaces/{workspace_id}/imports",
+            json={
+                "source_type": "csv",
+                "file_name": "customers.csv",
+                "content": "Name,Score\nAda,10\n",
+                "created_by_user_id": "owner-1",
+            },
+        )
+        counts_before = (len(uow.tables), len(uow.fields), len(uow.records))
+        client.headers["Idempotency-Key"] = "invalid-mapping-import-commit"
+        commit_response = client.post(
+            f"/imports/{import_response.json()['id']}/commit",
+            json={
+                "base_name": "Imported CRM",
+                "table_name": "Customers",
+                "table_key": "customers",
+                "field_mapping": field_mapping,
+            },
+        )
+
+    return uow, import_response, commit_response, counts_before
+
+
 def _simple_xlsx_bytes(rows: list[list[str]]) -> bytes:
     sheet_rows = []
     for row_number, row in enumerate(rows, start=1):

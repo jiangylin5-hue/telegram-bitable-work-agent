@@ -693,7 +693,13 @@ def _validate_field_mapping(mapping: list[dict[str, Any]]) -> None:
             raise PlatformValidationError("unsupported_field_type", str(item))
         source_key = item.get("source_key")
         target_key = item.get("target_key")
-        if not source_key or not target_key or target_key in target_keys:
+        if (
+            not isinstance(source_key, str)
+            or not source_key
+            or not isinstance(target_key, str)
+            or not target_key
+            or target_key in target_keys
+        ):
             raise PlatformValidationError("invalid_import_mapping", str(item))
         target_keys.add(target_key)
 
