@@ -2,6 +2,7 @@
 
 ## Status
 
+- Current Progress Update (2026-07-23, legacy Docker retirement approved): 用户已授权将历史 `telegram-bitable-stage03` Docker 栈在一致性归档后永久删除。只读盘点确认 Stage09 r22 已是 source/venv/static 三个 `current` symlink 的唯一运行版本；服务器 PostgreSQL 仅监听 loopback、`vector` extension 存在、Redis 使用 Unix socket，Stage09 API/worker/outbox/Redis/Nginx 均 active，回环和 `stage07.jiangtest1.online` HTTPS health/首页均为 200。发现旧 Docker Caddy 的落盘 Caddyfile 与其当前运行时路由不一致，容器重启可能恢复 502。该轮新增的 P1-C 原生 ingress 接管、归档、删除和回滚边界见 `STAGE_09_LEGACY_DOCKER_DECOMMISSION_DESIGN.md`；在文档规定的 preflight 完成前不停止或删除 Docker。
 - Current Progress Update (2026-07-23, r22 first real workspace): 已真实激活 `stage09-p1-20260723-r22`。先以同一 PostgreSQL 事务完成首个工作区初始化演练并 rollback，再执行原子 source/venv/static 切换与真实提交。当前平台库有 1 个 workspace、1 个 owner member、1 条 active Telegram binding、1 个 Base、3 张表/3 条记录、1 个数字员工、1 条群聊—客户—项目映射和 1 条审计；同一 binding 的 Mini App bootstrap/Home 服务端核验分别返回 1 个 workspace、1 个 Base、1 条关系索引。API 回环和外部 HTTPS health 均为 200。人机 Telegram 页面复开验收仍待完成，详见 `evidence/stage09-first-workspace-provisioning-2026-07-23.md`。
 
 - Current Progress Update (2026-07-23, r14 controlled Telegram smoke): 用户的唯一绑定 nonce 已真实经 Stage09 webhook 持久化；系统只将该事实 chat 写入完全相同的 receive/send allowlist，切换为 `restricted_test` 后重启 API、worker、outbox bridge 并通过 validator/health。实际 bot 回执严格经 send-request → confirm → outbox bridge/worker，最终 request=`sent`、outbox=`processed`、三类 test-send audit event 均存在。未扩大名单、未群发、未写业务表或确认 draft。完整脱敏证据见 `evidence/stage09-r14-real-runtime-and-provider-2026-07-23.md` 与 `2026-07-23-stage09-telegram-llm-real-smoke.md`；Stage07 UI 仍是独立验收项。
