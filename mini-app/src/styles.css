@@ -1480,3 +1480,82 @@ select:focus-visible {
     overflow: visible;
   }
 }
+
+/* Navigation actions stay compact; the Chinese hint appears only on hover or keyboard focus. */
+.primary-nav .nav-item,
+.mobile-nav .mobile-nav-item {
+  position: relative;
+}
+
+.mobile-nav button.mobile-nav-item {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.nav-item small,
+.mobile-nav-item small {
+  color: inherit;
+  font-size: 10px;
+  line-height: 1;
+  opacity: .72;
+}
+
+.nav-item[data-availability='planned'],
+.mobile-nav-item[data-availability='planned'] {
+  cursor: not-allowed;
+  color: #9ca5b1;
+}
+
+.nav-item[data-availability='planned']:hover,
+.mobile-nav-item[data-availability='planned']:hover {
+  background: transparent;
+  color: #9ca5b1;
+}
+
+@media (min-width: 901px) {
+  .primary-nav .nav-item[data-nav-hint]::after {
+    position: absolute;
+    z-index: 8;
+    top: 50%;
+    left: calc(100% + 10px);
+    width: max-content;
+    max-width: 220px;
+    transform: translate(-4px, -50%);
+    border-radius: 5px;
+    background: #20252d;
+    box-shadow: 0 4px 12px rgb(27 37 51 / 18%);
+    color: #fff;
+    content: attr(data-nav-hint);
+    opacity: 0;
+    padding: 6px 8px;
+    pointer-events: none;
+    transition: opacity .16s ease, transform .16s ease;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+
+  .primary-nav .nav-item[data-nav-hint]:hover::after,
+  .primary-nav .nav-item[data-nav-hint]:focus-visible::after {
+    transform: translate(0, -50%);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 900px) {
+  .mobile-nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .mobile-nav-item {
+    min-width: 0;
+  }
+
+  .mobile-nav-item span {
+    overflow: hidden;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

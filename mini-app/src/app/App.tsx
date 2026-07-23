@@ -2888,5 +2888,5 @@ function AppContent() {
     return buildBrowserHandoffUrl(ticket)
   }
 
-  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} activeRoute={navigationRoute} onNavigate={selectNavigation} onOpenGovernance={(trigger) => { void openGovernance(trigger) }} telegramState={telegramFullscreenState} onOpenBrowser={createBrowserHandoffUrl}>{content}{builderOverlay}{templateImportOverlay}{draftEmployeeOverlay}{assistantContextOverlay}{teamBotOverlay}{digitalEmployeeManagementOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
+  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} activeRoute={navigationRoute} onNavigate={selectNavigation} onOpenDraftHub={(trigger) => { void openDraftEmployeeHub(trigger) }} onOpenTeamBot={(trigger) => { void openTeamBot(trigger) }} onOpenGovernance={(trigger) => { void openGovernance(trigger) }} telegramState={telegramFullscreenState} onOpenBrowser={createBrowserHandoffUrl}>{content}{builderOverlay}{templateImportOverlay}{draftEmployeeOverlay}{assistantContextOverlay}{teamBotOverlay}{digitalEmployeeManagementOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
 }
