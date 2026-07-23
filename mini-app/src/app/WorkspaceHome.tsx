@@ -1,4 +1,4 @@
-import { ArrowUpRight, Bot, CheckCircle2, ChevronRight, CircleDot, Plus } from 'lucide-react'
+import { ArrowUpRight, Bot, CheckCircle2, ChevronRight, CircleDot, FolderOpen, Plus } from 'lucide-react'
 
 import type { BaseSummary, Workspace, WorkspaceHome as WorkspaceHomeData } from './api'
 
@@ -39,6 +39,13 @@ export function WorkspaceHome({
 }: WorkspaceHomeProps) {
   const basesById = new Map(home.recent_bases.map((base) => [base.id, base]))
   const businessRelations = home.business_context_relations ?? []
+  const nextDraft = home.queue[0]
+  const nextBase = home.recent_bases[0]
+  const canContinue = Boolean(
+    (nextDraft && onOpenDraftHub)
+    || nextBase
+    || onOpenTeamBot,
+  )
 
   return <main className="workspace-home" aria-label="工作区首页" data-testid="workspace-home-workbench" data-workbench-layout="queue-base-assistant">
     <section className="queue-surface" aria-labelledby="today-work-heading">
@@ -53,6 +60,26 @@ export function WorkspaceHome({
           {workspace.capabilities.can_manage_schema && onOpenTemplateImport && <button type="button" onClick={onOpenTemplateImport}>模板与导入</button>}
         </div>
       </header>
+      {canContinue ? <section className="continue-work" aria-label="继续处理">
+        <header><div><span>CONTINUE</span><h2>继续处理</h2></div><p>入口来自当前可访问的草稿、Base 与协作能力。</p></header>
+        <div className="continue-work-list">
+          {nextDraft && onOpenDraftHub ? <button type="button" className="continue-work-primary" aria-label="继续处理待确认草稿" onClick={(event) => onOpenDraftHub(event.currentTarget, nextDraft.destination.draft_id)}>
+            <span className="continue-work-icon"><CheckCircle2 size={17} /></span>
+            <span><strong>待确认草稿</strong><small>{home.queue.length} 个待处理</small></span>
+            <ArrowUpRight size={15} />
+          </button> : null}
+          {nextBase ? <button type="button" aria-label={`继续打开最近 Base ${nextBase.name}`} onClick={() => onOpenBase(nextBase)}>
+            <span className="continue-work-icon"><FolderOpen size={17} /></span>
+            <span><strong>{nextBase.name}</strong><small>继续最近 Base</small></span>
+            <ChevronRight size={15} />
+          </button> : null}
+          {onOpenTeamBot ? <button type="button" aria-label="继续使用团队 Bot" onClick={(event) => onOpenTeamBot(event.currentTarget)}>
+            <span className="continue-work-icon"><Bot size={17} /></span>
+            <span><strong>团队 Bot</strong><small>使用已授权团队助手</small></span>
+            <ChevronRight size={15} />
+          </button> : null}
+        </div>
+      </section> : null}
       <div className="queue-section-title"><span className="section-icon blue"><CircleDot size={16} /></span><h2>待确认</h2><span className="count">{home.queue.length}</span></div>
       {home.queue.length > 0 ? <div className="queue-list" aria-label="待确认队列">{home.queue.map((item) => {
         const linkedBase = basesById.get(item.destination.base_id)

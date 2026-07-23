@@ -18,7 +18,7 @@ function NavigationButton({ item, activeRoute, className }: { item: NavigationIt
   const label = `${item.label}：${hint}`
   const isActiveRoute = Boolean(item.route && item.route === activeRoute)
 
-  return <button className={`${className}${isActiveRoute ? ' active' : ''}${item.availability === 'planned' ? ' planned' : ''}`} type="button" aria-current={isActiveRoute ? 'page' : undefined} aria-expanded={item.controls ? item.expanded : undefined} aria-controls={item.controls} aria-label={label} title={label} data-nav-hint={hint} data-availability={item.availability} disabled={!enabled} onClick={enabled ? (event) => item.onClick?.(event.currentTarget) : undefined}><Icon aria-hidden="true" size={18} strokeWidth={1.8} /><span>{item.label}</span>{item.availability === 'planned' && <small aria-hidden="true">即将上线</small>}</button>
+  return <button className={`${className}${isActiveRoute ? ' active' : ''}${item.availability === 'planned' ? ' planned' : ''}`} type="button" aria-current={isActiveRoute ? 'page' : undefined} aria-expanded={item.controls ? item.expanded : undefined} aria-controls={item.controls} aria-label={label} title={label} data-nav-hint={hint} data-availability={item.availability} disabled={!enabled} onClick={enabled ? (event) => item.onClick?.(event.currentTarget) : undefined}><Icon aria-hidden="true" size={18} strokeWidth={1.8} /><span className="nav-item-copy"><strong>{item.label}</strong><small>{hint}</small></span></button>
 }
 
 export function AppShell({ workspace, workspaces, onWorkspaceChange, activeRoute, onNavigate, onOpenDraftHub, onOpenTeamBot, onOpenCollaboration, onOpenMemory, onOpenGovernance, isTelegramMiniApp = false, telegramState, onOpenBrowser, children }: AppShellProps) {

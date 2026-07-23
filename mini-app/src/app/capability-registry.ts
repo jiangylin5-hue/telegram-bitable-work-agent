@@ -35,7 +35,7 @@ export const tableOperationDefinitions: readonly TableOperationDefinition[] = [
   { key: 'save_template', label: '保存为模板', description: '将当前 Base 保存为可复用的受控模板。', group: 'data', availability: 'available', baseOnly: true },
   { key: 'base_lifecycle', label: '复制或归档 Base', description: 'Base/Table/Field/View 生命周期将在下一模块提供。', group: 'planned', availability: 'planned' },
   { key: 'bulk_record_edit', label: '批量编辑记录', description: '批量编辑、归档和恢复需要独立的权限与审计契约。', group: 'planned', availability: 'planned' },
-  { key: 'export_data', label: '导出数据', description: '导出需要字段脱敏、权限和异步任务设计。', group: 'planned', availability: 'planned' },
+  { key: 'export_data', label: '导出 CSV / XLSX', description: '导出需要字段脱敏、权限和异步任务设计。', group: 'planned', availability: 'planned' },
 ]
 
 export function getTableOperationDefinitions(scope: 'workspace' | 'base'): readonly TableOperationDefinition[] {

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { expect, test, vi } from 'vitest'
 
 import { BaseCanvas } from '../app/BaseCanvas'
@@ -35,6 +35,54 @@ test('opens the operation center from the Home workbench without exposing a fake
 
   fireEvent.click(screen.getByRole('button', { name: '表格操作' }))
   expect(onOpenTableOperations).toHaveBeenCalledOnce()
+})
+
+test('offers a factual continue-working path for drafts, bases and team collaboration', () => {
+  const onOpenBase = vi.fn()
+  const onOpenDraftHub = vi.fn()
+  const onOpenTeamBot = vi.fn()
+  render(<WorkspaceHome
+    workspace={{ id: 'workspace-1', name: '运营中心', slug: 'operations', role: 'owner', capabilities: { can_read_bases: true, can_manage_workspace: true, can_manage_schema: true, can_review_drafts: true } }}
+    home={{
+      workspace_id: 'workspace-1',
+      recent_bases: [{ id: 'base-1', name: '客户运营', source_type: 'blank' }],
+      queue: [{ id: 'queue-1', kind: 'draft', title: '确认客户回访草稿', status: 'pending', destination: { base_id: 'base-1', draft_id: 'draft-1' }, action_availability: { can_confirm: true, can_reject: true } }],
+    }}
+    onOpenBase={onOpenBase}
+    onOpenDraftHub={onOpenDraftHub}
+    onOpenTeamBot={onOpenTeamBot}
+  />)
+
+  const continueSection = screen.getByRole('region', { name: '继续处理' })
+  fireEvent.click(within(continueSection).getByRole('button', { name: '继续处理待确认草稿' }))
+  fireEvent.click(within(continueSection).getByRole('button', { name: '继续打开最近 Base 客户运营' }))
+  fireEvent.click(within(continueSection).getByRole('button', { name: '继续使用团队 Bot' }))
+
+  expect(onOpenDraftHub).toHaveBeenCalledOnce()
+  expect(onOpenBase).toHaveBeenCalledWith({ id: 'base-1', name: '客户运营', source_type: 'blank' })
+  expect(onOpenTeamBot).toHaveBeenCalledOnce()
+})
+
+test('guides an unselected Team Bot through three actionable steps', () => {
+  render(<TeamBotWorkbench
+    contacts={[{ id: 'employee-1', baseId: 'base-1', name: '项目助手', description: '安全汇总', availableIntents: ['summarize'] as const }]}
+    context={null}
+    selectedView={null}
+    summary={null}
+    loading={false}
+    failed={false}
+    onSelectContact={vi.fn()}
+    onSelectView={vi.fn()}
+    onSummarize={vi.fn().mockResolvedValue(undefined)}
+    onOpenBase={vi.fn()}
+    onRetry={vi.fn()}
+    onClose={vi.fn()}
+  />)
+
+  const guide = screen.getByRole('region', { name: '团队 Bot 使用步骤' })
+  expect(guide).toHaveTextContent('1选择团队助手')
+  expect(guide).toHaveTextContent('2选择已授权视图')
+  expect(guide).toHaveTextContent('3生成摘要并继续处理')
 })
 
 test('connects an authorized group relationship to employee, customer, project and context indexes', () => {

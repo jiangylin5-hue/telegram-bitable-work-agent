@@ -48,10 +48,11 @@ test('shows unimplemented lifecycle, bulk and export work as planned rather than
     onClose={vi.fn()}
   />)
 
-  for (const name of ['复制或归档 Base', '批量编辑记录', '导出数据']) {
+  for (const name of ['复制或归档 Base', '批量编辑记录', '导出 CSV / XLSX']) {
     const item = screen.getByRole('button', { name })
     expect(item).toBeDisabled()
     expect(item).toHaveAttribute('data-availability', 'planned')
+    expect(item).toHaveTextContent('规划中')
   }
   expect(screen.getByText('这些能力尚未有受控的后端契约，不能以静态页面冒充可用。')).toBeVisible()
 })

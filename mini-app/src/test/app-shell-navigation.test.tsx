@@ -36,6 +36,16 @@ test('uses desktop and mobile Home/Base controls as route actions', () => {
   expect(onNavigate.mock.calls).toEqual([['bases'], ['bases'], ['home']])
 })
 
+test('shows visible Chinese labels and usage descriptions for desktop navigation actions', () => {
+  render(<AppShell workspace={workspace} workspaces={[workspace]} onWorkspaceChange={vi.fn()} activeRoute="home" onNavigate={vi.fn()}><main>内容</main></AppShell>)
+
+  const desktopNavigation = within(screen.getByRole('complementary', { name: '主导航' }))
+  const basesButton = desktopNavigation.getByRole('button', { name: 'Bases：浏览和打开多维表格' })
+  expect(basesButton).toHaveTextContent('Bases')
+  expect(within(basesButton).getByText('浏览和打开多维表格')).toBeVisible()
+  expect(within(desktopNavigation.getByRole('button', { name: '工作区：查看今日事项' })).getByText('查看今日事项')).toBeVisible()
+})
+
 test('marks only the selected Base controls active', () => {
   render(<AppShell workspace={workspace} workspaces={[workspace]} onWorkspaceChange={vi.fn()} activeRoute="bases" onNavigate={vi.fn()}><main>内容</main></AppShell>)
 

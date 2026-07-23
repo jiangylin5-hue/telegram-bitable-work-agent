@@ -76,6 +76,26 @@ export function TeamBotWorkbench({
           </section>
         ) : null}
         {businessContextRelations.length > 0 ? <section className="team-bot-business-context" data-testid="team-bot-business-context" aria-label="团队 Bot 的已授权业务关联"><header><p>BUSINESS CONTEXT</p><h3>已授权业务关联</h3></header><div>{businessContextRelations.map((relation) => <article key={`${relation.group.id}:${relation.mapping_version}`}><strong>{relation.employee.name}</strong><span>{relation.group.label}</span><span>客户 · {relation.customer.label}</span><span>项目 · {relation.project.label}</span></article>)}</div></section> : null}
+        {!context ? <section className="team-bot-onboarding" aria-label="团队 Bot 使用步骤">
+          <header><span>从已授权数据开始</span><strong>三步生成可追溯的团队摘要</strong></header>
+          <ol>
+            <li className={contacts.length > 0 ? 'ready' : 'blocked'}>
+              <span>1</span>
+              <div><strong>选择团队助手</strong><small>{contacts.length > 0 ? `${contacts.length} 位助手可用` : '当前没有可用助手'}</small></div>
+              {contacts[0] ? <button type="button" onClick={() => onSelectContact(contacts[0].id)}>选择</button> : <em>不可用</em>}
+            </li>
+            <li>
+              <span>2</span>
+              <div><strong>选择已授权视图</strong><small>只显示当前成员可访问的保存视图</small></div>
+              <em>下一步</em>
+            </li>
+            <li>
+              <span>3</span>
+              <div><strong>生成摘要并继续处理</strong><small>输出保留来源记录与审计回执</small></div>
+              <em>待选择</em>
+            </li>
+          </ol>
+        </section> : null}
         <div className="assistant-context-columns">
             <section className="assistant-context-section" aria-label="团队助手目录">
               <header>

@@ -83,7 +83,7 @@ export function TableOperationCenter({ scope, actions, onClose }: TableOperation
               >
                 <strong>{definition.label}</strong>
                 <span>{definition.description}</span>
-                {definition.availability === 'planned' && <small>即将上线</small>}
+                {definition.availability === 'planned' && <small>规划中</small>}
               </button>
             })}</div>
           </section>
