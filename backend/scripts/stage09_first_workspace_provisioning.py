@@ -175,6 +175,7 @@ def provision_first_workspace(
         },
         actor=actor,
     )
+    uow.session.flush()
     project = create_record(
         uow,
         project_table.id,
@@ -187,6 +188,7 @@ def provision_first_workspace(
         },
         actor=actor,
     )
+    uow.session.flush()
     create_record(
         uow,
         group_table.id,
