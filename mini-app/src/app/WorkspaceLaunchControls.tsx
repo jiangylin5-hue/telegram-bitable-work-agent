@@ -1,9 +1,11 @@
 import { useState } from 'react'
 
-import type { TelegramFullscreenState } from './telegram-mini-app'
+import { exitTelegramMiniAppFullscreen, requestTelegramMiniAppFullscreen, type TelegramFullscreenState } from './telegram-mini-app'
 
 type WorkspaceLaunchControlsProps = {
   telegramState: TelegramFullscreenState | null
+  onRequestFullscreen?: () => void
+  onExitFullscreen?: () => void
   onOpenBrowser?: () => string | void | Promise<string | void>
 }
 
@@ -11,10 +13,12 @@ type WorkspaceLaunchControlsProps = {
  * Renders only an already-authorized browser handoff. It accepts no identity
  * or transport data and cannot create a browser navigation by itself.
  */
-export function WorkspaceLaunchControls({ telegramState, onOpenBrowser }: WorkspaceLaunchControlsProps) {
+export function WorkspaceLaunchControls({ telegramState, onRequestFullscreen, onExitFullscreen, onOpenBrowser }: WorkspaceLaunchControlsProps) {
   const [failed, setFailed] = useState(false)
-  if (telegramState?.kind !== 'fullscreenFailed' || telegramState.error !== 'UNSUPPORTED' || !onOpenBrowser) return null
+  if (!onOpenBrowser) return null
   const issueBrowserHandoff = onOpenBrowser
+  const requestFullscreen = onRequestFullscreen ?? requestTelegramMiniAppFullscreen
+  const exitFullscreen = onExitFullscreen ?? exitTelegramMiniAppFullscreen
 
   function isBrowserHandoffUrl(url: URL): boolean {
     if (url.origin !== window.location.origin || url.pathname !== '/browser-handoff.html' || url.search) return false
@@ -57,7 +61,10 @@ export function WorkspaceLaunchControls({ telegramState, onOpenBrowser }: Worksp
   }
 
   return <aside className="workspace-launch-controls" aria-label="工作台打开方式">
-    <button type="button" onClick={() => { void openBrowserWorkspaceFromClick() }}>在浏览器打开工作台</button>
+    {telegramState?.kind === 'fullscreen'
+      ? <button type="button" onClick={exitFullscreen}>退出全屏</button>
+      : <button type="button" onClick={requestFullscreen}>进入专注全屏</button>}
+    <button type="button" onClick={() => { void openBrowserWorkspaceFromClick() }}>在浏览器打开完整工作台</button>
     {failed && <p role="alert">无法打开工作台，请返回 Telegram 后重试。</p>}
   </aside>
 }

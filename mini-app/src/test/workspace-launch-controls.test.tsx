@@ -22,14 +22,38 @@ test('renders the browser workspace action after Telegram reports fullscreen uns
 
   render(<WorkspaceLaunchControls telegramState={{ kind: 'fullscreenFailed', error: 'UNSUPPORTED' }} onOpenBrowser={onOpenBrowser} />)
 
-  fireEvent.click(screen.getByRole('button', { name: '在浏览器打开工作台' }))
+  fireEvent.click(screen.getByRole('button', { name: '在浏览器打开完整工作台' }))
   expect(onOpenBrowser).toHaveBeenCalledTimes(1)
+})
+
+test('shows the browser workspace action while Telegram is fullscreen', () => {
+  render(<WorkspaceLaunchControls telegramState={{ kind: 'fullscreen' }} onOpenBrowser={vi.fn()} />)
+
+  expect(screen.getByRole('button', { name: '在浏览器打开完整工作台' })).toBeVisible()
+})
+
+test('requests fullscreen only from an explicit user click', () => {
+  const onRequestFullscreen = vi.fn()
+  render(<WorkspaceLaunchControls telegramState={{ kind: 'windowed' }} onRequestFullscreen={onRequestFullscreen} onOpenBrowser={vi.fn()} />)
+
+  expect(onRequestFullscreen).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: '进入专注全屏' }))
+  expect(onRequestFullscreen).toHaveBeenCalledTimes(1)
+})
+
+test('exits fullscreen only from an explicit user click', () => {
+  const onExitFullscreen = vi.fn()
+  render(<WorkspaceLaunchControls telegramState={{ kind: 'fullscreen' }} onExitFullscreen={onExitFullscreen} onOpenBrowser={vi.fn()} />)
+
+  expect(onExitFullscreen).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: '退出全屏' }))
+  expect(onExitFullscreen).toHaveBeenCalledTimes(1)
 })
 
 test('does not render a browser workspace action without a real handoff callback', () => {
   render(<WorkspaceLaunchControls telegramState={{ kind: 'fullscreenFailed', error: 'UNSUPPORTED' }} />)
 
-  expect(screen.queryByRole('button', { name: '在浏览器打开工作台' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '在浏览器打开完整工作台' })).not.toBeInTheDocument()
 })
 
 test('preopens a controlled browser window synchronously before issuing a fragment-only handoff', async () => {
@@ -40,7 +64,7 @@ test('preopens a controlled browser window synchronously before issuing a fragme
 
   render(<WorkspaceLaunchControls telegramState={{ kind: 'fullscreenFailed', error: 'UNSUPPORTED' }} onOpenBrowser={issueHandoff} />)
 
-  fireEvent.click(screen.getByRole('button', { name: '在浏览器打开工作台' }))
+  fireEvent.click(screen.getByRole('button', { name: '在浏览器打开完整工作台' }))
 
   expect(openBrowser).toHaveBeenCalledExactlyOnceWith('about:blank', '_blank')
   expect(openBrowser.mock.invocationCallOrder[0]).toBeLessThan(issueHandoff.mock.invocationCallOrder[0])
@@ -59,7 +83,7 @@ test.each([
   vi.spyOn(window, 'open').mockReturnValue(popup)
 
   render(<WorkspaceLaunchControls telegramState={{ kind: 'fullscreenFailed', error: 'UNSUPPORTED' }} onOpenBrowser={() => invalidUrl} />)
-  fireEvent.click(screen.getByRole('button', { name: '在浏览器打开工作台' }))
+  fireEvent.click(screen.getByRole('button', { name: '在浏览器打开完整工作台' }))
 
   await waitFor(() => expect(popup.close).toHaveBeenCalledTimes(1))
   expect(popup.location.replace).not.toHaveBeenCalled()
@@ -70,7 +94,7 @@ test('closes the preopened browser window when ticket issuance fails without sho
   vi.spyOn(window, 'open').mockReturnValue(popup)
 
   render(<WorkspaceLaunchControls telegramState={{ kind: 'fullscreenFailed', error: 'UNSUPPORTED' }} onOpenBrowser={() => Promise.reject(new Error('opaque-ticket'))} />)
-  fireEvent.click(screen.getByRole('button', { name: '在浏览器打开工作台' }))
+  fireEvent.click(screen.getByRole('button', { name: '在浏览器打开完整工作台' }))
 
   await waitFor(() => expect(popup.close).toHaveBeenCalledTimes(1))
   expect(screen.getByRole('alert')).not.toHaveTextContent('opaque-ticket')

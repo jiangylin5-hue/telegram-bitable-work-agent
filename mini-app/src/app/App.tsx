@@ -22,7 +22,7 @@ import { TemplateImportHub } from './TemplateImportHub'
 import { ViewBuilderPanel } from './ViewBuilderPanel'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
 import { clearAllProtectedQueries, clearAssistantContextQueries, clearDigitalEmployeeManagementQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTeamBotQueries, clearTelegramDeepLinkQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, digitalEmployeeManagementKeys, draftEmployeeKeys, governanceKeys, governanceWriteKeys, navigationKeys, protectedQueryKey, relationCandidateQueryKey, teamBotKeys, templateImportKeys, viewBuilderKeys } from './protectedQuery'
-import { prepareTelegramMiniAppViewport, readTelegramMiniAppLaunch, requestTelegramMiniAppFullscreen, subscribeTelegramMiniAppFullscreen, type TelegramFullscreenState, type TelegramMiniAppLaunch } from './telegram-mini-app'
+import { prepareTelegramMiniAppViewport, readTelegramMiniAppFullscreenState, readTelegramMiniAppLaunch, subscribeTelegramMiniAppFullscreen, type TelegramFullscreenState, type TelegramMiniAppLaunch } from './telegram-mini-app'
 import type { GovernanceAuditPage, GovernanceMemberPage } from './governance-types'
 import type { GovernanceEditableMemberPage, GovernanceFieldPermissionPage, GovernanceFieldPermissionPolicy } from './governance-write-types'
 import type { AssistantContextPage, AssistantSelectedView, CurrentCanvasInvocationContext, S5Contact, S5DraftDetail, S5InvocationRequest, S5InvocationResult } from './draft-employee-types'
@@ -174,12 +174,7 @@ function AppContent() {
   useEffect(() => {
     prepareTelegramMiniAppViewport()
     const unsubscribe = subscribeTelegramMiniAppFullscreen(setTelegramFullscreenState)
-    const result = requestTelegramMiniAppFullscreen()
-    setTelegramFullscreenState(result === 'requested'
-      ? { kind: 'fullscreenRequested' }
-      : result === 'already_fullscreen'
-        ? { kind: 'fullscreen' }
-        : { kind: 'fullscreenFailed', error: 'UNSUPPORTED' })
+    setTelegramFullscreenState(readTelegramMiniAppFullscreenState())
     return unsubscribe
   }, [])
   const telegramLaunch = useRef<TelegramMiniAppLaunch | null | undefined>(undefined)

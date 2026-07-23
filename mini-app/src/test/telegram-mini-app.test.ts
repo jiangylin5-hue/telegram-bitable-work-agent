@@ -1,7 +1,10 @@
+import { createElement } from 'react'
+import { render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api, setTelegramInitData } from '../app/api'
-import { prepareTelegramMiniAppViewport, readTelegramMiniAppLaunch, requestTelegramMiniAppFullscreen, subscribeTelegramMiniAppFullscreen } from '../app/telegram-mini-app'
+import { App } from '../app/App'
+import { exitTelegramMiniAppFullscreen, prepareTelegramMiniAppViewport, readTelegramMiniAppLaunch, requestTelegramMiniAppFullscreen, subscribeTelegramMiniAppFullscreen } from '../app/telegram-mini-app'
 
 type TelegramWindow = Window & {
   Telegram?: {
@@ -14,6 +17,7 @@ type TelegramWindow = Window & {
       isFullscreen?: boolean
       isVersionAtLeast?: (version: string) => boolean
       requestFullscreen?: () => void
+      exitFullscreen?: () => void
       onEvent?: (event: string, listener: (payload?: unknown) => void) => void
       offEvent?: (event: string, listener: (payload?: unknown) => void) => void
     }
@@ -41,6 +45,22 @@ describe('Telegram Mini App runtime adapter', () => {
     expect(prepareTelegramMiniAppViewport()).toBe(false)
   })
 
+  it('does not request Telegram fullscreen when the application mounts', () => {
+    const ready = vi.fn()
+    const expand = vi.fn()
+    const requestFullscreen = vi.fn()
+    ;(window as TelegramWindow).Telegram = {
+      WebApp: { ready, expand, version: '8.0', requestFullscreen },
+    }
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => undefined)))
+
+    render(createElement(App))
+
+    expect(ready).toHaveBeenCalledTimes(1)
+    expect(expand).toHaveBeenCalledTimes(1)
+    expect(requestFullscreen).not.toHaveBeenCalled()
+  })
+
   it('requests fullscreen exactly once on a version-8 Telegram runtime', () => {
     const requestFullscreen = vi.fn()
     ;(window as TelegramWindow).Telegram = {
@@ -49,6 +69,26 @@ describe('Telegram Mini App runtime adapter', () => {
 
     expect(requestTelegramMiniAppFullscreen()).toBe('requested')
     expect(requestFullscreen).toHaveBeenCalledTimes(1)
+  })
+
+  it('exits fullscreen exactly once on a capable fullscreen Telegram runtime', () => {
+    const exitFullscreen = vi.fn()
+    ;(window as TelegramWindow).Telegram = {
+      WebApp: { version: '8.0', isFullscreen: true, exitFullscreen },
+    }
+
+    expect(exitTelegramMiniAppFullscreen()).toBe('requested')
+    expect(exitFullscreen).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not exit when Telegram is already windowed', () => {
+    const exitFullscreen = vi.fn()
+    ;(window as TelegramWindow).Telegram = {
+      WebApp: { version: '8.0', isFullscreen: false, exitFullscreen },
+    }
+
+    expect(exitTelegramMiniAppFullscreen()).toBe('already_windowed')
+    expect(exitFullscreen).not.toHaveBeenCalled()
   })
 
   it('subscribes to fullscreen events and removes the same listeners on cleanup', () => {

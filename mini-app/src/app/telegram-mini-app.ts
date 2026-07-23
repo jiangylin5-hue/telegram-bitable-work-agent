@@ -24,6 +24,7 @@ type TelegramWebApp = {
   isFullscreen?: boolean
   isVersionAtLeast?: (version: string) => boolean
   requestFullscreen?: () => void
+  exitFullscreen?: () => void
   onEvent?: (event: TelegramFullscreenEvent, listener: TelegramFullscreenListener) => void
   offEvent?: (event: TelegramFullscreenEvent, listener: TelegramFullscreenListener) => void
 }
@@ -66,6 +67,28 @@ export function requestTelegramMiniAppFullscreen(): 'requested' | 'unsupported' 
   if (webApp.isFullscreen) return 'already_fullscreen'
   webApp.requestFullscreen()
   return 'requested'
+}
+
+/**
+ * Return a focused Mini App to the Telegram windowed viewport only when the
+ * host exposes its versioned fullscreen exit capability.
+ */
+export function exitTelegramMiniAppFullscreen(): 'requested' | 'unsupported' | 'already_windowed' {
+  if (typeof window === 'undefined') return 'unsupported'
+  const webApp = window.Telegram?.WebApp
+  if (!webApp?.exitFullscreen || !isVersionAtLeast(webApp, '8.0')) return 'unsupported'
+  if (!webApp.isFullscreen) return 'already_windowed'
+  webApp.exitFullscreen()
+  return 'requested'
+}
+
+/**
+ * Read the host's current presentation state without requesting a viewport
+ * change. Initializing a Mini App must remain windowed unless the user asks.
+ */
+export function readTelegramMiniAppFullscreenState(): TelegramFullscreenState {
+  if (typeof window === 'undefined' || !window.Telegram?.WebApp) return { kind: 'fullscreenFailed', error: 'UNSUPPORTED' }
+  return window.Telegram.WebApp.isFullscreen ? { kind: 'fullscreen' } : { kind: 'windowed' }
 }
 
 /**
