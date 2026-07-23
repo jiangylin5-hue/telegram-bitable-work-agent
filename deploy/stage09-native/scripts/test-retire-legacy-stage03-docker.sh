@@ -162,13 +162,26 @@ sed \
 chmod 700 "$fixture_script" || fail fixture-script-mode
 sh -n "$fixture_script" || fail fixture-script-syntax
 
-run_tool() {
+missing_utility_script="$fixture_root/retire-legacy-stage03-docker-missing-utility-fixture.sh"
+sed \
+    's/^for utility in /for utility in fixture_missing_utility /' \
+    "$fixture_script" > "$missing_utility_script" || fail missing-utility-script-copy
+chmod 700 "$missing_utility_script" || fail missing-utility-script-mode
+sh -n "$missing_utility_script" || fail missing-utility-script-syntax
+
+run_script() {
+    tool_script=$1
+    shift
     FAKE_DOCKER_LOG="$fixture_log" \
     FAKE_COMPOSE_DIR="$fixture_compose" \
     FAKE_VOLUME_PATH="$fixture_root/releases/source" \
     FAKE_SECRET=fixture-secret-value \
     REAL_STAT="$real_stat" \
-    "$fixture_script" "$@"
+    "$tool_script" "$@"
+}
+
+run_tool() {
+    run_script "$fixture_script" "$@"
 }
 
 assert_no_runtime_delete() {
@@ -223,6 +236,11 @@ awk -F '\t' '
         $3 !~ /^[0-9]+$/ || $4 == "" || $5 !~ /^[0-9a-f]{64}$/ { exit 1 }
     END { if (NR != 8) exit 1 }
 ' "$archive_dir/inventory.tsv" || fail archive-inventory-shape
+
+: > "$fixture_log" || fail fixture-log-reset
+if run_script "$missing_utility_script" retire > "$fixture_root/missing-utility.receipt" 2>&1; then fail missing-utility-accepted; fi
+assert_failed_retire_receipt "$fixture_root/missing-utility.receipt" missing-utility-receipt
+assert_no_runtime_delete missing-utility-deleted-runtime
 
 : > "$fixture_log" || fail fixture-log-reset
 retire_output=$(FAKE_CADDY_EXEC_FAIL=1 run_tool retire 2>&1) || fail retire-run

@@ -450,7 +450,13 @@ case "${1:-}" in
 esac
 [ "$#" -eq 1 ] || fail
 for utility in awk cat chmod cp date dd docker du find grep id mkdir mktemp mv pg_restore python3 readlink rm sha256sum sort stat wc; do
-    command -v "$utility" >/dev/null 2>&1 || fail
+    if ! command -v "$utility" >/dev/null 2>&1; then
+        if [ "$mode" = retire ]; then
+            failed_retire_receipt
+            exit 1
+        fi
+        fail
+    fi
 done
 
 umask 077
