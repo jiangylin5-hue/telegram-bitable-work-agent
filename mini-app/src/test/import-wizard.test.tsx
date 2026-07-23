@@ -62,7 +62,9 @@ test('keeps the preview editable after a table-key conflict', async () => {
   fireEvent.click(screen.getByRole('button', { name: '确认创建数据表' }))
 
   expect(await screen.findByRole('alert')).toHaveTextContent('数据表 key 已存在')
-  expect(screen.getByLabelText('数据表 key')).toBeEnabled()
+  const tableKeyInput = screen.getByLabelText('数据表 key')
+  expect(tableKeyInput).toBeEnabled()
+  expect(tableKeyInput).toHaveFocus()
   expect(screen.queryByText('已创建数据表')).not.toBeInTheDocument()
 })
 

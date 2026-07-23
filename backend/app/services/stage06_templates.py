@@ -687,11 +687,15 @@ def _default_field_mapping(schema: list[dict[str, Any]]) -> list[dict[str, Any]]
 
 
 def _validate_field_mapping(mapping: list[dict[str, Any]]) -> None:
+    target_keys: set[str] = set()
     for item in mapping:
         if item.get("field_type") not in STAGE06_FIELD_TYPES:
             raise PlatformValidationError("unsupported_field_type", str(item))
-        if not item.get("source_key") or not item.get("target_key"):
+        source_key = item.get("source_key")
+        target_key = item.get("target_key")
+        if not source_key or not target_key or target_key in target_keys:
             raise PlatformValidationError("invalid_import_mapping", str(item))
+        target_keys.add(target_key)
 
 
 def _coerce_value(value: Any, field_type: str) -> Any:

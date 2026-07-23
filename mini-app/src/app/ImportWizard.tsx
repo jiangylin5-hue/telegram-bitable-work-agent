@@ -1,4 +1,4 @@
-import { type ChangeEvent, type FormEvent, useRef, useState } from 'react'
+import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react'
 
 import { ApiError, type SafeApiErrorCode } from './api'
 import type { CommitImportValues, CreateImportValues, ImportCommitReceipt, ImportMapping, ImportPreview, ImportScalarFieldType } from './template-import-types'
@@ -86,6 +86,14 @@ export function ImportWizard({ target, onCreatePreview, onCommit, onClose }: Pro
   const [pending, setPending] = useState<'preview' | 'commit' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [receipt, setReceipt] = useState<ImportCommitReceipt | null>(null)
+  const [focusTableKey, setFocusTableKey] = useState(false)
+
+  useEffect(() => {
+    if (focusTableKey && pending === null) {
+      tableKeyInputRef.current?.focus()
+      setFocusTableKey(false)
+    }
+  }, [focusTableKey, pending])
 
   function selectFile(event: ChangeEvent<HTMLInputElement>) {
     setError(null); setPreview(null); setMapping([]); setReceipt(null)
@@ -121,7 +129,7 @@ export function ImportWizard({ target, onCreatePreview, onCommit, onClose }: Pro
       setReceipt(await onCommit(preview.id, { baseName: normalizedBaseName, tableName: normalizedTableName, tableKey: normalizedTableKey, fieldMapping: mapping }))
     } catch (caught) {
       setError(safeError(caught))
-      if (caught instanceof ApiError && caught.code === 'import_table_key_conflict') tableKeyInputRef.current?.focus()
+      if (caught instanceof ApiError && caught.code === 'import_table_key_conflict') setFocusTableKey(true)
     } finally { setPending(null) }
   }
 

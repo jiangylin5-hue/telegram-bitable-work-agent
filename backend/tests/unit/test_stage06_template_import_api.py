@@ -203,6 +203,59 @@ def test_stage06_template_import_commit_rejects_duplicate_table_key_without_new_
     assert len(uow.records) == records_before
 
 
+def test_stage06_template_import_commit_rejects_duplicate_mapping_targets_without_new_resources() -> None:
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_template_import_uow] = lambda: uow
+    app.dependency_overrides[get_system_actor] = lambda: Actor(
+        actor_type="user",
+        actor_id="owner-1",
+        role="owner",
+    )
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "owner-1"
+        client.headers["Idempotency-Key"] = "duplicate-mapping-target"
+        workspace_id = client.post(
+            "/workspaces",
+            json={"name": "Acme", "owner_user_id": "owner-1"},
+        ).json()["id"]
+        client.headers["Idempotency-Key"] = "duplicate-mapping-target-import"
+        import_response = client.post(
+            f"/workspaces/{workspace_id}/imports",
+            json={
+                "source_type": "csv",
+                "file_name": "customers.csv",
+                "content": "Name,Score\nAda,10\n",
+                "created_by_user_id": "owner-1",
+            },
+        )
+
+        tables_before = len(uow.tables)
+        fields_before = len(uow.fields)
+        records_before = len(uow.records)
+        commit_response = client.post(
+            f"/imports/{import_response.json()['id']}/commit",
+            json={
+                "base_name": "Imported CRM",
+                "table_name": "Customers",
+                "table_key": "customers",
+                "field_mapping": [
+                    {"source_key": "name", "target_key": "customer", "field_type": "text"},
+                    {"source_key": "score", "target_key": "customer", "field_type": "number"},
+                ],
+            },
+        )
+
+    assert import_response.status_code == 200
+    assert commit_response.status_code == 422
+    assert commit_response.json()["detail"]["code"] == "invalid_import_mapping"
+    assert len(uow.tables) == tables_before
+    assert len(uow.fields) == fields_before
+    assert len(uow.records) == records_before
+
+
 def _simple_xlsx_bytes(rows: list[list[str]]) -> bytes:
     sheet_rows = []
     for row_number, row in enumerate(rows, start=1):
