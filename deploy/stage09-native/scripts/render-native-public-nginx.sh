@@ -7,9 +7,21 @@ fail() {
     exit 1
 }
 
+has_line_break() {
+    candidate=$1
+    line_feed=$(printf '\nx')
+    line_feed=${line_feed%x}
+    carriage_return=$(printf '\r')
+    case "$candidate" in
+        *"$line_feed"*|*"$carriage_return"*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 is_hostname() {
     candidate=$1
     [ -n "$candidate" ] && [ "${#candidate}" -le 253 ] || return 1
+    has_line_break "$candidate" && return 1
     printf '%s\n' "$candidate" | grep -Eq '^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$'
 }
 
@@ -22,6 +34,7 @@ has_forbidden_marker() {
 
 is_file_path() {
     candidate=$1
+    has_line_break "$candidate" && return 1
     case "$candidate" in
         /*) ;;
         *) return 1 ;;
