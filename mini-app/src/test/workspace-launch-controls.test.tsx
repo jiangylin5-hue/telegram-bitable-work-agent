@@ -17,6 +17,12 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+test('does not render Telegram launch controls outside Telegram', () => {
+  render(<WorkspaceLaunchControls telegramState={null} onOpenBrowser={vi.fn()} />)
+
+  expect(screen.queryByLabelText('工作台打开方式')).not.toBeInTheDocument()
+})
+
 test('renders the browser workspace action after Telegram reports fullscreen unsupported', () => {
   const onOpenBrowser = vi.fn()
   vi.spyOn(window, 'open').mockReturnValue(browserWindow())

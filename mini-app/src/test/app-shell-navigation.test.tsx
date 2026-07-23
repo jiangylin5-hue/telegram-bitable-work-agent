@@ -49,6 +49,12 @@ test('marks only the selected Base controls active', () => {
   expect(mobileNavigation.getByRole('button', { name: '工作区：查看今日事项' })).not.toHaveClass('active')
 })
 
+test('does not render Telegram launch controls in a desktop browser workspace', () => {
+  render(<AppShell workspace={workspace} workspaces={[workspace]} onWorkspaceChange={vi.fn()} activeRoute="home" onNavigate={vi.fn()} telegramState={{ kind: 'windowed' }} onOpenBrowser={vi.fn()}><main>内容</main></AppShell>)
+
+  expect(screen.queryByLabelText('工作台打开方式')).not.toBeInTheDocument()
+})
+
 test('opens real supported destinations and has Chinese usage hints', () => {
   const onOpenDraftHub = vi.fn()
   const onOpenTeamBot = vi.fn()
@@ -180,7 +186,7 @@ test('opens every additional supported workbench from the mobile More menu', () 
 
 test.each([320, 375, 900])('puts the mobile header before in-flow fullscreen controls at %ipx', (width) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
-  const rendered = render(<AppShell workspace={workspace} workspaces={[workspace]} onWorkspaceChange={vi.fn()} activeRoute="home" onNavigate={vi.fn()} telegramState={{ kind: 'windowed' }} onOpenBrowser={vi.fn()}><main>内容</main></AppShell>)
+  const rendered = render(<AppShell workspace={workspace} workspaces={[workspace]} onWorkspaceChange={vi.fn()} activeRoute="home" onNavigate={vi.fn()} isTelegramMiniApp telegramState={{ kind: 'windowed' }} onOpenBrowser={vi.fn()}><main>内容</main></AppShell>)
 
   const header = rendered.container.querySelector('.mobile-header')
   const controls = screen.getByRole('complementary', { name: '工作台打开方式' })

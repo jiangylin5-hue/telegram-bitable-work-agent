@@ -63,7 +63,10 @@ export function TeamBotWorkbench({
             <h2>团队 Bot</h2>
             <span>仅汇总当前成员可访问的团队视图；不会保存个人对话或记忆。</span>
           </div>
-          <button type="button" aria-label="关闭团队 Bot" onClick={onClose}>×</button>
+          <div className="assistant-context-header-actions">
+            <button type="button" className="assistant-context-return" onClick={onClose}>返回工作区</button>
+            <button type="button" aria-label="关闭团队 Bot" onClick={onClose}>×</button>
+          </div>
         </header>
 
         {failed ? (

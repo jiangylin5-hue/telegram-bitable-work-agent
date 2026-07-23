@@ -15,7 +15,7 @@ type WorkspaceLaunchControlsProps = {
  */
 export function WorkspaceLaunchControls({ telegramState, onRequestFullscreen, onExitFullscreen, onOpenBrowser }: WorkspaceLaunchControlsProps) {
   const [failed, setFailed] = useState(false)
-  if (!onOpenBrowser) return null
+  if (telegramState === null || !onOpenBrowser) return null
   const issueBrowserHandoff = onOpenBrowser
   const requestFullscreen = onRequestFullscreen ?? requestTelegramMiniAppFullscreen
   const exitFullscreen = onExitFullscreen ?? exitTelegramMiniAppFullscreen

@@ -509,6 +509,7 @@ function AppContent() {
   }
 
   function selectNavigation(route: AppShellRoute) {
+    dismissTransientWorkbenches()
     baseDirectoryRequestVersion.current += 1
     if (readyState.canvasLoading || readyState.canvas) {
       canvasRequestVersion.current += 1
@@ -520,6 +521,30 @@ function AppContent() {
     }
     setNavigationRoute(route)
     if (route === 'bases') void loadBaseDirectory()
+  }
+
+  function dismissTransientWorkbenches() {
+    builderRequestVersion.current += 1
+    templateImportRequestVersion.current += 1
+    governanceRequestVersion.current += 1
+    governanceWriteRequestVersion.current += 1
+    draftEmployeeRequestVersion.current += 1
+    assistantContextRequestVersion.current += 1
+    teamBotRequestVersion.current += 1
+    digitalEmployeeManagementRequestVersion.current += 1
+    collaborationRequestVersion.current += 1
+    memoryRequestVersion.current += 1
+    setBuilderPanel(undefined)
+    setTemplateImportPanel(undefined)
+    setTableOperationPanel(undefined)
+    setGovernancePanel(undefined)
+    setGovernanceWritePanel(undefined)
+    setDraftEmployeePanel(undefined)
+    setAssistantContextPanel(undefined)
+    setTeamBotPanel(undefined)
+    setDigitalEmployeeManagementPanel(undefined)
+    setCollaborationPanel(undefined)
+    setMemoryPanel(undefined)
   }
 
   async function readV1BuilderForCanvas(
@@ -3082,5 +3107,5 @@ function AppContent() {
     return buildBrowserHandoffUrl(ticket)
   }
 
-  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} activeRoute={navigationRoute} onNavigate={selectNavigation} onOpenDraftHub={(trigger) => { void openDraftEmployeeHub(trigger) }} onOpenTeamBot={(trigger) => { void openTeamBot(trigger) }} onOpenCollaboration={(trigger) => { void openCollaboration(trigger) }} onOpenMemory={(trigger) => { void openMemory(trigger) }} onOpenGovernance={(trigger) => { void openGovernance(trigger) }} telegramState={telegramFullscreenState} onOpenBrowser={createBrowserHandoffUrl}>{content}{builderOverlay}{templateImportOverlay}{tableOperationOverlay}{collaborationOverlay}{memoryOverlay}{draftEmployeeOverlay}{assistantContextOverlay}{teamBotOverlay}{digitalEmployeeManagementOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
+  return <AppShell workspace={selectedWorkspace} workspaces={readyState.bootstrap.workspaces} onWorkspaceChange={selectWorkspace} activeRoute={navigationRoute} onNavigate={selectNavigation} onOpenDraftHub={(trigger) => { void openDraftEmployeeHub(trigger) }} onOpenTeamBot={(trigger) => { void openTeamBot(trigger) }} onOpenCollaboration={(trigger) => { void openCollaboration(trigger) }} onOpenMemory={(trigger) => { void openMemory(trigger) }} onOpenGovernance={(trigger) => { void openGovernance(trigger) }} isTelegramMiniApp={telegramLaunch.current !== null} telegramState={telegramFullscreenState} onOpenBrowser={telegramLaunch.current ? createBrowserHandoffUrl : undefined}>{content}{builderOverlay}{templateImportOverlay}{tableOperationOverlay}{collaborationOverlay}{memoryOverlay}{draftEmployeeOverlay}{assistantContextOverlay}{teamBotOverlay}{digitalEmployeeManagementOverlay}{governanceOverlay}{governanceWriteOverlay}</AppShell>
 }

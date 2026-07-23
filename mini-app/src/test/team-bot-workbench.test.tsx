@@ -19,6 +19,7 @@ const context = {
 }
 
 test('keeps team knowledge separate from personal memory and direct record changes', () => {
+  const onClose = vi.fn()
   render(
     <TeamBotWorkbench
       contacts={[contact]}
@@ -32,7 +33,7 @@ test('keeps team knowledge separate from personal memory and direct record chang
       onSummarize={vi.fn()}
       onOpenBase={vi.fn()}
       onRetry={vi.fn()}
-      onClose={vi.fn()}
+      onClose={onClose}
     />,
   )
 
@@ -41,6 +42,10 @@ test('keeps team knowledge separate from personal memory and direct record chang
   expect(screen.getByLabelText('已授权视图')).toBeVisible()
   expect(screen.getByLabelText('团队摘要与审计')).toBeVisible()
   expect(screen.getByText('仅汇总当前成员可访问的团队视图；不会保存个人对话或记忆。')).toBeVisible()
+  const returnButton = screen.getByRole('button', { name: '返回工作区' })
+  expect(returnButton).toBeVisible()
+  fireEvent.click(returnButton)
+  expect(onClose).toHaveBeenCalledOnce()
   expect(screen.getByRole('button', { name: '打开 Base 继续处理' })).toBeEnabled()
   expect(screen.queryByRole('button', { name: /创建草稿|直接写入|记录选择/ })).not.toBeInTheDocument()
 })

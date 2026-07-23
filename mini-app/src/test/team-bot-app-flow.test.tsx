@@ -22,6 +22,9 @@ test('rereads the selected team view before one safe summary and hands off only 
     if (path === '/workspaces/workspace-1/home') return Promise.resolve(json({
       workspace_id: 'workspace-1', recent_bases: [{ id: 'base-1', name: '运营 Base', source_type: 'blank' }], queue: [],
     }))
+    if (path === '/workspaces/workspace-1/bases') return Promise.resolve(json({
+      bases: [{ id: 'base-1', name: '运营 Base', source_type: 'blank' }],
+    }))
     if (path === '/mini-app/workspaces/workspace-1/team-bot-contacts?limit=50') return Promise.resolve(json({
       workspace_id: 'workspace-1',
       contacts: [{ id: 'employee-1', base_id: 'base-1', name: '团队助手', description: '汇总当前可访问视图。', available_intents: ['summarize'] }],
@@ -89,4 +92,8 @@ test('rereads the selected team view before one safe summary and hands off only 
 
   fireEvent.click(screen.getByRole('button', { name: '打开 Base 继续处理' }))
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/bases/base-1/tables', expect.anything()))
+
+  fireEvent.click(screen.getAllByRole('button', { name: 'Bases：浏览和打开多维表格' })[0])
+  await waitFor(() => expect(screen.queryByTestId('team-bot-workbench')).not.toBeInTheDocument())
+  expect(await screen.findByRole('main', { name: 'Bases' })).toBeVisible()
 })
