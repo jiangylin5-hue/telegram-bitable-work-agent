@@ -797,6 +797,41 @@ select:focus-visible {
   color: var(--accent-azure);
 }
 
+.table-tab-shell {
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 38px;
+  align-items: center;
+  border-bottom: 2px solid transparent;
+}
+
+.table-tab-shell.active {
+  border-bottom-color: var(--accent-azure);
+}
+
+.table-tab-shell .table-tab {
+  height: 36px;
+  border-bottom: 0;
+  padding-right: 4px;
+}
+
+.table-tab-menu-trigger {
+  display: grid;
+  width: 25px;
+  height: 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--accent-azure);
+}
+
+.table-tab-menu-trigger:hover,
+.table-tab-menu-trigger:focus-visible {
+  background: #edf5ff;
+  outline: none;
+}
+
 .record-grid th,
 .record-grid td {
   border-color: var(--line-subtle);
@@ -1421,6 +1456,21 @@ select:focus-visible {
 .workbench-business-context strong,
 .team-bot-business-context strong {
   color: var(--text-primary);
+}
+
+.workbench-business-context > div > button {
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  padding: 3px 5px;
+  text-align: left;
+}
+
+.workbench-business-context > div > button:hover,
+.workbench-business-context > div > button:focus-visible {
+  background: #edf5ff;
+  color: var(--accent-azure);
+  outline: none;
 }
 
 .team-bot-business-context article {

@@ -182,6 +182,9 @@ test('renders a factual Base context rail beside the table work surface', () => 
 })
 
 test('renders the same authorized business relationship inside the Base and Team Bot workbenches', () => {
+  const onOpenRecordReference = vi.fn()
+  const onOpenEmployeeReference = vi.fn()
+  const onOpenAssistantContext = vi.fn()
   const relation = {
     employee: { id: 'employee-1', name: 'Customer Success', base_id: 'base-1', base_name: 'CRM' },
     group: { id: 'group_context:private', label: '已授权群聊 1' },
@@ -197,11 +200,24 @@ test('renders the same authorized business relationship inside the Base and Team
     records={{ view_id: 'view-1', records: [], next_cursor: null, has_more: false }}
     presentation={{ view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: [], group_by_field_key: null, date_field_key: null, form_field_keys: [] }}
     businessContextRelations={[relation]}
+    onOpenRecordReference={onOpenRecordReference}
+    onOpenEmployeeReference={onOpenEmployeeReference}
+    onOpenAssistantContext={onOpenAssistantContext}
     onBack={vi.fn()} onOpenRecord={vi.fn()} onSelectView={vi.fn()}
   />)
 
   expect(screen.getByTestId('base-business-context')).toHaveTextContent('Customer Success')
   expect(screen.getByTestId('base-business-context')).toHaveTextContent('Acme Co')
+  expect(screen.getByTestId('base-business-context')).not.toHaveTextContent('group_context:private')
+  fireEvent.click(screen.getByRole('button', { name: '打开客户记录 Acme Co' }))
+  fireEvent.click(screen.getByRole('button', { name: '打开项目记录 Renewal' }))
+  fireEvent.click(screen.getByRole('button', { name: '打开数字员工 Customer Success' }))
+  fireEvent.click(screen.getByRole('button', { name: '查看群聊上下文 已授权群聊 1' }))
+
+  expect(onOpenRecordReference).toHaveBeenNthCalledWith(1, relation.customer)
+  expect(onOpenRecordReference).toHaveBeenNthCalledWith(2, relation.project)
+  expect(onOpenEmployeeReference).toHaveBeenCalledWith(expect.any(HTMLElement), relation.employee)
+  expect(onOpenAssistantContext).toHaveBeenCalledWith(expect.any(HTMLElement))
 
   rerender(<TeamBotWorkbench
     contacts={[]}
