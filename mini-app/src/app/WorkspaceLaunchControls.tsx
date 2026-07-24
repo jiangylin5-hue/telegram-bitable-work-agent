@@ -68,7 +68,9 @@ export function WorkspaceLaunchControls({ telegramState, onRequestFullscreen, on
   return <aside className="workspace-launch-controls" aria-label="工作台打开方式">
     {telegramState?.kind === 'fullscreen'
       ? <button type="button" onClick={exitFullscreen}>退出全屏</button>
-      : <button type="button" onClick={requestFullscreen}>进入专注全屏</button>}
+      : telegramState?.kind === 'fullscreenUnsupported'
+        ? null
+        : <button type="button" onClick={requestFullscreen}>进入专注全屏</button>}
     <button type="button" onClick={() => { void openBrowserWorkspaceFromClick() }}>在浏览器打开完整工作台</button>
     {failed && <p role="alert">无法打开工作台，请返回 Telegram 后重试。</p>}
   </aside>

@@ -24,6 +24,20 @@
 
 **验收：** 为 `401` bootstrap 编写先失败后通过的 UI 自动化测试；真实桌面入口由用户从 Telegram 重新打开后应进入已授权工作区，而非停留在无说明的空白页。此补充不延长会话、不自动登录，也不改变任何业务数据。
 
+### 2026-07-24 补充：Mini App 浏览器入口身份恢复与能力收口
+
+**根因证据：** 用户在 Telegram Mini App 内点击浏览器入口后，生产 Nginx/API 均记录到三次 `POST /mini-app/browser-handoffs` 返回 `401`。返回体的安全代码为 `stage06_verified_identity_required`，与无身份头的受控探针返回完全一致；数据库中 handoff/session 的数量没有新增。结论是前端模块级 `telegramInitData` 在入口点击时已被清空，后端按设计拒绝，不能以旧首页渲染推断为仍有交接权限。
+
+**修复设计：**
+
+1. `AppContent` 已持有仅内存的 `TelegramMiniAppLaunch.initData`。每次创建 browser handoff 前，必须从该受控内存来源重新设置 API 身份头，再请求 `POST /mini-app/browser-handoffs`；不得写入 localStorage、sessionStorage、URL、日志或页面正文。
+2. Telegram host 不具备 `requestFullscreen` 或不满足版本要求时，适配器返回明确的 `fullscreenUnsupported` 状态；界面不再显示点击后必然无效的“进入专注全屏”按钮，保留可用的浏览器入口。
+3. 浏览器入口的失败提示必须仅在该次点击失败后出现；成功的新点击会清除旧提示。提示只给恢复方向，不暴露原始身份、ticket、cookie、HTTP 细节或授权对象。
+
+**不在范围：** 不调整 5 分钟 Telegram initData 校验策略、不修改 handoff/session TTL、不增加永久登录、不改变数据库 schema、不会放宽 Telegram、浏览器或业务权限。
+
+**验收：** 先写失败测试证明“模块级身份已清空时，入口仍用当前 Mini App 内存身份发起 handoff”与“不支持全屏时不渲染无效按钮”；再以真实 Telegram 身份点击验证 API 从 `401` 变为受控 `201`，浏览器完成 ticket exchange 后进入工作台。
+
 ---
 
 ### Task 1: Telegram 全屏兼容层和入口控件

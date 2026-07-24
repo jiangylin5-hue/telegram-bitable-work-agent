@@ -77,6 +77,13 @@ test('does not render a browser workspace action without a real handoff callback
   expect(screen.queryByRole('button', { name: '在浏览器打开完整工作台' })).not.toBeInTheDocument()
 })
 
+test('does not render an inoperable fullscreen action on an unsupported Telegram host', () => {
+  render(<WorkspaceLaunchControls telegramState={{ kind: 'fullscreenUnsupported' } as never} onOpenBrowser={vi.fn()} />)
+
+  expect(screen.queryByRole('button', { name: '进入专注全屏' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '在浏览器打开完整工作台' })).toBeVisible()
+})
+
 test('preopens a controlled browser window synchronously before issuing a fragment-only handoff', async () => {
   const popup = browserWindow()
   const issueHandoff = vi.fn().mockResolvedValue(`${window.location.origin}/browser-handoff.html#ticket=opaque-ticket`)

@@ -3103,6 +3103,9 @@ function AppContent() {
     />
     : null
   async function createBrowserHandoffUrl(): Promise<string> {
+    const launch = telegramLaunch.current
+    if (!launch?.initData) throw new Error('Telegram Mini App identity is unavailable')
+    api.setTelegramInitData(launch.initData)
     const { ticket } = await api.createBrowserHandoff()
     return buildBrowserHandoffUrl(ticket)
   }

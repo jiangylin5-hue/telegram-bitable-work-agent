@@ -7,6 +7,7 @@ export type TelegramFullscreenState =
   | { kind: 'fullscreenRequested' }
   | { kind: 'fullscreen' }
   | { kind: 'windowed' }
+  | { kind: 'fullscreenUnsupported' }
   | { kind: 'fullscreenFailed'; error: string }
 
 type TelegramFullscreenEvent = 'fullscreen_changed' | 'fullscreen_failed'
@@ -126,7 +127,10 @@ export function openTelegramMiniAppLink(url: string): boolean {
 export function readTelegramMiniAppFullscreenState(): TelegramFullscreenState {
   try {
     if (typeof window === 'undefined' || !window.Telegram?.WebApp) return { kind: 'fullscreenFailed', error: 'UNSUPPORTED' }
-    return window.Telegram.WebApp.isFullscreen ? { kind: 'fullscreen' } : { kind: 'windowed' }
+    const webApp = window.Telegram.WebApp
+    if (webApp.isFullscreen) return { kind: 'fullscreen' }
+    if (!webApp.requestFullscreen || !isVersionAtLeast(webApp, '8.0')) return { kind: 'fullscreenUnsupported' }
+    return { kind: 'windowed' }
   } catch {
     return { kind: 'fullscreenFailed', error: 'UNSUPPORTED' }
   }
