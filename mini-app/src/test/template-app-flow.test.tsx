@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import { App } from '../app/App'
+import { TemplateImportHub } from '../app/TemplateImportHub'
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -54,4 +55,55 @@ test('closes the template shelf after the receipt Base is reread and opened', as
   const canvas = await screen.findByRole('main', { name: 'Base 工作台' })
   expect(within(canvas).getByRole('heading', { name: 'CRM' })).toBeVisible()
   expect(screen.queryByRole('dialog', { name: '模板与导入' })).not.toBeInTheDocument()
+})
+
+test('closes the template shelf with Escape and restores focus to its trigger', async () => {
+  const fetchMock = vi.fn((input: RequestInfo | URL) => {
+    const path = String(input)
+    if (path === '/mini-app/bootstrap') return Promise.resolve(json({ identity: { user_id: 'owner-1', source: 'header' }, workspaces: [{ id: 'workspace-1', name: 'Acme', slug: 'acme', role: 'owner', capabilities: { can_read_bases: true, can_manage_workspace: true, can_manage_schema: true, can_review_drafts: false } }] }))
+    if (path === '/workspaces/workspace-1/home') return Promise.resolve(json({ workspace_id: 'workspace-1', recent_bases: [], queue: [] }))
+    if (path === '/templates') return Promise.resolve(json({ templates: [] }))
+    return Promise.resolve(json({ detail: 'unexpected' }, 404))
+  })
+  vi.stubGlobal('fetch', fetchMock)
+
+  render(<App />)
+  const trigger = await screen.findByRole('button', { name: '模板与导入' })
+  fireEvent.click(trigger)
+  await screen.findByRole('dialog', { name: '模板与导入' })
+
+  fireEvent.keyDown(document, { key: 'Escape' })
+
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: '模板与导入' })).not.toBeInTheDocument())
+  expect(trigger).toHaveFocus()
+})
+
+test('closes an idle template shelf from its backdrop', () => {
+  const onClose = vi.fn()
+  const { container } = render(<TemplateImportHub templates={[]} loading={false} error={null} onRetry={() => undefined} onInstall={() => undefined} onClose={onClose} />)
+
+  fireEvent.mouseDown(container.firstElementChild!)
+
+  expect(onClose).toHaveBeenCalledOnce()
+})
+
+test('does not close a template shelf from Escape or its backdrop while installation is pending', async () => {
+  let resolveInstall: (() => void) | undefined
+  const onClose = vi.fn()
+  const { container } = render(<TemplateImportHub
+    templates={[{ id: 'template-1', name: 'CRM', category: 'crm', description: 'Safe summary', version: '1.0.0', status: 'published' }]}
+    loading={false}
+    error={null}
+    onRetry={() => undefined}
+    onInstall={() => new Promise<void>((resolve) => { resolveInstall = resolve })}
+    onClose={onClose}
+  />)
+
+  fireEvent.click(screen.getByRole('button', { name: '安装模板 CRM' }))
+  await waitFor(() => expect(screen.getByRole('button', { name: '安装模板 CRM' })).toBeDisabled())
+  fireEvent.keyDown(document, { key: 'Escape' })
+  fireEvent.mouseDown(container.firstElementChild!)
+
+  expect(onClose).not.toHaveBeenCalled()
+  await act(async () => resolveInstall?.())
 })

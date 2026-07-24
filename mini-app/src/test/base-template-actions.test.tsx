@@ -20,10 +20,10 @@ test('exposes template save and in-Base import only through authorized Base acti
   />)
 
   fireEvent.click(screen.getByRole('button', { name: '更多 Base 操作' }))
-  fireEvent.click(screen.getByRole('button', { name: '保存为模板' }))
+  fireEvent.click(screen.getByRole('menuitem', { name: '保存为模板' }))
   expect(onSaveTemplate).toHaveBeenCalledOnce()
   fireEvent.click(screen.getByRole('button', { name: '更多 Base 操作' }))
-  fireEvent.click(screen.getByRole('button', { name: '导入到当前 Base' }))
+  fireEvent.click(screen.getByRole('menuitem', { name: '导入到当前 Base' }))
   expect(onImportIntoBase).toHaveBeenCalledOnce()
 })
 

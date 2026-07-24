@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { type MouseEvent, useEffect, useState } from 'react'
 
 import type { TemplateSummary } from './template-import-types'
 
@@ -39,7 +39,21 @@ export function TemplateImportHub({ templates, loading, error, onRetry, onInstal
       setInstallingId(null)
     }
   }
-  return <div className="template-import-backdrop" role="presentation">
+
+  useEffect(() => {
+    if (installingId !== null) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [installingId, onClose])
+
+  function closeFromBackdrop(event: MouseEvent<HTMLDivElement>) {
+    if (installingId === null && event.target === event.currentTarget) onClose()
+  }
+
+  return <div className="template-import-backdrop" role="presentation" onMouseDown={closeFromBackdrop}>
     <aside className="template-import-panel" aria-labelledby="template-import-title" aria-modal="true" role="dialog">
       <header className="template-import-header"><div><p>WORKSPACE SETUP</p><h2 id="template-import-title">模板与导入</h2><span>从已有结构开始，或导入一个文件创建持久化数据表。</span></div><button type="button" aria-label="关闭模板与导入" onClick={onClose}>×</button></header>
       {onStartWorkspaceImport && <div className="template-import-actions"><button type="button" className="button-primary" onClick={onStartWorkspaceImport}>导入到新 Base</button></div>}

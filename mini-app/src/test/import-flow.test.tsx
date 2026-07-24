@@ -135,7 +135,7 @@ test('returns focus to the exact Base action that opened an in-Base import', asy
   fireEvent.click(await screen.findByRole('link', { name: 'CRM' }))
   const moreActions = await screen.findByRole('button', { name: '更多 Base 操作' })
   fireEvent.click(moreActions)
-  fireEvent.click(screen.getByRole('button', { name: '导入到当前 Base' }))
+  fireEvent.click(screen.getByRole('menuitem', { name: '导入到当前 Base' }))
   expect(await screen.findByRole('heading', { name: '导入数据表' })).toBeVisible()
 
   fireEvent.click(screen.getByRole('button', { name: '关闭导入' }))

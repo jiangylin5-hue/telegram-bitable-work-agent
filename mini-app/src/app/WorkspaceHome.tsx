@@ -10,8 +10,8 @@ type WorkspaceHomeProps = {
   home: WorkspaceHomeData
   workspace: Workspace
   onOpenBase: (base: BaseSummary) => void
-  onCreateBase?: () => void
-  onOpenTemplateImport?: () => void
+  onCreateBase?: (trigger: HTMLElement) => void
+  onOpenTemplateImport?: (trigger: HTMLElement) => void
   onOpenTableOperations?: (trigger: HTMLElement) => void
   onOpenDraftHub?: (trigger: HTMLElement, draftId?: string) => void
   onOpenAssistantContext?: (trigger: HTMLElement) => void
@@ -57,8 +57,8 @@ export function WorkspaceHome({
         <div className="toolbar-actions">
           {onOpenCollaboration ? <button className="home-ai-conversation" type="button" aria-label="打开 AI 对话" onClick={(event) => onOpenCollaboration(event.currentTarget)}><Sparkles size={16} /> AI 对话</button> : null}
           {onOpenTableOperations && <button type="button" onClick={(event) => onOpenTableOperations(event.currentTarget)}>表格操作</button>}
-          {workspace.capabilities.can_manage_schema && onCreateBase && <button type="button" onClick={onCreateBase}><Plus size={17} /> 新建 Base</button>}
-          {workspace.capabilities.can_manage_schema && onOpenTemplateImport && <button type="button" onClick={onOpenTemplateImport}>模板与导入</button>}
+          {workspace.capabilities.can_manage_schema && onCreateBase && <button type="button" onClick={(event) => onCreateBase(event.currentTarget)}><Plus size={17} /> 新建 Base</button>}
+          {workspace.capabilities.can_manage_schema && onOpenTemplateImport && <button type="button" onClick={(event) => onOpenTemplateImport(event.currentTarget)}>模板与导入</button>}
         </div>
       </header>
       <section className="workspace-fact-strip" aria-label="当前工作区状态">
@@ -104,8 +104,8 @@ export function WorkspaceHome({
         <div className="workspace-ready-mark"><CheckCircle2 size={19} /></div>
         <div className="workspace-ready-copy"><strong>工作台已准备就绪</strong><span>还没有待确认的变更。选择一个入口开始沉淀业务结果。</span></div>
         <div className="workspace-ready-actions">
-          {workspace.capabilities.can_manage_schema && onCreateBase ? <button className="ready-action-ready" type="button" aria-label="从工作台新建 Base" onClick={onCreateBase}><Plus size={15} /> 新建 Base</button> : null}
-          {workspace.capabilities.can_manage_schema && onOpenTemplateImport ? <button className="ready-action-import" type="button" onClick={onOpenTemplateImport}><FileSpreadsheet size={15} /> 从 Excel/CSV 导入</button> : null}
+          {workspace.capabilities.can_manage_schema && onCreateBase ? <button className="ready-action-ready" type="button" aria-label="从工作台新建 Base" onClick={(event) => onCreateBase(event.currentTarget)}><Plus size={15} /> 新建 Base</button> : null}
+          {workspace.capabilities.can_manage_schema && onOpenTemplateImport ? <button className="ready-action-import" type="button" onClick={(event) => onOpenTemplateImport(event.currentTarget)}><FileSpreadsheet size={15} /> 从 Excel/CSV 导入</button> : null}
           {onOpenCollaboration ? <button className="ready-action-ai" type="button" onClick={(event) => onOpenCollaboration(event.currentTarget)}><MessageSquareText size={15} /> 开始 AI 对话</button> : null}
         </div>
       </section>}

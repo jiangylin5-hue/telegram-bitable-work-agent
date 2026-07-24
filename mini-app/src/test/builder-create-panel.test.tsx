@@ -1,10 +1,15 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import { BuilderCreatePanel } from '../app/BuilderCreatePanel'
 import { BaseCanvas } from '../app/BaseCanvas'
 import { WorkspaceHome } from '../app/WorkspaceHome'
 import { ApiError } from '../app/api'
+import { App } from '../app/App'
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+}
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -81,6 +86,61 @@ test('closing the panel does not submit', () => {
 
   expect(onClose).toHaveBeenCalledOnce()
   expect(onSubmit).not.toHaveBeenCalled()
+})
+
+test('closes an idle create panel with Escape', () => {
+  const onClose = vi.fn()
+
+  render(<BuilderCreatePanel mode="table" onSubmit={() => Promise.resolve()} onClose={onClose} />)
+  fireEvent.keyDown(document, { key: 'Escape' })
+
+  expect(onClose).toHaveBeenCalledOnce()
+})
+
+test('closes an idle create panel from its backdrop', () => {
+  const onClose = vi.fn()
+  const { container } = render(<BuilderCreatePanel mode="table" onSubmit={() => Promise.resolve()} onClose={onClose} />)
+
+  fireEvent.mouseDown(container.firstElementChild!)
+
+  expect(onClose).toHaveBeenCalledOnce()
+})
+
+test('does not close a create panel from Escape or its backdrop while saving', async () => {
+  let resolveSubmission: (() => void) | undefined
+  const onClose = vi.fn()
+  const { container } = render(<BuilderCreatePanel
+    mode="table"
+    onSubmit={() => new Promise<void>((resolve) => { resolveSubmission = resolve })}
+    onClose={onClose}
+  />)
+
+  fireEvent.click(screen.getByRole('button', { name: '创建数据表' }))
+  await screen.findByRole('button', { name: '创建中…' })
+  fireEvent.keyDown(document, { key: 'Escape' })
+  fireEvent.mouseDown(container.firstElementChild!)
+
+  expect(onClose).not.toHaveBeenCalled()
+  await act(async () => resolveSubmission?.())
+})
+
+test('closes the Base create panel with Escape and restores focus to its trigger', async () => {
+  vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+    const path = String(input)
+    if (path === '/mini-app/bootstrap') return Promise.resolve(json({ identity: { user_id: 'owner-1', source: 'header' }, workspaces: [{ id: 'workspace-1', name: 'Acme', slug: 'acme', role: 'owner', capabilities: { can_read_bases: true, can_manage_workspace: true, can_manage_schema: true, can_review_drafts: false } }] }))
+    if (path === '/workspaces/workspace-1/home') return Promise.resolve(json({ workspace_id: 'workspace-1', recent_bases: [], queue: [] }))
+    return Promise.resolve(json({ detail: 'unexpected' }, 404))
+  }))
+
+  render(<App />)
+  const trigger = await screen.findByRole('button', { name: '新建 Base' })
+  fireEvent.click(trigger)
+  await screen.findByRole('dialog', { name: '新建 Base' })
+
+  fireEvent.keyDown(document, { key: 'Escape' })
+
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: '新建 Base' })).not.toBeInTheDocument())
+  expect(trigger).toHaveFocus()
 })
 
 test('creation entries are shown only when the server capability permits schema management', () => {

@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { type FormEvent, type MouseEvent, useEffect, useRef, useState } from 'react'
 
 import { ApiError } from './api'
 
@@ -24,6 +24,19 @@ export function BuilderCreatePanel({ mode, onSubmit, onClose }: BuilderCreatePan
   useEffect(() => {
     firstInputRef.current?.focus()
   }, [])
+
+  useEffect(() => {
+    if (saving) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [onClose, saving])
+
+  function closeFromBackdrop(event: MouseEvent<HTMLDivElement>) {
+    if (!saving && event.target === event.currentTarget) onClose()
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -65,7 +78,7 @@ export function BuilderCreatePanel({ mode, onSubmit, onClose }: BuilderCreatePan
 
   const submitLabel = isBase ? '创建 Base' : '创建数据表'
 
-  return <div className="builder-create-backdrop" role="presentation">
+  return <div className="builder-create-backdrop" role="presentation" onMouseDown={closeFromBackdrop}>
     <aside className="builder-create-panel" aria-labelledby="builder-create-title" aria-modal="true" role="dialog">
       <header>
         <p className="builder-create-eyebrow">BUILDER</p>
