@@ -2,6 +2,12 @@
 
 ## Status
 
+### r33 online visual baseline — 2026-07-24
+
+- Native release `stage09-p1-20260724-r33` passed the sealed-release, HTTPS/readiness and service-health gates.
+- Fixed visual references remain in `evidence/design-references/stage09-feishu-bitable/`; the authorized online Home capture is retained at `evidence/screenshots/stage09-r33/workspace-home-browser-viewport.png`.
+- The baseline uses only factual workspace counts and actual controlled entries. It deliberately does not fabricate records to imitate a populated Bitable grid.
+
 - Document status: active implementation plan
 - Visual source of truth: `project-docs/08-implementation/evidence/design-references/stage09-feishu-bitable/README.md` and its five retained reference images. UI changes must compare to the matching image rather than reconstructing the target from conversation history.
 - Scope: 已上线 Mini App 中已经声明为可用的表格、模板、导入、导航、数字员工与协作入口的可操作性收口。

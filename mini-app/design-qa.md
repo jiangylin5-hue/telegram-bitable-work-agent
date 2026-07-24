@@ -138,3 +138,20 @@ final result: blocked
 3. 为真实 Base 卡片、授权关联卡配置稳定的蓝、紫、绿、橙、红、青语义色，不新增假数据、不使用渐变。
 
 final result: still blocked pending r33 browser comparison
+
+## Stage09 r33 Online Home Visual Baseline — 2026-07-24
+
+### Retained evidence
+
+- Fixed design sources remain versioned in `../project-docs/08-implementation/evidence/design-references/stage09-feishu-bitable/`; later UI work must compare against those files rather than recreate the visual direction from chat history.
+- The actual authorized online r33 Home capture is versioned at `../project-docs/08-implementation/evidence/screenshots/stage09-r33/workspace-home-browser-viewport.png`.
+
+### Verified result
+
+- The screenshot is from `https://stage07.jiangtest1.online/` after native release `stage09-p1-20260724-r33` passed its HTTPS/readiness gate, rather than from a local mock or design canvas.
+- The empty-queue state now remains productive: it exposes the real `新建 Base`、`从 Excel/CSV 导入`、`开始 AI 对话` paths; the summary strip and accessible Base cards use factual counts and a stable blue / amber / violet / green semantic palette.
+- The result is intentionally not presented as a populated-table fidelity pass. The current authorized Base has no readable records, so no customer/project rows were invented merely to make the grid colorful. When real `status` or select values exist, the grid uses its implemented blue / purple / green / amber / red / cyan semantic tags.
+
+### Remaining visual closure
+
+- Home now has a retained r33 baseline and no longer relies on long-context recollection. A like-for-like full fidelity comparison of the populated grid, table-operation drawer and AI panel still requires an authorized Base with real readable records; this remains a tracked visual QA item, not an unproven completion claim.
