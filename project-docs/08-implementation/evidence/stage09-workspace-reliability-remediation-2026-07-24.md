@@ -4,10 +4,10 @@
 
 - Status: `partial-production-accepted`
 - Scope: Stage09 工作台可靠性修复包；不是 Stage07、Stage08 或整个产品的全量验收声明。
-- Release: `stage09-p1-20260724-r28`
+- Release: 后端 `stage09-p1-20260724-r28`；静态前端 `stage09-p1-20260724-r29`
 - Deployment model: 原生 systemd、PostgreSQL 16 + pgvector、Redis、Nginx；未使用 Docker。
 - Source branch: `codex/stage07-mini-app-ui`
-- Source commits included: `263b533`、`8b8738d`、`8ba5af3`、`d80935a`、`b8be2f9`、`2879aca`、`cf4e542`、`021b124`。
+- Source commits included: `263b533`、`8b8738d`、`8ba5af3`、`d80935a`、`b8be2f9`、`2879aca`、`cf4e542`、`021b124`、`79594a9`。
 
 ## 已授权的生产数据修复
 
@@ -45,9 +45,28 @@
 | r28 JS/CSS 静态资源 | 两域名均返回 HTTP 200 |
 | `/browser-handoff.html` | `Cache-Control: no-store`、`Referrer-Policy: no-referrer` |
 
+## 浏览器会话过期恢复：r29 静态前端发布
+
+2026-07-24 19:28（Asia/Shanghai）受控统计确认：服务器中已有的浏览器会话均已超过既定的 8 小时 TTL；没有工作区、Base、记录或授权被删除。此前前端把会话过期与真正的授权拒绝显示为同一句“当前身份没有可访问的工作区”，导致用户无法判断恢复方式。
+
+本次仅发布前端静态资源，未重启 API、worker、Redis 或 Nginx，未修改数据库和 browser handoff 的安全约定。发布前后校验如下：
+
+| 检查 | 结果 |
+| --- | --- |
+| Commit | `79594a9 fix(workspace): explain expired browser sessions`，已推送到 `origin/codex/stage07-mini-app-ui` |
+| RED | `browser-session-recovery.test.tsx` 在旧文案下失败，证明能复现问题 |
+| 前端自动化 | `74 files / 306 passed` |
+| 生产构建 | `tsc -b && vite build` 成功 |
+| r29 静态包 SHA-256 | `c0ff7e45c995ac3bf2d8d0c53e152599da48d93f75c9643c109ffacbf9029b97` |
+| r29 JavaScript SHA-256 | `44b627ca9af0f95d1d0b3d97c9bc64993cda7220a808ae44c322a6bc44890cba` |
+| 远端静态目录 | `/var/www/stage09-p1/current` 原子切换到 `stage09-p1-20260724-r29`；`current.previous` 保留 r28 |
+| 公网内容回读 | 首页与新 JavaScript 文件分别按 SHA-256 回读一致；`https://stage09.jiangtest1.online/health` 返回 HTTP 200 |
+
+新的安全提示为“当前浏览器工作台会话已失效或无访问权限，请返回 Telegram 重新打开工作区。”它不暴露用户身份、ticket、cookie 或会话时间。用户从 Telegram 的“打开工作区”重新进入后，现有机制会创建新的单次 handoff 与新的 8 小时浏览器会话；该步骤仍然是用户主动登录，不是自动续会或绕过权限。
+
 未改动 Docker、Stage03、80/443 的所有权、Nginx host 结构、Telegram webhook、BotFather 配置，也没有发送 Telegram 消息或调用真实 LLM。
 
-发布后已经清理服务器上的 r27 无效候选静态目录和上传包；r28 当前 release/venv/static、r26 静态回退点、运行时备份与发布证据保留。桌面临时打包文件因本机文件删除策略被工具拦截，未以不安全方式绕过；它们不在 Git 工作区、不影响运行时或服务器版本。
+发布后已经清理服务器上的 r27 无效候选静态目录和上传包；后端 release/venv 保持 r28，静态 current 为 r29、静态 previous 为 r28，r26 保留在历史发布目录；运行时备份与发布证据保留。桌面临时打包文件因本机文件删除策略被工具拦截，未以不安全方式绕过；它们不在 Git 工作区、不影响运行时或服务器版本。
 
 ## 自动化验证
 
