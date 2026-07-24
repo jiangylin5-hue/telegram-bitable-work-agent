@@ -55,7 +55,7 @@ type BaseCanvasState = {
 
 type AppState =
   | { status: 'loading' }
-  | { status: 'denied' }
+  | { status: 'denied'; postCommitNotice?: string }
   | { status: 'error' }
   | { status: 'ready'; bootstrap: BootstrapResponse; home: WorkspaceHome; canvas?: BaseCanvasState; canvasLoading?: boolean }
 
@@ -63,6 +63,7 @@ type BaseDirectoryData = { state: BaseDirectoryState; bases: BaseSummary[] }
 type BusinessContextRelation = NonNullable<WorkspaceHome['business_context_relations']>[number]
 
 type CanvasTarget = { tableId?: string; viewId?: string; recordId?: string; openViewBuilder?: boolean }
+type OpenBaseMode = 'default' | 'post-commit-recovery'
 type BuilderPanel =
   | { mode: 'base' }
   | { mode: 'table'; base: BaseSummary }
@@ -81,6 +82,8 @@ type TemplateImportPanel =
 type TableOperationPanel = {
   scope: TableOperationScope
 }
+
+const postCommitDeniedNotice = '数据表已创建。当前会话或权限已失效，请从 Telegram 重新打开工作区后继续。'
 
 type GovernancePanel = {
   members: GovernanceMemberPage | null
@@ -291,18 +294,18 @@ function AppContent() {
     void telegramDestinationHandoff.current?.(destination)
   }, [state])
 
-  async function denyInvalidSession() {
+  async function denyInvalidSession(postCommitNotice?: string) {
     sessionInvalidated.current = true
     invalidateInFlightRequests()
-    setState({ status: 'denied' })
+    setState({ status: 'denied', ...(postCommitNotice ? { postCommitNotice } : {}) })
     await clearAllProtectedQueries(queryClient)
   }
 
-  async function denyWorkspace(scope: { userId: string; workspaceId: string }) {
+  async function denyWorkspace(scope: { userId: string; workspaceId: string }, postCommitNotice?: string) {
     await clearProtectedWorkspace(queryClient, scope)
     if (!sessionInvalidated.current && activeWorkspaceId.current === scope.workspaceId) {
       invalidateInFlightRequests()
-      setState({ status: 'denied' })
+      setState({ status: 'denied', ...(postCommitNotice ? { postCommitNotice } : {}) })
     }
   }
 
@@ -433,7 +436,7 @@ function AppContent() {
     }
   }, [bootstrapQuery.error, queryClient])
 
-  if (state.status === 'denied') return <main className="app-state" aria-label="无工作区访问权限">当前浏览器工作台会话已失效或无访问权限，请返回 Telegram 重新打开工作区。</main>
+  if (state.status === 'denied') return <main className="app-state" aria-label="无工作区访问权限">{state.postCommitNotice ? <p>{state.postCommitNotice}</p> : null}<p>当前浏览器工作台会话已失效或无访问权限，请返回 Telegram 重新打开工作区。</p></main>
   if (bootstrapQuery.isError) return <main className="app-state" aria-label={bootstrapQuery.error instanceof ApiError && (bootstrapQuery.error.status === 401 || bootstrapQuery.error.status === 403) ? '无工作区访问权限' : '网络错误'}>{bootstrapQuery.error instanceof ApiError && (bootstrapQuery.error.status === 401 || bootstrapQuery.error.status === 403) ? '当前浏览器工作台会话已失效或无访问权限，请返回 Telegram 重新打开工作区。' : '暂时无法加载工作区，请稍后重试。'}</main>
   if (bootstrapQuery.isPending || state.status === 'loading') return <main className="app-state" aria-label="正在加载工作区">正在加载工作区…</main>
 
@@ -561,7 +564,7 @@ function AppContent() {
     }
   }
 
-  async function openBase(base: BaseSummary, target?: CanvasTarget, homeOverride: WorkspaceHome = readyState.home, builderVersion = ++builderRequestVersion.current): Promise<boolean> {
+  async function openBase(base: BaseSummary, target?: CanvasTarget, homeOverride: WorkspaceHome = readyState.home, builderVersion = ++builderRequestVersion.current, mode: OpenBaseMode = 'default'): Promise<boolean> {
     if (digitalEmployeeManagementPanel?.baseId !== undefined && digitalEmployeeManagementPanel.baseId !== base.id) {
       closeDigitalEmployeeManagement()
     }
@@ -613,9 +616,11 @@ function AppContent() {
       if (!isCurrent() || isAbortError(error)) return false
       if (target?.openViewBuilder) setBuilderPanel(undefined)
       if (error instanceof ApiError && error.status === 401) {
-        await denyInvalidSession()
+        await denyInvalidSession(mode === 'post-commit-recovery' ? postCommitDeniedNotice : undefined)
       } else if (error instanceof ApiError && error.status === 403) {
-        await denyWorkspace(scope)
+        await denyWorkspace(scope, mode === 'post-commit-recovery' ? postCommitDeniedNotice : undefined)
+      } else if (mode === 'post-commit-recovery') {
+        setState(canvasState)
       } else {
         setState({ status: 'error' })
       }
@@ -2038,11 +2043,13 @@ function AppContent() {
       if (!isCurrent()) throw new DOMException('Import target changed', 'AbortError')
       const base = bases.find((item) => item.id === receipt.baseId)
       if (!base) throw new Error('Committed Base is unavailable')
-      const opened = await openBase(base, undefined, refreshedHome, builderVersion)
-      if (!opened || !isCurrent()) throw new DOMException('Import target changed', 'AbortError')
+      const opened = await openBase(base, undefined, refreshedHome, builderVersion, 'post-commit-recovery')
+      if (!opened) throw new DOMException('Import target changed', 'AbortError')
       setTemplateImportPanel(undefined)
       return receipt
-    } catch {
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession(postCommitDeniedNotice)
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope, postCommitDeniedNotice)
       return { ...receipt, navigationWarning: '数据表已创建；暂时无法自动打开，可从 Bases 重新进入。' }
     }
   }
