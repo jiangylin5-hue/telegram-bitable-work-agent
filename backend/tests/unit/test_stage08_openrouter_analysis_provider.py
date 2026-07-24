@@ -419,6 +419,14 @@ def test_general_advice_contract_is_explicit_and_empty_citations_are_valid() -> 
         '{"answer":"advice","citation_ordinals":[],"action":"general_advice","draft":null}'
         in system_instruction
     )
+    assert (
+        '{"answer":"fact","citation_ordinals":[1],"action":"read_only","draft":null}'
+        in system_instruction
+    )
+    assert (
+        '{"answer":"proposal","citation_ordinals":[1],"action":"draft_update","draft":{"field_key":"status","value":"proposed"}}'
+        in system_instruction
+    )
     assert outcome.status == "available"
     assert outcome.reason_code == "none"
     assert outcome.decision is not None

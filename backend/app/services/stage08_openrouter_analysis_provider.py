@@ -44,6 +44,10 @@ _SYSTEM_PROMPT = (
     "and return citation_ordinals as an empty array []. "
     "For general_advice, use this exact JSON shape and replace only the answer text: "
     '{\"answer\":\"advice\",\"citation_ordinals\":[],\"action\":\"general_advice\",\"draft\":null}. '
+    "For read_only, use this exact JSON shape and replace only the answer text and citation ordinal: "
+    '{\"answer\":\"fact\",\"citation_ordinals\":[1],\"action\":\"read_only\",\"draft\":null}. '
+    "For draft_update, use this exact JSON shape and replace only the answer, citation ordinal, field key, and value: "
+    '{\"answer\":\"proposal\",\"citation_ordinals\":[1],\"action\":\"draft_update\",\"draft\":{\"field_key\":\"status\",\"value\":\"proposed\"}}. '
     "A deny action must also return citation_ordinals as an empty array []. "
     "Use draft_update only when requested_action is draft_update. It requires one "
     "draft object with exactly field_key and value, plus at least one evidence citation. "
