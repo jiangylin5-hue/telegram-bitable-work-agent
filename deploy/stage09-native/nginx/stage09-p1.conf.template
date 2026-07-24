@@ -3,6 +3,7 @@ server {
     server_name _;
     root /var/www/stage09-p1/current;
     index index.html;
+    client_max_body_size 16m;
 
     allow {{STAGE09_P1_CADDY_SOURCE_CIDR}};
     deny all;

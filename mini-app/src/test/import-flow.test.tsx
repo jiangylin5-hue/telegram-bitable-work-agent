@@ -54,3 +54,59 @@ test('returns focus to the exact Base action that opened an in-Base import', asy
   fireEvent.click(screen.getByRole('button', { name: '关闭导入' }))
   await waitFor(() => expect(moreActions).toHaveFocus())
 })
+
+test('keeps a committed import successful when opening its Base fails', async () => {
+  vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+    const path = String(input)
+    if (path === '/mini-app/bootstrap') return Promise.resolve(json({
+      identity: { user_id: 'owner-1', source: 'header' },
+      workspaces: [{
+        id: 'workspace-1',
+        name: 'Acme',
+        slug: 'acme',
+        role: 'owner',
+        capabilities: {
+          can_read_bases: true,
+          can_manage_workspace: true,
+          can_manage_schema: true,
+          can_review_drafts: false,
+        },
+      }],
+    }))
+    if (path === '/workspaces/workspace-1/home') return Promise.resolve(json({ workspace_id: 'workspace-1', recent_bases: [], queue: [] }))
+    if (path === '/templates') return Promise.resolve(json({ templates: [] }))
+    if (path === '/workspaces/workspace-1/imports') return Promise.resolve(json({
+      id: 'job-1',
+      workspace_id: 'workspace-1',
+      base_id: null,
+      source_type: 'csv',
+      status: 'awaiting_confirmation',
+      detected_schema: [{ key: 'name', name: 'Name', field_type: 'text' }],
+      preview_rows: [{ name: 'Ada' }],
+      mapping: [{ source_key: 'name', target_key: 'name', field_type: 'text' }],
+    }))
+    if (path === '/imports/job-1/commit') return Promise.resolve(json({
+      import_job_id: 'job-1',
+      status: 'committed',
+      resource_map: { base_id: 'base-1', table_id: 'table-1' },
+    }))
+    if (path === '/workspaces/workspace-1/bases') return Promise.resolve(json({ detail: 'readback unavailable' }, 503))
+    return Promise.resolve(json({ detail: 'unexpected' }, 404))
+  }))
+
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: '模板与导入' }))
+  fireEvent.click(await screen.findByRole('button', { name: '导入到新 Base' }))
+
+  const file = new File(['Name\nAda\n'], 'customers.csv', { type: 'text/csv' })
+  Object.defineProperty(file, 'text', { value: () => Promise.resolve('Name\nAda\n') })
+  fireEvent.change(screen.getByLabelText('选择导入文件'), { target: { files: [file] } })
+  fireEvent.click(screen.getByRole('button', { name: '生成预览' }))
+  await screen.findByText('Ada')
+  fireEvent.change(screen.getByLabelText('Base 名称'), { target: { value: 'Imported CRM' } })
+  fireEvent.click(screen.getByRole('button', { name: '确认创建数据表' }))
+
+  expect(await screen.findByText('已创建数据表')).toBeVisible()
+  expect(screen.getByText('数据表已创建；暂时无法自动打开，可从 Bases 重新进入。')).toBeVisible()
+  expect(screen.queryByText('导入暂时无法继续，请稍后重试。')).not.toBeInTheDocument()
+})

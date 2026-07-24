@@ -83,4 +83,5 @@ export type ImportCommitReceipt = {
   status: 'committed'
   baseId: string
   tableId: string
+  navigationWarning?: string
 }

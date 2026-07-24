@@ -72,6 +72,13 @@ STAGE09_P1_CADDY_SOURCE_CIDR=127.0.0.1/32 \
 assert_contains 'safe-render-listen' '    listen 127.0.0.1:18090;' "$tmpdir/stage09-p1.conf"
 assert_contains 'safe-render-caddy-allow' '    allow 127.0.0.1/32;' "$tmpdir/stage09-p1.conf"
 assert_contains 'safe-render-static-root' '    root /var/www/stage09-p1/current;' "$tmpdir/stage09-p1.conf"
+assert_contains 'safe-render-body-limit' '    client_max_body_size 16m;' "$tmpdir/stage09-p1.conf"
+awk '
+    /^    client_max_body_size 16m;$/ { body_limit = NR }
+    /^    location / && !first_location { first_location = NR }
+    END { exit !(body_limit && first_location && body_limit < first_location) }
+' "$tmpdir/stage09-p1.conf" || fail 'safe-render-body-limit-order'
+printf '%s\n' 'safe-render-body-limit-order: PASS'
 assert_contains 'safe-render-api-loopback' '        proxy_pass http://127.0.0.1:18080;' "$tmpdir/stage09-p1.conf"
 
 if command -v nginx >/dev/null 2>&1; then

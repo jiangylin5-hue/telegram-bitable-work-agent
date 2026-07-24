@@ -2019,8 +2019,16 @@ function AppContent() {
     const canvasVersion = canvasRequestVersion.current
     const builderVersion = builderRequestVersion.current
     const isCurrent = () => !sessionInvalidated.current && templateImportRequestVersion.current === requestVersion && canvasRequestVersion.current === canvasVersion && activeWorkspaceId.current === workspaceId
+    let receipt: ImportCommitReceipt
     try {
-      const receipt = await api.commitImport(importJobId, values, crypto.randomUUID())
+      receipt = await api.commitImport(importJobId, values, crypto.randomUUID())
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else if (error instanceof ApiError && error.status === 404) await clearTemplateImportQueries(queryClient, scope, importJobId)
+      throw error
+    }
+    try {
       if (!isCurrent()) throw new DOMException('Import target changed', 'AbortError')
       await clearTemplateImportQueries(queryClient, scope, importJobId)
       const [refreshedHome, { bases }] = await Promise.all([
@@ -2034,11 +2042,8 @@ function AppContent() {
       if (!opened || !isCurrent()) throw new DOMException('Import target changed', 'AbortError')
       setTemplateImportPanel(undefined)
       return receipt
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
-      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
-      else if (error instanceof ApiError && error.status === 404) await clearTemplateImportQueries(queryClient, scope, importJobId)
-      throw error
+    } catch {
+      return { ...receipt, navigationWarning: '数据表已创建；暂时无法自动打开，可从 Bases 重新进入。' }
     }
   }
 

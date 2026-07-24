@@ -40,6 +40,12 @@ https_output=$(STAGE09_P1_PUBLIC_HOSTNAME=stage07.jiangtest1.online \
 assert_contains https-listen '    listen 443 ssl http2;' "$https_output"
 assert_contains https-certificate '    ssl_certificate /etc/letsencrypt/live/stage07.jiangtest1.online/fullchain.pem;' "$https_output"
 assert_contains https-certificate-key '    ssl_certificate_key /etc/letsencrypt/live/stage07.jiangtest1.online/privkey.pem;' "$https_output"
+assert_contains https-body-limit '    client_max_body_size 16m;' "$https_output"
+printf '%s\n' "$https_output" | awk '
+    /^    client_max_body_size 16m;$/ { body_limit = NR }
+    /^    location / && !first_location { first_location = NR }
+    END { exit !(body_limit && first_location && body_limit < first_location) }
+' || fail https-body-limit-order
 assert_contains api-loopback '        proxy_pass http://127.0.0.1:18080;' "$https_output"
 assert_contains handoff-location '    location = /browser-handoff.html {' "$https_output"
 assert_contains handoff-static '        try_files /browser-handoff.html =404;' "$https_output"

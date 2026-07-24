@@ -13,7 +13,13 @@ test('sends CSV text, renders only server preview and commits scalar mapping', a
     previewRows: [{ name: 'Ada', score: 10 }],
     mapping: [{ sourceKey: 'name', targetKey: 'name', fieldType: 'text' }, { sourceKey: 'score', targetKey: 'score', fieldType: 'number' }],
   })
-  const onCommit = vi.fn().mockResolvedValue({ importJobId: 'job-1', status: 'committed', baseId: 'base-1', tableId: 'table-1' })
+  const onCommit = vi.fn().mockResolvedValue({
+    importJobId: 'job-1',
+    status: 'committed',
+    baseId: 'base-1',
+    tableId: 'table-1',
+    navigationWarning: '数据表已创建；暂时无法自动打开，可从 Bases 重新进入。',
+  })
   render(<ImportWizard target={{ kind: 'workspace', workspaceId: 'workspace-1' }} onCreatePreview={onCreatePreview} onCommit={onCommit} onClose={vi.fn()} />)
 
   fireEvent.change(screen.getByLabelText('选择导入文件'), { target: { files: [file] } })
@@ -27,8 +33,29 @@ test('sends CSV text, renders only server preview and commits scalar mapping', a
   fireEvent.click(screen.getByRole('button', { name: '确认创建数据表' }))
 
   expect(await screen.findByText('已创建数据表')).toBeVisible()
+  expect(screen.getByText('数据表已创建；暂时无法自动打开，可从 Bases 重新进入。')).toBeVisible()
+  expect(screen.queryByText('导入暂时无法继续，请稍后重试。')).not.toBeInTheDocument()
   expect(onCommit).toHaveBeenCalledWith('job-1', expect.objectContaining({ baseName: 'Imported CRM', tableName: 'Customers', tableKey: 'customers', fieldMapping: [{ sourceKey: 'name', targetKey: 'name', fieldType: 'text' }, { sourceKey: 'score', targetKey: 'score', fieldType: 'number' }] }))
   expect(screen.queryByText('Name,Score')).not.toBeInTheDocument()
+})
+
+test.each([
+  [401, '浏览器会话已失效，请从 Telegram 重新打开工作台后重试'],
+  [403, '当前身份没有导入权限'],
+])('shows the actionable import authorization message for HTTP %i', async (status, message) => {
+  const file = new File(['Name\nAda\n'], 'customers.csv', { type: 'text/csv' })
+  Object.defineProperty(file, 'text', { value: () => Promise.resolve('Name\nAda\n') })
+  render(<ImportWizard
+    target={{ kind: 'workspace', workspaceId: 'workspace-1' }}
+    onCreatePreview={vi.fn().mockRejectedValue(new ApiError(status))}
+    onCommit={vi.fn()}
+    onClose={vi.fn()}
+  />)
+
+  fireEvent.change(screen.getByLabelText('选择导入文件'), { target: { files: [file] } })
+  fireEvent.click(screen.getByRole('button', { name: '生成预览' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(message)
 })
 
 test('keeps status and select mappings visible and editable through the import confirmation', async () => {
