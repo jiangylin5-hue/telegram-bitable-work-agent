@@ -16,10 +16,16 @@
 - Verification before deployment: backend import/API regression `20 passed`; Mini App import/API/grid regression `3 files / 31 tests`; production build passed. A real Telegram/browser commit remains a required separate evidence item, not substituted by these tests.
 - r34 native deployment has completed its sealed-release, offline-migration, service-health, HTTPS and corrected root-level readiness gates. Browser control reached the real authorized Home but timed out before file selection; no import write was made and no success is claimed. Full redacted evidence: `evidence/stage09-r34-semantic-import-deployment-2026-07-24.md`.
 
+### r37 real LLM quality closure — 2026-07-25
+
+- r37 is the active native release. Its sealed-release, offline-migration, service-health and public readiness gates passed; r35 was rejected before activation because its archive accidentally contained a historical Stage07 environment example, while r36/r37 only package `deploy/stage09-native`.
+- A fresh real OpenRouter 12-Case run passed `12 / 12`, with `9 / 9` Provider calls completed and no timeout. The run is synthetic-fixture safety/contract evidence, not a claim that real customer copy has been human-scored. Full Chinese report: `evidence/stage09-r37-real-llm-quality-2026-07-25.md`.
+- Real browser import is now verified through the authorized Home → template/import panel → new Base → file-selection dialog. The final file upload and new acceptance Base commit remain blocked on the Chrome extension's file URL permission; no import write has occurred in this attempt.
+
 - Document status: active implementation plan
 - Visual source of truth: `project-docs/08-implementation/evidence/design-references/stage09-feishu-bitable/README.md` and its five retained reference images. UI changes must compare to the matching image rather than reconstructing the target from conversation history.
 - Scope: 已上线 Mini App 中已经声明为可用的表格、模板、导入、导航、数字员工与协作入口的可操作性收口。
-- Current Progress: 2026-07-24 已从生产访问日志确认一次真实导入预览成功、提交返回 `422`；同时发现导入提交在业务校验失败后会遗留 `in_progress` 幂等记录。修复已在提交 `9eea078` 完成、推送并真实部署为 Stage09 r31：自动化覆盖了空映射、错误码、失败幂等重试、右键菜单与浮层退出；Mini App 全量测试 `76 files / 315 tests` 通过，后端导入定向测试 `20 passed`，生产构建和服务器密封预检通过。r32 正在收口“LLM 已接入但对话入口不明显”的 UI 问题：复用既有 `/api/stage08/assistant/query` 真实受控协作接口，不新增无权限的通用聊天后端。真实 Telegram 身份下的浏览器点击验收仍待完成，不能据此称为完整产品验收。
+- Current Progress: 2026-07-25 r37 已将真实 OpenRouter 12-Case 安全/结构评测收口为 `12 / 12` 通过，并保留前两次失败的原因与修复证据。导入 UI 已在真实授权 Chrome 中走到文件选择步骤；隔离 CSV 的上传、字段映射、提交独立验收 Base、打开网格并核对状态/优先级色标签仍待完成，因此不能据此称为完整产品验收。
 
 ## 目标
 
