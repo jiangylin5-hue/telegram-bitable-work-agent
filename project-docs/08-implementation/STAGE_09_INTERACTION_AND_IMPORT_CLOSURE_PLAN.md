@@ -13,7 +13,8 @@
 - The CSV fixture `evidence/stage09-ui-acceptance-sample.csv` is a retained, non-sensitive acceptance sample. It creates a separate `Stage09 UI 验收样例` Base only and must not modify existing customer data.
 - Import inference now recognizes commonly named business columns: `状态` / `status` / `stage` are created as `status`; `优先级` / `priority` and other category columns are created as `single_select`. Number, date and checkbox inference remains unchanged.
 - The Mini App mapping editor now exposes the portable field types that the backend already supports (`状态`、单选、多选、链接、邮箱、电话 included). Relation, lookup and formula remain intentionally excluded because they require a pre-existing schema rather than an import guess.
-- Verification before deployment: backend import service `5 passed`; Mini App import/API tests `15 passed`; production build passed. A real Telegram/browser commit remains a required separate evidence item, not substituted by these tests.
+- Verification before deployment: backend import/API regression `20 passed`; Mini App import/API/grid regression `3 files / 31 tests`; production build passed. A real Telegram/browser commit remains a required separate evidence item, not substituted by these tests.
+- r34 native deployment has completed its sealed-release, offline-migration, service-health, HTTPS and corrected root-level readiness gates. Browser control reached the real authorized Home but timed out before file selection; no import write was made and no success is claimed. Full redacted evidence: `evidence/stage09-r34-semantic-import-deployment-2026-07-24.md`.
 
 - Document status: active implementation plan
 - Visual source of truth: `project-docs/08-implementation/evidence/design-references/stage09-feishu-bitable/README.md` and its five retained reference images. UI changes must compare to the matching image rather than reconstructing the target from conversation history.
