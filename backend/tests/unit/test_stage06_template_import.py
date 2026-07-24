@@ -63,6 +63,44 @@ def test_stage06_csv_import_previews_then_commits_records_after_confirmation() -
     assert uow.audit_events[-1].event_type == "stage06.import_committed"
 
 
+def test_stage06_import_recognizes_common_business_status_and_choice_columns() -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    workspace = create_workspace(uow, name="Acme", owner_user_id="owner-1")
+
+    job = create_import_job_from_csv(
+        uow,
+        workspace.id,
+        file_name="customer_pipeline.csv",
+        content="客户名称,状态,优先级,预计金额\n晨光,跟进中,高,68000\n",
+        created_by_user_id="owner-1",
+    )
+
+    assert [field["field_type"] for field in job.detected_schema] == [
+        "text",
+        "status",
+        "single_select",
+        "number",
+    ]
+
+    result = commit_import_job(
+        uow,
+        job.id,
+        base_name="Stage09 UI 验收样例",
+        table_name="客户管道",
+        table_key="customer_pipeline",
+        field_mapping=None,
+        actor=Actor(actor_type="user", actor_id="owner-1", role="owner"),
+    )
+
+    assert result.resource_map["record_count"] == 1
+    assert [field.field_type for field in uow.fields] == [
+        "text",
+        "status",
+        "single_select",
+        "number",
+    ]
+
+
 def test_stage06_excel_import_previews_then_commits_records_after_confirmation() -> None:
     uow = InMemoryStage06PlatformUnitOfWork()
     workspace = create_workspace(uow, name="Acme", owner_user_id="owner-1")

@@ -22,7 +22,22 @@ export type SaveTemplateValues = {
   createdByUserId: string
 }
 
-export type ImportScalarFieldType = 'text' | 'number' | 'date' | 'checkbox'
+/**
+ * Import intentionally exposes only portable field types. Relation, lookup
+ * and formula fields require an existing table/schema and are added later in
+ * the Base instead of being guessed from a spreadsheet column.
+ */
+export type ImportScalarFieldType =
+  | 'text'
+  | 'number'
+  | 'date'
+  | 'checkbox'
+  | 'status'
+  | 'single_select'
+  | 'multi_select'
+  | 'url'
+  | 'email'
+  | 'phone'
 
 export type ImportSchemaField = {
   key: string

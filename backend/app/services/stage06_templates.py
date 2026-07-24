@@ -649,6 +649,38 @@ def _validate_import_payload_size(content: str | bytes, maximum: int) -> None:
         raise PlatformValidationError("import_payload_limit_exceeded", str(maximum))
 
 
+_STATUS_HEADER_KEYS = frozenset(
+    {
+        "status",
+        "state",
+        "stage",
+        "progress",
+        "状态",
+        "客户状态",
+        "项目状态",
+        "处理状态",
+        "订单状态",
+        "进度",
+    }
+)
+_SINGLE_SELECT_HEADER_KEYS = frozenset(
+    {
+        "priority",
+        "level",
+        "type",
+        "category",
+        "source",
+        "channel",
+        "优先级",
+        "等级",
+        "类型",
+        "分类",
+        "来源",
+        "渠道",
+    }
+)
+
+
 def _infer_schema(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     schema = []
     for key in rows[0]:
@@ -657,13 +689,18 @@ def _infer_schema(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             {
                 "key": key,
                 "name": _titleize(key),
-                "field_type": _infer_field_type(values),
+                "field_type": _infer_field_type(values, field_key=key),
             }
         )
     return schema
 
 
-def _infer_field_type(values: list[Any]) -> str:
+def _infer_field_type(values: list[Any], *, field_key: str) -> str:
+    normalized_key = re.sub(r"[-_\\s]+", "", field_key.casefold())
+    if normalized_key in _STATUS_HEADER_KEYS:
+        return "status"
+    if normalized_key in _SINGLE_SELECT_HEADER_KEYS:
+        return "single_select"
     non_empty = [str(value).strip() for value in values if str(value).strip()]
     if non_empty and all(_is_bool(value) for value in non_empty):
         return "checkbox"

@@ -31,6 +31,49 @@ test('sends CSV text, renders only server preview and commits scalar mapping', a
   expect(screen.queryByText('Name,Score')).not.toBeInTheDocument()
 })
 
+test('keeps status and select mappings visible and editable through the import confirmation', async () => {
+  const file = new File(['客户名称,状态,优先级\n晨光,跟进中,高\n'], 'customer-pipeline.csv', { type: 'text/csv' })
+  Object.defineProperty(file, 'text', { value: () => Promise.resolve('客户名称,状态,优先级\n晨光,跟进中,高\n') })
+  const onCreatePreview = vi.fn().mockResolvedValue({
+    id: 'job-business-fields', workspaceId: 'workspace-1', baseId: null, sourceType: 'csv', status: 'awaiting_confirmation',
+    detectedSchema: [
+      { key: '客户名称', name: '客户名称', fieldType: 'text' },
+      { key: '状态', name: '状态', fieldType: 'status' },
+      { key: '优先级', name: '优先级', fieldType: 'single_select' },
+    ],
+    previewRows: [{ 客户名称: '晨光', 状态: '跟进中', 优先级: '高' }],
+    mapping: [
+      { sourceKey: '客户名称', targetKey: '客户名称', fieldType: 'text', name: '客户名称' },
+      { sourceKey: '状态', targetKey: '状态', fieldType: 'status', name: '状态' },
+      { sourceKey: '优先级', targetKey: '优先级', fieldType: 'single_select', name: '优先级' },
+    ],
+  })
+  const onCommit = vi.fn().mockResolvedValue({ importJobId: 'job-business-fields', status: 'committed', baseId: 'base-1', tableId: 'table-1' })
+  render(<ImportWizard target={{ kind: 'workspace', workspaceId: 'workspace-1' }} onCreatePreview={onCreatePreview} onCommit={onCommit} onClose={vi.fn()} />)
+
+  fireEvent.change(screen.getByLabelText('选择导入文件'), { target: { files: [file] } })
+  fireEvent.click(screen.getByRole('button', { name: '生成预览' }))
+
+  expect(await screen.findByText('晨光')).toBeVisible()
+  expect(screen.getByLabelText('状态 字段类型')).toHaveValue('status')
+  expect(screen.getByLabelText('优先级 字段类型')).toHaveValue('single_select')
+  expect(screen.getByLabelText('状态 字段类型')).toHaveTextContent('状态')
+  expect(screen.getByLabelText('优先级 字段类型')).toHaveTextContent('单选')
+
+  fireEvent.change(screen.getByLabelText('Base 名称'), { target: { value: 'Stage09 UI 验收样例' } })
+  fireEvent.change(screen.getByLabelText('数据表名称'), { target: { value: '客户管道' } })
+  fireEvent.change(screen.getByLabelText('数据表 key'), { target: { value: 'customer_pipeline' } })
+  fireEvent.click(screen.getByRole('button', { name: '确认创建数据表' }))
+
+  expect(await screen.findByText('已创建数据表')).toBeVisible()
+  expect(onCommit).toHaveBeenCalledWith('job-business-fields', expect.objectContaining({
+    fieldMapping: expect.arrayContaining([
+      expect.objectContaining({ sourceKey: '状态', fieldType: 'status' }),
+      expect.objectContaining({ sourceKey: '优先级', fieldType: 'single_select' }),
+    ]),
+  }))
+})
+
 test('rejects unsupported file names before content leaves the browser', async () => {
   const onCreatePreview = vi.fn()
   render(<ImportWizard target={{ kind: 'workspace', workspaceId: 'workspace-1' }} onCreatePreview={onCreatePreview} onCommit={vi.fn()} onClose={vi.fn()} />)

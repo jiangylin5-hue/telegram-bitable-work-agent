@@ -469,7 +469,18 @@ export function buildBrowserHandoffUrl(ticket: string): string {
   return url.toString()
 }
 
-const importScalarFieldTypes = new Set<ImportScalarFieldType>(['text', 'number', 'date', 'checkbox'])
+const importScalarFieldTypes = new Set<ImportScalarFieldType>([
+  'text',
+  'number',
+  'date',
+  'checkbox',
+  'status',
+  'single_select',
+  'multi_select',
+  'url',
+  'email',
+  'phone',
+])
 const governanceActorTypes = new Set<GovernanceAuditActorType>(['user', 'digital_employee', 'system'])
 
 function safeGovernanceMember(value: unknown): GovernanceMember {
