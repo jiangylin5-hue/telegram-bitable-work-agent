@@ -29,6 +29,7 @@ from app.services.stage06_identity import Stage06RequestIdentity
 from app.services.stage06_idempotency import (
     begin_idempotent_operation,
     complete_idempotent_operation,
+    fail_idempotent_operation,
     fingerprint_request,
     idempotency_trace_id,
 )
@@ -209,6 +210,7 @@ def commit_import_endpoint(
     identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
     uow: Stage06TemplateImportUnitOfWork = Depends(get_stage06_template_import_uow),
 ) -> ImportCommitResponse:
+    decision = None
     try:
         workspace_id = workspace_id_for_import_job(uow, import_job_id)
         actor = authorize_workspace_action(uow, identity, workspace_id, "import.commit")
@@ -248,9 +250,21 @@ def commit_import_endpoint(
         )
     except (PlatformValidationError, Stage06AuthorizationError) as exc:
         _rollback_if_sqlalchemy(uow)
+        if decision is not None and decision.status == "started":
+            fail_idempotent_operation(
+                decision.record,
+                failure_code=exc.code,
+            )
+            _commit_if_sqlalchemy(uow)
         raise _http_error(exc) from exc
     except IntegrityError as exc:
         _rollback_if_sqlalchemy(uow)
+        if decision is not None and decision.status == "started":
+            fail_idempotent_operation(
+                decision.record,
+                failure_code="import_table_key_conflict",
+            )
+            _commit_if_sqlalchemy(uow)
         raise HTTPException(
             status_code=409,
             detail=error_detail("import_table_key_conflict", "import_table_key_conflict"),

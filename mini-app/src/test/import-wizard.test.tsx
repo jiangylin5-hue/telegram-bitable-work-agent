@@ -91,3 +91,65 @@ test('shows a known import validation reason without raw API details', async () 
 
   expect(await screen.findByRole('alert')).toHaveTextContent('导入文件缺少表头。')
 })
+
+test('derives an editable mapping when the server preview intentionally omits its default mapping', async () => {
+  const file = new File(['客户名称,预算\n明日璀璨,12000\n'], '客户运营.csv', { type: 'text/csv' })
+  Object.defineProperty(file, 'text', { value: () => Promise.resolve('客户名称,预算\n明日璀璨,12000\n') })
+  const onCreatePreview = vi.fn().mockResolvedValue({
+    id: 'job-empty-mapping', workspaceId: 'workspace-1', baseId: null, sourceType: 'csv', status: 'awaiting_confirmation',
+    detectedSchema: [{ key: '客户名称', name: '客户名称', fieldType: 'text' }, { key: '预算', name: '预算', fieldType: 'number' }],
+    previewRows: [{ 客户名称: '明日璀璨', 预算: 12000 }], mapping: [],
+  })
+  const onCommit = vi.fn().mockResolvedValue({ importJobId: 'job-empty-mapping', status: 'committed', baseId: 'base-1', tableId: 'table-1' })
+  render(<ImportWizard target={{ kind: 'workspace', workspaceId: 'workspace-1' }} onCreatePreview={onCreatePreview} onCommit={onCommit} onClose={vi.fn()} />)
+
+  fireEvent.change(screen.getByLabelText('选择导入文件'), { target: { files: [file] } })
+  fireEvent.click(screen.getByRole('button', { name: '生成预览' }))
+
+  expect(await screen.findByLabelText('客户名称 目标 key')).toHaveValue('客户名称')
+  expect(screen.getByLabelText('预算 字段类型')).toHaveValue('number')
+  expect(screen.getByLabelText('数据表 key')).toHaveValue('imported_data')
+
+  fireEvent.change(screen.getByLabelText('Base 名称'), { target: { value: '客户运营' } })
+  fireEvent.change(screen.getByLabelText('数据表名称'), { target: { value: '客户汇总' } })
+  fireEvent.click(screen.getByRole('button', { name: '确认创建数据表' }))
+
+  expect(await screen.findByText('已创建数据表')).toBeVisible()
+  expect(onCommit).toHaveBeenCalledWith('job-empty-mapping', expect.objectContaining({
+    tableKey: 'imported_data',
+    fieldMapping: [
+      { sourceKey: '客户名称', targetKey: '客户名称', fieldType: 'text', name: '客户名称' },
+      { sourceKey: '预算', targetKey: '预算', fieldType: 'number', name: '预算' },
+    ],
+  }))
+})
+
+test('keeps an unexpected controlled import refusal actionable by showing its stable error code', async () => {
+  const file = new File(['Name\nAda\n'], 'customers.csv', { type: 'text/csv' })
+  Object.defineProperty(file, 'text', { value: () => Promise.resolve('Name\nAda\n') })
+  render(<ImportWizard
+    target={{ kind: 'workspace', workspaceId: 'workspace-1' }}
+    onCreatePreview={vi.fn().mockRejectedValue(new ApiError(422, 'idempotency_in_progress'))}
+    onCommit={vi.fn()}
+    onClose={vi.fn()}
+  />)
+
+  fireEvent.change(screen.getByLabelText('选择导入文件'), { target: { files: [file] } })
+  fireEvent.click(screen.getByRole('button', { name: '生成预览' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('idempotency_in_progress')
+})
+
+test('closes an idle import panel with Escape or its backdrop without treating panel clicks as cancellation', () => {
+  const onClose = vi.fn()
+  render(<ImportWizard target={{ kind: 'workspace', workspaceId: 'workspace-1' }} onCreatePreview={vi.fn()} onCommit={vi.fn()} onClose={onClose} />)
+
+  fireEvent.mouseDown(screen.getByRole('dialog', { name: '导入数据表' }))
+  expect(onClose).not.toHaveBeenCalled()
+
+  fireEvent.mouseDown(screen.getByRole('presentation'))
+  expect(onClose).toHaveBeenCalledOnce()
+
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect(onClose).toHaveBeenCalledTimes(2)
+})

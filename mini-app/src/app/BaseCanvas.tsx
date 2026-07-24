@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { type KeyboardEvent as ReactKeyboardEvent, type MouseEvent, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ChevronDown, MoreHorizontal, Plus, Table2 } from 'lucide-react'
 
 import type { BaseSummary, BusinessContextRelation, PlatformTable, TableSchema, ViewPresentation, ViewRecords, ViewSummary } from './api'
@@ -8,8 +8,39 @@ type BaseCanvasProps = { base: BaseSummary; tables: PlatformTable[]; views: View
 
 export function BaseCanvas({ base, tables, views, table, view, schema, records, presentation, loadingMore, loadMoreError, serverQuerySummary, businessContextRelations = [], onBack, onOpenRecord, onSelectTable, onSelectView, onLoadMore, onCreateRecord, canManageSchema = false, canCreateViews = false, canManageViews = false, canCreateRecords = false, canManageDigitalEmployees = false, onCreateTable, onCreateField, onCreateView, onConfigureView, onSaveTemplate, onImportIntoBase, onOpenTableOperations, onOpenCollaboration, onOpenDraftHub, onOpenDigitalEmployeeManagement }: BaseCanvasProps) {
   const [moreOpen, setMoreOpen] = useState(false)
+  const [recordContextMenu, setRecordContextMenu] = useState<{ recordId: string; x: number; y: number } | null>(null)
   const moreActionsTrigger = useRef<HTMLButtonElement>(null)
+  const recordContextTrigger = useRef<HTMLElement | null>(null)
+  const recordContextMenuRef = useRef<HTMLDivElement>(null)
   const baseRelations = businessContextRelations.filter((relation) => relation.employee.base_id === base.id || relation.customer.base_id === base.id || relation.project.base_id === base.id)
+
+  function closeRecordContextMenu() {
+    setRecordContextMenu(null)
+    const trigger = recordContextTrigger.current
+    recordContextTrigger.current = null
+    queueMicrotask(() => trigger?.focus())
+  }
+
+  function openRecordContextMenu(event: MouseEvent<HTMLElement> | ReactKeyboardEvent<HTMLElement>, recordId: string) {
+    event.preventDefault()
+    recordContextTrigger.current = event.currentTarget
+    const pointerEvent = 'clientX' in event ? event : null
+    setRecordContextMenu({ recordId, x: pointerEvent?.clientX ?? 24, y: pointerEvent?.clientY ?? 24 })
+  }
+
+  useEffect(() => {
+    if (!recordContextMenu) return
+    recordContextMenuRef.current?.focus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeRecordContextMenu()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [recordContextMenu])
+
   if (!table || !view || !schema || !records || !presentation) return <main className="base-canvas empty-canvas" aria-label="Base 工作台"><button className="back-link" type="button" onClick={onBack}><ArrowLeft size={16} /> 返回工作区</button><h1>{base.name}</h1><p>这个 Base 还没有可访问的表或保存视图。</p></main>
   return <main className="base-canvas" aria-label="Base 工作台">
     <header className="canvas-header"><button className="back-link" type="button" onClick={onBack}><ArrowLeft size={16} /> 工作区</button><span className="canvas-separator">/</span><h1>{base.name}</h1>{onOpenTableOperations ? <button className="canvas-operation-center-button" type="button" onClick={(event) => onOpenTableOperations(event.currentTarget)}>表格操作</button> : null}{canManageSchema && (onSaveTemplate || onImportIntoBase) ? <div className="base-more-actions"><button ref={moreActionsTrigger} className="icon-button" aria-label="更多 Base 操作" aria-expanded={moreOpen} type="button" onClick={() => setMoreOpen((open) => !open)}><MoreHorizontal size={19} /></button>{moreOpen ? <div className="base-more-menu">{onImportIntoBase ? <button type="button" onClick={() => { const trigger = moreActionsTrigger.current; setMoreOpen(false); if (trigger) onImportIntoBase(trigger) }}>导入到当前 Base</button> : null}{onSaveTemplate ? <button type="button" onClick={() => { setMoreOpen(false); onSaveTemplate() }}>保存为模板</button> : null}</div> : null}</div> : null}</header>
@@ -17,7 +48,7 @@ export function BaseCanvas({ base, tables, views, table, view, schema, records, 
     <div className="view-toolbar"><div role="tablist" aria-label="保存视图">{views.filter((item) => item.table_id === table.id).map((item) => <button role="tab" aria-selected={item.id === view.id} className={item.id === view.id ? 'view-tab active' : 'view-tab'} type="button" key={item.id} onClick={() => onSelectView(item.id)}>{item.name}</button>)}</div><div className="view-tools">{serverQuerySummary ? <output className="view-query-summary" aria-label="服务器查询摘要">{serverQuerySummary}</output> : null}{onOpenCollaboration ? <button className="open-collaboration" type="button" onClick={(event) => onOpenCollaboration(event.currentTarget)}>智能协作</button> : null}{canManageDigitalEmployees && onOpenDigitalEmployeeManagement ? <button className="open-employee-management" type="button" onClick={(event) => onOpenDigitalEmployeeManagement(event.currentTarget)}>数字员工管理</button> : null}{onOpenDraftHub ? <button className="open-employee-hub" type="button" onClick={(event) => onOpenDraftHub(event.currentTarget)}>数字员工</button> : null}{canManageViews && onConfigureView ? <button className="configure-view-button" type="button" onClick={onConfigureView}>配置视图</button> : null}{canCreateViews && onCreateView ? <button className="create-view-button" type="button" onClick={onCreateView}>新建视图</button> : null}{canManageSchema && onCreateField ? <button className="add-field-button" type="button" onClick={onCreateField}>添加字段</button> : null}{canCreateRecords && schema.fields.length > 0 && onCreateRecord ? <button className="create-record-button" type="button" onClick={onCreateRecord}>新建记录</button> : null}</div></div>
     <div className="base-workbench-body" data-workbench-layout="table-context">
       <div className="base-workbench-main">
-        {presentation.view_type === 'grid' && schema.fields.length === 0 ? <div className="grid-empty" role="status"><p>此数据表尚未添加字段。</p>{canManageSchema && onCreateField ? <button className="add-first-field-button" type="button" onClick={onCreateField}>添加第一个字段</button> : null}</div> : <ViewSurface presentation={presentation} schema={schema} records={records} onOpenRecord={onOpenRecord} />}
+        {presentation.view_type === 'grid' && schema.fields.length === 0 ? <div className="grid-empty" role="status"><p>此数据表尚未添加字段。</p>{canManageSchema && onCreateField ? <button className="add-first-field-button" type="button" onClick={onCreateField}>添加第一个字段</button> : null}</div> : <ViewSurface presentation={presentation} schema={schema} records={records} onOpenRecord={onOpenRecord} onOpenRecordContextMenu={openRecordContextMenu} />}
         {records.has_more && records.next_cursor && onLoadMore && <div className="record-pagination"><button type="button" disabled={loadingMore} onClick={() => onLoadMore(records.next_cursor!)}>{loadingMore ? '正在加载…' : '加载更多记录'}</button>{loadMoreError && <p role="alert">加载失败，请重试。</p>}</div>}
       </div>
       <aside className="base-workbench-context" data-testid="base-workbench-context" aria-label="当前表格上下文">
@@ -27,41 +58,47 @@ export function BaseCanvas({ base, tables, views, table, view, schema, records, 
       </aside>
     </div>
     {baseRelations.length > 0 ? <section className="workbench-business-context" data-testid="base-business-context" aria-label="当前 Base 的已授权业务关联"><header><p>BUSINESS CONTEXT</p><h2>已授权业务关联</h2></header>{baseRelations.map((relation) => <div key={`${relation.group.id}:${relation.mapping_version}`}><strong>{relation.employee.name}</strong><span>{relation.group.label}</span><span>客户 · {relation.customer.label}</span><span>项目 · {relation.project.label}</span></div>)}</section> : null}
+    {recordContextMenu ? <div className="record-context-backdrop" role="presentation" onMouseDown={closeRecordContextMenu}>
+      <div ref={recordContextMenuRef} className="record-context-menu" role="menu" aria-label="记录操作" tabIndex={-1} style={{ left: recordContextMenu.x, top: recordContextMenu.y }} onMouseDown={(event) => event.stopPropagation()}>
+        <button type="button" role="menuitem" onClick={() => { const recordId = recordContextMenu.recordId; closeRecordContextMenu(); onOpenRecord(recordId) }}>查看记录详情</button>
+        <button type="button" role="menuitem" disabled aria-label="复制或归档记录（即将上线）">复制或归档记录（即将上线）</button>
+      </div>
+    </div> : null}
   </main>
 }
 
 type Field = TableSchema['fields'][number]
-type RecordsProps = { fields: Field[]; allFields: Field[]; records: ViewRecords; onOpenRecord: (recordId: string) => void }
+type RecordsProps = { fields: Field[]; allFields: Field[]; records: ViewRecords; onOpenRecord: (recordId: string) => void; onOpenRecordContextMenu: (event: MouseEvent<HTMLElement> | ReactKeyboardEvent<HTMLElement>, recordId: string) => void }
 
-function ViewSurface({ presentation, schema, records, onOpenRecord }: { presentation: ViewPresentation; schema: TableSchema; records: ViewRecords; onOpenRecord: (recordId: string) => void }) {
+function ViewSurface({ presentation, schema, records, onOpenRecord, onOpenRecordContextMenu }: { presentation: ViewPresentation; schema: TableSchema; records: ViewRecords; onOpenRecord: (recordId: string) => void; onOpenRecordContextMenu: (event: MouseEvent<HTMLElement> | ReactKeyboardEvent<HTMLElement>, recordId: string) => void }) {
   const fields = schema.fields.filter((field) => presentation.visible_field_keys.includes(field.key))
-  if (presentation.view_type === 'kanban') return <KanbanSurface fields={fields} allFields={schema.fields} records={records} groupBy={presentation.group_by_field_key} onOpenRecord={onOpenRecord} />
-  if (presentation.view_type === 'calendar') return <CalendarSurface fields={fields} allFields={schema.fields} records={records} dateField={presentation.date_field_key} onOpenRecord={onOpenRecord} />
-  if (presentation.view_type === 'form') return <FormSurface fields={fields} allFields={schema.fields} record={records.records[0]} formFieldKeys={presentation.form_field_keys} onOpenRecord={onOpenRecord} />
-  return <GridSurface fields={fields} allFields={schema.fields} records={records} onOpenRecord={onOpenRecord} />
+  if (presentation.view_type === 'kanban') return <KanbanSurface fields={fields} allFields={schema.fields} records={records} groupBy={presentation.group_by_field_key} onOpenRecord={onOpenRecord} onOpenRecordContextMenu={onOpenRecordContextMenu} />
+  if (presentation.view_type === 'calendar') return <CalendarSurface fields={fields} allFields={schema.fields} records={records} dateField={presentation.date_field_key} onOpenRecord={onOpenRecord} onOpenRecordContextMenu={onOpenRecordContextMenu} />
+  if (presentation.view_type === 'form') return <FormSurface fields={fields} allFields={schema.fields} record={records.records[0]} formFieldKeys={presentation.form_field_keys} onOpenRecord={onOpenRecord} onOpenRecordContextMenu={onOpenRecordContextMenu} />
+  return <GridSurface fields={fields} allFields={schema.fields} records={records} onOpenRecord={onOpenRecord} onOpenRecordContextMenu={onOpenRecordContextMenu} />
 }
 
-function GridSurface({ fields, records, onOpenRecord }: RecordsProps) {
-  return <section data-testid="view-grid"><div className="grid-scroll"><table className="record-grid"><thead><tr><th aria-label="选择记录" /><th scope="col">#</th>{fields.map((field) => <th scope="col" key={field.id}>{field.name}</th>)}</tr></thead><tbody>{records.records.map((record, index) => <tr key={record.id} onClick={() => onOpenRecord(record.id)}><td><span className="row-check" /></td><td>{index + 1}</td>{fields.map((field) => <td key={field.id}>{displayCell(field, record.fields[field.key])}</td>)}</tr>)}</tbody></table></div>{records.records.length === 0 && <div className="grid-empty">当前视图没有可访问记录。</div>}</section>
+function GridSurface({ fields, records, onOpenRecord, onOpenRecordContextMenu }: RecordsProps) {
+  return <section data-testid="view-grid"><div className="grid-scroll"><table className="record-grid"><thead><tr><th aria-label="选择记录" /><th scope="col">#</th>{fields.map((field) => <th scope="col" key={field.id}>{field.name}</th>)}</tr></thead><tbody>{records.records.map((record, index) => <tr key={record.id} tabIndex={0} onClick={() => onOpenRecord(record.id)} onContextMenu={(event) => onOpenRecordContextMenu(event, record.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpenRecord(record.id) } else if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) onOpenRecordContextMenu(event, record.id) }}><td><span className="row-check" /></td><td>{index + 1}</td>{fields.map((field) => <td key={field.id}>{displayCell(field, record.fields[field.key])}</td>)}</tr>)}</tbody></table></div>{records.records.length === 0 && <div className="grid-empty">当前视图没有可访问记录。</div>}</section>
 }
 
-function KanbanSurface({ fields, allFields, records, groupBy, onOpenRecord }: RecordsProps & { groupBy: string | null }) {
+function KanbanSurface({ fields, allFields, records, groupBy, onOpenRecord, onOpenRecordContextMenu }: RecordsProps & { groupBy: string | null }) {
   const groups = new Map<string, typeof records.records>()
   const groupField = allFields.find((field) => field.key === groupBy)
   for (const record of records.records) { const key = groupBy ? displayText(groupField, record.fields[groupBy]) || '未分组' : '未分组'; groups.set(key, [...(groups.get(key) ?? []), record]) }
-  return <div className="kanban-surface" data-testid="view-kanban">{[...groups.entries()].map(([name, items]) => <section className="kanban-column" key={name}><header><strong>{name}</strong><span>{items.length}</span></header>{items.map((record) => <button type="button" key={record.id} onClick={() => onOpenRecord(record.id)}>{fields.slice(0, 3).map((field) => <span key={field.id}><small>{field.name}</small>{displayCell(field, record.fields[field.key])}</span>)}</button>)}</section>)}</div>
+  return <div className="kanban-surface" data-testid="view-kanban">{[...groups.entries()].map(([name, items]) => <section className="kanban-column" key={name}><header><strong>{name}</strong><span>{items.length}</span></header>{items.map((record) => <button type="button" key={record.id} onClick={() => onOpenRecord(record.id)} onContextMenu={(event) => onOpenRecordContextMenu(event, record.id)}>{fields.slice(0, 3).map((field) => <span key={field.id}><small>{field.name}</small>{displayCell(field, record.fields[field.key])}</span>)}</button>)}</section>)}</div>
 }
 
-function CalendarSurface({ fields, allFields, records, dateField, onOpenRecord }: RecordsProps & { dateField: string | null }) {
+function CalendarSurface({ fields, allFields, records, dateField, onOpenRecord, onOpenRecordContextMenu }: RecordsProps & { dateField: string | null }) {
   const groups = new Map<string, typeof records.records>()
   const dateFieldDefinition = allFields.find((field) => field.key === dateField)
   for (const record of records.records) { const key = dateField ? displayText(dateFieldDefinition, record.fields[dateField]) || '未排期' : '未排期'; groups.set(key, [...(groups.get(key) ?? []), record]) }
-  return <div className="calendar-surface" data-testid="view-calendar">{[...groups.entries()].map(([date, items]) => <section key={date}><h2>{date}</h2>{items.map((record) => <button type="button" key={record.id} onClick={() => onOpenRecord(record.id)}>{fields.map((field) => <span key={field.id}>{displayCell(field, record.fields[field.key])}</span>)}</button>)}</section>)}</div>
+  return <div className="calendar-surface" data-testid="view-calendar">{[...groups.entries()].map(([date, items]) => <section key={date}><h2>{date}</h2>{items.map((record) => <button type="button" key={record.id} onClick={() => onOpenRecord(record.id)} onContextMenu={(event) => onOpenRecordContextMenu(event, record.id)}>{fields.map((field) => <span key={field.id}>{displayCell(field, record.fields[field.key])}</span>)}</button>)}</section>)}</div>
 }
 
-function FormSurface({ fields, record, formFieldKeys, onOpenRecord }: { fields: Field[]; allFields: Field[]; record: ViewRecords['records'][number] | undefined; formFieldKeys: string[]; onOpenRecord: (recordId: string) => void }) {
+function FormSurface({ fields, record, formFieldKeys, onOpenRecord, onOpenRecordContextMenu }: { fields: Field[]; allFields: Field[]; record: ViewRecords['records'][number] | undefined; formFieldKeys: string[]; onOpenRecord: (recordId: string) => void; onOpenRecordContextMenu: (event: MouseEvent<HTMLElement> | ReactKeyboardEvent<HTMLElement>, recordId: string) => void }) {
   if (!record) return <div className="grid-empty">当前表单没有可访问记录。</div>
-  return <form className="record-form" data-testid="view-form" onSubmit={(event) => event.preventDefault()}>{fields.filter((field) => formFieldKeys.includes(field.key)).map((field) => <label key={field.id}>{field.name}<output>{displayCell(field, record.fields[field.key])}</output></label>)}<button type="button" onClick={() => onOpenRecord(record.id)}>查看记录详情</button></form>
+  return <form className="record-form" data-testid="view-form" onSubmit={(event) => event.preventDefault()}>{fields.filter((field) => formFieldKeys.includes(field.key)).map((field) => <label key={field.id}>{field.name}<output>{displayCell(field, record.fields[field.key])}</output></label>)}<button type="button" onClick={() => onOpenRecord(record.id)} onContextMenu={(event) => onOpenRecordContextMenu(event, record.id)}>查看记录详情</button></form>
 }
 
 function displayCell(field: Field, value: unknown) {

@@ -75,6 +75,10 @@ def begin_idempotent_operation(
                 record=existing,
                 response_ref=existing.response_ref,
             )
+        if existing.status == "failed":
+            existing.status = "in_progress"
+            existing.response_ref = None
+            return IdempotencyDecision(status="started", record=existing)
         raise PlatformValidationError("idempotency_in_progress", operation)
 
     record = Stage06IdempotencyRecord(
@@ -98,3 +102,12 @@ def complete_idempotent_operation(
 ) -> None:
     record.status = "completed"
     record.response_ref = dict(response_ref)
+
+
+def fail_idempotent_operation(
+    record: Stage06IdempotencyRecord,
+    *,
+    failure_code: str,
+) -> None:
+    record.status = "failed"
+    record.response_ref = {"failure_code": failure_code}

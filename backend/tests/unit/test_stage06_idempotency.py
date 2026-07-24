@@ -5,6 +5,7 @@ import pytest
 from app.services.stage06_idempotency import (
     begin_idempotent_operation,
     complete_idempotent_operation,
+    fail_idempotent_operation,
     fingerprint_request,
 )
 from app.services.stage06_platform import (
@@ -104,3 +105,33 @@ def test_stage06_in_progress_duplicate_conflicts() -> None:
         )
 
     assert denied.value.code == "idempotency_in_progress"
+
+
+def test_stage06_same_key_can_retry_after_controlled_failure() -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    workspace = create_workspace(uow, name="Acme", owner_user_id="owner-1")
+    fingerprint = fingerprint_request({"import_job_id": "job-1"})
+    first = begin_idempotent_operation(
+        uow,
+        workspace_id=workspace.id,
+        operation="import.commit",
+        idempotency_key="retryable-import",
+        request_fingerprint=fingerprint,
+        trace_id="trace-1",
+    )
+
+    fail_idempotent_operation(first.record, failure_code="invalid_import_mapping")
+
+    retry = begin_idempotent_operation(
+        uow,
+        workspace_id=workspace.id,
+        operation="import.commit",
+        idempotency_key="retryable-import",
+        request_fingerprint=fingerprint,
+        trace_id="trace-2",
+    )
+
+    assert retry.status == "started"
+    assert retry.record.id == first.record.id
+    assert retry.record.status == "in_progress"
+    assert retry.record.response_ref is None

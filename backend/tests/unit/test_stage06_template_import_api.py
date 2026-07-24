@@ -257,6 +257,63 @@ def test_stage06_template_import_commit_rejects_duplicate_mapping_targets_withou
     assert len(uow.records) == records_before
 
 
+def test_stage06_template_import_commit_failure_releases_its_idempotency_key() -> None:
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_template_import_uow] = lambda: uow
+    app.dependency_overrides[get_system_actor] = lambda: Actor(
+        actor_type="user",
+        actor_id="owner-1",
+        role="owner",
+    )
+
+    invalid_mapping = [
+        {"source_key": "name", "target_key": "customer", "field_type": "text"},
+        {"source_key": "score", "target_key": "customer", "field_type": "number"},
+    ]
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "owner-1"
+        client.headers["Idempotency-Key"] = "retryable-import-create"
+        workspace_id = client.post(
+            "/workspaces",
+            json={"name": "Acme", "owner_user_id": "owner-1"},
+        ).json()["id"]
+        import_response = client.post(
+            f"/workspaces/{workspace_id}/imports",
+            json={
+                "source_type": "csv",
+                "file_name": "customers.csv",
+                "content": "Name,Score\nAda,10\n",
+                "created_by_user_id": "owner-1",
+            },
+        )
+        client.headers["Idempotency-Key"] = "retryable-import-commit"
+        first = client.post(
+            f"/imports/{import_response.json()['id']}/commit",
+            json={
+                "base_name": "Imported CRM",
+                "table_name": "Customers",
+                "table_key": "customers",
+                "field_mapping": invalid_mapping,
+            },
+        )
+        retry = client.post(
+            f"/imports/{import_response.json()['id']}/commit",
+            json={
+                "base_name": "Imported CRM",
+                "table_name": "Customers",
+                "table_key": "customers",
+                "field_mapping": invalid_mapping,
+            },
+        )
+
+    assert first.status_code == 422
+    assert first.json()["detail"]["code"] == "invalid_import_mapping"
+    assert retry.status_code == 422
+    assert retry.json()["detail"]["code"] == "invalid_import_mapping"
+
+
 def test_stage06_template_import_commit_rejects_array_target_key_without_new_resources() -> None:
     uow, import_response, commit_response, counts_before = _commit_import_with_mapping(
         [

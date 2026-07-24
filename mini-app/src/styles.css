@@ -1825,17 +1825,102 @@ select:focus-visible {
 
 .nav-item[data-availability='planned'],
 .mobile-nav-item[data-availability='planned'] {
-  cursor: not-allowed;
+  cursor: help;
   color: #9ca5b1;
 }
 
 .nav-item[data-availability='planned']:hover,
 .mobile-nav-item[data-availability='planned']:hover {
+  background: #f4f7fb;
+  color: #697586;
+}
+
+.planned-navigation-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 12px 24px 0;
+  border: 1px solid #d7e3f5;
+  border-radius: 8px;
+  background: #f5f9ff;
+  color: #526176;
+  padding: 9px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.planned-navigation-notice button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 5px;
   background: transparent;
-  color: #9ca5b1;
+  color: #2d76dd;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.planned-navigation-notice button:hover,
+.planned-navigation-notice button:focus-visible {
+  background: #e6f0ff;
+  outline: none;
+}
+
+.record-grid tbody tr {
+  cursor: pointer;
+}
+
+.record-grid tbody tr:focus-visible td {
+  outline: 2px solid #1677ff;
+  outline-offset: -2px;
+}
+
+.record-context-backdrop {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+}
+
+.record-context-menu {
+  position: fixed;
+  z-index: 31;
+  display: grid;
+  min-width: 180px;
+  gap: 3px;
+  border: 1px solid #dfe6ee;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgb(23 33 48 / 16%);
+  padding: 5px;
+}
+
+.record-context-menu button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #26313d;
+  padding: 7px 9px;
+  text-align: left;
+  font-size: 12px;
+}
+
+.record-context-menu button:hover:not(:disabled),
+.record-context-menu button:focus-visible:not(:disabled) {
+  background: #f1f6fd;
+  outline: none;
+}
+
+.record-context-menu button:disabled {
+  color: #a0a9b5;
+  cursor: not-allowed;
 }
 
 @media (max-width: 900px) {
+  .planned-navigation-notice {
+    margin: 8px 14px 0;
+  }
+
   .mobile-nav {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }

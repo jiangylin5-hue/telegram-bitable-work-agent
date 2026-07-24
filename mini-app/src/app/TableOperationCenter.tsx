@@ -1,3 +1,4 @@
+import { useEffect, type MouseEvent } from 'react'
 import { X } from 'lucide-react'
 
 import { getTableOperationDefinitions, type TableOperationKey } from './capability-registry'
@@ -50,6 +51,14 @@ export function TableOperationCenter({ scope, actions, onClose }: TableOperation
     save_template: actions.onSaveTemplate,
   }
 
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [onClose])
+
   function dispatch(key: TableOperationKey) {
     const action = actionByKey[key]
     if (!action) return
@@ -57,7 +66,11 @@ export function TableOperationCenter({ scope, actions, onClose }: TableOperation
     action()
   }
 
-  return <div className="table-operation-backdrop" role="presentation">
+  function closeFromBackdrop(event: MouseEvent<HTMLDivElement>) {
+    if (event.target === event.currentTarget) onClose()
+  }
+
+  return <div className="table-operation-backdrop" role="presentation" onMouseDown={closeFromBackdrop}>
     <aside className="table-operation-center" aria-label="表格操作中心" aria-modal="true" role="dialog">
       <header className="table-operation-header">
         <div><p>TABLE OPERATIONS</p><h2>表格操作中心</h2><span>{scopeSummary}</span></div>

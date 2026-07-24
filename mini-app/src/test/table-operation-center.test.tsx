@@ -56,3 +56,18 @@ test('shows unimplemented lifecycle, bulk and export work as planned rather than
   }
   expect(screen.getByText('这些能力尚未有受控的后端契约，不能以静态页面冒充可用。')).toBeVisible()
 })
+
+test('closes the operation center with Escape or its backdrop without closing from panel content', () => {
+  const onClose = vi.fn()
+  render(<TableOperationCenter scope={{ kind: 'workspace' }} actions={{ onCreateBase: vi.fn(), onOpenTemplates: vi.fn() }} onClose={onClose} />)
+
+  const dialog = screen.getByRole('dialog', { name: '表格操作中心' })
+  fireEvent.mouseDown(dialog)
+  expect(onClose).not.toHaveBeenCalled()
+
+  fireEvent.mouseDown(screen.getByRole('presentation'))
+  expect(onClose).toHaveBeenCalledOnce()
+
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect(onClose).toHaveBeenCalledTimes(2)
+})

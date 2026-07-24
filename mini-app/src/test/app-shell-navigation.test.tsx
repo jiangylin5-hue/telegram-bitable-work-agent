@@ -99,7 +99,7 @@ test('opens real supported destinations and has Chinese usage hints', () => {
   expect(onOpenGovernance).toHaveBeenCalledTimes(1)
   expect(draftButton).toHaveAttribute('title', '待确认：查看待处理草稿')
   expect(draftButton).toHaveAttribute('data-nav-hint', '查看待处理草稿')
-  expect(desktopNavigation.getByRole('button', { name: '消息：即将上线' })).toBeDisabled()
+  expect(desktopNavigation.getByRole('button', { name: '消息：即将上线' })).toHaveAttribute('aria-disabled', 'true')
   expect(desktopNavigation.getByRole('button', { name: '消息：即将上线' })).toHaveAttribute('data-availability', 'planned')
   expect(rendered.container.querySelectorAll('a.nav-item, a.mobile-nav-item')).toHaveLength(0)
 
@@ -114,7 +114,7 @@ test('opens real supported destinations and has Chinese usage hints', () => {
 test.each([
   { missingEntry: 'Draft Hub', missingButton: '待确认：即将上线', availableButton: '团队 Bot：使用已授权团队助手' },
   { missingEntry: 'Team Bot', missingButton: '团队 Bot：即将上线', availableButton: '待确认：查看待处理草稿' },
-])('plans and disables a missing $missingEntry action without disabling the other real action', ({ missingEntry, missingButton, availableButton }) => {
+])('plans a missing $missingEntry action with an explicit non-navigation explanation', ({ missingEntry, missingButton, availableButton }) => {
   const onNavigate = vi.fn()
   const onOpenDraftHub = missingEntry === 'Team Bot' ? vi.fn() : undefined
   const onOpenTeamBot = missingEntry === 'Draft Hub' ? vi.fn() : undefined
@@ -129,7 +129,7 @@ test.each([
 
   for (const button of missingButtons) {
     expect(button).toHaveAttribute('data-availability', 'planned')
-    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-disabled', 'true')
     fireEvent.click(button)
   }
 
@@ -159,9 +159,21 @@ test('hides desktop governance and plans mobile More for non-managers', () => {
 
   const moreButton = mobileNavigation.getByRole('button', { name: '更多：即将上线' })
   expect(moreButton).toHaveAttribute('data-availability', 'planned')
-  expect(moreButton).toBeDisabled()
+  expect(moreButton).toHaveAttribute('aria-disabled', 'true')
   fireEvent.click(moreButton)
   expect(onOpenGovernance).not.toHaveBeenCalled()
+})
+
+test('explains a planned navigation item without pretending to open an unavailable page', () => {
+  const onNavigate = vi.fn()
+  render(<AppShell workspace={workspace} workspaces={[workspace]} onWorkspaceChange={vi.fn()} activeRoute="home" onNavigate={onNavigate}><main>内容</main></AppShell>)
+
+  const desktopNavigation = within(screen.getByRole('complementary', { name: '主导航' }))
+  fireEvent.click(desktopNavigation.getByRole('button', { name: '消息：即将上线' }))
+
+  expect(screen.getByRole('status')).toHaveTextContent('消息尚未上线')
+  expect(screen.getByRole('status')).toHaveTextContent('不会跳转')
+  expect(onNavigate).not.toHaveBeenCalled()
 })
 
 test('opens every additional supported workbench from the mobile More menu', () => {

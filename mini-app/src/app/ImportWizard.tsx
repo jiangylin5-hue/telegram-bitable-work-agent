@@ -1,4 +1,4 @@
-import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react'
+import { type ChangeEvent, type FormEvent, type MouseEvent, useEffect, useRef, useState } from 'react'
 
 import { ApiError, type SafeApiErrorCode } from './api'
 import type { CommitImportValues, CreateImportValues, ImportCommitReceipt, ImportMapping, ImportPreview, ImportScalarFieldType } from './template-import-types'
@@ -40,6 +40,28 @@ async function payloadForFile(file: File): Promise<{ sourceType: 'csv' | 'excel'
   throw new Error('仅支持 CSV 或 XLSX 文件。')
 }
 
+function defaultMappingForPreview(preview: ImportPreview): ImportMapping[] {
+  if (preview.mapping.length > 0) return preview.mapping
+  return preview.detectedSchema.map((field) => ({
+    sourceKey: field.key,
+    targetKey: field.key,
+    fieldType: field.fieldType,
+    name: field.name,
+  }))
+}
+
+function defaultTableKey(preview: ImportPreview): string {
+  const candidate = preview.detectedSchema[0]?.key ?? ''
+  const normalized = candidate
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+  if (!normalized) return 'imported_data'
+  return /^[a-z]/.test(normalized) ? normalized.slice(0, 120) : `import_${normalized}`.slice(0, 120)
+}
+
 const importErrorCopy: Partial<Record<SafeApiErrorCode, string>> = {
   import_payload_limit_exceeded: '导入文件超过了允许的大小。',
   import_row_limit_exceeded: '导入行数超过了允许的上限。',
@@ -56,10 +78,13 @@ const importErrorCopy: Partial<Record<SafeApiErrorCode, string>> = {
 
 function safeError(error: unknown) {
   if (error instanceof ApiError) {
-    if (error.code === 'import_table_key_conflict') return '数据表 key 已存在。请修改 key 后再次确认创建。'
-    if (error.status === 409) return '请求发生冲突，请刷新后重试。'
+    if (error.code === 'import_table_key_conflict') return '数据表 key 已存在。请修改 key 后再次确认创建。 [import_table_key_conflict]'
+    if (error.code === 'idempotency_in_progress') return '上一次提交尚未结束，请等待片刻后使用当前表单重试。 [idempotency_in_progress]'
+    if (error.code === 'import_job_invalid_state') return '该导入预览已失效，请重新生成预览。 [import_job_invalid_state]'
+    if (error.status === 409) return '请求发生冲突，请刷新后重试。 [request_conflict]'
     const message = error.code ? importErrorCopy[error.code] : undefined
-    if (message) return message
+    if (message) return `${message} [${error.code}]`
+    return `导入未通过服务端校验，请检查表名、数据表 key 和字段映射后重试。 [${error.code ?? `http_${error.status}`}]`
   }
   if (error instanceof Error && ['仅支持 CSV 或 XLSX 文件。', 'CSV 文件不能超过 5 MiB。', 'XLSX 文件不能超过 10 MiB。'].includes(error.message)) return error.message
   return '导入暂时无法继续，请稍后重试。'
@@ -95,6 +120,23 @@ export function ImportWizard({ target, onCreatePreview, onCommit, onClose }: Pro
     }
   }, [focusTableKey, pending])
 
+  function closeIfIdle() {
+    if (pending === null) onClose()
+  }
+
+  useEffect(() => {
+    if (pending !== null) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [pending, onClose])
+
+  function closeFromBackdrop(event: MouseEvent<HTMLDivElement>) {
+    if (event.target === event.currentTarget) closeIfIdle()
+  }
+
   function selectFile(event: ChangeEvent<HTMLInputElement>) {
     setError(null); setPreview(null); setMapping([]); setReceipt(null)
     setFile(event.target.files?.[0] ?? null)
@@ -106,8 +148,13 @@ export function ImportWizard({ target, onCreatePreview, onCommit, onClose }: Pro
     try {
       const payload = await payloadForFile(file)
       const next = await onCreatePreview({ ...payload, fileName: file.name, ...(target.kind === 'base' ? { baseId: target.baseId } : {}) })
-      setPreview(next); setMapping(next.mapping); setTableName(next.detectedSchema[0]?.name || 'Imported data'); setTableKey(next.detectedSchema[0]?.key || 'imported_data')
-    } catch (caught) { setError(safeError(caught)) } finally { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; setPending(null) }
+      setPreview(next)
+      setMapping(defaultMappingForPreview(next))
+      setTableName(next.detectedSchema[0]?.name || 'Imported data')
+      setTableKey(defaultTableKey(next))
+      setFile(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    } catch (caught) { setError(safeError(caught)) } finally { setPending(null) }
   }
 
   function updateMapping(index: number, field: 'targetKey' | 'fieldType', value: string) {
@@ -133,7 +180,7 @@ export function ImportWizard({ target, onCreatePreview, onCommit, onClose }: Pro
     } finally { setPending(null) }
   }
 
-  return <div className="template-import-backdrop" role="presentation">
+  return <div className="template-import-backdrop" role="presentation" onMouseDown={closeFromBackdrop}>
     <aside className="template-import-panel import-wizard" aria-labelledby="import-wizard-title" aria-modal="true" role="dialog">
       <header className="template-import-header"><div><p>SERVER PREVIEW</p><h2 id="import-wizard-title">导入数据表</h2><span>仅上传一个 CSV 或 XLSX 文件；字段、预览和限制由服务器确认。</span></div><button type="button" aria-label="关闭导入" disabled={pending !== null} onClick={onClose}>×</button></header>
       {receipt ? <section className="template-save-success" role="status"><strong>已创建数据表</strong><span>导入已提交并写入持久化数据表。</span><small>Base: {receipt.baseId} · Table: {receipt.tableId}</small><button type="button" onClick={onClose}>完成</button></section> : !preview ? <section className="template-import-form"><label>选择导入文件<input ref={fileInputRef} aria-label="选择导入文件" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={pending !== null} type="file" onChange={selectFile} /></label><small>CSV 最大 5 MiB；XLSX 最大 10 MiB。文件只在生成服务器预览期间保留在当前内存。</small>{error ? <p className="template-import-error" role="alert">{error}</p> : null}<footer><button type="button" className="button-secondary" disabled={pending !== null} onClick={onClose}>取消</button><button type="button" className="button-primary" disabled={!file || pending !== null} onClick={() => { void createPreview() }}>{pending === 'preview' ? '正在生成预览…' : '生成预览'}</button></footer></section> : <form className="template-import-form" noValidate onSubmit={commit}><section className="import-preview"><h3>服务器预览</h3><div className="import-preview-table"><table><thead><tr>{preview.detectedSchema.map((field) => <th key={field.key}>{field.name}</th>)}</tr></thead><tbody>{preview.previewRows.map((row, rowIndex) => <tr key={rowIndex}>{preview.detectedSchema.map((field) => <td key={field.key}>{String(row[field.key] ?? '')}</td>)}</tr>)}</tbody></table></div></section><section className="import-mapping"><h3>字段映射</h3>{mapping.map((item, index) => <div className="import-mapping-row" key={item.sourceKey}><span>{item.sourceKey}</span><input aria-label={`${item.sourceKey} 目标 key`} value={item.targetKey} disabled={pending !== null} onChange={(event) => updateMapping(index, 'targetKey', event.target.value)} /><select aria-label={`${item.sourceKey} 字段类型`} value={item.fieldType} disabled={pending !== null} onChange={(event) => updateMapping(index, 'fieldType', event.target.value)}>{scalarTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select></div>)}</section>{target.kind === 'workspace' ? <label>Base 名称<input aria-label="Base 名称" value={baseName} disabled={pending !== null} onChange={(event) => setBaseName(event.target.value)} /></label> : <p className="template-import-context">目标 Base：{target.baseName}</p>}<label>数据表名称<input aria-label="数据表名称" value={tableName} disabled={pending !== null} onChange={(event) => setTableName(event.target.value)} /></label><label>数据表 key<input ref={tableKeyInputRef} aria-label="数据表 key" value={tableKey} disabled={pending !== null} onChange={(event) => setTableKey(event.target.value)} /></label>{error ? <p className="template-import-error" role="alert">{error}</p> : null}<footer><button type="button" className="button-secondary" disabled={pending !== null} onClick={onClose}>取消</button><button type="submit" className="button-primary" disabled={pending !== null}>{pending === 'commit' ? '正在创建…' : '确认创建数据表'}</button></footer></form>}
