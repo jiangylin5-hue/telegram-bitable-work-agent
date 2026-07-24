@@ -140,7 +140,10 @@ def test_stage06_template_import_api_imports_excel_after_preview_confirmation() 
     assert uow.records[0].values == {"title": "Launch", "due": "2026-07-10"}
 
 
-def test_stage06_template_import_api_rejects_corrupt_excel_with_safe_422() -> None:
+@pytest.mark.parametrize("corruption", ["bad_zip", "bad_xml"])
+def test_stage06_template_import_api_rejects_corrupt_excel_with_safe_422(
+    corruption: str,
+) -> None:
     app = create_app()
     uow = InMemoryStage06PlatformUnitOfWork()
     app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
@@ -159,12 +162,17 @@ def test_stage06_template_import_api_rejects_corrupt_excel_with_safe_422() -> No
             json={"name": "Acme", "owner_user_id": "owner-1"},
         ).json()["id"]
         client.headers["Idempotency-Key"] = "corrupt-excel-import"
+        content = (
+            b"not-an-xlsx-archive"
+            if corruption == "bad_zip"
+            else _simple_xlsx_bytes([], sheet_xml=b"<worksheet>")
+        )
         response = client.post(
             f"/workspaces/{workspace_id}/imports",
             json={
                 "source_type": "excel",
                 "file_name": "corrupt.xlsx",
-                "content": base64.b64encode(b"not-an-xlsx-archive").decode("ascii"),
+                "content": base64.b64encode(content).decode("ascii"),
                 "created_by_user_id": "owner-1",
             },
         )
@@ -365,7 +373,12 @@ def test_stage06_template_import_commit_rejects_array_target_key_without_new_res
     assert import_response.status_code == 200
     assert commit_response.status_code == 422
     assert commit_response.json()["detail"]["code"] == "invalid_import_mapping"
-    assert (len(uow.tables), len(uow.fields), len(uow.records)) == counts_before
+    assert (
+        len(uow.bases),
+        len(uow.tables),
+        len(uow.fields),
+        len(uow.records),
+    ) == counts_before
 
 
 def test_stage06_template_import_commit_rejects_object_source_key_without_new_resources() -> None:
@@ -382,7 +395,12 @@ def test_stage06_template_import_commit_rejects_object_source_key_without_new_re
     assert import_response.status_code == 200
     assert commit_response.status_code == 422
     assert commit_response.json()["detail"]["code"] == "invalid_import_mapping"
-    assert (len(uow.tables), len(uow.fields), len(uow.records)) == counts_before
+    assert (
+        len(uow.bases),
+        len(uow.tables),
+        len(uow.fields),
+        len(uow.records),
+    ) == counts_before
 
 
 def test_stage06_template_import_commit_rejects_unknown_source_key_without_new_resources() -> None:
@@ -399,7 +417,12 @@ def test_stage06_template_import_commit_rejects_unknown_source_key_without_new_r
     assert import_response.status_code == 200
     assert commit_response.status_code == 422
     assert commit_response.json()["detail"]["code"] == "invalid_import_mapping"
-    assert (len(uow.tables), len(uow.fields), len(uow.records)) == counts_before
+    assert (
+        len(uow.bases),
+        len(uow.tables),
+        len(uow.fields),
+        len(uow.records),
+    ) == counts_before
 
 
 @pytest.mark.parametrize("table_key", ["Customer Records", "a" * 121])
@@ -420,7 +443,12 @@ def test_stage06_template_import_commit_rejects_invalid_table_key_without_new_re
     assert import_response.status_code == 200
     assert commit_response.status_code == 422
     assert commit_response.json()["detail"]["code"] == "invalid_table_key"
-    assert (len(uow.tables), len(uow.fields), len(uow.records)) == counts_before
+    assert (
+        len(uow.bases),
+        len(uow.tables),
+        len(uow.fields),
+        len(uow.records),
+    ) == counts_before
 
 
 @pytest.mark.parametrize("field_type", [["text"], {"type": "text"}, None, ""])
@@ -440,7 +468,12 @@ def test_stage06_template_import_commit_rejects_non_string_or_empty_field_type_w
     assert import_response.status_code == 200
     assert commit_response.status_code == 422
     assert commit_response.json()["detail"]["code"] == "unsupported_field_type"
-    assert (len(uow.tables), len(uow.fields), len(uow.records)) == counts_before
+    assert (
+        len(uow.bases),
+        len(uow.tables),
+        len(uow.fields),
+        len(uow.records),
+    ) == counts_before
 
 
 @pytest.mark.parametrize("name", [{"display": "Customer"}, ["Customer"], None, ""])
@@ -461,14 +494,19 @@ def test_stage06_template_import_commit_rejects_non_string_or_empty_field_name_w
     assert import_response.status_code == 200
     assert commit_response.status_code == 422
     assert commit_response.json()["detail"]["code"] == "invalid_import_mapping"
-    assert (len(uow.tables), len(uow.fields), len(uow.records)) == counts_before
+    assert (
+        len(uow.bases),
+        len(uow.tables),
+        len(uow.fields),
+        len(uow.records),
+    ) == counts_before
 
 
 def _commit_import_with_mapping(
     field_mapping: list[dict[str, object]],
     *,
     table_key: str = "customers",
-) -> tuple[InMemoryStage06PlatformUnitOfWork, object, object, tuple[int, int, int]]:
+) -> tuple[InMemoryStage06PlatformUnitOfWork, object, object, tuple[int, int, int, int]]:
     app = create_app()
     uow = InMemoryStage06PlatformUnitOfWork()
     app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
@@ -496,7 +534,12 @@ def _commit_import_with_mapping(
                 "created_by_user_id": "owner-1",
             },
         )
-        counts_before = (len(uow.tables), len(uow.fields), len(uow.records))
+        counts_before = (
+            len(uow.bases),
+            len(uow.tables),
+            len(uow.fields),
+            len(uow.records),
+        )
         client.headers["Idempotency-Key"] = "invalid-mapping-import-commit"
         commit_response = client.post(
             f"/imports/{import_response.json()['id']}/commit",
@@ -511,7 +554,11 @@ def _commit_import_with_mapping(
     return uow, import_response, commit_response, counts_before
 
 
-def _simple_xlsx_bytes(rows: list[list[str]]) -> bytes:
+def _simple_xlsx_bytes(
+    rows: list[list[str]],
+    *,
+    sheet_xml: bytes | str | None = None,
+) -> bytes:
     sheet_rows = []
     for row_number, row in enumerate(rows, start=1):
         cells = []
@@ -521,11 +568,12 @@ def _simple_xlsx_bytes(rows: list[list[str]]) -> bytes:
                 f'<c r="{cell_ref}" t="inlineStr"><is><t>{value}</t></is></c>'
             )
         sheet_rows.append(f'<row r="{row_number}">{"".join(cells)}</row>')
-    sheet_xml = (
-        '<?xml version="1.0" encoding="UTF-8"?>'
-        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-        f'<sheetData>{"".join(sheet_rows)}</sheetData></worksheet>'
-    )
+    if sheet_xml is None:
+        sheet_xml = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            f'<sheetData>{"".join(sheet_rows)}</sheetData></worksheet>'
+        )
     output = BytesIO()
     with ZipFile(output, "w", ZIP_DEFLATED) as archive:
         archive.writestr("xl/worksheets/sheet1.xml", sheet_xml)
