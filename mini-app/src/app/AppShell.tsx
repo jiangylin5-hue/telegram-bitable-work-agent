@@ -33,7 +33,7 @@ export function AppShell({ workspace, workspaces, onWorkspaceChange, activeRoute
     { label: '待确认', description: '查看待处理草稿', icon: Bell, availability: onOpenDraftHub ? 'available' : 'planned', onClick: onOpenDraftHub },
     { label: 'Bases', description: '浏览和打开多维表格', icon: Table2, route: 'bases', availability: 'available', onClick: () => onNavigate('bases') },
     { label: '团队 Bot', description: '使用已授权团队助手', icon: Bot, availability: onOpenTeamBot ? 'available' : 'planned', onClick: onOpenTeamBot },
-    { label: '智能协作', description: '基于受权业务、记忆和知识协作', icon: Bot, availability: onOpenCollaboration ? 'available' : 'planned', onClick: onOpenCollaboration },
+    { label: 'AI 对话', description: '基于受权业务、记忆和知识协作', icon: Bot, availability: onOpenCollaboration ? 'available' : 'planned', onClick: onOpenCollaboration },
     { label: '记忆与知识', description: '查看长期记忆与知识边界', icon: Grid2X2, availability: onOpenMemory ? 'available' : 'planned', onClick: onOpenMemory },
     { label: '消息', description: '即将上线', icon: Bell, availability: 'planned' },
     { label: '视图', description: '即将上线', icon: LayoutList, availability: 'planned' },

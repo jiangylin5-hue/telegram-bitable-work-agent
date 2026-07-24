@@ -31,10 +31,10 @@ test('opens Stage08 collaboration from Home and sends only the safe query contra
 
   render(<App />)
   const dock = await screen.findByRole('complementary', { name: '个人助理与团队 Bot' })
-  fireEvent.click(within(dock).getByRole('button', { name: '智能协作' }))
-  fireEvent.click(await screen.findByRole('button', { name: '选择数字员工 客户协作员工' }))
+  fireEvent.click(within(dock).getByRole('button', { name: 'AI 对话' }))
+  expect(await screen.findByRole('dialog', { name: 'AI 对话' })).toBeVisible()
   fireEvent.change(screen.getByLabelText('协作问题'), { target: { value: '客户下一步怎么推进？' } })
-  fireEvent.click(screen.getByRole('button', { name: '开始协作' }))
+  fireEvent.click(screen.getByRole('button', { name: '发送问题' }))
 
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/stage08/assistant/query', expect.objectContaining({ method: 'POST' })))
   const invocation = fetchMock.mock.calls.find(([input]) => String(input) === '/api/stage08/assistant/query')

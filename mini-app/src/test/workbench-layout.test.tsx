@@ -65,6 +65,19 @@ test('offers a factual continue-working path for drafts, bases and team collabor
   expect(screen.queryByText(/最近 Base/)).not.toBeInTheDocument()
 })
 
+test('offers a direct AI conversation entry from the Home workbench', () => {
+  const onOpenCollaboration = vi.fn()
+  render(<WorkspaceHome
+    workspace={{ id: 'workspace-1', name: '运营中心', slug: 'operations', role: 'owner', capabilities: { can_read_bases: true, can_manage_workspace: true, can_manage_schema: true, can_review_drafts: true } }}
+    home={{ workspace_id: 'workspace-1', recent_bases: [], queue: [] }}
+    onOpenBase={vi.fn()}
+    onOpenCollaboration={onOpenCollaboration}
+  />)
+
+  fireEvent.click(screen.getByRole('button', { name: '打开 AI 对话' }))
+  expect(onOpenCollaboration).toHaveBeenCalledOnce()
+})
+
 test('guides an unselected Team Bot through three actionable steps', () => {
   const onSelectContact = vi.fn()
   render(<TeamBotWorkbench

@@ -45,10 +45,10 @@ export function BaseCanvas({ base, tables, views, table, view, schema, records, 
   return <main className="base-canvas" aria-label="Base 工作台">
     <header className="canvas-header"><button className="back-link" type="button" onClick={onBack}><ArrowLeft size={16} /> 工作区</button><span className="canvas-separator">/</span><h1>{base.name}</h1>{onOpenTableOperations ? <button className="canvas-operation-center-button" type="button" onClick={(event) => onOpenTableOperations(event.currentTarget)}>表格操作</button> : null}{canManageSchema && (onSaveTemplate || onImportIntoBase) ? <div className="base-more-actions"><button ref={moreActionsTrigger} className="icon-button" aria-label="更多 Base 操作" aria-expanded={moreOpen} type="button" onClick={() => setMoreOpen((open) => !open)}><MoreHorizontal size={19} /></button>{moreOpen ? <div className="base-more-menu">{onImportIntoBase ? <button type="button" onClick={() => { const trigger = moreActionsTrigger.current; setMoreOpen(false); if (trigger) onImportIntoBase(trigger) }}>导入到当前 Base</button> : null}{onSaveTemplate ? <button type="button" onClick={() => { setMoreOpen(false); onSaveTemplate() }}>保存为模板</button> : null}</div> : null}</div> : null}</header>
     <div className="canvas-table-tabs" role="tablist" aria-label="数据表">{tables.map((item) => <button role="tab" aria-selected={item.id === table.id} className={item.id === table.id ? 'table-tab active' : 'table-tab'} type="button" key={item.id} onClick={() => onSelectTable?.(item.id)}><Table2 size={16} />{item.name}{item.id === table.id && <ChevronDown size={14} />}</button>)}{canManageSchema && onCreateTable && <button className="add-table" type="button" aria-label="新建表" onClick={onCreateTable}><Plus size={16} /></button>}</div>
-    <div className="view-toolbar"><div role="tablist" aria-label="保存视图">{views.filter((item) => item.table_id === table.id).map((item) => <button role="tab" aria-selected={item.id === view.id} className={item.id === view.id ? 'view-tab active' : 'view-tab'} type="button" key={item.id} onClick={() => onSelectView(item.id)}>{item.name}</button>)}</div><div className="view-tools">{serverQuerySummary ? <output className="view-query-summary" aria-label="服务器查询摘要">{serverQuerySummary}</output> : null}{onOpenCollaboration ? <button className="open-collaboration" type="button" onClick={(event) => onOpenCollaboration(event.currentTarget)}>智能协作</button> : null}{canManageDigitalEmployees && onOpenDigitalEmployeeManagement ? <button className="open-employee-management" type="button" onClick={(event) => onOpenDigitalEmployeeManagement(event.currentTarget)}>数字员工管理</button> : null}{onOpenDraftHub ? <button className="open-employee-hub" type="button" onClick={(event) => onOpenDraftHub(event.currentTarget)}>数字员工</button> : null}{canManageViews && onConfigureView ? <button className="configure-view-button" type="button" onClick={onConfigureView}>配置视图</button> : null}{canCreateViews && onCreateView ? <button className="create-view-button" type="button" onClick={onCreateView}>新建视图</button> : null}{canManageSchema && onCreateField ? <button className="add-field-button" type="button" onClick={onCreateField}>添加字段</button> : null}{canCreateRecords && schema.fields.length > 0 && onCreateRecord ? <button className="create-record-button" type="button" onClick={onCreateRecord}>新建记录</button> : null}</div></div>
+    <div className="view-toolbar"><div role="tablist" aria-label="保存视图">{views.filter((item) => item.table_id === table.id).map((item) => <button role="tab" aria-selected={item.id === view.id} className={item.id === view.id ? 'view-tab active' : 'view-tab'} type="button" key={item.id} onClick={() => onSelectView(item.id)}>{item.name}</button>)}</div><div className="view-tools">{serverQuerySummary ? <output className="view-query-summary" aria-label="服务器查询摘要">{serverQuerySummary}</output> : null}{onOpenCollaboration ? <button className="open-collaboration" type="button" onClick={(event) => onOpenCollaboration(event.currentTarget)}>AI 对话</button> : null}{canManageDigitalEmployees && onOpenDigitalEmployeeManagement ? <button className="open-employee-management" type="button" onClick={(event) => onOpenDigitalEmployeeManagement(event.currentTarget)}>数字员工管理</button> : null}{onOpenDraftHub ? <button className="open-employee-hub" type="button" onClick={(event) => onOpenDraftHub(event.currentTarget)}>数字员工</button> : null}{canManageViews && onConfigureView ? <button className="configure-view-button" type="button" onClick={onConfigureView}>配置视图</button> : null}{canCreateViews && onCreateView ? <button className="create-view-button" type="button" onClick={onCreateView}>新建视图</button> : null}{canManageSchema && onCreateField ? <button className="add-field-button" type="button" onClick={onCreateField}>添加字段</button> : null}{canCreateRecords && schema.fields.length > 0 && onCreateRecord ? <button className="create-record-button" type="button" onClick={onCreateRecord}>新建记录</button> : null}</div></div>
     <div className="base-workbench-body" data-workbench-layout="table-context">
       <div className="base-workbench-main">
-        {presentation.view_type === 'grid' && schema.fields.length === 0 ? <div className="grid-empty" role="status"><p>此数据表尚未添加字段。</p>{canManageSchema && onCreateField ? <button className="add-first-field-button" type="button" onClick={onCreateField}>添加第一个字段</button> : null}</div> : <ViewSurface presentation={presentation} schema={schema} records={records} onOpenRecord={onOpenRecord} onOpenRecordContextMenu={openRecordContextMenu} />}
+        {presentation.view_type === 'grid' && schema.fields.length === 0 ? <div className="grid-empty grid-empty-onboarding" role="status"><p>此数据表尚未添加字段。</p><span>先导入 Excel/CSV，或从零创建第一列。</span>{canManageSchema && (onImportIntoBase || onCreateField) ? <div className="grid-empty-actions">{onImportIntoBase ? <button className="import-first-data-button" type="button" onClick={(event) => onImportIntoBase(event.currentTarget)}>从 Excel/CSV 导入</button> : null}{onCreateField ? <button className="add-first-field-button" type="button" onClick={onCreateField}>添加第一个字段</button> : null}</div> : null}</div> : <ViewSurface presentation={presentation} schema={schema} records={records} onOpenRecord={onOpenRecord} onOpenRecordContextMenu={openRecordContextMenu} />}
         {records.has_more && records.next_cursor && onLoadMore && <div className="record-pagination"><button type="button" disabled={loadingMore} onClick={() => onLoadMore(records.next_cursor!)}>{loadingMore ? '正在加载…' : '加载更多记录'}</button>{loadMoreError && <p role="alert">加载失败，请重试。</p>}</div>}
       </div>
       <aside className="base-workbench-context" data-testid="base-workbench-context" aria-label="当前表格上下文">
@@ -102,7 +102,26 @@ function FormSurface({ fields, record, formFieldKeys, onOpenRecord, onOpenRecord
 }
 
 function displayCell(field: Field, value: unknown) {
-  return field.field_type === 'linked_record' ? <RelationChips value={value} /> : displayText(field, value)
+  if (field.field_type === 'linked_record') return <RelationChips value={value} />
+  if (field.field_type === 'single_select' || field.field_type === 'multi_select' || field.field_type === 'status') return <SelectionChips fieldType={field.field_type} value={value} />
+  return displayText(field, value)
+}
+
+function choiceValues(value: unknown): string[] {
+  if (typeof value === 'string' && value.trim()) return [value]
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
+}
+
+function choiceTone(value: string): number {
+  let hash = 0
+  for (let index = 0; index < value.length; index += 1) hash = (hash * 31 + value.charCodeAt(index)) % 6
+  return hash
+}
+
+function SelectionChips({ fieldType, value }: { fieldType: string; value: unknown }) {
+  const values = choiceValues(value)
+  if (values.length === 0) return null
+  return <span className="selection-chip-list" data-field-type={fieldType}>{values.map((item) => <span className={`selection-chip tone-${choiceTone(item)}`} key={item}>{item}</span>)}</span>
 }
 
 function displayText(field: Field | undefined, value: unknown): string {

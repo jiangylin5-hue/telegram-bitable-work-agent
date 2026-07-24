@@ -31,6 +31,15 @@ test('renders Calendar headings using the server-provided date field', () => {
   expect(screen.getByRole('heading', { name: '2026-07-10' })).toBeInTheDocument()
 })
 
+test('renders status values as compact semantic color tags instead of unstyled grid text', () => {
+  const rendered = renderView('grid')
+  const tag = rendered.container.querySelector('[data-field-type="status"] .selection-chip')
+
+  expect(tag).toHaveTextContent('进行中')
+  expect(tag).toHaveClass('selection-chip')
+  expect(tag?.className).toMatch(/tone-/)
+})
+
 test('renders Form fields in the server-provided field order', () => {
   renderView('form', { form_field_keys: ['due', 'name'] })
   expect(screen.getByRole('button', { name: '查看记录详情' })).toBeInTheDocument()

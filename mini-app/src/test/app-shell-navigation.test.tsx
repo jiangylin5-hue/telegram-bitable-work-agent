@@ -198,7 +198,7 @@ test('opens every additional supported workbench from the mobile More menu', () 
   fireEvent.click(moreButton)
   expect(moreButton).toHaveAttribute('aria-expanded', 'true')
   const moreMenu = within(screen.getByLabelText('更多工作台'))
-  fireEvent.click(moreMenu.getByRole('button', { name: '智能协作：基于受权业务、记忆和知识协作' }))
+  fireEvent.click(moreMenu.getByRole('button', { name: 'AI 对话：基于受权业务、记忆和知识协作' }))
   expect(onOpenCollaboration).toHaveBeenCalledOnce()
 
   fireEvent.click(mobileNavigation.getByRole('button', { name: '更多：打开其他工作台' }))

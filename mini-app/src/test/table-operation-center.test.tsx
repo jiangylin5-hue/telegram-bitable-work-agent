@@ -71,3 +71,9 @@ test('closes the operation center with Escape or its backdrop without closing fr
   fireEvent.keyDown(document, { key: 'Escape' })
   expect(onClose).toHaveBeenCalledTimes(2)
 })
+
+test('uses a right-side drawer layout so table work stays visually in context', () => {
+  render(<TableOperationCenter scope={{ kind: 'workspace' }} actions={{ onCreateBase: vi.fn(), onOpenTemplates: vi.fn() }} onClose={vi.fn()} />)
+
+  expect(screen.getByRole('dialog', { name: '表格操作中心' })).toHaveAttribute('data-layout', 'side-drawer')
+})

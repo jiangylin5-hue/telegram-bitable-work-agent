@@ -71,7 +71,7 @@ export function TableOperationCenter({ scope, actions, onClose }: TableOperation
   }
 
   return <div className="table-operation-backdrop" role="presentation" onMouseDown={closeFromBackdrop}>
-    <aside className="table-operation-center" aria-label="表格操作中心" aria-modal="true" role="dialog">
+    <aside className="table-operation-center" aria-label="表格操作中心" aria-modal="true" data-layout="side-drawer" role="dialog">
       <header className="table-operation-header">
         <div><p>TABLE OPERATIONS</p><h2>表格操作中心</h2><span>{scopeSummary}</span></div>
         <button type="button" aria-label="关闭表格操作中心" onClick={onClose}><X size={19} /></button>

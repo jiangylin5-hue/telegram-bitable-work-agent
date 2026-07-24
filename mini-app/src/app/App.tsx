@@ -2962,6 +2962,7 @@ function AppContent() {
     : null
   const collaborationOverlay = collaborationPanel
     ? <CollaborationWorkbench
+      variant={readyState.canvas ? 'side-panel' : 'dialog'}
       contacts={collaborationPanel.contacts}
       currentRecordId={readyState.canvas?.detail?.id ?? null}
       loading={collaborationPanel.loading}

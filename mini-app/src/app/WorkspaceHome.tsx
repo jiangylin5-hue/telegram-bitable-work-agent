@@ -1,4 +1,4 @@
-import { ArrowUpRight, Bot, CheckCircle2, ChevronRight, CircleDot, FolderOpen, Plus } from 'lucide-react'
+import { ArrowUpRight, Bot, CheckCircle2, ChevronRight, CircleDot, FolderOpen, Plus, Sparkles } from 'lucide-react'
 
 import type { BaseSummary, Workspace, WorkspaceHome as WorkspaceHomeData } from './api'
 
@@ -55,6 +55,7 @@ export function WorkspaceHome({
           <p>{workspace.name} · 当前需处理的持久化事项</p>
         </div>
         <div className="toolbar-actions">
+          {onOpenCollaboration ? <button className="home-ai-conversation" type="button" aria-label="打开 AI 对话" onClick={(event) => onOpenCollaboration(event.currentTarget)}><Sparkles size={16} /> AI 对话</button> : null}
           {onOpenTableOperations && <button type="button" onClick={(event) => onOpenTableOperations(event.currentTarget)}>表格操作</button>}
           {workspace.capabilities.can_manage_schema && onCreateBase && <button type="button" onClick={onCreateBase}><Plus size={17} /> 新建 Base</button>}
           {workspace.capabilities.can_manage_schema && onOpenTemplateImport && <button type="button" onClick={onOpenTemplateImport}>模板与导入</button>}
@@ -107,7 +108,7 @@ export function WorkspaceHome({
       <p>你好，{workspace.name}</p>
       <span>需要时选择上下文，再开始协作。</span>
       {onOpenAssistantContext ? <button type="button" onClick={(event) => onOpenAssistantContext(event.currentTarget)}>智能汇总 <ChevronRight size={16} /></button> : null}
-      {onOpenCollaboration ? <button type="button" onClick={(event) => onOpenCollaboration(event.currentTarget)}>智能协作 <ChevronRight size={16} /></button> : null}
+      {onOpenCollaboration ? <button className="assistant-dock-ai" type="button" onClick={(event) => onOpenCollaboration(event.currentTarget)}><Sparkles size={16} /> AI 对话 <ChevronRight size={16} /></button> : null}
       {onOpenMemory ? <button type="button" onClick={(event) => onOpenMemory(event.currentTarget)}>记忆与知识 <ChevronRight size={16} /></button> : null}
       {onOpenTeamBot ? <button type="button" aria-label="打开团队 Bot" onClick={(event) => onOpenTeamBot(event.currentTarget)}>团队 Bot <ChevronRight size={16} /></button> : null}
       {businessRelations.length > 0 && <section className="business-context-index" data-testid="business-context-index" aria-label="已授权业务关联">

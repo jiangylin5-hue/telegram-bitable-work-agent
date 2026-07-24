@@ -71,3 +71,49 @@ blocked (reference-fidelity acceptance)
 The earlier rebaseline render check proves the current components can render safely; it does not constitute approval against the four selected visual references. The current 1440 × 900 comparison and retained evidence are in `../project-docs/08-implementation/evidence/stage07-visual-acceptance-2026-07-16.md`.
 
 The blocking deltas are intentional scope gaps rather than a claim of missing safe workflow behavior: Home/Base remain materially sparser than the Work Queue Atlas and Workspace Ledger; Team Bot/Draft remain modal overlays rather than the Conversation Desk; and Digital Employee Management remains a sparse modal instead of the selected full-page workbench. The report records the required redesign scope before visual approval.
+
+## Stage09 Feishu-style UI/UX Redesign QA — 2026-07-24
+
+### Comparison target
+
+- Source visual truth: `../project-docs/08-implementation/evidence/design-references/stage09-feishu-bitable/README.md`, especially `02-base-table.png`, `03-table-operations-drawer.png`, and `04-ai-side-panel.png`.
+- Intended implementation: the current Mini App Home, Base Canvas, Table Operation Center and AI collaboration panel in this worktree.
+- Intended desktop viewport: `1487 × 1058` CSS px, density `1`; the source Base Canvas is `1487 × 1058` pixels, so no density normalization is required for that comparison.
+- Intended state: an authorized workspace with one populated Base, a selected Grid view, the table-operation drawer and the AI side panel available from the same table canvas.
+
+### Browser evidence and blocker
+
+- Browser surface: Codex in-app Browser, `http://127.0.0.1:5173`.
+- Implementation screenshot path: unavailable. The rendered local page stopped at `网络错误：暂时无法加载工作区，请稍后重试。` because the Vite proxy had no local API on `127.0.0.1:8000`; it did not produce an authorized Home or Base state to capture.
+- Full-view comparison: blocked. A network-error page is not the same state as the selected Base-table source image.
+- Focused-region comparison: blocked for the same reason; table headers, semantic color tags, drawer and AI panel could not be simultaneously inspected in the browser.
+
+### Code changes awaiting browser comparison
+
+- The Base Canvas renders real `status` / `single_select` / `multi_select` values as deterministic semantic color tags (blue, purple, green, amber, red and cyan), rather than unstyled text. It does not fabricate record values.
+- An empty real table now exposes the existing Excel/CSV import workflow before field creation.
+- The table-operation entry is rendered as a right-side drawer, keeping the table context visible; it only enables existing controlled backend workflows and labels unsupported operations as planned.
+- The existing Stage08 assistant is exposed as `AI 对话` from Home, Base and navigation; it is a contextual side panel on desktop and a full screen on narrow layouts.
+
+### Findings
+
+- [P0] Browser-rendered authorized comparison is unavailable.
+  Location: local preview runtime.
+  Evidence: the in-app Browser received the local bootstrap network-error state instead of an authorized Base.
+  Impact: source and implementation cannot be put into the same-state visual comparison, so fidelity must not be declared.
+  Fix: run an authorized, non-production local API or retained safe fixture on the Vite proxy target, then capture matching Home, Grid, table-drawer and AI-panel states at the stated viewport.
+
+- [P1] Final visual fidelity remains unmeasured.
+  Location: fonts/typography, spacing/layout rhythm, colors/tokens, image/icon fidelity and copy.
+  Evidence: source images are retained, but there is no current rendered implementation capture.
+  Impact: the rich table color system and drawer/panel density cannot be honestly compared against the references yet.
+  Fix: make the local API available, capture a full view plus focused Grid/Drawer/AI regions, compare them with the retained images, and iterate any visible P1/P2 differences.
+
+### Implementation checklist
+
+1. Start an authorized, non-production local API or retained safe fixture on the Vite proxy target.
+2. Capture the matching populated Base Grid, table drawer and AI side-panel at `1487 × 1058`.
+3. Compare each capture with the retained image in the same visual input; fix only observed differences.
+4. Re-run the Mini App suite and production build after the visual pass.
+
+final result: blocked
