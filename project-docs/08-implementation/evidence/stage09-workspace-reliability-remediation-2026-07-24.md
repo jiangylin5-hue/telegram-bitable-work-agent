@@ -4,10 +4,10 @@
 
 - Status: `partial-production-accepted`
 - Scope: Stage09 工作台可靠性修复包；不是 Stage07、Stage08 或整个产品的全量验收声明。
-- Release: 后端 `stage09-p1-20260724-r28`；静态前端 `stage09-p1-20260724-r29`
+- Release: 后端 `stage09-p1-20260724-r28`；静态前端 `stage09-p1-20260724-r30`
 - Deployment model: 原生 systemd、PostgreSQL 16 + pgvector、Redis、Nginx；未使用 Docker。
 - Source branch: `codex/stage07-mini-app-ui`
-- Source commits included: `263b533`、`8b8738d`、`8ba5af3`、`d80935a`、`b8be2f9`、`2879aca`、`cf4e542`、`021b124`、`79594a9`。
+- Source commits included: `263b533`、`8b8738d`、`8ba5af3`、`d80935a`、`b8be2f9`、`2879aca`、`cf4e542`、`021b124`、`79594a9`、`35462b5`。
 
 ## 已授权的生产数据修复
 
@@ -64,9 +64,31 @@
 
 新的安全提示为“当前浏览器工作台会话已失效或无访问权限，请返回 Telegram 重新打开工作区。”它不暴露用户身份、ticket、cookie 或会话时间。用户从 Telegram 的“打开工作区”重新进入后，现有机制会创建新的单次 handoff 与新的 8 小时浏览器会话；该步骤仍然是用户主动登录，不是自动续会或绕过权限。
 
+## 浏览器入口身份恢复：r30 静态前端发布
+
+用户在 Telegram Mini App 内点击“在浏览器打开完整工作台”后，生产访问日志记录到三次 `POST /mini-app/browser-handoffs` 返回 HTTP 401。受控无身份探针返回同一安全代码 `stage06_verified_identity_required`，且 handoff/session 表计数没有新增，证明请求没有携带身份头；这不是浏览器窗口、Base 权限或 ticket 交换错误。
+
+根因是前端曾只依赖模块级 `telegramInitData`。该内存值被生命周期清理后，页面仍持有当前 Mini App launch 的内存引用并可显示已加载的首页，但浏览器 handoff 请求失去了 `X-Telegram-Init-Data`，后端因而正确拒绝。
+
+`35462b5 fix(mini-app): restore browser handoff identity` 的修复在每次 handoff 点击前，从当前 `TelegramMiniAppLaunch` 的内存引用恢复请求身份；原始 initData 不会进入 URL、localStorage、sessionStorage、日志或页面正文。没有调整 Telegram 校验时长、browser session TTL、cookie、数据表或权限模型。对不支持全屏的 Telegram host，界面不再显示不可用的全屏按钮。
+
+| 检查 | 结果 |
+| --- | --- |
+| RED | `browser-handoff-recovery.test.tsx` 在模块级身份被清空时，旧代码断言收到 `null` 身份头而失败 |
+| 前端完整回归 | `75 files / 308 passed` |
+| 针对性前端回归 | `3 files / 40 passed` |
+| 后端交接安全回归 | `16 passed`：`test_stage09_browser_handoffs.py`、`test_stage07_mini_app_api.py` |
+| 生产构建 | `tsc -b && vite build` 成功 |
+| r30 静态包 SHA-256 | `428a0f03a80eef2dbd208077a9843e3f01ab60a3dd61d5fc092a1e6912dedf86` |
+| r30 JavaScript SHA-256 | `7187b3fb37f872931d06331bf33ced82ce802e3d3a19684765e3c9470e17b243` |
+| 远端切换 | 静态 `current` 原子切换为 r30，`current.previous` 为 r29；后端服务保持 r28 且未重启 |
+| 公网回读 | `stage07.jiangtest1.online`、`stage09.jiangtest1.online` 的 health 都为 HTTP 200，r30 JavaScript 哈希一致 |
+
+仍需一次真实 Telegram 人工验收：从重新打开的 Mini App 点击浏览器入口，预期 `POST /mini-app/browser-handoffs` 从 HTTP 401 变为 HTTP 201，然后静态交接页完成 ticket exchange 并进入工作台。该证据在取得前不把浏览器 handoff 写成“端到端已验收”。
+
 未改动 Docker、Stage03、80/443 的所有权、Nginx host 结构、Telegram webhook、BotFather 配置，也没有发送 Telegram 消息或调用真实 LLM。
 
-发布后已经清理服务器上的 r27 无效候选静态目录和上传包；后端 release/venv 保持 r28，静态 current 为 r29、静态 previous 为 r28，r26 保留在历史发布目录；运行时备份与发布证据保留。桌面临时打包文件因本机文件删除策略被工具拦截，未以不安全方式绕过；它们不在 Git 工作区、不影响运行时或服务器版本。
+发布后已经清理服务器上的 r27 无效候选静态目录和上传包；后端 release/venv 保持 r28，静态 current 为 r30、静态 previous 为 r29，r26 保留在历史发布目录；运行时备份与发布证据保留。桌面临时打包文件因本机文件删除策略被工具拦截，未以不安全方式绕过；它们不在 Git 工作区、不影响运行时或服务器版本。
 
 ## 自动化验证
 
