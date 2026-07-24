@@ -42,6 +42,8 @@ _SYSTEM_PROMPT = (
     "Allowed actions are read_only, draft_update, general_advice, and deny. "
     "When the input intent is general_advice, use action general_advice or deny "
     "and return citation_ordinals as an empty array []. "
+    "For general_advice, use this exact JSON shape and replace only the answer text: "
+    '{\"answer\":\"advice\",\"citation_ordinals\":[],\"action\":\"general_advice\",\"draft\":null}. '
     "A deny action must also return citation_ordinals as an empty array []. "
     "Use draft_update only when requested_action is draft_update. It requires one "
     "draft object with exactly field_key and value, plus at least one evidence citation. "

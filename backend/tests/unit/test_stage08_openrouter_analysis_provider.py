@@ -414,6 +414,11 @@ def test_general_advice_contract_is_explicit_and_empty_citations_are_valid() -> 
     assert "general_advice" in outbound
     assert "citation_ordinals" in outbound
     assert "[]" in outbound
+    system_instruction = captured_body["messages"][0]["content"]
+    assert (
+        '{"answer":"advice","citation_ordinals":[],"action":"general_advice","draft":null}'
+        in system_instruction
+    )
     assert outcome.status == "available"
     assert outcome.reason_code == "none"
     assert outcome.decision is not None
