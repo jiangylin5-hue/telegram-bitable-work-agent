@@ -1,4 +1,4 @@
-import { ArrowUpRight, Bot, CheckCircle2, ChevronRight, CircleDot, FolderOpen, Plus, Sparkles } from 'lucide-react'
+import { ArrowUpRight, Bot, CheckCircle2, ChevronRight, CircleDot, Database, FileSpreadsheet, FolderOpen, MessageSquareText, Network, Plus, Sparkles } from 'lucide-react'
 
 import type { BaseSummary, Workspace, WorkspaceHome as WorkspaceHomeData } from './api'
 
@@ -61,6 +61,11 @@ export function WorkspaceHome({
           {workspace.capabilities.can_manage_schema && onOpenTemplateImport && <button type="button" onClick={onOpenTemplateImport}>模板与导入</button>}
         </div>
       </header>
+      <section className="workspace-fact-strip" aria-label="当前工作区状态">
+        <div className="workspace-fact fact-blue"><span><Database size={15} /> 可访问 Base</span><strong>{home.recent_bases.length}</strong></div>
+        <div className="workspace-fact fact-amber"><span><CircleDot size={15} /> 待确认</span><strong>{home.queue.length}</strong></div>
+        <div className="workspace-fact fact-violet"><span><Network size={15} /> 已授权业务关联</span><strong>{businessRelations.length}</strong></div>
+      </section>
       {canContinue ? <section className="continue-work" aria-label="继续处理">
         <header><div><span>CONTINUE</span><h2>继续处理</h2></div><p>入口来自当前可访问的草稿、Base 与协作能力。</p></header>
         <div className="continue-work-list">
@@ -95,12 +100,20 @@ export function WorkspaceHome({
           <span className="queue-status">等待你的决定</span>
           {onOpenDraftHub ? <a href={`#draft/${item.destination.draft_id}`} className="row-link" onClick={(event) => { event.preventDefault(); onOpenDraftHub(event.currentTarget, item.destination.draft_id) }}>查看草稿 <ArrowUpRight size={14} /></a> : <span className="queue-base-unavailable">草稿入口暂不可用</span>}
         </article>
-      })}</div> : <div className="empty-queue">没有待确认的变更。</div>}
+      })}</div> : <section className="workspace-ready-state" data-testid="workspace-ready-state" aria-label="开始协作">
+        <div className="workspace-ready-mark"><CheckCircle2 size={19} /></div>
+        <div className="workspace-ready-copy"><strong>工作台已准备就绪</strong><span>还没有待确认的变更。选择一个入口开始沉淀业务结果。</span></div>
+        <div className="workspace-ready-actions">
+          {workspace.capabilities.can_manage_schema && onCreateBase ? <button className="ready-action-ready" type="button" aria-label="从工作台新建 Base" onClick={onCreateBase}><Plus size={15} /> 新建 Base</button> : null}
+          {workspace.capabilities.can_manage_schema && onOpenTemplateImport ? <button className="ready-action-import" type="button" onClick={onOpenTemplateImport}><FileSpreadsheet size={15} /> 从 Excel/CSV 导入</button> : null}
+          {onOpenCollaboration ? <button className="ready-action-ai" type="button" onClick={(event) => onOpenCollaboration(event.currentTarget)}><MessageSquareText size={15} /> 开始 AI 对话</button> : null}
+        </div>
+      </section>}
     </section>
 
     <aside className="base-rail" aria-labelledby="accessible-bases-heading">
       <div className="rail-heading"><h2 id="accessible-bases-heading">可访问 Base</h2><span>{home.recent_bases.length} 个可访问</span></div>
-      <div className="base-list">{home.recent_bases.map((base, index) => <a className="base-preview" href={`#base/${base.id}`} key={base.id} aria-label={base.name} onClick={(event) => { event.preventDefault(); onOpenBase(base) }}><div className="base-preview-title"><span className={`base-glyph glyph-${index % 3}`}>▣</span><strong>{base.name}</strong></div><span className="base-kind">{base.source_type === 'blank' ? '多维表格' : base.source_type}</span><div className="preview-grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></div></a>)}</div>
+      <div className="base-list">{home.recent_bases.map((base, index) => <a className={`base-preview palette-${index % 6}`} href={`#base/${base.id}`} key={base.id} aria-label={base.name} onClick={(event) => { event.preventDefault(); onOpenBase(base) }}><div className="base-preview-title"><span className={`base-glyph glyph-${index % 3}`}>▣</span><strong>{base.name}</strong></div><span className="base-kind">{base.source_type === 'blank' ? '多维表格' : base.source_type}</span><div className="preview-grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></div></a>)}</div>
     </aside>
 
     <aside className="assistant-dock" aria-label="个人助理与团队 Bot">
@@ -113,7 +126,7 @@ export function WorkspaceHome({
       {onOpenTeamBot ? <button type="button" aria-label="打开团队 Bot" onClick={(event) => onOpenTeamBot(event.currentTarget)}>团队 Bot <ChevronRight size={16} /></button> : null}
       {businessRelations.length > 0 && <section className="business-context-index" data-testid="business-context-index" aria-label="已授权业务关联">
         <header><span>业务关联</span><small>{businessRelations.length} 条已授权映射</small></header>
-        <div className="business-context-list">{businessRelations.map((relation) => <article key={`${relation.group.id}:${relation.mapping_version}`} className="business-context-relation">
+        <div className="business-context-list">{businessRelations.map((relation, index) => <article key={`${relation.group.id}:${relation.mapping_version}`} className={`business-context-relation relation-tone-${index % 3}`}>
           <div className="business-context-route">
             {onOpenEmployeeReference ? <button type="button" className="business-context-employee" aria-label={`打开数字员工 ${relation.employee.name}`} onClick={(event) => onOpenEmployeeReference(event.currentTarget, relation.employee)}>{relation.employee.name}</button> : <span>{relation.employee.name}</span>}
             <span aria-hidden="true">→</span>

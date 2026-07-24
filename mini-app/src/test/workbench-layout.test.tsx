@@ -78,6 +78,29 @@ test('offers a direct AI conversation entry from the Home workbench', () => {
   expect(onOpenCollaboration).toHaveBeenCalledOnce()
 })
 
+test('turns an empty workspace into three real starting actions instead of a blank canvas', () => {
+  const onCreateBase = vi.fn()
+  const onOpenTemplateImport = vi.fn()
+  const onOpenCollaboration = vi.fn()
+  render(<WorkspaceHome
+    workspace={{ id: 'workspace-1', name: 'Operations', slug: 'operations', role: 'owner', capabilities: { can_read_bases: true, can_manage_workspace: true, can_manage_schema: true, can_review_drafts: true } }}
+    home={{ workspace_id: 'workspace-1', recent_bases: [], queue: [], business_context_relations: [] }}
+    onOpenBase={vi.fn()}
+    onCreateBase={onCreateBase}
+    onOpenTemplateImport={onOpenTemplateImport}
+    onOpenCollaboration={onOpenCollaboration}
+  />)
+
+  const readyState = screen.getByTestId('workspace-ready-state')
+  fireEvent.click(within(readyState).getByRole('button', { name: '从工作台新建 Base' }))
+  fireEvent.click(within(readyState).getByRole('button', { name: '从 Excel/CSV 导入' }))
+  fireEvent.click(within(readyState).getByRole('button', { name: '开始 AI 对话' }))
+
+  expect(onCreateBase).toHaveBeenCalledOnce()
+  expect(onOpenTemplateImport).toHaveBeenCalledOnce()
+  expect(onOpenCollaboration).toHaveBeenCalledOnce()
+})
+
 test('guides an unselected Team Bot through three actionable steps', () => {
   const onSelectContact = vi.fn()
   render(<TeamBotWorkbench

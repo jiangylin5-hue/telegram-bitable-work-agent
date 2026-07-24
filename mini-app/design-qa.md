@@ -117,3 +117,24 @@ The blocking deltas are intentional scope gaps rather than a claim of missing sa
 4. Re-run the Mini App suite and production build after the visual pass.
 
 final result: blocked
+
+## Stage09 线上 Home 对照补充 — 2026-07-24
+
+### 已保存的视觉证据
+
+- 线上 r32 的真实授权工作区截图保存于 `../project-docs/08-implementation/evidence/screenshots/stage09-r32/workspace-home-browser-viewport.png`。
+- 五张生成参考图继续作为不可漂移的视觉真源，保存在 `../project-docs/08-implementation/evidence/design-references/stage09-feishu-bitable/`，不得依靠对话记忆重新猜测样式。
+
+### 真实观察
+
+- r32 Home 已实际显示可点击的 `AI 对话`、三个可访问 Base、数字员工—群聊—客户—项目的受权关联索引；这不是静态设计稿。
+- 与 `01-workspace-home.png` 对照，当前 Home 在“没有待确认事项”时仍显得过空，Base 卡片和业务关联的状态色不足，尚未达到参考图的工作台密度与多色业务层级。
+- 因为真实 Base 当前没有可访问记录，不能为了截图伪造客户或项目记录；数据网格的状态色只应由真实 `status` / select 字段值触发。
+
+### r33 待部署的最小修正
+
+1. 用真实的 Base、待确认和授权关联计数构成紧凑的多色事实条。
+2. 空队列替换为三个真实入口：新建 Base、Excel/CSV 导入、AI 对话；每项复用已存在受控流程。
+3. 为真实 Base 卡片、授权关联卡配置稳定的蓝、紫、绿、橙、红、青语义色，不新增假数据、不使用渐变。
+
+final result: still blocked pending r33 browser comparison

@@ -2034,6 +2034,142 @@ select:focus-visible {
 .selection-chip.tone-4 { background: #ffe9e8; color: #c44d46; }
 .selection-chip.tone-5 { background: #e2f7f8; color: #147b85; }
 
+/* Reference-driven density and semantic color: every color represents a live workspace fact or action. */
+.workspace-fact-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.workspace-fact {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--fact-line);
+  border-radius: 8px;
+  background: var(--fact-surface);
+  color: var(--fact-ink);
+  padding: 9px 10px;
+}
+
+.workspace-fact span {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-fact strong { font-size: 17px; line-height: 1; }
+.fact-blue { --fact-line: #cfe2ff; --fact-surface: #f4f9ff; --fact-ink: #2877d5; }
+.fact-amber { --fact-line: #ffe1a9; --fact-surface: #fffaf0; --fact-ink: #ba740b; }
+.fact-violet { --fact-line: #ddd0ff; --fact-surface: #f8f5ff; --fact-ink: #7650c6; }
+
+.workspace-ready-state {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px 13px;
+  align-items: center;
+  margin-top: 8px;
+  border: 1px solid #dce8f5;
+  border-radius: 10px;
+  background: #fbfdff;
+  padding: 18px;
+}
+
+.workspace-ready-mark {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 11px;
+  background: #e9f5ff;
+  color: #1e77d8;
+}
+
+.workspace-ready-copy { display: grid; gap: 4px; min-width: 0; }
+.workspace-ready-copy strong { color: var(--text-primary); font-size: 14px; font-weight: 650; }
+.workspace-ready-copy span { color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
+
+.workspace-ready-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-top: 1px solid #e7eef6;
+  padding-top: 13px;
+}
+
+.workspace-ready-actions button {
+  display: inline-flex;
+  min-height: 33px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  background: #fff;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.workspace-ready-actions button:hover,
+.workspace-ready-actions button:focus-visible { filter: brightness(.97); outline: 2px solid currentColor; outline-offset: 1px; }
+.ready-action-ready { color: #176fca; }
+.ready-action-import { color: #8a5abd; }
+.ready-action-ai { color: #16856d; }
+
+.base-preview {
+  --base-accent: #4684ff;
+  --base-soft: #eef5ff;
+  position: relative;
+  overflow: hidden;
+}
+
+.base-preview::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--base-accent);
+  content: '';
+}
+
+.base-preview .base-glyph { background: var(--base-soft); color: var(--base-accent); }
+.base-preview.palette-0 { --base-accent: #3478f6; --base-soft: #edf5ff; }
+.base-preview.palette-1 { --base-accent: #7655cf; --base-soft: #f1edff; }
+.base-preview.palette-2 { --base-accent: #168b79; --base-soft: #e5f8f2; }
+.base-preview.palette-3 { --base-accent: #c27413; --base-soft: #fff3dc; }
+.base-preview.palette-4 { --base-accent: #c25663; --base-soft: #ffedf0; }
+.base-preview.palette-5 { --base-accent: #1e899c; --base-soft: #e6f8fa; }
+
+.base-preview .preview-grid i:nth-child(1),
+.base-preview .preview-grid i:nth-child(4),
+.base-preview .preview-grid i:nth-child(7) { background: var(--base-soft); }
+
+.business-context-relation {
+  border-left: 3px solid var(--relation-accent);
+  background: var(--relation-surface);
+}
+
+.relation-tone-0 { --relation-accent: #4b85ed; --relation-surface: #fbfdff; }
+.relation-tone-1 { --relation-accent: #8a62d2; --relation-surface: #fcfbff; }
+.relation-tone-2 { --relation-accent: #1d9a7d; --relation-surface: #fbfffd; }
+
+@media (max-width: 900px) {
+  .workspace-fact-strip { grid-template-columns: 1fr; gap: 6px; }
+  .workspace-fact { padding: 8px 10px; }
+  .workspace-ready-state { padding: 15px; }
+}
+
 /* Feishu-inspired table task drawer: keep the grid visible while actions stay one click away. */
 .table-operation-backdrop {
   display: flex;
