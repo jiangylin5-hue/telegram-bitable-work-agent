@@ -433,8 +433,8 @@ function AppContent() {
     }
   }, [bootstrapQuery.error, queryClient])
 
-  if (state.status === 'denied') return <main className="app-state" aria-label="无工作区访问权限">当前身份没有可访问的工作区。</main>
-  if (bootstrapQuery.isError) return <main className="app-state" aria-label={bootstrapQuery.error instanceof ApiError && (bootstrapQuery.error.status === 401 || bootstrapQuery.error.status === 403) ? '无工作区访问权限' : '网络错误'}>{bootstrapQuery.error instanceof ApiError && (bootstrapQuery.error.status === 401 || bootstrapQuery.error.status === 403) ? '当前身份没有可访问的工作区。' : '暂时无法加载工作区，请稍后重试。'}</main>
+  if (state.status === 'denied') return <main className="app-state" aria-label="无工作区访问权限">当前浏览器工作台会话已失效或无访问权限，请返回 Telegram 重新打开工作区。</main>
+  if (bootstrapQuery.isError) return <main className="app-state" aria-label={bootstrapQuery.error instanceof ApiError && (bootstrapQuery.error.status === 401 || bootstrapQuery.error.status === 403) ? '无工作区访问权限' : '网络错误'}>{bootstrapQuery.error instanceof ApiError && (bootstrapQuery.error.status === 401 || bootstrapQuery.error.status === 403) ? '当前浏览器工作台会话已失效或无访问权限，请返回 Telegram 重新打开工作区。' : '暂时无法加载工作区，请稍后重试。'}</main>
   if (bootstrapQuery.isPending || state.status === 'loading') return <main className="app-state" aria-label="正在加载工作区">正在加载工作区…</main>
 
   if (state.status === 'error') return <main className="app-state" aria-label="网络错误">暂时无法加载工作区，请稍后重试。</main>
