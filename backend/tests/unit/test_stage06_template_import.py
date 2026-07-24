@@ -1,9 +1,12 @@
 from io import BytesIO
 from zipfile import ZIP_DEFLATED, ZipFile
 
+import pytest
+
 from app.services.permissions import Actor
 from app.services.stage06_platform import (
     InMemoryStage06PlatformUnitOfWork,
+    PlatformValidationError,
     create_base,
     create_field,
     create_form_view,
@@ -138,6 +141,38 @@ def test_stage06_excel_import_previews_then_commits_records_after_confirmation()
     assert uow.records[0].values == {"title": "Launch", "due": "2026-07-10"}
 
 
+@pytest.mark.parametrize(
+    "corruption",
+    ["bad_zip", "bad_xml"],
+)
+def test_stage06_excel_import_rejects_corrupt_files_with_safe_error(
+    corruption: str,
+) -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    workspace = create_workspace(uow, name="Acme", owner_user_id="owner-1")
+    content = (
+        b"not-an-xlsx-archive"
+        if corruption == "bad_zip"
+        else _simple_xlsx_bytes(
+            [["Title"], ["Launch"]],
+            sheet_xml=b"<worksheet>",
+        )
+    )
+
+    with pytest.raises(PlatformValidationError) as denied:
+        create_import_job_from_excel(
+            uow,
+            workspace.id,
+            file_name="corrupt.xlsx",
+            content=content,
+            created_by_user_id="owner-1",
+        )
+
+    assert denied.value.code == "invalid_excel_file"
+    assert str(denied.value) == "invalid_excel_file"
+    assert uow.import_jobs == []
+
+
 def test_stage06_official_templates_are_generic_first_and_install_ordinary_resources() -> None:
     uow = InMemoryStage06PlatformUnitOfWork()
     workspace = create_workspace(uow, name="Acme", owner_user_id="owner-1")
@@ -197,7 +232,11 @@ def test_stage06_save_base_as_template_creates_custom_manifest() -> None:
     assert template.manifest["tables"][0]["records"] == [{"title": "Launch"}]
 
 
-def _simple_xlsx_bytes(rows: list[list[str]]) -> bytes:
+def _simple_xlsx_bytes(
+    rows: list[list[str]],
+    *,
+    sheet_xml: bytes | str | None = None,
+) -> bytes:
     sheet_rows = []
     for row_number, row in enumerate(rows, start=1):
         cells = []
@@ -207,11 +246,12 @@ def _simple_xlsx_bytes(rows: list[list[str]]) -> bytes:
                 f'<c r="{cell_ref}" t="inlineStr"><is><t>{value}</t></is></c>'
             )
         sheet_rows.append(f'<row r="{row_number}">{"".join(cells)}</row>')
-    sheet_xml = (
-        '<?xml version="1.0" encoding="UTF-8"?>'
-        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-        f'<sheetData>{"".join(sheet_rows)}</sheetData></worksheet>'
-    )
+    if sheet_xml is None:
+        sheet_xml = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            f'<sheetData>{"".join(sheet_rows)}</sheetData></worksheet>'
+        )
     workbook_xml = (
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'

@@ -4,7 +4,7 @@ from io import BytesIO, StringIO
 import re
 from typing import Any, Protocol
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
-from zipfile import ZipFile
+from zipfile import BadZipFile, ZipFile
 import xml.etree.ElementTree as ET
 
 from app.models.stage06_templates import (
@@ -43,6 +43,7 @@ class ImportLimits:
 
 
 DEFAULT_IMPORT_LIMITS = ImportLimits()
+TABLE_KEY_RE = re.compile(r"[a-z][a-z0-9]*(?:_[a-z0-9]+)*")
 
 
 @dataclass(frozen=True)
@@ -248,7 +249,13 @@ def create_import_job_from_excel(
     base_id: UUID | None = None,
 ) -> ImportJob:
     _validate_import_payload_size(content, DEFAULT_IMPORT_LIMITS.excel_bytes)
-    rows = _parse_xlsx_rows(content)
+    try:
+        rows = _parse_xlsx_rows(content)
+    except (BadZipFile, ET.ParseError) as exc:
+        raise PlatformValidationError(
+            "invalid_excel_file",
+            "invalid_excel_file",
+        ) from exc
     validate_import_rows(rows, DEFAULT_IMPORT_LIMITS)
     return _create_import_job(
         uow,
@@ -274,9 +281,14 @@ def commit_import_job(
     job = _require_import_job(uow, import_job_id)
     if job.status != "awaiting_confirmation":
         raise PlatformValidationError("import_job_invalid_state", str(import_job_id))
+    if len(table_key) > 120 or TABLE_KEY_RE.fullmatch(table_key) is None:
+        raise PlatformValidationError("invalid_table_key", "invalid_table_key")
 
     mapping = field_mapping or _default_field_mapping(job.detected_schema)
-    _validate_field_mapping(mapping)
+    _validate_field_mapping(
+        mapping,
+        detected_keys={field["key"] for field in job.detected_schema},
+    )
     base = (
         create_base(uow, job.workspace_id, name=base_name, actor=actor)
         if job.base_id is None
@@ -723,7 +735,11 @@ def _default_field_mapping(schema: list[dict[str, Any]]) -> list[dict[str, Any]]
     ]
 
 
-def _validate_field_mapping(mapping: list[dict[str, Any]]) -> None:
+def _validate_field_mapping(
+    mapping: list[dict[str, Any]],
+    *,
+    detected_keys: set[str],
+) -> None:
     target_keys: set[str] = set()
     for item in mapping:
         field_type = item.get("field_type")
@@ -738,6 +754,7 @@ def _validate_field_mapping(mapping: list[dict[str, Any]]) -> None:
         if (
             not isinstance(source_key, str)
             or not source_key
+            or source_key not in detected_keys
             or not isinstance(target_key, str)
             or not target_key
             or target_key in target_keys

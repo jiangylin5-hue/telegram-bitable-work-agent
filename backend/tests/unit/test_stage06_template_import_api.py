@@ -140,6 +140,43 @@ def test_stage06_template_import_api_imports_excel_after_preview_confirmation() 
     assert uow.records[0].values == {"title": "Launch", "due": "2026-07-10"}
 
 
+def test_stage06_template_import_api_rejects_corrupt_excel_with_safe_422() -> None:
+    app = create_app()
+    uow = InMemoryStage06PlatformUnitOfWork()
+    app.dependency_overrides[get_stage06_platform_uow] = lambda: uow
+    app.dependency_overrides[get_stage06_template_import_uow] = lambda: uow
+    app.dependency_overrides[get_system_actor] = lambda: Actor(
+        actor_type="user",
+        actor_id="owner-1",
+        role="owner",
+    )
+
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "owner-1"
+        client.headers["Idempotency-Key"] = "corrupt-excel-workspace"
+        workspace_id = client.post(
+            "/workspaces",
+            json={"name": "Acme", "owner_user_id": "owner-1"},
+        ).json()["id"]
+        client.headers["Idempotency-Key"] = "corrupt-excel-import"
+        response = client.post(
+            f"/workspaces/{workspace_id}/imports",
+            json={
+                "source_type": "excel",
+                "file_name": "corrupt.xlsx",
+                "content": base64.b64encode(b"not-an-xlsx-archive").decode("ascii"),
+                "created_by_user_id": "owner-1",
+            },
+        )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == {
+        "code": "invalid_excel_file",
+        "message": "invalid_excel_file",
+    }
+    assert uow.import_jobs == []
+
+
 def test_stage06_template_import_commit_rejects_duplicate_table_key_without_new_resources() -> None:
     app = create_app()
     uow = InMemoryStage06PlatformUnitOfWork()
@@ -348,6 +385,44 @@ def test_stage06_template_import_commit_rejects_object_source_key_without_new_re
     assert (len(uow.tables), len(uow.fields), len(uow.records)) == counts_before
 
 
+def test_stage06_template_import_commit_rejects_unknown_source_key_without_new_resources() -> None:
+    uow, import_response, commit_response, counts_before = _commit_import_with_mapping(
+        [
+            {
+                "source_key": "unknown",
+                "target_key": "customer",
+                "field_type": "text",
+            }
+        ]
+    )
+
+    assert import_response.status_code == 200
+    assert commit_response.status_code == 422
+    assert commit_response.json()["detail"]["code"] == "invalid_import_mapping"
+    assert (len(uow.tables), len(uow.fields), len(uow.records)) == counts_before
+
+
+@pytest.mark.parametrize("table_key", ["Customer Records", "a" * 121])
+def test_stage06_template_import_commit_rejects_invalid_table_key_without_new_resources(
+    table_key: str,
+) -> None:
+    uow, import_response, commit_response, counts_before = _commit_import_with_mapping(
+        [
+            {
+                "source_key": "name",
+                "target_key": "customer",
+                "field_type": "text",
+            }
+        ],
+        table_key=table_key,
+    )
+
+    assert import_response.status_code == 200
+    assert commit_response.status_code == 422
+    assert commit_response.json()["detail"]["code"] == "invalid_table_key"
+    assert (len(uow.tables), len(uow.fields), len(uow.records)) == counts_before
+
+
 @pytest.mark.parametrize("field_type", [["text"], {"type": "text"}, None, ""])
 def test_stage06_template_import_commit_rejects_non_string_or_empty_field_type_without_new_resources(
     field_type: object,
@@ -391,6 +466,8 @@ def test_stage06_template_import_commit_rejects_non_string_or_empty_field_name_w
 
 def _commit_import_with_mapping(
     field_mapping: list[dict[str, object]],
+    *,
+    table_key: str = "customers",
 ) -> tuple[InMemoryStage06PlatformUnitOfWork, object, object, tuple[int, int, int]]:
     app = create_app()
     uow = InMemoryStage06PlatformUnitOfWork()
@@ -426,7 +503,7 @@ def _commit_import_with_mapping(
             json={
                 "base_name": "Imported CRM",
                 "table_name": "Customers",
-                "table_key": "customers",
+                "table_key": table_key,
                 "field_mapping": field_mapping,
             },
         )
