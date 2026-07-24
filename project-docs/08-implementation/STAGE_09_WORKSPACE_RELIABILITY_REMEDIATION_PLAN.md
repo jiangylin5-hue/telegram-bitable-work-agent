@@ -11,6 +11,7 @@
 
 ## 2026-07-24 发布与验收续报
 
+- Current Progress Update (r31, interaction/import closure): 提交 `9eea078` 已推送并以密封原生 release `stage09-p1-20260724-r31` 真实部署。后端 source 与 venv、静态 `current` 均切换为 r31，静态 `current.previous` 保留 r30；API、worker、outbox 都是 active，回环 `/health` 与两个 HTTPS 首页均为 `200`，公网 JavaScript SHA-256 与本地构建一致。r31 增加了导入空映射默认生成、受控错误码/失败幂等重试、对象右键菜单、Esc/空白处关闭和规划入口的显式说明。Chrome 扩展接管已登录工作台时两次超时，因而真实 Telegram 身份的逐项点击与真实导入写入仍未伪造为通过；详见 `evidence/stage09-r31-interaction-import-closure-2026-07-24.md`。
 - Current Progress: Task 1、Task 2、Task 3 已完成并经本地回归；Task 4 的授权数据清理、r28 原生部署、两个 HTTPS health、静态资产和未认证拒绝分支均已实际通过。r27 候选在 sealed 校验阶段被拒绝且已清理，r28 为 current，r26 静态版本保留为回退点。
 - Interactive Acceptance: 真实 Telegram 身份下的 Home/Bases/Home、Team Bot 返回和导入向导取消/409 恢复仍待浏览器会话重新交接；未创建新业务数据，也未伪造 Telegram 身份或把未认证页面当作完整验收。
 - Evidence: 详见 `project-docs/08-implementation/evidence/stage09-workspace-reliability-remediation-2026-07-24.md`。
