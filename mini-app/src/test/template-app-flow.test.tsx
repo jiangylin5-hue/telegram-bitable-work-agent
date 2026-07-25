@@ -109,6 +109,28 @@ test('does not close a template shelf from Escape or its backdrop while installa
   await act(async () => resolveInstall?.())
 })
 
+test('blocks starting a workspace import while template installation is pending', async () => {
+  let resolveInstall: (() => void) | undefined
+  const onStartWorkspaceImport = vi.fn()
+  render(<TemplateImportHub
+    templates={[{ id: 'template-1', name: 'CRM', category: 'crm', description: 'Safe summary', version: '1.0.0', status: 'published' }]}
+    loading={false}
+    error={null}
+    onRetry={() => undefined}
+    onInstall={() => new Promise<void>((resolve) => { resolveInstall = resolve })}
+    onStartWorkspaceImport={onStartWorkspaceImport}
+    onClose={() => undefined}
+  />)
+
+  fireEvent.click(screen.getByRole('button', { name: '安装模板 CRM' }))
+  const workspaceImportButton = screen.getByRole('button', { name: '导入到新 Base' })
+  await waitFor(() => expect(workspaceImportButton).toBeDisabled())
+  fireEvent.click(workspaceImportButton)
+
+  expect(onStartWorkspaceImport).not.toHaveBeenCalled()
+  await act(async () => resolveInstall?.())
+})
+
 test('moves initial focus into the Template Hub', () => {
   render(<TemplateImportHub templates={[]} loading={false} error={null} onRetry={() => undefined} onInstall={() => undefined} onClose={vi.fn()} />)
 
