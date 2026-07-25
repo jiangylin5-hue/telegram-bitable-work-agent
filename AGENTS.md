@@ -6,6 +6,11 @@
 - Scope: Generic Telegram-first multidimensional table, no-code workspace and table-bound digital employee platform
 - Current Progress: 2026-07-12 Stage06 backend-stage acceptance remains the baseline. Stage07 bounded Package 2 substages P3, F1 and the user-approved F2 relation/lookup slice are `implemented-local`. V1-1 through V1-13 are `partial-local`: durable typed/canonical/versioned/ACL/query/HTTP/PostgreSQL/transport/panel/Canvas recovery work is implemented, and disposable Browser evidence now includes four renderer widths, owner/editor/viewer UI separation, bounded filter/sort/group controls, safe F2 relation label, editor save and raw-detail-suppressed `409` reread with console `[]`. The fixture cannot prove real-backend Base/Table/Field intersection, every type-invalid/F2 state, Telegram, staging or production; those remain unaccepted. The Base-list and direct-presentation paths resolve V1 ACL before emitting a summary or projection; only V1 safe scope/access/default markers supplement the legacy list shape. The measured access query uses existing indexes, so both optional non-unique V1 indexes remain explicitly deferred and no migration was added. S5 Draft and Digital Employee Hub is `partial-local`: its approved safe contact/draft adapter, versioned terminal transition, citation projection and TD006 Option A current-Canvas invocation bridge have focused backend/local-PostgreSQL/frontend/build evidence. The Hub receives only transient Canvas IDs; it adds no generic context source or persistent client context. Browser loopback access was refused, so no S5 visual self-test/four-width acceptance is claimed. Telegram identity, staging, production and Stage07 acceptance remain pending.
 
+## Current Handoff
+
+- New sessions must read `project-docs/00-governance/HANDOFF_2026-07-26_CODEX_STYLE_AI_CONVERSATION.md` before continuing Stage08/Stage09 work.
+- The next confirmed implementation is defined by `project-docs/08-implementation/STAGE_09_CODEX_STYLE_AI_CONVERSATION_DESIGN.md`: a Codex-style AI conversation workbench with a controlled SSE API. The design is approved; implementation has not started.
+
 ## 1. Project Positioning
 
 This project is a generic multidimensional table and no-code workspace platform with Telegram as the primary entry and table-bound digital employees as the AI operating layer.
