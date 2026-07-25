@@ -102,6 +102,68 @@ def test_stage06_import_recognizes_common_business_status_and_choice_columns() -
         "single_select",
         "number",
     ]
+    assert [field.key for field in uow.fields] == [
+        "field_1",
+        "field_2",
+        "field_3",
+        "field_4",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("target_key", "name"),
+    [
+        ("customer name", "Customer"),
+        ("Customer", "Customer"),
+        ("a" * 121, "Customer"),
+        ("customer", "C" * 161),
+    ],
+)
+def test_stage06_import_rejects_invalid_field_mapping_before_creating_resources(
+    target_key: str,
+    name: str,
+) -> None:
+    uow = InMemoryStage06PlatformUnitOfWork()
+    workspace = create_workspace(uow, name="Acme", owner_user_id="owner-1")
+    job = create_import_job_from_csv(
+        uow,
+        workspace.id,
+        file_name="customers.csv",
+        content="Name\nAda\n",
+        created_by_user_id="owner-1",
+    )
+    counts_before = (
+        len(uow.bases),
+        len(uow.tables),
+        len(uow.fields),
+        len(uow.records),
+    )
+
+    with pytest.raises(PlatformValidationError) as denied:
+        commit_import_job(
+            uow,
+            job.id,
+            base_name="Imported CRM",
+            table_name="Customers",
+            table_key="customers",
+            field_mapping=[
+                {
+                    "source_key": "name",
+                    "target_key": target_key,
+                    "field_type": "text",
+                    "name": name,
+                }
+            ],
+            actor=Actor(actor_type="user", actor_id="owner-1", role="owner"),
+        )
+
+    assert denied.value.code == "invalid_import_mapping"
+    assert (
+        len(uow.bases),
+        len(uow.tables),
+        len(uow.fields),
+        len(uow.records),
+    ) == counts_before
 
 
 def test_stage06_excel_import_previews_then_commits_records_after_confirmation() -> None:

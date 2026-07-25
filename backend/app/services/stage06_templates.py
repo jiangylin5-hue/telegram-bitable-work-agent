@@ -724,15 +724,34 @@ def _infer_field_type(values: list[Any], *, field_key: str) -> str:
 
 
 def _default_field_mapping(schema: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [
-        {
-            "source_key": field["key"],
-            "target_key": field["key"],
-            "field_type": field["field_type"],
-            "name": field["name"],
-        }
+    stable_source_keys = {
+        field["key"]
         for field in schema
-    ]
+        if isinstance(field.get("key"), str)
+        and len(field["key"]) <= 120
+        and TABLE_KEY_RE.fullmatch(field["key"]) is not None
+    }
+    target_keys: set[str] = set()
+    mapping: list[dict[str, Any]] = []
+    for index, field in enumerate(schema, start=1):
+        source_key = field["key"]
+        target_key = source_key
+        if source_key not in stable_source_keys or source_key in target_keys:
+            suffix = index
+            target_key = f"field_{suffix}"
+            while target_key in stable_source_keys or target_key in target_keys:
+                suffix += 1
+                target_key = f"field_{suffix}"
+        target_keys.add(target_key)
+        mapping.append(
+            {
+                "source_key": source_key,
+                "target_key": target_key,
+                "field_type": field["field_type"],
+                "name": field["name"],
+            }
+        )
+    return mapping
 
 
 def _validate_field_mapping(
@@ -757,11 +776,13 @@ def _validate_field_mapping(
             or source_key not in detected_keys
             or not isinstance(target_key, str)
             or not target_key
+            or len(target_key) > 120
+            or TABLE_KEY_RE.fullmatch(target_key) is None
             or target_key in target_keys
         ):
             raise PlatformValidationError("invalid_import_mapping", str(item))
         name = item["name"] if "name" in item else _titleize(target_key)
-        if not isinstance(name, str) or not name:
+        if not isinstance(name, str) or not name or len(name) > 160:
             raise PlatformValidationError("invalid_import_mapping", str(item))
         target_keys.add(target_key)
 

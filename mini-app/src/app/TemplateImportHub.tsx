@@ -1,4 +1,4 @@
-import { type MouseEvent, useEffect, useState } from 'react'
+import { type MouseEvent, useEffect, useRef, useState } from 'react'
 
 import type { TemplateSummary } from './template-import-types'
 
@@ -14,6 +14,7 @@ type Props = {
 }
 
 export function TemplateImportHub({ templates, loading, error, onRetry, onInstall, onInstallError, onStartWorkspaceImport, onClose }: Props) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
   const [installingId, setInstallingId] = useState<string | null>(null)
   const [conflictLockedId, setConflictLockedId] = useState<string | null>(null)
   const [installError, setInstallError] = useState<string | null>(null)
@@ -53,9 +54,13 @@ export function TemplateImportHub({ templates, loading, error, onRetry, onInstal
     if (installingId === null && event.target === event.currentTarget) onClose()
   }
 
+  useEffect(() => {
+    closeButtonRef.current?.focus()
+  }, [])
+
   return <div className="template-import-backdrop" role="presentation" onMouseDown={closeFromBackdrop}>
     <aside className="template-import-panel" aria-labelledby="template-import-title" aria-modal="true" role="dialog">
-      <header className="template-import-header"><div><p>WORKSPACE SETUP</p><h2 id="template-import-title">模板与导入</h2><span>从已有结构开始，或导入一个文件创建持久化数据表。</span></div><button type="button" aria-label="关闭模板与导入" onClick={onClose}>×</button></header>
+      <header className="template-import-header"><div><p>WORKSPACE SETUP</p><h2 id="template-import-title">模板与导入</h2><span>从已有结构开始，或导入一个文件创建持久化数据表。</span></div><button ref={closeButtonRef} type="button" aria-label="关闭模板与导入" disabled={installingId !== null} onClick={() => { if (installingId === null) onClose() }}>×</button></header>
       {onStartWorkspaceImport && <div className="template-import-actions"><button type="button" className="button-primary" onClick={onStartWorkspaceImport}>导入到新 Base</button></div>}
       {installError ? <div className="template-import-error" role="alert">{installError}</div> : null}
       <section className="template-shelf" aria-labelledby="template-shelf-title"><header><h3 id="template-shelf-title">模板</h3><small>安装后将刷新工作区资源</small></header>

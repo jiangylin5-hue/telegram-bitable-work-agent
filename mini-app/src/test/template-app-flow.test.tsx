@@ -103,9 +103,16 @@ test('does not close a template shelf from Escape or its backdrop while installa
   await waitFor(() => expect(screen.getByRole('button', { name: '安装模板 CRM' })).toBeDisabled())
   fireEvent.keyDown(document, { key: 'Escape' })
   fireEvent.mouseDown(container.firstElementChild!)
+  fireEvent.click(screen.getByRole('button', { name: '关闭模板与导入' }))
 
   expect(onClose).not.toHaveBeenCalled()
   await act(async () => resolveInstall?.())
+})
+
+test('moves initial focus into the Template Hub', () => {
+  render(<TemplateImportHub templates={[]} loading={false} error={null} onRetry={() => undefined} onInstall={() => undefined} onClose={vi.fn()} />)
+
+  expect(screen.getByRole('button', { name: '关闭模板与导入' })).toHaveFocus()
 })
 
 test('returns focus to the Table Operations template action after closing the Template Hub', async () => {
@@ -128,4 +135,34 @@ test('returns focus to the Table Operations template action after closing the Te
 
   await waitFor(() => expect(screen.queryByRole('dialog', { name: '模板与导入' })).not.toBeInTheDocument())
   expect(action).toHaveFocus()
+})
+
+test('returns focus to the actual Base menu trigger after closing Save Template', async () => {
+  vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+    const path = String(input)
+    const responses: Record<string, unknown> = {
+      '/mini-app/bootstrap': { identity: { user_id: 'owner-1', source: 'header' }, workspaces: [{ id: 'workspace-1', name: 'Acme', slug: 'acme', role: 'owner', capabilities: { can_read_bases: true, can_manage_workspace: true, can_manage_schema: true, can_review_drafts: false } }] },
+      '/workspaces/workspace-1/home': { workspace_id: 'workspace-1', recent_bases: [{ id: 'base-1', name: 'CRM', source_type: 'blank' }], queue: [] },
+      '/bases/base-1/tables': { tables: [{ id: 'table-1', base_id: 'base-1', name: 'Customers', key: 'customers', status: 'active' }] },
+      '/bases/base-1/views': { views: [{ id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: 'Grid', view_type: 'grid', status: 'active' }] },
+      '/tables/table-1/schema': { table: { id: 'table-1', name: 'Customers', key: 'customers' }, fields: [] },
+      '/views/view-1/presentation': { view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: [], group_by_field_key: null, date_field_key: null, form_field_keys: [] },
+      '/views/view-1/records': { view_id: 'view-1', records: [], next_cursor: null, has_more: false },
+    }
+    if (path === '/views/view-1/builder') return Promise.resolve(json({ detail: 'unavailable' }, 404))
+    return Promise.resolve(path in responses ? json(responses[path]) : json({ detail: `unexpected ${path}` }, 404))
+  }))
+
+  render(<App />)
+  fireEvent.click(await screen.findByRole('link', { name: 'CRM' }))
+  const trigger = await screen.findByRole('button', { name: '更多 Base 操作' })
+  fireEvent.click(trigger)
+  fireEvent.click(screen.getByRole('menuitem', { name: '保存为模板' }))
+  await screen.findByRole('dialog', { name: '保存为模板' })
+  await waitFor(() => expect(screen.getByLabelText('模板名称')).toHaveFocus())
+
+  fireEvent.click(screen.getByRole('button', { name: '关闭保存模板' }))
+
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: '保存为模板' })).not.toBeInTheDocument())
+  expect(trigger).toHaveFocus()
 })

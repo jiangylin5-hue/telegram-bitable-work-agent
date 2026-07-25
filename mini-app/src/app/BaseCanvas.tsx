@@ -4,7 +4,7 @@ import { ArrowLeft, ChevronDown, MoreHorizontal, Plus, Table2 } from 'lucide-rea
 import type { BaseSummary, BusinessContextRelation, PlatformTable, TableSchema, ViewPresentation, ViewRecords, ViewSummary } from './api'
 import { RelationChips, relationLabels } from './RelationChips'
 
-type BaseCanvasProps = { base: BaseSummary; tables: PlatformTable[]; views: ViewSummary[]; table: PlatformTable | null; view: ViewSummary | null; schema: TableSchema | null; records: ViewRecords | null; presentation: ViewPresentation | null; loadingMore?: boolean; loadMoreError?: boolean; serverQuerySummary?: string; businessContextRelations?: BusinessContextRelation[]; onBack: () => void; onOpenRecord: (recordId: string) => void; onOpenRecordReference?: (reference: BusinessContextRelation['customer']) => void; onOpenEmployeeReference?: (trigger: HTMLElement, employee: BusinessContextRelation['employee']) => void; onOpenAssistantContext?: (trigger: HTMLElement) => void; onSelectTable?: (tableId: string) => void; onSelectView: (viewId: string) => void; onLoadMore?: (cursor: string) => void; onCreateRecord?: (tableId?: string) => void; canManageSchema?: boolean; canCreateViews?: boolean; canManageViews?: boolean; canCreateRecords?: boolean; canManageDigitalEmployees?: boolean; onCreateTable?: (trigger: HTMLElement) => void; onCreateField?: (tableId?: string) => void; onCreateView?: () => void; onConfigureView?: () => void; onSaveTemplate?: () => void; onImportIntoBase?: (trigger: HTMLElement) => void; onOpenTableOperations?: (trigger: HTMLElement, tableId?: string) => void; onOpenCollaboration?: (trigger: HTMLElement) => void; onOpenDraftHub?: (trigger: HTMLElement) => void; onOpenDigitalEmployeeManagement?: (trigger: HTMLElement) => void }
+type BaseCanvasProps = { base: BaseSummary; tables: PlatformTable[]; views: ViewSummary[]; table: PlatformTable | null; view: ViewSummary | null; schema: TableSchema | null; records: ViewRecords | null; presentation: ViewPresentation | null; loadingMore?: boolean; loadMoreError?: boolean; serverQuerySummary?: string; businessContextRelations?: BusinessContextRelation[]; onBack: () => void; onOpenRecord: (recordId: string) => void; onOpenRecordReference?: (reference: BusinessContextRelation['customer']) => void; onOpenEmployeeReference?: (trigger: HTMLElement, employee: BusinessContextRelation['employee']) => void; onOpenAssistantContext?: (trigger: HTMLElement) => void; onSelectTable?: (tableId: string) => void; onSelectView: (viewId: string) => void; onLoadMore?: (cursor: string) => void; onCreateRecord?: (tableId?: string) => void; canManageSchema?: boolean; canCreateViews?: boolean; canManageViews?: boolean; canCreateRecords?: boolean; canManageDigitalEmployees?: boolean; onCreateTable?: (trigger: HTMLElement) => void; onCreateField?: (tableId?: string) => void; onCreateView?: () => void; onConfigureView?: () => void; onSaveTemplate?: (trigger: HTMLElement) => void; onImportIntoBase?: (trigger: HTMLElement) => void; onOpenTableOperations?: (trigger: HTMLElement, tableId?: string) => void; onOpenCollaboration?: (trigger: HTMLElement) => void; onOpenDraftHub?: (trigger: HTMLElement) => void; onOpenDigitalEmployeeManagement?: (trigger: HTMLElement) => void }
 
 type ObjectMenu = {
   kind: 'base' | 'table'
@@ -63,10 +63,10 @@ export function BaseCanvas({ base, tables, views, table, view, schema, records, 
     })
   }
 
-  function closeObjectMenu() {
+  function closeObjectMenu(restoreFocus = true) {
     const trigger = objectMenu?.trigger
     setObjectMenu(null)
-    queueMicrotask(() => trigger?.focus())
+    if (restoreFocus) queueMicrotask(() => trigger?.focus())
   }
 
   useEffect(() => {
@@ -133,10 +133,10 @@ export function BaseCanvas({ base, tables, views, table, view, schema, records, 
       {onOpenRecordReference ? <button type="button" aria-label={`打开客户记录 ${relation.customer.label}`} onClick={() => onOpenRecordReference(relation.customer)}>客户 · {relation.customer.label}</button> : <span>客户 · {relation.customer.label}</span>}
       {onOpenRecordReference ? <button type="button" aria-label={`打开项目记录 ${relation.project.label}`} onClick={() => onOpenRecordReference(relation.project)}>项目 · {relation.project.label}</button> : <span>项目 · {relation.project.label}</span>}
     </div>)}</section> : null}
-    {objectMenu ? <div className="record-context-backdrop" role="presentation" onMouseDown={closeObjectMenu}>
+    {objectMenu ? <div className="record-context-backdrop" role="presentation" onMouseDown={() => closeObjectMenu()}>
       <div id={objectMenu.kind === 'base' ? 'base-actions-menu' : `table-actions-menu-${objectMenu.tableId}`} ref={objectMenuRef} className="record-context-menu" role="menu" aria-label={objectMenu.kind === 'base' ? 'Base 操作' : '数据表操作'} tabIndex={-1} style={{ left: objectMenu.x, top: objectMenu.y }} onKeyDown={handleMenuKeyDown} onMouseDown={(event) => event.stopPropagation()}>
         {objectMenu.kind === 'base' && onImportIntoBase ? <button type="button" role="menuitem" onClick={() => { const trigger = objectMenu.trigger; closeObjectMenu(); onImportIntoBase(trigger) }}>导入到当前 Base</button> : null}
-        {objectMenu.kind === 'base' && onSaveTemplate ? <button type="button" role="menuitem" onClick={() => { closeObjectMenu(); onSaveTemplate() }}>保存为模板</button> : null}
+        {objectMenu.kind === 'base' && onSaveTemplate ? <button type="button" role="menuitem" onClick={() => { const trigger = objectMenu.trigger; closeObjectMenu(false); onSaveTemplate(trigger) }}>保存为模板</button> : null}
         {objectMenu.kind === 'base' && onOpenTableOperations ? <button type="button" role="menuitem" onClick={() => { const trigger = objectMenu.trigger; closeObjectMenu(); onOpenTableOperations(trigger) }}>表格操作</button> : null}
         {objectMenu.kind === 'table' && onOpenTableOperations ? <button type="button" role="menuitem" onClick={() => { const { trigger, tableId } = objectMenu; closeObjectMenu(); onOpenTableOperations(trigger, tableId) }}>表格操作</button> : null}
         {objectMenu.kind === 'table' && canCreateRecords && onCreateRecord ? <button type="button" role="menuitem" onClick={() => { const { tableId } = objectMenu; closeObjectMenu(); onCreateRecord(tableId) }}>新建记录</button> : null}

@@ -1,11 +1,18 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
-import { expect, test, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { afterEach, expect, test, vi } from 'vitest'
 
+import { App } from '../app/App'
 import { BaseCanvas } from '../app/BaseCanvas'
 import { DigitalEmployeeManagementWorkbench } from '../app/DigitalEmployeeManagementWorkbench'
 import { DraftEmployeeHub } from '../app/DraftEmployeeHub'
 import { TeamBotWorkbench } from '../app/TeamBotWorkbench'
 import { WorkspaceHome } from '../app/WorkspaceHome'
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+}
+
+afterEach(() => vi.unstubAllGlobals())
 
 test('connects a queued draft to its loaded Base from the Home workbench', () => {
   const onOpenBase = vi.fn()
@@ -232,6 +239,87 @@ test('renders the same authorized business relationship inside the Base and Team
 
   expect(screen.getByTestId('team-bot-workbench')).toHaveTextContent('已授权群聊 1')
   expect(screen.getByTestId('team-bot-workbench')).toHaveTextContent('Renewal')
+})
+
+function installEmployeeRelationFixture(canManageDigitalEmployees: boolean) {
+  const fetchMock = vi.fn((input: RequestInfo | URL) => {
+    const path = String(input)
+    if (path === '/mini-app/bootstrap') return Promise.resolve(json({
+      identity: { user_id: 'operator-1', source: 'development_header' },
+      workspaces: [{
+        id: 'workspace-1',
+        name: 'Operations',
+        slug: 'operations',
+        role: canManageDigitalEmployees ? 'owner' : 'operator',
+        capabilities: {
+          can_read_bases: true,
+          can_manage_workspace: canManageDigitalEmployees,
+          can_manage_schema: canManageDigitalEmployees,
+          can_manage_digital_employees: canManageDigitalEmployees,
+          can_review_drafts: true,
+        },
+      }],
+    }))
+    if (path === '/workspaces/workspace-1/home') return Promise.resolve(json({
+      workspace_id: 'workspace-1',
+      recent_bases: [{ id: 'base-1', name: 'CRM', source_type: 'blank' }],
+      queue: [],
+      business_context_relations: [{
+        employee: { id: 'employee-1', name: 'Customer Success', base_id: 'base-1', base_name: 'CRM' },
+        group: { id: 'group_context:private', label: '已授权群聊 1' },
+        customer: { id: 'customer-1', base_id: 'base-1', label: 'Acme Co' },
+        project: { id: 'project-1', base_id: 'base-1', label: 'Renewal' },
+        mapping_version: 1,
+      }],
+    }))
+    if (path === '/bases/base-1/tables') return Promise.resolve(json({ tables: [{ id: 'table-1', base_id: 'base-1', name: 'Customers', key: 'customers', status: 'active' }] }))
+    if (path === '/bases/base-1/views') return Promise.resolve(json({ views: [{ id: 'view-1', base_id: 'base-1', table_id: 'table-1', name: 'All', view_type: 'grid', status: 'active' }] }))
+    if (path === '/tables/table-1/schema') return Promise.resolve(json({ table: { id: 'table-1', name: 'Customers', key: 'customers' }, fields: [] }))
+    if (path === '/views/view-1/presentation') return Promise.resolve(json({ view_id: 'view-1', table_id: 'table-1', view_type: 'grid', visible_field_keys: [], group_by_field_key: null, date_field_key: null, form_field_keys: [] }))
+    if (path === '/views/view-1/records') return Promise.resolve(json({ view_id: 'view-1', records: [], next_cursor: null, has_more: false }))
+    if (path === '/views/view-1/builder') return Promise.resolve(json({ detail: 'unavailable' }, 404))
+    if (path === '/mini-app/workspaces/workspace-1/team-bot-contacts?limit=50') return Promise.resolve(json({
+      workspace_id: 'workspace-1',
+      contacts: [{ id: 'employee-1', base_id: 'base-1', name: 'Customer Success', description: 'Read-only authorized context', available_intents: ['summarize'] }],
+      next_cursor: null,
+      has_more: false,
+    }))
+    if (path === '/mini-app/bases/base-1/digital-employee-management-context') return Promise.resolve(json({
+      base: { id: 'base-1', name: 'CRM' },
+      tables: [{ id: 'table-1', name: 'Customers' }],
+      views: [{ id: 'view-1', table_id: 'table-1', name: 'All', view_type: 'grid' }],
+      members: [],
+    }))
+    if (path === '/mini-app/bases/base-1/digital-employees/management?limit=50') return Promise.resolve(json({ base_id: 'base-1', employees: [], next_cursor: null, has_more: false }))
+    return Promise.resolve(json({ detail: `unexpected ${path}` }, 404))
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
+}
+
+test('opens a read-only Team Bot relationship without calling management APIs when management is unavailable', async () => {
+  const fetchMock = installEmployeeRelationFixture(false)
+  render(<App />)
+  fireEvent.click(await screen.findByRole('link', { name: 'CRM' }))
+
+  fireEvent.click(await screen.findByRole('button', { name: '打开数字员工 Customer Success' }))
+
+  expect(await screen.findByTestId('team-bot-workbench')).toBeVisible()
+  expect(fetchMock).toHaveBeenCalledWith('/mini-app/workspaces/workspace-1/team-bot-contacts?limit=50', expect.any(Object))
+  expect(fetchMock.mock.calls.some(([input]) => String(input).includes('digital-employee-management'))).toBe(false)
+  expect(screen.queryByRole('main', { name: '无工作区访问权限' })).not.toBeInTheDocument()
+})
+
+test('keeps the existing management relationship entry when management is available', async () => {
+  const fetchMock = installEmployeeRelationFixture(true)
+  render(<App />)
+  fireEvent.click(await screen.findByRole('link', { name: 'CRM' }))
+
+  fireEvent.click(await screen.findByRole('button', { name: '打开数字员工 Customer Success' }))
+
+  await waitFor(() => expect(fetchMock.mock.calls.some(([input]) => String(input) === '/mini-app/bases/base-1/digital-employee-management-context')).toBe(true))
+  expect(await screen.findByTestId('digital-employee-workbench')).toBeVisible()
+  expect(fetchMock.mock.calls.some(([input]) => String(input).includes('team-bot-contacts'))).toBe(false)
 })
 
 test('marks the Bot, draft and employee surfaces as full three-pane workbenches', () => {

@@ -502,6 +502,41 @@ def test_stage06_template_import_commit_rejects_non_string_or_empty_field_name_w
     ) == counts_before
 
 
+@pytest.mark.parametrize(
+    ("target_key", "name"),
+    [
+        ("customer name", "Customer"),
+        ("Customer", "Customer"),
+        ("a" * 121, "Customer"),
+        ("customer", "C" * 161),
+    ],
+)
+def test_stage06_template_import_commit_rejects_invalid_mapping_boundaries_without_new_resources(
+    target_key: str,
+    name: str,
+) -> None:
+    uow, import_response, commit_response, counts_before = _commit_import_with_mapping(
+        [
+            {
+                "source_key": "name",
+                "target_key": target_key,
+                "field_type": "text",
+                "name": name,
+            }
+        ]
+    )
+
+    assert import_response.status_code == 200
+    assert commit_response.status_code == 422
+    assert commit_response.json()["detail"]["code"] == "invalid_import_mapping"
+    assert (
+        len(uow.bases),
+        len(uow.tables),
+        len(uow.fields),
+        len(uow.records),
+    ) == counts_before
+
+
 def _commit_import_with_mapping(
     field_mapping: list[dict[str, object]],
     *,

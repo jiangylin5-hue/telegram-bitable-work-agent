@@ -230,6 +230,7 @@ function AppContent() {
   const telegramRecoveryButton = useRef<HTMLButtonElement | null>(null)
   const viewBuilderReturnFocus = useRef<HTMLElement | null>(null)
   const builderCreateReturnFocus = useRef<HTMLElement | null>(null)
+  const createRecordReturnFocus = useRef<HTMLElement | null>(null)
   const templateImportReturnFocus = useRef<HTMLElement | null>(null)
   const governanceReturnFocus = useRef<HTMLElement | null>(null)
   const governanceWriteReturnFocus = useRef<HTMLElement | null>(null)
@@ -314,10 +315,10 @@ function AppContent() {
     await clearRecordMutationQueries(queryClient, scope, recordId, viewId)
   }
 
-  function rememberViewBuilderTrigger() {
-    viewBuilderReturnFocus.current = document.activeElement instanceof HTMLElement
+  function rememberViewBuilderTrigger(trigger?: HTMLElement) {
+    viewBuilderReturnFocus.current = trigger ?? (document.activeElement instanceof HTMLElement
       ? document.activeElement
-      : null
+      : null)
   }
 
   function closeViewBuilder() {
@@ -638,6 +639,10 @@ function AppContent() {
     trigger: HTMLElement,
     employee: { id: string; name: string; base_id: string; base_name: string },
   ): void {
+    if (selectedWorkspace.capabilities.can_manage_digital_employees !== true) {
+      void openTeamBot(trigger)
+      return
+    }
     const base = readyState.home.recent_bases.find((item) => item.id === employee.base_id)
     if (!base) return
     void (async () => {
@@ -2767,9 +2772,10 @@ function AppContent() {
     }
   }
 
-  async function openCreateRecord(requestedTableId?: string) {
+  async function openCreateRecord(requestedTableId?: string, returnFocus?: HTMLElement) {
     const canvas = readyState.canvas
     if (!canvas?.table || !canvas.view) return
+    createRecordReturnFocus.current = returnFocus ?? null
     const tableId = requestedTableId ?? canvas.table.id
     const viewId = canvas.views.find((item) => item.table_id === tableId)?.id
     if (!viewId) return
@@ -2850,6 +2856,11 @@ function AppContent() {
     setState((current) => current.status === 'ready' && current.canvas
       ? { ...current, canvas: { ...current.canvas, createForm: undefined } }
       : current)
+    const trigger = createRecordReturnFocus.current
+    createRecordReturnFocus.current = null
+    queueMicrotask(() => {
+      if (trigger?.isConnected) trigger.focus()
+    })
   }
 
   async function selectTable(tableId: string): Promise<boolean> {
@@ -2950,7 +2961,7 @@ function AppContent() {
   const content = readyState.canvasLoading
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
-    ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} canCreateRecords={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role)} canManageDigitalEmployees={selectedWorkspace.capabilities.can_manage_digital_employees === true} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; closeDigitalEmployeeManagement(); abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onOpenRecordReference={openBusinessRecordReference} onOpenEmployeeReference={openBusinessEmployeeReference} onOpenAssistantContext={(trigger) => { void openAssistantContext(trigger) }} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role) ? openCreateRecord : undefined} onCreateTable={(trigger) => { builderCreateReturnFocus.current = trigger; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={(requestedTableId) => { const canvas = readyState.canvas; const tableId = requestedTableId ?? canvas?.table?.id; const view = tableId ? canvas?.views.find((item) => item.table_id === tableId) : undefined; if (!tableId || !view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId, viewId: view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (!canvas?.table) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id, canvas.view.id) }} onSaveTemplate={() => setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base })} onImportIntoBase={(trigger) => openBaseImport(readyState.canvas!.base, trigger)} onOpenTableOperations={(trigger, tableId) => { void openTableOperationsForTable(trigger, tableId) }} onOpenCollaboration={(trigger) => { void openCollaboration(trigger) }} onOpenDraftHub={(trigger) => { void openDraftEmployeeHub(trigger) }} onOpenDigitalEmployeeManagement={(trigger) => { void openDigitalEmployeeManagement(trigger) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
+    ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} canCreateRecords={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role)} canManageDigitalEmployees={selectedWorkspace.capabilities.can_manage_digital_employees === true} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; closeDigitalEmployeeManagement(); abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onOpenRecordReference={openBusinessRecordReference} onOpenEmployeeReference={openBusinessEmployeeReference} onOpenAssistantContext={(trigger) => { void openAssistantContext(trigger) }} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role) ? openCreateRecord : undefined} onCreateTable={(trigger) => { builderCreateReturnFocus.current = trigger; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={(requestedTableId) => { const canvas = readyState.canvas; const tableId = requestedTableId ?? canvas?.table?.id; const view = tableId ? canvas?.views.find((item) => item.table_id === tableId) : undefined; if (!tableId || !view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId, viewId: view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (!canvas?.table) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id, canvas.view.id) }} onSaveTemplate={(trigger) => { templateImportReturnFocus.current = trigger; setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base }) }} onImportIntoBase={(trigger) => openBaseImport(readyState.canvas!.base, trigger)} onOpenTableOperations={(trigger, tableId) => { void openTableOperationsForTable(trigger, tableId) }} onOpenCollaboration={(trigger) => { void openCollaboration(trigger) }} onOpenDraftHub={(trigger) => { void openDraftEmployeeHub(trigger) }} onOpenDigitalEmployeeManagement={(trigger) => { void openDigitalEmployeeManagement(trigger) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
       : navigationRoute === 'bases'
         ? <BaseDirectory state={baseDirectory.state} bases={baseDirectory.bases} onOpenBase={(base) => { void openBase(base) }} onHome={() => selectNavigation('home')} onRetry={() => { void loadBaseDirectory() }} />
         : <>{telegramRecoveryNotice}<WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={(trigger) => { builderCreateReturnFocus.current = trigger; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={(trigger) => { void openTemplateImportHub(trigger) }} onOpenTableOperations={(trigger) => openTableOperationCenter(trigger, { kind: 'workspace' })} onOpenDraftHub={(trigger, draftId) => { void openDraftEmployeeHub(trigger, draftId) }} onOpenAssistantContext={(trigger) => { void openAssistantContext(trigger) }} onOpenCollaboration={(trigger) => { void openCollaboration(trigger) }} onOpenMemory={(trigger) => { void openMemory(trigger) }} onOpenTeamBot={(trigger) => { void openTeamBot(trigger) }} onOpenRecordReference={openBusinessRecordReference} onOpenEmployeeReference={openBusinessEmployeeReference} /></>
@@ -2959,11 +2970,11 @@ function AppContent() {
     : builderPanel?.mode === 'table'
       ? <BuilderCreatePanel mode="table" onSubmit={(values, idempotencyKey) => createTable(builderPanel.base, values as { tableName: string }, idempotencyKey)} onClose={closeBuilderCreatePanel} />
       : builderPanel?.mode === 'field'
-        ? <FieldBuilderPanel onSubmit={(values, idempotencyKey) => createField(builderPanel.tableId, builderPanel.viewId, values, idempotencyKey)} onOpenRelationLookup={() => { void openRelationLookupBuilder(builderPanel.tableId, builderPanel.viewId) }} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
+        ? <FieldBuilderPanel onSubmit={(values, idempotencyKey) => createField(builderPanel.tableId, builderPanel.viewId, values, idempotencyKey)} onOpenRelationLookup={() => { void openRelationLookupBuilder(builderPanel.tableId, builderPanel.viewId) }} onClose={closeBuilderCreatePanel} />
         : builderPanel?.mode === 'relation-lookup-loading'
-          ? <div className="field-builder-backdrop" role="presentation"><aside className="field-builder-panel" aria-label="正在加载关系字段" aria-modal="true" role="dialog"><header className="field-builder-header"><div className="field-builder-heading"><div><p>关系字段</p><h2>正在加载关系字段</h2></div></div><button className="field-builder-close" type="button" aria-label="关闭" onClick={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }}>×</button></header><p className="field-builder-intro">正在加载当前 Base 的授权表结构。</p></aside></div>
+          ? <div className="field-builder-backdrop" role="presentation"><aside className="field-builder-panel" aria-label="正在加载关系字段" aria-modal="true" role="dialog"><header className="field-builder-header"><div className="field-builder-heading"><div><p>关系字段</p><h2>正在加载关系字段</h2></div></div><button className="field-builder-close" type="button" aria-label="关闭" onClick={closeBuilderCreatePanel}>×</button></header><p className="field-builder-intro">正在加载当前 Base 的授权表结构。</p></aside></div>
           : builderPanel?.mode === 'relation-lookup'
-            ? <RelationLookupFieldBuilderPanel currentTableId={builderPanel.tableId} tables={builderPanel.tables} schemas={builderPanel.schemas} onSubmit={(values, idempotencyKey) => createRelationLookupField(builderPanel.tableId, builderPanel.viewId, values, idempotencyKey)} onClose={() => { builderRequestVersion.current += 1; setBuilderPanel(undefined) }} />
+            ? <RelationLookupFieldBuilderPanel currentTableId={builderPanel.tableId} tables={builderPanel.tables} schemas={builderPanel.schemas} onSubmit={(values, idempotencyKey) => createRelationLookupField(builderPanel.tableId, builderPanel.viewId, values, idempotencyKey)} onClose={closeBuilderCreatePanel} />
             : builderPanel?.mode === 'view-loading'
               ? <div className="view-builder-backdrop" role="presentation"><aside className="view-builder-panel" aria-label="正在加载视图配置" aria-modal="true" role="dialog"><header className="view-builder-header"><div className="view-builder-heading"><div><p>VIEW BUILDER</p><h2>正在加载视图配置</h2></div></div><button className="field-builder-close" type="button" aria-label="关闭视图配置" onClick={closeViewBuilder}>×</button></header><p className="field-builder-intro">正在读取当前权限范围内的安全视图配置。</p></aside></div>
               : builderPanel?.mode === 'view'
@@ -2988,16 +2999,16 @@ function AppContent() {
         } : {}),
         ...(tableOperationPanel.scope.kind === 'base' && selectedWorkspace.capabilities.can_manage_schema && readyState.canvas?.table && readyState.canvas.view ? {
           onCreateTable: (trigger) => { builderCreateReturnFocus.current = trigger; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) },
-          onCreateField: () => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: readyState.canvas!.table!.id, viewId: readyState.canvas!.view!.id }) },
-          onCreateView: () => { rememberViewBuilderTrigger(); void openViewBuilder(readyState.canvas!.table!.id) },
-          onConfigureView: () => { rememberViewBuilderTrigger(); void openViewBuilder(readyState.canvas!.table!.id, readyState.canvas!.view!.id) },
-          onImportIntoBase: () => openBaseImport(readyState.canvas!.base, tableOperationReturnFocus.current ?? document.body),
-          onSaveTemplate: () => setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base }),
-          ...(['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role) && readyState.canvas.schema?.fields.length ? { onCreateRecord: () => { void openCreateRecord() } } : {}),
+          onCreateField: (trigger) => { builderCreateReturnFocus.current = trigger; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: readyState.canvas!.table!.id, viewId: readyState.canvas!.view!.id }) },
+          onCreateView: (trigger) => { rememberViewBuilderTrigger(trigger); void openViewBuilder(readyState.canvas!.table!.id) },
+          onConfigureView: (trigger) => { rememberViewBuilderTrigger(trigger); void openViewBuilder(readyState.canvas!.table!.id, readyState.canvas!.view!.id) },
+          onImportIntoBase: (trigger) => openBaseImport(readyState.canvas!.base, trigger),
+          onSaveTemplate: (trigger) => { templateImportReturnFocus.current = trigger; setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base }) },
+          ...(['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role) && readyState.canvas.schema?.fields.length ? { onCreateRecord: (trigger: HTMLElement) => { void openCreateRecord(undefined, trigger) } } : {}),
         } : {}),
       }}
       onClose={closeTableOperationCenter}
-      suspended={Boolean(templateImportPanel || builderPanel?.mode === 'base' || builderPanel?.mode === 'table')}
+      suspended={Boolean(templateImportPanel || builderPanel || readyState.canvas?.detail || readyState.canvas?.createForm)}
     />
     : null
   const collaborationOverlay = collaborationPanel
