@@ -80,3 +80,11 @@ test('uses a right-side drawer layout so table work stays visually in context', 
 
   expect(screen.getByRole('dialog', { name: '表格操作中心' })).toHaveAttribute('data-layout', 'side-drawer')
 })
+
+test('removes suspended parent controls from modal and pointer interaction', () => {
+  render(<TableOperationCenter scope={{ kind: 'workspace' }} actions={{ onCreateBase: vi.fn(), onOpenTemplates: vi.fn() }} onClose={vi.fn()} suspended />)
+
+  expect(screen.queryByRole('dialog', { name: '表格操作中心' })).not.toBeInTheDocument()
+  expect(document.querySelector('.table-operation-backdrop')).toHaveAttribute('data-suspended', 'true')
+  expect(screen.getByRole('button', { name: '关闭表格操作中心', hidden: true })).toBeDisabled()
+})

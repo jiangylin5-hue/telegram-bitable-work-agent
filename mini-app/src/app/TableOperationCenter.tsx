@@ -71,11 +71,11 @@ export function TableOperationCenter({ scope, actions, onClose, suspended = fals
     if (!suspended && event.target === event.currentTarget) onClose()
   }
 
-  return <div className="table-operation-backdrop" role="presentation" onMouseDown={closeFromBackdrop}>
-    <aside className="table-operation-center" aria-label="表格操作中心" aria-modal="true" data-layout="side-drawer" role="dialog">
+  return <div className="table-operation-backdrop" role="presentation" data-suspended={suspended} onMouseDown={closeFromBackdrop}>
+    <aside className="table-operation-center" aria-hidden={suspended || undefined} aria-label="表格操作中心" aria-modal={suspended ? undefined : true} data-layout="side-drawer" role={suspended ? undefined : 'dialog'}>
       <header className="table-operation-header">
         <div><p>TABLE OPERATIONS</p><h2>表格操作中心</h2><span>{scopeSummary}</span></div>
-        <button type="button" aria-label="关闭表格操作中心" onClick={onClose}><X size={19} /></button>
+        <button type="button" aria-label="关闭表格操作中心" disabled={suspended} onClick={onClose}><X size={19} /></button>
       </header>
       <p className="table-operation-intro">这里的每一项都会打开现有的受控工作流；不会绕过 Base、字段、视图、记录或权限服务。</p>
       <div className="table-operation-groups">
@@ -90,7 +90,7 @@ export function TableOperationCenter({ scope, actions, onClose, suspended = fals
               return <button
                 type="button"
                 key={definition.key}
-                disabled={!enabled}
+                disabled={!enabled || suspended}
                 data-availability={definition.availability}
                 aria-label={definition.label}
                 onClick={(event) => dispatch(definition.key, event.currentTarget)}
