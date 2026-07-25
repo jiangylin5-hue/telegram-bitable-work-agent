@@ -322,3 +322,4 @@ Expected: 后端导入边界与全量前端串行回归均通过；不存在 tim
 - 最终分支审查（`07af702..f9ac2e1`）发现 5 项 Important，Task 5 已创建并处于 in_progress：必须先消除所有阻断项，才可推送和部署。
 - Task 5 complete：`424e016`、`09ca663`。最终审查的五项阻断均已修复，并在 Task 5 复审中额外发现“模板安装 pending 时仍可切换到新 Base”的入口，已按红绿测试修复。Task 5 的初始独立审查和 fix scoped re-review 均为 Spec PASS、Quality PASS；最终必须在当前 HEAD 重新运行后端导入边界、全量前端串行回归与生产构建，再执行推送和部署。
 - 发布前重新验证（当前 HEAD `09ca663`）：后端导入边界 `40 passed in 9.88s`；前端串行隔离回归 `76 files / 353 tests passed in 228.18s`；`npm.cmd run build` 成功；`git diff --check 07af702..HEAD` 成功。待执行的仅为受控推送、服务器发布和真实浏览器/Telegram 写入证据，后者不可由自动化测试替代。
+- 2026-07-25 发布完成：分支已推送至 GitHub；原生服务器已激活密封 release `stage09-p1-20260725-r39`（源码、venv、静态资源三处 `current` 一致）。服务器 release layout/assets、离线固定迁移、运行时隔离、服务与公网 readiness 全部通过；API、worker、outbox、Redis、Nginx 均为 `active`，回环与 `https://stage07.jiangtest1.online/health`、公网首页均为 HTTP 200。首次候选切换发现运行时配置权限错误会使服务账号无法读取配置，已自动回退并将权限修正为 `root:stage09-p1` / `0640` 后重试成功。真实浏览器/Telegram 的导入写入和人工 UI 操作验收仍未执行，不以此次部署替代。
