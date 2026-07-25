@@ -8,21 +8,22 @@ export type TableOperationScope =
   | { kind: 'base'; baseName: string; tableName: string; viewName: string }
 
 export type TableOperationActions = {
-  onCreateBase?: () => void
-  onOpenTemplates?: () => void
-  onCreateTable?: () => void
-  onCreateField?: () => void
-  onCreateView?: () => void
-  onConfigureView?: () => void
-  onCreateRecord?: () => void
-  onImportIntoBase?: () => void
-  onSaveTemplate?: () => void
+  onCreateBase?: (trigger: HTMLElement) => void
+  onOpenTemplates?: (trigger: HTMLElement) => void
+  onCreateTable?: (trigger: HTMLElement) => void
+  onCreateField?: (trigger: HTMLElement) => void
+  onCreateView?: (trigger: HTMLElement) => void
+  onConfigureView?: (trigger: HTMLElement) => void
+  onCreateRecord?: (trigger: HTMLElement) => void
+  onImportIntoBase?: (trigger: HTMLElement) => void
+  onSaveTemplate?: (trigger: HTMLElement) => void
 }
 
 type TableOperationCenterProps = {
   scope: TableOperationScope
   actions: TableOperationActions
   onClose: () => void
+  suspended?: boolean
 }
 
 const groupLabels = {
@@ -32,14 +33,14 @@ const groupLabels = {
   planned: '后续能力',
 } as const
 
-export function TableOperationCenter({ scope, actions, onClose }: TableOperationCenterProps) {
+export function TableOperationCenter({ scope, actions, onClose, suspended = false }: TableOperationCenterProps) {
   const availableGroups = ['workspace', 'authoring', 'data', 'planned'] as const
   const definitions = getTableOperationDefinitions(scope.kind)
   const scopeSummary = scope.kind === 'base'
     ? `${scope.baseName} / ${scope.tableName} / ${scope.viewName}`
     : '从当前工作区开始创建、导入或安装一个 Base。'
 
-  const actionByKey: Partial<Record<TableOperationKey, () => void>> = {
+  const actionByKey: Partial<Record<TableOperationKey, (trigger: HTMLElement) => void>> = {
     create_base: actions.onCreateBase,
     templates_import: actions.onOpenTemplates,
     create_table: actions.onCreateTable,
@@ -52,22 +53,22 @@ export function TableOperationCenter({ scope, actions, onClose }: TableOperation
   }
 
   useEffect(() => {
+    if (suspended) return
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', closeOnEscape)
     return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [onClose])
+  }, [onClose, suspended])
 
-  function dispatch(key: TableOperationKey) {
+  function dispatch(key: TableOperationKey, trigger: HTMLElement) {
     const action = actionByKey[key]
     if (!action) return
-    onClose()
-    action()
+    action(trigger)
   }
 
   function closeFromBackdrop(event: MouseEvent<HTMLDivElement>) {
-    if (event.target === event.currentTarget) onClose()
+    if (!suspended && event.target === event.currentTarget) onClose()
   }
 
   return <div className="table-operation-backdrop" role="presentation" onMouseDown={closeFromBackdrop}>
@@ -92,7 +93,7 @@ export function TableOperationCenter({ scope, actions, onClose }: TableOperation
                 disabled={!enabled}
                 data-availability={definition.availability}
                 aria-label={definition.label}
-                onClick={() => dispatch(definition.key)}
+                onClick={(event) => dispatch(definition.key, event.currentTarget)}
               >
                 <strong>{definition.label}</strong>
                 <span>{definition.description}</span>

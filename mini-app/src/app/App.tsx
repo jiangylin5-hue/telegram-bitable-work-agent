@@ -2983,20 +2983,21 @@ function AppContent() {
       scope={tableOperationPanel.scope}
       actions={{
         ...(selectedWorkspace.capabilities.can_manage_schema ? {
-          onCreateBase: () => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) },
-          onOpenTemplates: () => { void openTemplateImportHub() },
+          onCreateBase: (trigger) => { builderCreateReturnFocus.current = trigger; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) },
+          onOpenTemplates: (trigger) => { void openTemplateImportHub(trigger) },
         } : {}),
         ...(tableOperationPanel.scope.kind === 'base' && selectedWorkspace.capabilities.can_manage_schema && readyState.canvas?.table && readyState.canvas.view ? {
-          onCreateTable: () => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) },
+          onCreateTable: (trigger) => { builderCreateReturnFocus.current = trigger; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) },
           onCreateField: () => { builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId: readyState.canvas!.table!.id, viewId: readyState.canvas!.view!.id }) },
           onCreateView: () => { rememberViewBuilderTrigger(); void openViewBuilder(readyState.canvas!.table!.id) },
           onConfigureView: () => { rememberViewBuilderTrigger(); void openViewBuilder(readyState.canvas!.table!.id, readyState.canvas!.view!.id) },
           onImportIntoBase: () => openBaseImport(readyState.canvas!.base, tableOperationReturnFocus.current ?? document.body),
           onSaveTemplate: () => setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base }),
-          ...(['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role) && readyState.canvas.schema?.fields.length ? { onCreateRecord: openCreateRecord } : {}),
+          ...(['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role) && readyState.canvas.schema?.fields.length ? { onCreateRecord: () => { void openCreateRecord() } } : {}),
         } : {}),
       }}
       onClose={closeTableOperationCenter}
+      suspended={Boolean(templateImportPanel || builderPanel?.mode === 'base' || builderPanel?.mode === 'table')}
     />
     : null
   const collaborationOverlay = collaborationPanel

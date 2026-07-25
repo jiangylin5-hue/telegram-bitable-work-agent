@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import { BuilderCreatePanel } from '../app/BuilderCreatePanel'
@@ -141,6 +141,26 @@ test('closes the Base create panel with Escape and restores focus to its trigger
 
   await waitFor(() => expect(screen.queryByRole('dialog', { name: '新建 Base' })).not.toBeInTheDocument())
   expect(trigger).toHaveFocus()
+})
+
+test('returns focus to the Table Operations Base action after closing the create panel', async () => {
+  vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+    const path = String(input)
+    if (path === '/mini-app/bootstrap') return Promise.resolve(json({ identity: { user_id: 'owner-1', source: 'header' }, workspaces: [{ id: 'workspace-1', name: 'Acme', slug: 'acme', role: 'owner', capabilities: { can_read_bases: true, can_manage_workspace: true, can_manage_schema: true, can_review_drafts: false } }] }))
+    if (path === '/workspaces/workspace-1/home') return Promise.resolve(json({ workspace_id: 'workspace-1', recent_bases: [], queue: [] }))
+    return Promise.resolve(json({ detail: 'unexpected' }, 404))
+  }))
+
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: '表格操作' }))
+  const action = within(await screen.findByRole('dialog', { name: '表格操作中心' })).getByRole('button', { name: '新建 Base' })
+  fireEvent.click(action)
+  await screen.findByRole('dialog', { name: '新建 Base' })
+
+  fireEvent.keyDown(document, { key: 'Escape' })
+
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: '新建 Base' })).not.toBeInTheDocument())
+  expect(action).toHaveFocus()
 })
 
 test('creation entries are shown only when the server capability permits schema management', () => {
