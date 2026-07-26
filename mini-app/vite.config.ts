@@ -3,6 +3,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { defineConfig, loadEnv } from 'vite'
 
 const localApiRoots = [
+  '/api',
   '/mini-app',
   '/workspaces',
   '/bases',

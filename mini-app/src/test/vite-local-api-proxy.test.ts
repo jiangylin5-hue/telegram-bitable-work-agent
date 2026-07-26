@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 
 import { createLocalApiProxy } from '../../vite.config'
 
-test('proxies every existing Stage07 API root to the local FastAPI server for built Mini App acceptance', () => {
+test('proxies every Mini App API namespace, including Stage08 /api routes, to the local FastAPI server', () => {
   const proxy = createLocalApiProxy()
 
   expect(proxy?.['/mini-app']).toMatchObject({ target: 'http://127.0.0.1:8000', changeOrigin: true })
@@ -13,6 +13,7 @@ test('proxies every existing Stage07 API root to the local FastAPI server for bu
   expect(proxy?.['/records']).toMatchObject({ target: 'http://127.0.0.1:8000', changeOrigin: true })
   expect(proxy?.['/templates']).toMatchObject({ target: 'http://127.0.0.1:8000', changeOrigin: true })
   expect(proxy?.['/import-jobs']).toMatchObject({ target: 'http://127.0.0.1:8000', changeOrigin: true })
+  expect(proxy?.['/api']).toMatchObject({ target: 'http://127.0.0.1:8000', changeOrigin: true })
 })
 
 test('adds a local-only Stage07 actor header only when an explicit acceptance actor is supplied', () => {

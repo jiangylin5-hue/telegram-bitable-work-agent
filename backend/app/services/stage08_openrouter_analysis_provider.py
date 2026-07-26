@@ -140,7 +140,9 @@ class OpenRouterStage08AnalysisProvider:
             return self._complete(_unavailable("analysis_provider_unavailable"))
 
         try:
-            prompt, evidence_count, command_intent = _build_prompt(material, command)
+            prompt, evidence_count, command_intent, allowed_provider_actions = _build_prompt(
+                material, command
+            )
             requested_action = _command_snapshot(command).requested_action
         except Exception:
             return self._complete(_unavailable("invalid_input"))
@@ -186,6 +188,7 @@ class OpenRouterStage08AnalysisProvider:
                     command_intent=command_intent,
                     requested_action=requested_action,
                     evidence_count=evidence_count,
+                    allowed_provider_actions=allowed_provider_actions,
                 )
                 decision = validate_analysis_decision(
                     AnalysisDecision(
@@ -333,7 +336,13 @@ def _validate_payload(
     command_intent: str,
     requested_action: str,
     evidence_count: int,
+    allowed_provider_actions: tuple[str, ...] | None = None,
 ) -> object | None:
+    if (
+        allowed_provider_actions is not None
+        and payload.action not in allowed_provider_actions
+    ):
+        raise ValueError("stage09_provider_skill_action_invalid")
     if command_intent == "general_advice" and payload.action not in {
         "general_advice",
         "deny",
@@ -367,19 +376,32 @@ def _validate_payload(
     )
 
 
-def _build_prompt(material: object, command: object) -> tuple[str, int, str]:
+def _build_prompt(material: object, command: object) -> tuple[str, int, str, tuple[str, ...] | None]:
     provider_snapshot = _provider_input_snapshot(material)
     outer_material = _material_snapshot(provider_snapshot.material)
     if outer_material.kind != "analysis_material":
         raise TypeError("stage08_provider_material_invalid")
     command_snapshot = _command_snapshot(command)
     evidence = _analysis_evidence(outer_material.payload)
+    profile = command_snapshot.skill_profile
+    safe_profile = None
+    allowed_provider_actions = None
+    if profile is not None:
+        safe_profile = {
+            "primary_skill_id": profile.primary_skill_id,
+            "purpose": profile.source_skill,
+            "allowed_provider_actions": list(profile.allowed_provider_actions),
+            "output_contract": profile.output_contract,
+            "confirmation_policy": profile.confirmation_policy,
+        }
+        allowed_provider_actions = profile.allowed_provider_actions
     return (
         json.dumps(
             {
                 "query": command_snapshot.query,
                 "intent": command_snapshot.intent,
                 "requested_action": command_snapshot.requested_action,
+                **({"skill_profile": safe_profile} if safe_profile is not None else {}),
                 "citation_policy": {
                     "general_advice": "citation_ordinals must be []",
                     "deny": "citation_ordinals must be []",
@@ -394,6 +416,7 @@ def _build_prompt(material: object, command: object) -> tuple[str, int, str]:
         ),
         len(evidence),
         command_snapshot.intent,
+        allowed_provider_actions,
     )
 
 

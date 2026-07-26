@@ -13,6 +13,7 @@ deploy/stage09-native/runtime/*
 !deploy/stage07-acceptance/runtime/.env.stage07-acceptance.example
 .local/
 .worktrees/
+.superpowers/
 mini-app/node_modules/
 mini-app/dist/
 mini-app/*.tsbuildinfo

@@ -19,6 +19,17 @@ test('submits a versioned direct human edit and shows the authoritative response
   expect(await screen.findByText('版本 4')).toBeInTheDocument()
 })
 
+test('offers the current-record collaboration entry only outside a human edit session', () => {
+  const onOpenCollaboration = vi.fn()
+  render(<RecordDetailPanel detail={detail} schema={schema} onClose={() => undefined} onSave={vi.fn()} onOpenCollaboration={onOpenCollaboration} />)
+
+  fireEvent.click(screen.getByRole('button', { name: '在当前记录中打开 AI 对话' }))
+  expect(onOpenCollaboration).toHaveBeenCalledWith(expect.any(HTMLButtonElement))
+
+  fireEvent.click(screen.getByRole('button', { name: '编辑记录' }))
+  expect(screen.queryByRole('button', { name: '在当前记录中打开 AI 对话' })).not.toBeInTheDocument()
+})
+
 test('shows a conflict state instead of a false successful save', async () => {
   const onSave = vi.fn().mockRejectedValue(new ApiError(409))
   const onConflict = vi.fn().mockResolvedValue({ ...detail, values: { ...detail.values, name: 'Ada Global' }, version: 4 })

@@ -96,6 +96,12 @@ export const draftEmployeeKeys = {
   ),
 }
 
+export const stage08AssistantKeys = {
+  skills: (scope: ProtectedScope, employeeId: string, recordId: string | null): QueryKey => (
+    protectedQueryKey(scope, 'stage08-assistant', 'skills', employeeId, recordId)
+  ),
+}
+
 export async function clearAssistantContextQueries(
   queryClient: QueryClient,
   scope: ProtectedScope,

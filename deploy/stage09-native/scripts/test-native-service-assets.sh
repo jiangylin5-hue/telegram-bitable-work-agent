@@ -21,6 +21,34 @@ assert_contains() {
     printf '%s\n' "$assertion_name: PASS"
 }
 
+assert_exact_sse_location_contains() {
+    assertion_name=$1
+    expected=$2
+    rendered_file=$3
+    location_file="$tmpdir/sse-location"
+
+    awk '
+        $0 == "    location = /api/stage08/assistant/query-stream {" {
+            in_location = 1
+            found = 1
+        }
+        in_location {
+            print
+        }
+        in_location && $0 == "    }" {
+            exit
+        }
+        END {
+            if (!found) {
+                exit 1
+            }
+        }
+    ' "$rendered_file" > "$location_file" || fail "$assertion_name-location"
+
+    grep -Fqx "$expected" "$location_file" || fail "$assertion_name"
+    printf '%s\n' "$assertion_name: PASS"
+}
+
 assert_rejected_without_value_leak() {
     assertion_name=$1
     rejected_value=$2
@@ -80,6 +108,16 @@ awk '
 ' "$tmpdir/stage09-p1.conf" || fail 'safe-render-body-limit-order'
 printf '%s\n' 'safe-render-body-limit-order: PASS'
 assert_contains 'safe-render-api-loopback' '        proxy_pass http://127.0.0.1:18080;' "$tmpdir/stage09-p1.conf"
+assert_exact_sse_location_contains 'sse-proxy-http-version' '        proxy_http_version 1.1;' "$tmpdir/stage09-p1.conf"
+assert_exact_sse_location_contains 'sse-proxy-buffering' '        proxy_buffering off;' "$tmpdir/stage09-p1.conf"
+assert_exact_sse_location_contains 'sse-proxy-cache' '        proxy_cache off;' "$tmpdir/stage09-p1.conf"
+assert_exact_sse_location_contains 'sse-proxy-read-timeout' '        proxy_read_timeout 90s;' "$tmpdir/stage09-p1.conf"
+assert_exact_sse_location_contains 'sse-x-accel-buffering' '        add_header X-Accel-Buffering no always;' "$tmpdir/stage09-p1.conf"
+assert_exact_sse_location_contains 'sse-proxy-pass-preserved' '        proxy_pass http://127.0.0.1:18080;' "$tmpdir/stage09-p1.conf"
+assert_exact_sse_location_contains 'sse-forward-host-preserved' '        proxy_set_header Host $host;' "$tmpdir/stage09-p1.conf"
+assert_exact_sse_location_contains 'sse-forward-real-ip-preserved' '        proxy_set_header X-Real-IP $remote_addr;' "$tmpdir/stage09-p1.conf"
+assert_exact_sse_location_contains 'sse-forward-for-preserved' '        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;' "$tmpdir/stage09-p1.conf"
+assert_exact_sse_location_contains 'sse-forward-proto-preserved' '        proxy_set_header X-Forwarded-Proto $scheme;' "$tmpdir/stage09-p1.conf"
 
 if command -v nginx >/dev/null 2>&1; then
     cat > "$tmpdir/nginx.conf" <<EOF

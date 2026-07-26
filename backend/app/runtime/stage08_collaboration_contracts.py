@@ -20,6 +20,7 @@ from app.runtime.stage08_context_contracts import ContextIntent
 
 
 AssistantRequestedAction: TypeAlias = Literal["read_only", "draft_update"]
+AssistantSkillSelectionMode: TypeAlias = Literal["explicit", "auto"]
 AnalysisAction: TypeAlias = Literal[
     "read_only",
     "draft_update",
@@ -136,6 +137,22 @@ class _CommandSnapshot:
     requested_action: AssistantRequestedAction
     target_record_id: UUID | None
     idempotency_key: str
+    skill_profile: _ResolvedAssistantSkillProfile | None
+
+
+@dataclass(frozen=True, slots=True)
+class _ResolvedAssistantSkillProfile:
+    manifest_version: str
+    primary_skill_id: str
+    source_skill: str
+    selection_mode: AssistantSkillSelectionMode
+    supporting_skill_ids: tuple[str, ...]
+    allowed_intents: tuple[ContextIntent, ...]
+    allowed_provider_actions: tuple[AnalysisAction, ...]
+    manifest_allowed_actions: tuple[str, ...]
+    output_contract: str
+    confirmation_policy: str
+    safe_label: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -357,6 +374,15 @@ class AssistantQuerySafeCitation(BaseModel):
     label: AssistantCitationLabel
 
 
+class AssistantSkillSafeSummary(BaseModel):
+    model_config = _STRICT_FROZEN_CONFIG
+
+    skill_id: StrictStr = Field(min_length=1, max_length=120)
+    label: StrictStr = Field(min_length=1, max_length=120)
+    manifest_version: StrictStr = Field(min_length=1, max_length=120)
+    selection_mode: AssistantSkillSelectionMode
+
+
 class AssistantQuerySafeView(BaseModel):
     model_config = _STRICT_FROZEN_CONFIG
 
@@ -365,6 +391,7 @@ class AssistantQuerySafeView(BaseModel):
     citations: tuple[AssistantQuerySafeCitation, ...] = Field(max_length=12)
     degradation_codes: tuple[CollaborationDegradationCode, ...] = Field(max_length=12)
     draft_id: UUID | None = None
+    skill: AssistantSkillSafeSummary | None = None
 
     @model_validator(mode="after")
     def validate_safe_view(self) -> "AssistantQuerySafeView":
@@ -461,6 +488,7 @@ class Stage08CollaborationContractFactory:
         requested_action: AssistantRequestedAction,
         target_record_id: UUID | None,
         idempotency_key: str,
+        skill_profile: _ResolvedAssistantSkillProfile | None = None,
     ) -> AssistantQueryCommand:
         if type(workspace_id) is not UUID or type(employee_id) is not UUID:
             raise ValueError("collaboration_command_identifier_invalid")
@@ -478,6 +506,8 @@ class Stage08CollaborationContractFactory:
             raise ValueError("collaboration_command_target_required")
         if type(idempotency_key) is not str or not 1 <= len(idempotency_key) <= 128:
             raise ValueError("collaboration_command_idempotency_invalid")
+        if skill_profile is not None and type(skill_profile) is not _ResolvedAssistantSkillProfile:
+            raise ValueError("collaboration_command_skill_profile_invalid")
         snapshot = _CommandSnapshot(
             seal=_PRIVATE_SEAL,
             workspace_id=workspace_id,
@@ -488,8 +518,73 @@ class Stage08CollaborationContractFactory:
             requested_action=requested_action,
             target_record_id=target_record_id,
             idempotency_key=idempotency_key,
+            skill_profile=skill_profile,
         )
         return AssistantQueryCommand(_PRIVATE_ISSUER, snapshot)
+
+    @staticmethod
+    def resolved_skill_profile(
+        *,
+        manifest_version: str,
+        primary_skill_id: str,
+        source_skill: str,
+        selection_mode: AssistantSkillSelectionMode,
+        supporting_skill_ids: tuple[str, ...],
+        allowed_intents: tuple[ContextIntent, ...],
+        allowed_provider_actions: tuple[AnalysisAction, ...],
+        manifest_allowed_actions: tuple[str, ...],
+        output_contract: str,
+        confirmation_policy: str,
+        safe_label: str,
+    ) -> _ResolvedAssistantSkillProfile:
+        tokens = (
+            manifest_version,
+            primary_skill_id,
+            source_skill,
+            output_contract,
+            confirmation_policy,
+            safe_label,
+            *supporting_skill_ids,
+            *manifest_allowed_actions,
+        )
+        if (
+            any(type(value) is not str or not 1 <= len(value) <= 120 for value in tokens)
+            or selection_mode not in {"explicit", "auto"}
+            or not supporting_skill_ids
+            or len(set(supporting_skill_ids)) != len(supporting_skill_ids)
+            or not allowed_intents
+            or any(value not in {"business_fact", "memory_lookup", "mixed", "general_advice"} for value in allowed_intents)
+            or not allowed_provider_actions
+            or any(value not in {"read_only", "draft_update", "general_advice", "deny"} for value in allowed_provider_actions)
+            or not manifest_allowed_actions
+            or len(set(manifest_allowed_actions)) != len(manifest_allowed_actions)
+        ):
+            raise ValueError("collaboration_skill_profile_invalid")
+        return _ResolvedAssistantSkillProfile(
+            manifest_version=manifest_version,
+            primary_skill_id=primary_skill_id,
+            source_skill=source_skill,
+            selection_mode=selection_mode,
+            supporting_skill_ids=supporting_skill_ids,
+            allowed_intents=allowed_intents,
+            allowed_provider_actions=allowed_provider_actions,
+            manifest_allowed_actions=manifest_allowed_actions,
+            output_contract=output_contract,
+            confirmation_policy=confirmation_policy,
+            safe_label=safe_label,
+        )
+
+    @staticmethod
+    def safe_skill_summary(command: object) -> AssistantSkillSafeSummary | None:
+        profile = _command_snapshot(command).skill_profile
+        if profile is None:
+            return None
+        return AssistantSkillSafeSummary(
+            skill_id=profile.primary_skill_id,
+            label=profile.safe_label,
+            manifest_version=profile.manifest_version,
+            selection_mode=profile.selection_mode,
+        )
 
     @staticmethod
     def private_material(

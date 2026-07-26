@@ -3,8 +3,8 @@
 ## Status
 
 - Document status: active source of truth
-- Scope: 顶层产品目标、边界、阶段、技术基线、安全约束和 Stage06 平台化方向
-- Current Progress: 2026-07-10 Updated after Stage06 backend-readiness evidence. The active project truth is now a generic Telegram-first multidimensional table, no-code workspace and table-bound digital employee platform. The current non-UI backend-readiness pass has evidence for local PostgreSQL migration smoke, real LangGraph/OpenRouter summarize and draft-update invocation, and Telegram-ecosystem productivity backend entry. Mini App UI remains a product target but must wait for separate user confirmation. Advertising-agency workflows are retained only as historical Stage02-05 evidence and optional template/sample material.
+- Scope: 顶层产品目标、边界、阶段、技术基线、安全约束，以及当前 Stage08/Stage09 运行时与工作台方向
+- Current Progress: 2026-07-26 Stage06 is the accepted backend baseline. Stage07 supplied the Mini App and table-workspace surface. Stage08 added permission-filtered business context, controlled group projection, memory, pgvector retrieval and LangGraph-first collaboration execution. The user-approved Stage09 Codex-style AI conversation workbench, controlled SSE compatibility path and Stage06-registry skill launcher passed local final acceptance (209 selected backend tests; 398 Mini App tests with 2 historical skips; production build; internal/public rendered Nginx asset checks; bounded real OpenRouter smoke; populated desktop/compact Browser QA). `design-qa.md` records the exact retained visual evidence and the three resolved review findings. Deployment and Telegram writes remain unapproved; the local squash commit is recorded on this branch; no schema or permission-model expansion occurred.
 
 ## 1. Product Goal
 
@@ -117,7 +117,7 @@ Before implementing a feature, answer:
 | Stage06 LLM acceptance | At least one real LangGraph/OpenRouter call when credentials are configured |
 | Telegram integration | Bot API + Webhook + Mini App |
 | Frontend stack | React + Vite + TypeScript + Tailwind + shadcn/ui + lucide-react |
-| Frontend target | Telegram Mini App first, desktop-browser-compatible route required; implementation deferred until backend readiness is complete and the user confirms a separate UI phase |
+| Frontend target | Telegram Mini App first with a desktop-browser-compatible route; the Stage07 workspace foundation is delivered and the current approved extension is the Stage09 Codex-style conversation workbench |
 | Observability | Audit events, draft logs, job logs, agent trace ids, controlled notification logs |
 
 ## 6. Digital Employee Authority Model
@@ -164,30 +164,23 @@ Digital employees cannot:
 - create broad external sends without a safety gate;
 - claim success without persisted evidence.
 
-## 7. Stage06 Active Goal
+## 7. Current Stage08/Stage09 Goal
 
-Stage06 is a production-like pilot stage for the generic platform direction, with Telegram ecosystem productivity as the pilot cut.
+Stage08/Stage09 turn the accepted platform backend into a usable, permission-safe collaboration workspace without changing the product constitution.
 
-The stage should deliver five large packages:
+The current delivery chain is:
 
-1. Platform Source Of Truth Rewrite.
-2. Generic Bitable Core.
-3. Template And Import System.
-4. Telegram Mini App And Digital Employee Runtime.
-5. Pilot Acceptance Evidence.
+1. Stage08 permission-filtered context, memory, retrieval and collaboration runtime.
+2. Stage09 native deployment and workspace interaction remediation.
+3. Codex-style AI conversation workbench with a controlled SSE compatibility path.
+4. Product-level browser evidence for a real read-only case.
+5. Separately confirmed evidence for any real draft, import or table write.
 
-Stage06 must be close to launch in feel, but it is not production cutover. Real external provider writes, broad group sends, funds movement and irreversible external operations remain out of scope unless a later explicit approval changes that.
+The approved SSE work changes presentation and transport only. It retains the existing synchronous query route, identity resolution, workspace/employee/record intersection, idempotency, audit, `run_stage08_collaboration`, `validate_assistant_query_safe_view` and draft-confirmation boundary. It does not add a conversation-history database, raw model token streaming, hidden reasoning, new schema, new permission semantics or new external send authority.
 
-Stage06 pilot evidence must include:
+On 2026-07-26 the user additionally required UI skill tabs to invoke corresponding backend LLM skills instead of acting as prompt-only shortcuts, and then explicitly approved `STAGE_09_LLM_SKILL_LAUNCHER_DESIGN.md`. The active implementation reuses the Stage06 manifest registry and adds a read-only skill catalog plus a versioned execution profile intersected with employee, caller, resource, record and chat permissions. The approval does not add database schema, deployment authority, external send authority or real-write authority.
 
-- local PostgreSQL Alembic migration smoke against a real local PostgreSQL database;
-- real Telegram entry smoke with a test bot and allowlisted chat/user when credentials are configured;
-- at least one real LangGraph/OpenRouter LLM invocation when credentials are configured;
-- audit and safety readback.
-
-Mini App/desktop frontend smoke is still required before a final launch-like Stage06 exit, but it is explicitly out of scope for the current backend-readiness pass and must not begin without separate user confirmation.
-
-Local PostgreSQL smoke is acceptable for Stage06, but it is not remote staging or production evidence.
+Task5 has locally verified rendered Nginx transport contracts for the exact SSE route in the internal and public HTTPS templates. This evidence proves only the repository assets: it is not a deployed-host check, a browser acceptance result or authorization for an external write.
 
 ## 8. Historical Stage Documents
 
@@ -198,11 +191,11 @@ Stage02 to Stage05 remain useful implementation history:
 - Stage04: binding management and restricted test send.
 - Stage05: real OpenRouter, LangGraph supervisor, draft Agents, controlled private test send, staging safety close.
 
-They are not the product definition for Stage06.
+They are not the current product definition.
 
 ## 9. Current Non-Goals
 
-Stage06 does not include:
+The current Stage09 AI conversation slice does not include:
 
 - Feishu/Lark API integration;
 - Feishu API compatibility;
@@ -229,14 +222,16 @@ Stage06 does not include:
 - `07-acceptance`: historical acceptance.
 - `08-implementation`: Stage documents and acceptance evidence.
 
-During Stage06, the main implementation entry is:
+The current implementation entry is:
 
-- [Stage 06 Source Of Truth](../08-implementation/STAGE_06_SOURCE_OF_TRUTH.md)
-- [Stage 06 Implementation Plan](../08-implementation/STAGE_06_IMPLEMENTATION_PLAN.md)
-- [Stage 06 SDD](../08-implementation/STAGE_06_SDD.md)
-- [Stage 06 API Data Security Contract](../08-implementation/STAGE_06_API_DATA_SECURITY_CONTRACT.md)
-- [Stage 06 BDD And Acceptance](../08-implementation/STAGE_06_BDD_AND_ACCEPTANCE.md)
-- [Stage 06 Progress](../08-implementation/STAGE_06_PROGRESS.md)
+- [Current handoff](HANDOFF_2026-07-26_CODEX_STYLE_AI_CONVERSATION.md)
+- [Project structure and document lifecycle](PROJECT_STRUCTURE_AND_DOCUMENT_LIFECYCLE.md)
+- [Stage09 Codex-style AI conversation design](../08-implementation/STAGE_09_CODEX_STYLE_AI_CONVERSATION_DESIGN.md)
+- [Stage09 Codex-style AI conversation implementation plan](../08-implementation/STAGE_09_CODEX_STYLE_AI_CONVERSATION_IMPLEMENTATION_PLAN.md)
+- [Approved Stage09 LLM skill launcher design](../08-implementation/STAGE_09_LLM_SKILL_LAUNCHER_DESIGN.md)
+- [Stage09 SSE transport task evidence](../08-implementation/evidence/stage09-codex-ai-conversation-sse-2026-07-26.md)
+- [Stage09 UI functional remediation plan](../08-implementation/STAGE_09_UI_FUNCTIONAL_REMEDIATION_PLAN.md)
+- [Stage09 r40 regression and live-readiness evidence](../08-implementation/evidence/stage09-r40-regression-and-live-readiness-2026-07-26.md)
 
 ## 11. Confirmation Rule
 
@@ -248,5 +243,6 @@ User confirmation is required before:
 - changing schema or API contracts;
 - enabling real external provider writes;
 - enabling broad or customer-facing Telegram sends;
-- moving from Stage06 documentation to code implementation;
-- treating Stage06 pilot as production launch.
+- bypassing the approved Stage09 design or implementation plan;
+- treating a local/API/provider smoke as product-level browser acceptance;
+- treating the Stage09 native deployment as authorization for new production writes.

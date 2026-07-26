@@ -1434,6 +1434,9 @@ def run_stage08_collaboration(
             degradation_codes=("internal_failure",),
             draft_id=None,
         )
+    skill_summary = Stage08CollaborationContractFactory.safe_skill_summary(command)
+    if skill_summary is not None:
+        view = view.model_copy(update={"skill": skill_summary})
     _record_terminal_run(
         uow,
         command=command,
@@ -2031,8 +2034,20 @@ def _record_terminal_run(
     try:
         command_snapshot = _command_snapshot(command)
         action = command_snapshot.requested_action
+        skill_profile = command_snapshot.skill_profile
     except (TypeError, AttributeError):
         action = "invalid"
+        skill_profile = None
+    skill_metadata = (
+        {}
+        if skill_profile is None
+        else {
+            "skill_manifest_version": skill_profile.manifest_version,
+            "primary_skill_id": skill_profile.primary_skill_id,
+            "skill_selection_mode": skill_profile.selection_mode,
+            "supporting_skill_ids": list(skill_profile.supporting_skill_ids),
+        }
+    )
     safe_summary = {
         "graph": "stage08_collaboration_e3",
         "status": view.status,
@@ -2043,6 +2058,7 @@ def _record_terminal_run(
         "draft_present": int(view.draft_id is not None),
         "trace_hash": trace_hash,
         "latency_ms": latency_ms,
+        **skill_metadata,
     }
     uow.add_agent_run(
         AgentRun(
@@ -2051,7 +2067,11 @@ def _record_terminal_run(
             model_provider="controlled",
             model_name="analysis_provider_port",
             prompt_version="stage08-e3",
-            input_summary={"graph": "stage08_collaboration_e3", "action": action},
+            input_summary={
+                "graph": "stage08_collaboration_e3",
+                "action": action,
+                **skill_metadata,
+            },
             output_summary=safe_summary,
             tool_calls=[{"name": "policy_gate", "status": view.status}],
             status=view.status,

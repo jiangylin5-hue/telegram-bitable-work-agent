@@ -4,12 +4,13 @@
 
 - Document status: active project collaboration rule
 - Scope: Generic Telegram-first multidimensional table, no-code workspace and table-bound digital employee platform
-- Current Progress: 2026-07-12 Stage06 backend-stage acceptance remains the baseline. Stage07 bounded Package 2 substages P3, F1 and the user-approved F2 relation/lookup slice are `implemented-local`. V1-1 through V1-13 are `partial-local`: durable typed/canonical/versioned/ACL/query/HTTP/PostgreSQL/transport/panel/Canvas recovery work is implemented, and disposable Browser evidence now includes four renderer widths, owner/editor/viewer UI separation, bounded filter/sort/group controls, safe F2 relation label, editor save and raw-detail-suppressed `409` reread with console `[]`. The fixture cannot prove real-backend Base/Table/Field intersection, every type-invalid/F2 state, Telegram, staging or production; those remain unaccepted. The Base-list and direct-presentation paths resolve V1 ACL before emitting a summary or projection; only V1 safe scope/access/default markers supplement the legacy list shape. The measured access query uses existing indexes, so both optional non-unique V1 indexes remain explicitly deferred and no migration was added. S5 Draft and Digital Employee Hub is `partial-local`: its approved safe contact/draft adapter, versioned terminal transition, citation projection and TD006 Option A current-Canvas invocation bridge have focused backend/local-PostgreSQL/frontend/build evidence. The Hub receives only transient Canvas IDs; it adds no generic context source or persistent client context. Browser loopback access was refused, so no S5 visual self-test/four-width acceptance is claimed. Telegram identity, staging, production and Stage07 acceptance remain pending.
+- Current Progress: 2026-07-26 Stage06 remains the accepted backend baseline; Stage07 delivered the Mini App/table workspace foundation; Stage08 implemented the permission-filtered context, memory, retrieval and LangGraph-first collaboration runtime. The approved Stage09 Codex-style workbench, controlled `POST /api/stage08/assistant/query-stream` SSE path and LarkSuite-registry skill launcher have passed final local acceptance: 209 selected backend tests, 398 Mini App tests (2 historical skips), production build, internal/public rendered Nginx asset checks, real OpenRouter in-memory smoke and populated desktop/compact Browser QA. `design-qa.md` records the resolved `/api` proxy, modal-layer and compact current-record findings. The local squash commit is recorded on this branch; no deployment, real production write, Telegram send, schema change or permission-model expansion occurred.
 
 ## Current Handoff
 
 - New sessions must read `project-docs/00-governance/HANDOFF_2026-07-26_CODEX_STYLE_AI_CONVERSATION.md` before continuing Stage08/Stage09 work.
-- The next confirmed implementation is defined by `project-docs/08-implementation/STAGE_09_CODEX_STYLE_AI_CONVERSATION_DESIGN.md`: a Codex-style AI conversation workbench with a controlled SSE API. The design is approved; implementation has not started.
+- The current confirmed implementation is defined by `project-docs/08-implementation/STAGE_09_CODEX_STYLE_AI_CONVERSATION_DESIGN.md`: a Codex-style AI conversation workbench with a controlled SSE API and a Stage06-registry skill launcher. Task5 transport assets are locally verified only; deployment remains unapproved.
+- Branch/worktree ownership, document tiers, retention and generated-artifact cleanup follow `project-docs/00-governance/PROJECT_STRUCTURE_AND_DOCUMENT_LIFECYCLE.md`. `.superpowers/` is execution scratch and must remain Git-ignored.
 
 ## 1. Project Positioning
 
@@ -130,19 +131,14 @@ Digital employees may query, summarize, classify, draft record changes, advance 
 
 Architecture changes, product-boundary changes, schema changes, permission model changes, API contract changes and stage transitions must be written into local Markdown documents before implementation.
 
-Current Stage06 rule:
+Current Stage09 AI conversation rule:
 
-- First rewrite active top-level truth documents to platform-first wording.
-- Then write Stage06 source, design, plan, contract and acceptance docs.
-- Only after user confirmation should code implementation begin.
+- The Codex-style workbench design, SSE API boundary and implementation plans are approved; implementation is in progress and must keep its reviewed scope.
+- Implementation must begin with failing tests and must reuse the existing Stage08 identity, scope, permission, idempotency, audit and collaboration services.
+- The current approval does not authorize schema changes, permission-model changes, persistent chat history, raw model-token/reasoning exposure, deployment or real external/business writes.
+- Deployment and any real draft, import, table or Telegram write remain separate action-level gates.
 
-Current Stage07 UI rule:
-
-- First record the approved Mini App visual, responsive, safety and contract boundary in Stage07 design documents.
-- Then require user review of the written specification and create a detailed implementation plan.
-- Do not start frontend code until the plan is approved; do not implement proposed schema, API-contract or permission changes until they receive separate explicit user confirmation.
-
-Stage02 to Stage05 documents remain historical evidence. They must not override the Stage06 platform-first source of truth.
+Stage02 to Stage08 documents remain historical or accepted implementation evidence according to the active indexes. They must not override the current top-level source of truth and handoff.
 
 ## 6. Confirmed Technical Baseline
 
@@ -159,7 +155,7 @@ Stage02 to Stage05 documents remain historical evidence. They must not override 
 | Agent orchestration | LangGraph-first |
 | LLM provider | OpenRouter-compatible API with real Stage06 smoke required |
 | Telegram | Bot API + Webhook + Mini App |
-| Mini App frontend | React + Vite + TypeScript + Tailwind + shadcn/ui + lucide-react; implementation waits for separate user confirmation after backend readiness |
+| Mini App frontend | React + Vite + TypeScript + Tailwind + shadcn/ui + lucide-react; Stage07 workspace foundation is delivered and the current approved work is the Stage09 conversation surface |
 
 Changing this baseline requires a technical decision document and user confirmation.
 
@@ -202,10 +198,9 @@ Forbidden:
 - If a new scenario is proposed, define its workspace/base/table/fields/views/permissions/agent landing point first.
 - Tests and acceptance must cite commands, evidence or manual verification notes.
 - Do not claim production readiness without production readiness evidence.
-- Stage06 pilot evidence should be Telegram-ecosystem productivity first, not advertising-agency first.
-- Stage06 database smoke may use local PostgreSQL, but it must be real PostgreSQL and must not be counted as remote staging/production evidence.
-- Stage06 digital employee acceptance requires at least one real LangGraph/OpenRouter LLM invocation when credentials are configured; deterministic backend tool gateway remains only a test and fallback mode.
-- Do not implement the Mini App UI in the current backend-readiness pass. Backend must be connected first; UI begins only after the user explicitly confirms a separate UI phase.
+- The Stage09 SSE route and synchronous assistant route must share authorization, scope, idempotency, audit and execution services.
+- The frontend may render only the approved event allowlist and the final validated `SafeView`; hidden reasoning, raw tool output and raw group content remain forbidden.
+- Deployment and real draft/import/table/Telegram writes require their own current evidence and confirmation gates.
 - Temporary files, scripts, test data and artifacts created during a stage must be cleaned before deployment or documented as retained artifacts.
 
 ## 9. Architecture Reuse Rule
@@ -223,13 +218,12 @@ Prefer mature patterns and ecosystems:
 1. User current explicit instruction.
 2. This file `AGENTS.md`.
 3. `project-docs/00-governance/IMPLEMENTATION_SOURCE_OF_TRUTH.md`.
-4. `project-docs/03-modules/BITABLE_SCHEMA_BLUEPRINT.md`.
-5. `project-docs/08-implementation/STAGE_06_SOURCE_OF_TRUTH.md` during Stage06.
-5a. `project-docs/08-implementation/STAGE_07_SOURCE_OF_TRUTH.md`, `STAGE_07_MINI_APP_UI_DESIGN.md`, the approved F2 documents and the V1 Saved View Builder design/BDD/SDD/work-surface/index package during Stage07 design/planning.
-6. `project-docs/00-governance/TECHNICAL_DECISIONS.md`.
-7. Stage06 SDD, implementation plan, API/data/security contract and acceptance docs.
-8. Historical Stage02 to Stage05 implementation documents.
-9. Migration/original advertising-agency documents as background only.
+4. `project-docs/00-governance/PROJECT_STRUCTURE_AND_DOCUMENT_LIFECYCLE.md` for branch/worktree/document ownership.
+5. Root `HANDOFF.md` and the authoritative handoff it names.
+6. `project-docs/03-modules/BITABLE_SCHEMA_BLUEPRINT.md`, `project-docs/05-data/PERMISSION_AND_SECURITY_MODEL.md` and `project-docs/00-governance/TECHNICAL_DECISIONS.md`.
+7. The current Stage design, implementation plan, detailed TDD plan and current evidence named by the handoff.
+8. Historical Stage source/design/contract/acceptance/evidence documents when the current task touches their owned resources.
+9. Migrations and original advertising-agency documents as history or template background only.
 
 ## 11. Completion Rule
 

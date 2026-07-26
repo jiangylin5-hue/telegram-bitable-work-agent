@@ -852,6 +852,70 @@ class _E5ReadOnlyProvider:
         )
 
 
+def test_terminal_run_and_audit_record_only_safe_resolved_skill_metadata() -> None:
+    fixture = _fixture()
+    query = "private query that must not persist"
+    command = Stage08CollaborationContractFactory.command(
+        workspace_id=fixture.workspace.id,
+        employee_id=fixture.employee.id,
+        actor_user_id=fixture.actor.actor_id,
+        intent="business_fact",
+        query=query,
+        requested_action="read_only",
+        target_record_id=None,
+        idempotency_key="stage09-skill-audit",
+        skill_profile=Stage08CollaborationContractFactory.resolved_skill_profile(
+            manifest_version="stage06-larksuite-skills-v1",
+            primary_skill_id="platform-tabular-analysis",
+            source_skill="lark-sheets",
+            selection_mode="explicit",
+            supporting_skill_ids=("platform-base", "platform-shared-policy"),
+            allowed_intents=("business_fact", "mixed"),
+            allowed_provider_actions=("read_only",),
+            manifest_allowed_actions=("record.query", "table.summarize"),
+            output_contract="analysis_answer_with_citations",
+            confirmation_policy="read_only",
+            safe_label="汇总分析",
+        ),
+    )
+
+    view = collaboration.run_stage08_collaboration(
+        fixture.uow,
+        command,
+        fixture.actor,
+        collaboration.Stage08CollaborationDependencies(
+            analysis_provider=_E5ReadOnlyProvider()
+        ),
+        now=NOW,
+    )
+
+    expected = {
+        "skill_manifest_version": "stage06-larksuite-skills-v1",
+        "primary_skill_id": "platform-tabular-analysis",
+        "skill_selection_mode": "explicit",
+        "supporting_skill_ids": ["platform-base", "platform-shared-policy"],
+    }
+    assert view.skill.model_dump() == {
+        "skill_id": "platform-tabular-analysis",
+        "label": "汇总分析",
+        "manifest_version": "stage06-larksuite-skills-v1",
+        "selection_mode": "explicit",
+    }
+    assert expected.items() <= fixture.uow.agent_runs[-1].input_summary.items()
+    assert expected.items() <= fixture.uow.agent_runs[-1].output_summary.items()
+    assert expected.items() <= fixture.uow.audit_events[-1].after_state.items()
+    persisted = json.dumps(
+        [
+            fixture.uow.agent_runs[-1].input_summary,
+            fixture.uow.agent_runs[-1].output_summary,
+            fixture.uow.audit_events[-1].after_state,
+        ],
+        ensure_ascii=False,
+    )
+    assert query not in persisted
+    assert "lark-sheets" not in persisted
+
+
 def test_runtime_control_is_opaque_and_not_serializable() -> None:
     runtime_control = collaboration._create_stage08_runtime_control()
 

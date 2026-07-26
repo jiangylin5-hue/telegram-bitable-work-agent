@@ -6,9 +6,13 @@
 
 1. `AGENTS.md`；
 2. `project-docs/00-governance/IMPLEMENTATION_SOURCE_OF_TRUTH.md`；
-3. `project-docs/08-implementation/STAGE_09_CODEX_STYLE_AI_CONVERSATION_DESIGN.md`；
-4. `project-docs/08-implementation/STAGE_09_UI_FUNCTIONAL_REMEDIATION_PLAN.md`；
-5. `project-docs/08-implementation/evidence/stage09-r40-regression-and-live-readiness-2026-07-26.md`。
+3. `project-docs/00-governance/PROJECT_STRUCTURE_AND_DOCUMENT_LIFECYCLE.md`；
+4. `project-docs/08-implementation/STAGE_09_CODEX_STYLE_AI_CONVERSATION_DESIGN.md`；
+5. `project-docs/08-implementation/STAGE_09_CODEX_STYLE_AI_CONVERSATION_IMPLEMENTATION_PLAN.md`；
+6. `project-docs/08-implementation/STAGE_09_LLM_SKILL_LAUNCHER_DESIGN.md`；
+7. `docs/superpowers/plans/2026-07-26-stage09-llm-skill-launcher.md`；
+8. `docs/superpowers/plans/2026-07-26-stage09-codex-ai-conversation-sse.md`；
+9. `project-docs/08-implementation/evidence/stage09-r40-regression-and-live-readiness-2026-07-26.md`。
 
 不要因为域名仍叫 `stage07.jiangtest1.online` 就把线上系统回退到旧 Stage07。它目前承载的是已部署的 Stage09 原生服务。不得读取或输出任何 `.env`、token、数据库密码、Telegram 原始 `initData`、SSH 私钥或真实群聊原文。
 
@@ -30,24 +34,19 @@ workspace -> base -> table -> fields -> records/views -> permissions
 | 项目 | 当前状态 |
 | --- | --- |
 | 主仓库 | `D:\telegram多维表格和工作智能体的开发` |
-| 活动工作树 | `D:\telegram多维表格和工作智能体的开发\.worktrees\stage07-mini-app-ui` |
-| 分支 | `codex/stage07-mini-app-ui` |
-| 已推送最新提交 | `274c6d9 docs(stage09): record r40 regression evidence` |
+| 活动工作树 | `D:\telegram多维表格和工作智能体的开发\.worktrees\stage09-ai-conversation-sse` |
+| 分支 | `codex/stage09-ai-conversation-sse` |
+| 分支起点 | `b57b152 docs(stage09): add AI conversation handoff` |
+| 当前本地 checkpoint commits | `07766b5`、`4c9b388`、`94e4ded`、`12ec04c`、`fc157a6`、`cc32fef`、`46de92a`；均未推送，最终需从 `b57b152` squash 为一个 Stage09 commit |
+| 当前工作树 | Task 3 前端 SSE client、Task 4 Ledgerline UI 初版、视觉资产和技能启动器文档均未提交 |
+| 下一任务 | 按已确认的 skill launcher 设计和独立 TDD plan 实施后端 catalog/profile |
 | 线上代码发布 | `stage09-p1-20260725-r39`，来源 commit `4f9096a` |
+| 当前分支部署状态 | 未部署；上述三个当前分支提交均未进入线上 r39 |
 | 最新 r40 | 仅新增回归/上线就绪证据文档，不需要发布代码 |
 
-工作树中存在用户自己的未提交内容，必须保留、不可重置、不可混入本次提交：
+旧工作树 `.worktrees/stage07-mini-app-ui` 中存在用户自己的未提交内容，包括执行缓存和未跟踪截图。其精确清单必须在该 worktree 内只读检查，不能从本 handoff 的历史快照推断。该 worktree 必须保留、不可重置、不可清理、不可混入当前分支。
 
-```text
-M .superpowers/sdd/progress.md
-M .superpowers/sdd/task-1-brief.md
-M .superpowers/sdd/task-1-report.md
-M .superpowers/sdd/task-2-brief.md
-M .superpowers/sdd/task-2-report.md
-?? project-docs/08-implementation/evidence/screenshots/2026-07-24-ui-audit/
-```
-
-后续提交只显式 `git add` 自己修改的文件。不要做 `git reset --hard`、广泛清理或覆盖上述内容。
+当前活动工作树从 `b57b152` 干净创建。`.superpowers/` 只用于当前 SDD brief/report/review/ledger，已按治理规则改为 Git ignore，不再作为长期项目文档提交。后续提交只显式 `git add` 当前任务文件；不要对旧工作树执行 `git reset --hard`、广泛清理或覆盖上述用户内容。
 
 ## 3. 阶段进度
 
@@ -82,9 +81,9 @@ UI 已补齐多维表格工作台的多个能力入口：Base/表/记录上下�
 
 本轮没有创建/修改生产 Base、表、字段、记录、视图、模板或权限；没有提交 CSV/XLSX；没有发送 Telegram 消息；没有动 Stage03 Docker、webhook 或生产 schema。真实写入在执行当刻仍需用户再次确认并保留截图、回执和审计证据。
 
-## 5. 当前已确认、但尚未实现的下一工作
+## 5. 当前实现状态与新增确认门
 
-用户已明确确认：AI 对话要做成类似 Codex 的连续工作台，并采用真实、受控的 SSE 状态流。
+用户已明确确认：AI 对话要做成类似 Codex 的连续工作台，并采用真实、受控的 SSE 状态流。后端 SSE 与前端 stream client 已实现并分别复核；Ledgerline 工作台初版也已实现，但独立复核指出终态、写权限证明、宽屏 dialog、focus trap 和 near-bottom 滚动仍需修复。
 
 权威设计文件是：
 
@@ -93,13 +92,17 @@ UI 已补齐多维表格工作台的多个能力入口：Base/表/记录上下�
 关键决定：
 
 - 底部固定一个核心 Composer；上方是持续时间线，显示用户问题、允许的工作阶段、答案分段、引用和草稿结果；
-- 技能标签可一键预填“智能汇总、查表问答、群聊总结、风险识别、调用长期记忆、生成跟进草稿”；标签不直接写库；
+- 原六个技能标签只完成了前端预填，尚未真实关联后端 skills；
 - 新增 `POST /api/stage08/assistant/query-stream`，保留旧同步 `/query`；
 - 新端点只能复用既有身份、权限、scope、审计、幂等、`run_stage08_collaboration` 和 `validate_assistant_query_safe_view`，不得复制或旁路业务规则；
 - SSE 只发送白名单阶段、已安全校验的答案片段、最终 `SafeView`、稳定错误和结束事件；不发送原始模型 token、隐藏推理、工具中间结果、原始群聊、凭据或堆栈；
 - 不新建“聊天历史长期记忆”。长期保存继续使用既有 audit、agent run、draft 和 memory 机制。
 
-这个 API contract 已有用户确认。实现前仍需要按照项目规则写失败测试和实现计划；实现时不要另行改变 schema/权限模型。
+原 SSE API contract 已有用户确认。2026-07-26 用户新增要求：技能标签必须真实调用对应后端 LLM skills。新的详细设计是：
+
+`project-docs/08-implementation/STAGE_09_LLM_SKILL_LAUNCHER_DESIGN.md`
+
+它从 Stage06 active registry 首批公开 `platform-base`、`platform-tabular-analysis`、`platform-task`、`platform-telegram-im`，把 `platform-shared-policy` 和 `platform-approval` 作为服务端自动护栏；同时增加 skills catalog、可选 `skill_id`、SafeView skill summary、versioned execution profile、permission intersection、provider action validation 和 audit。该扩展不增加数据库 schema；用户已于 2026-07-26 明确确认 API/runtime/permission contract，可以按独立 TDD plan 编码。
 
 ## 6. 关键文件地图
 
@@ -113,7 +116,10 @@ UI 已补齐多维表格工作台的多个能力入口：Base/表/记录上下�
 | `backend/app/api/routes/stage08_collaboration.py` | 当前同步查询路由；新增受控流入口的位置。 |
 | `backend/app/schemas/stage08_collaboration.py` | Query/SafeView schema；流事件应在这里或同级严格声明。 |
 | `backend/app/services/stage08_collaboration.py` | 当前协作运行服务；必须复用，不复制执行逻辑。 |
+| `backend/app/agents/stage06_skills.py` | 已有版本化 skill manifest registry；新 launcher 必须复用，不能另造一套能力目录。 |
+| `backend/app/agents/stage06_skill_matching.py` | 已有确定性 matcher；auto mode 应在其结果上再做 runtime/permission 交集。 |
 | `backend/tests/unit/test_stage08_*` | Stage08 后端测试集合。 |
+| `project-docs/08-implementation/STAGE_09_LLM_SKILL_LAUNCHER_DESIGN.md` | 已批准的 skill catalog、执行 profile、权限、审计和前端迁移真源。 |
 | `project-docs/08-implementation/STAGE_09_UI_FUNCTIONAL_REMEDIATION_PLAN.md` | UI 功能修复、导入、关系跳转、菜单与回归要求。 |
 | `project-docs/08-implementation/evidence/design-references/stage09-feishu-bitable/` | 飞书风格参考图资产；视觉修改时避免漂移。 |
 | `project-docs/08-implementation/evidence/stage09-r40-regression-and-live-readiness-2026-07-26.md` | 最新真实回归、线上状态与浏览器限制证据。 |
@@ -121,12 +127,13 @@ UI 已补齐多维表格工作台的多个能力入口：Base/表/记录上下�
 ## 7. 推荐执行顺序
 
 1. 先阅读本文件、项目规则与 Codex 式 AI 设计；确认活动工作树状态，不碰用户 dirty files。
-2. 检查现有同步 API 的请求、响应、权限与测试，写一份简短实施计划，将新 SSE 路径映射到现有服务。
-3. 先添加后端失败测试：事件顺序、拒绝、错误脱敏、read-only、draft；再实现最小流端点。
-4. 再添加前端失败测试：固定 Composer、技能预填、事件顺序、断开、安全错误、不可写 draft；再改 `CollaborationWorkbench` 和 `api.ts`。
-5. 运行针对性测试，然后全量 `npm.cmd run test:run`、`npm.cmd run build` 和相关后端 pytest；记录实际输出。
-6. 仅在测试和代码审查通过后，按现有 Stage09 原生部署脚本发布。发布后复查 `/health`、资源 hash 和真实浏览器只读路径。
-7. 想验真实导入或真实草稿/表格写入时，必须在点击最终 Commit/确认前再向用户索取动作级确认；完成后保存脱敏截图与审计证据。
+2. 用户已确认 `STAGE_09_LLM_SKILL_LAUNCHER_DESIGN.md` 六项整体变更；按独立 plan 的 Task 1 先写 catalog/permission resolver 失败测试，再实现。
+3. 再按 Task 2 把 profile 接入 command/provider/idempotency/SafeView/audit；不得增加数据库 migration。
+4. 前端删除静态能力真源，消费 server catalog，再恢复 Task 4 的终态、权限证明、dialog、focus 与滚动修复。
+5. 完成 Nginx SSE 资产后，运行针对性测试、后端全量、Mini App 全量、TypeScript、production build、视觉 QA、安全审计与文档真源审计。
+6. 临时资产清理和整阶段复核通过后，从 `b57b152` 把未推送 checkpoint 与工作树改动 squash 为一个最终 Stage09 commit；不要 task 级提交。
+7. 当前阶段不自动部署。若后续另行授权发布，再按现有 Stage09 原生部署脚本执行并复查 `/health`、资源 hash 和真实浏览器只读路径。
+8. 想验真实导入或真实草稿/表格写入时，必须在点击最终 Commit/确认前再向用户索取动作级确认；完成后保存脱敏截图与审计证据。
 
 ## 8. 协作和沟通偏好
 
@@ -138,4 +145,6 @@ UI 已补齐多维表格工作台的多个能力入口：Base/表/记录上下�
 
 ## Current Progress
 
-本交接文档和 Codex 式 AI 对话设计于 2026-07-26 创建，用于让无历史上下文的新会话安全续做。截止写入时，SSE API 和新对话工作台尚未开始编码；Stage09 r39 仍稳定在线，r40 的真实回归证据已推送。
+2026-07-26 final update: 隔离本地 PostgreSQL 工作区已提供真实记录上下文的 Browser/Product Design QA；`design-qa.md` 已通过。验收期间修复 Vite `/api` 代理、固定 modal 层级和窄屏记录详情内的 AI 入口；同时验证了服务端投影的五项技能选择与安全只读终态时间线。cleanup/audit 已完成，唯一的本地 squash commit 已记录在当前分支；部署和外部写入仍未授权。
+
+本交接文档和 Codex 式 AI 对话设计于 2026-07-26 创建。隔离分支 `codex/stage09-ai-conversation-sse` 以 `b57b152` 为起点；后端 SSE 已完成并复核，前端 stream client 已完成并复核，Ledgerline 工作台初版已完成但 Task 4 review 问题尚未收口。用户新增并确认“技能标签真实关联后端 LLM skills”要求，`STAGE_09_LLM_SKILL_LAUNCHER_DESIGN.md` 与独立 TDD plan 已建立，当前进入后端 catalog/profile 实施。Task5 已通过 internal/public HTTPS 模板的精确 SSE rendered-config 资产检查；它不等于部署、全阶段验收或浏览器验收。当前改动未部署、未推送、未暂存，最终只做一次 Stage09 commit。Stage09 r39 仍是当前线上 release；r40 的真实回归证据已推送。

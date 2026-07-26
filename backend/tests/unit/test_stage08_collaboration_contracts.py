@@ -6,6 +6,7 @@ from uuid import UUID
 
 import pytest
 from pydantic import ValidationError
+from pydantic import TypeAdapter
 
 from app.runtime import stage08_collaboration_contracts as collaboration_contracts
 from app.runtime.stage08_collaboration_contracts import (
@@ -19,6 +20,12 @@ from app.runtime.stage08_collaboration_contracts import (
     validate_analysis_decision,
     validate_assistant_query_safe_view,
 )
+from app.schemas.stage08_collaboration import (
+    AssistantStreamAnswerDelta,
+    AssistantStreamDone,
+    AssistantStreamEvent,
+    AssistantStreamStatus,
+)
 from app.runtime.stage08_contracts import (
     ExecutionBudget,
     ExecutionPlan,
@@ -31,6 +38,51 @@ WORKSPACE_ID = UUID("00000000-0000-4000-8000-000000000101")
 EMPLOYEE_ID = UUID("00000000-0000-4000-8000-000000000102")
 TARGET_ID = UUID("00000000-0000-4000-8000-000000000103")
 TRACE_HASH = "stage08:collaboration:" + "a" * 32
+
+
+def test_stream_event_contract_rejects_unknown_or_unbounded_payload() -> None:
+    with pytest.raises(ValidationError):
+        AssistantStreamAnswerDelta(
+            event="answer_delta",
+            sequence=1,
+            request_id="req-1",
+            text="",
+            raw_provider="forbidden",
+        )
+
+
+def test_stream_event_contract_rejects_invalid_phase() -> None:
+    with pytest.raises(ValidationError):
+        AssistantStreamStatus(
+            event="status",
+            sequence=1,
+            request_id="req-1",
+            phase="retrieving_private_material",
+        )
+
+
+@pytest.mark.parametrize("sequence", [0, -1, True])
+def test_stream_event_contract_requires_positive_strict_sequence(
+    sequence: object,
+) -> None:
+    with pytest.raises(ValidationError):
+        AssistantStreamDone(
+            event="done",
+            sequence=sequence,
+            request_id="req-1",
+        )
+
+
+def test_stream_event_union_rejects_unknown_event() -> None:
+    with pytest.raises(ValidationError):
+        TypeAdapter(AssistantStreamEvent).validate_python(
+            {
+                "event": "provider_token",
+                "sequence": 1,
+                "request_id": "req-1",
+                "text": "forbidden",
+            }
+        )
 
 
 def _command(*, query: str = "请告诉我当前项目风险", action: str = "read_only"):

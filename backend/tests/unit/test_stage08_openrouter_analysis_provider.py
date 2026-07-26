@@ -40,6 +40,32 @@ def _command(
     )
 
 
+def _profiled_command() -> object:
+    return Stage08CollaborationContractFactory.command(
+        workspace_id=_WORKSPACE_ID,
+        employee_id=_EMPLOYEE_ID,
+        actor_user_id="private-actor",
+        intent="business_fact",
+        query="只回答当前授权的合成客户事实",
+        requested_action="read_only",
+        target_record_id=None,
+        idempotency_key="private-idempotency-key",
+        skill_profile=Stage08CollaborationContractFactory.resolved_skill_profile(
+            manifest_version="stage06-larksuite-skills-v1",
+            primary_skill_id="platform-tabular-analysis",
+            source_skill="lark-sheets",
+            selection_mode="explicit",
+            supporting_skill_ids=("platform-base", "platform-shared-policy"),
+            allowed_intents=("business_fact", "mixed"),
+            allowed_provider_actions=("read_only", "deny"),
+            manifest_allowed_actions=("record.query", "table.summarize"),
+            output_contract="analysis_answer_with_citations",
+            confirmation_policy="read_only",
+            safe_label="汇总分析",
+        ),
+    )
+
+
 def _provider_input(*contents: str) -> object:
     materials = tuple(
         Stage08CollaborationContractFactory.private_material(
@@ -759,3 +785,103 @@ def test_prompt_is_minimal_and_raw_material_is_not_persisted_or_logged(caplog) -
     assert caplog.records == []
     with pytest.raises(AttributeError):
         provider.__dict__
+
+
+def test_profiled_command_sends_only_the_safe_skill_projection_to_openrouter() -> None:
+    captured_body: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_body.update(json.loads(request.content))
+        return httpx.Response(200, request=request, json=_response_payload())
+
+    provider, client = _provider(handler)
+    try:
+        outcome = provider.analyse(
+            _provider_input("visible synthetic fact"),
+            _profiled_command(),
+            budget=CollaborationBudget(),
+        )
+    finally:
+        client.close()
+
+    assert outcome.status == "available"
+    prompt = json.loads(captured_body["messages"][1]["content"])
+    assert prompt["skill_profile"] == {
+        "primary_skill_id": "platform-tabular-analysis",
+        "purpose": "lark-sheets",
+        "allowed_provider_actions": ["read_only", "deny"],
+        "output_contract": "analysis_answer_with_citations",
+        "confirmation_policy": "read_only",
+    }
+    assert "supporting_skill_ids" not in json.dumps(prompt)
+    assert "manifest_allowed_actions" not in json.dumps(prompt)
+
+
+def test_profiled_read_skill_keeps_safe_deny_available() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            request=request,
+            json=_response_payload(action="deny", citation_ordinals=()),
+        )
+
+    provider, client = _provider(handler)
+    try:
+        outcome = provider.analyse(
+            _provider_input("visible synthetic fact"),
+            _profiled_command(),
+            budget=CollaborationBudget(),
+        )
+    finally:
+        client.close()
+
+    assert outcome.status == "available"
+    assert outcome.decision is not None
+    assert outcome.decision.action == "deny"
+
+
+def test_profile_rejects_non_deny_action_outside_strict_membership() -> None:
+    command = Stage08CollaborationContractFactory.command(
+        workspace_id=_WORKSPACE_ID,
+        employee_id=_EMPLOYEE_ID,
+        actor_user_id="private-actor",
+        intent="business_fact",
+        query="prepare a controlled draft",
+        requested_action="draft_update",
+        target_record_id=_RECORD_ID,
+        idempotency_key="profile-action-boundary",
+        skill_profile=Stage08CollaborationContractFactory.resolved_skill_profile(
+            manifest_version="stage06-larksuite-skills-v1",
+            primary_skill_id="platform-tabular-analysis",
+            source_skill="lark-sheets",
+            selection_mode="explicit",
+            supporting_skill_ids=("platform-base", "platform-shared-policy"),
+            allowed_intents=("business_fact",),
+            allowed_provider_actions=("read_only", "deny"),
+            manifest_allowed_actions=("record.query",),
+            output_contract="analysis_answer_with_citations",
+            confirmation_policy="read_only",
+            safe_label="汇总分析",
+        ),
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            request=request,
+            json=_response_payload(
+                action="draft_update",
+                extra={"draft": {"field_key": "status", "value": "ready"}},
+            ),
+        )
+
+    provider, client = _provider(handler)
+    try:
+        outcome = provider.analyse(
+            _provider_input("visible synthetic fact"), command, budget=CollaborationBudget()
+        )
+    finally:
+        client.close()
+
+    assert outcome.status == "unavailable"
+    assert outcome.reason_code == "invalid_input"

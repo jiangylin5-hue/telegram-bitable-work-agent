@@ -4,6 +4,7 @@ set -eu
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 renderer="$script_dir/render-caddy-stage09-host.sh"
+nginx_renderer="$script_dir/render-native-public-nginx.sh"
 activator="$script_dir/activate-public-ingress.sh"
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT HUP INT TERM
@@ -14,6 +15,55 @@ fail() {
 }
 
 [ -f "$renderer" ] || fail renderer-missing
+[ -f "$nginx_renderer" ] || fail nginx-renderer-missing
+
+assert_exact_sse_location_contains() {
+    assertion_name=$1
+    expected=$2
+    rendered_file=$3
+    location_file="$tmpdir/sse-location"
+
+    awk '
+        $0 == "    location = /api/stage08/assistant/query-stream {" {
+            in_location = 1
+            found = 1
+        }
+        in_location {
+            print
+        }
+        in_location && $0 == "    }" {
+            exit
+        }
+        END {
+            if (!found) {
+                exit 1
+            }
+        }
+    ' "$rendered_file" > "$location_file" || fail "$assertion_name-location"
+
+    grep -Fqx "$expected" "$location_file" || fail "$assertion_name"
+    printf '%s\n' "$assertion_name: PASS"
+}
+
+assert_rendered_https_sse_transport() {
+    rendered_file="$tmpdir/stage09-p1-public-https.conf"
+    STAGE09_P1_PUBLIC_HOSTNAME=agent.example.com \
+    STAGE09_P1_PUBLIC_MODE=https \
+    STAGE09_P1_CERTIFICATE_PATH=/etc/ssl/certs/stage09-p1.crt \
+    STAGE09_P1_CERTIFICATE_KEY_PATH=/etc/ssl/private/stage09-p1.key \
+        sh "$nginx_renderer" > "$rendered_file" || fail nginx-renderer-valid-input
+
+    assert_exact_sse_location_contains 'https-sse-proxy-http-version' '        proxy_http_version 1.1;' "$rendered_file"
+    assert_exact_sse_location_contains 'https-sse-proxy-buffering' '        proxy_buffering off;' "$rendered_file"
+    assert_exact_sse_location_contains 'https-sse-proxy-cache' '        proxy_cache off;' "$rendered_file"
+    assert_exact_sse_location_contains 'https-sse-proxy-read-timeout' '        proxy_read_timeout 90s;' "$rendered_file"
+    assert_exact_sse_location_contains 'https-sse-x-accel-buffering' '        add_header X-Accel-Buffering no always;' "$rendered_file"
+    assert_exact_sse_location_contains 'https-sse-proxy-pass-preserved' '        proxy_pass http://127.0.0.1:18080;' "$rendered_file"
+    assert_exact_sse_location_contains 'https-sse-forward-host-preserved' '        proxy_set_header Host $host;' "$rendered_file"
+    assert_exact_sse_location_contains 'https-sse-forward-real-ip-preserved' '        proxy_set_header X-Real-IP $remote_addr;' "$rendered_file"
+    assert_exact_sse_location_contains 'https-sse-forward-for-preserved' '        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;' "$rendered_file"
+    assert_exact_sse_location_contains 'https-sse-forward-proto-preserved' '        proxy_set_header X-Forwarded-Proto $scheme;' "$rendered_file"
+}
 
 assert_rendered_host() {
     rendered=$(
@@ -45,6 +95,7 @@ assert_rejected_input() {
 }
 
 assert_rendered_host
+assert_rendered_https_sse_transport
 assert_rejected_input localhost 172.20.0.1 18090
 assert_rejected_input '*.example.com' 172.20.0.1 18090
 assert_rejected_input 'agent example.com' 172.20.0.1 18090

@@ -74,8 +74,9 @@ import type {
   ManagedEmployeeUpdateValues,
   ManagedEmployeeViewType,
 } from './digital-employee-management-types'
-import type { Stage08AssistantCitation, Stage08AssistantQuery, Stage08AssistantSafeView, Stage08AssistantStatus, Stage08CitationLabel, Stage08DegradationCode } from './stage08-collaboration-types'
+import type { Stage08AssistantCitation, Stage08AssistantQuery, Stage08AssistantSafeView, Stage08AssistantSkill, Stage08AssistantSkillCatalog, Stage08AssistantStatus, Stage08AssistantStreamEvent, Stage08CitationLabel, Stage08DegradationCode, Stage08RequestedAction, Stage08SkillConfirmationPolicy, Stage08SkillDisabledReason } from './stage08-collaboration-types'
 import type { Stage08MemoryItem, Stage08MemoryPage, Stage08MemoryType } from './stage08-memory-types'
+import { parseStage08AssistantStream } from './stage08-collaboration-stream'
 
 export type {
   SafeViewErrorCode,
@@ -682,7 +683,59 @@ const stage08CitationLabels = new Set<Stage08CitationLabel>(['business_data', 'c
 const stage08DegradationCodes = new Set<Stage08DegradationCode>(['context_unavailable', 'retrieval_unavailable', 'compression_unavailable', 'analysis_unavailable', 'no_evidence', 'policy_denied', 'cancelled', 'timed_out', 'internal_failure'])
 const stage08Intents = new Set<Stage08AssistantQuery['intent']>(['business_fact', 'memory_lookup', 'mixed', 'general_advice'])
 const stage08RequestedActions = new Set<Stage08AssistantQuery['requestedAction']>(['read_only', 'draft_update'])
+const stage08SkillDisabledReasons = new Set<Stage08SkillDisabledReason>(['context_required', 'read_scope_unavailable', 'write_scope_unavailable', 'chat_scope_unavailable', 'runtime_unsupported'])
+const stage08SkillConfirmationPolicies = new Set<Stage08SkillConfirmationPolicy>(['read_only', 'draft_required_for_write'])
 const privateIdentifierPattern = /(?<![0-9a-f])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?![0-9a-f])/i
+
+function hasExactKeys(record: Record<string, unknown>, keys: string[]): boolean {
+  const actual = Object.keys(record).sort()
+  const expected = [...keys].sort()
+  return actual.length === expected.length && actual.every((key, index) => key === expected[index])
+}
+
+function boundedStage08SkillString(value: unknown, maxLength: number): string {
+  if (typeof value !== 'string' || value.length < 1 || value.length > maxLength) throw new Error('Invalid Stage08 skill catalog response')
+  return value
+}
+
+function safeStage08AssistantSkill(value: unknown): Stage08AssistantSkill {
+  const record = jsonRecord(value)
+  if (!hasExactKeys(record, ['skill_id', 'label', 'description', 'enabled', 'disabled_reason', 'supported_intents', 'supported_actions', 'confirmation_policy'])) throw new Error('Invalid Stage08 skill catalog response')
+  const skillId = boundedStage08SkillString(record.skill_id, 120)
+  const label = boundedStage08SkillString(record.label, 120)
+  const description = boundedStage08SkillString(record.description, 300)
+  if (typeof record.enabled !== 'boolean' || !Array.isArray(record.supported_intents) || !Array.isArray(record.supported_actions) || typeof record.confirmation_policy !== 'string' || !stage08SkillConfirmationPolicies.has(record.confirmation_policy as Stage08SkillConfirmationPolicy)) throw new Error('Invalid Stage08 skill catalog response')
+  if (record.disabled_reason !== null && (typeof record.disabled_reason !== 'string' || !stage08SkillDisabledReasons.has(record.disabled_reason as Stage08SkillDisabledReason))) throw new Error('Invalid Stage08 skill catalog response')
+  if ((record.enabled && record.disabled_reason !== null) || (!record.enabled && record.disabled_reason === null)) throw new Error('Invalid Stage08 skill catalog response')
+  const supportedIntents = record.supported_intents.map((intent) => {
+    if (intent !== 'business_fact' && intent !== 'mixed') throw new Error('Invalid Stage08 skill catalog response')
+    return intent
+  }) as Stage08AssistantSkill['supportedIntents']
+  const supportedActions = record.supported_actions.map((action) => {
+    if (!stage08RequestedActions.has(action as Stage08RequestedAction)) throw new Error('Invalid Stage08 skill catalog response')
+    return action as Stage08RequestedAction
+  })
+  return {
+    skillId,
+    label,
+    description,
+    enabled: record.enabled,
+    disabledReason: record.disabled_reason as Stage08SkillDisabledReason | null,
+    supportedIntents,
+    supportedActions,
+    confirmationPolicy: record.confirmation_policy as Stage08SkillConfirmationPolicy,
+  }
+}
+
+function safeStage08AssistantSkillCatalog(value: unknown): Stage08AssistantSkillCatalog {
+  const record = jsonRecord(value)
+  if (!hasExactKeys(record, ['manifest_version', 'default_selection', 'skills']) || record.manifest_version !== 'stage06-larksuite-skills-v1' || record.default_selection !== 'auto' || !Array.isArray(record.skills)) throw new Error('Invalid Stage08 skill catalog response')
+  return {
+    manifestVersion: record.manifest_version,
+    defaultSelection: record.default_selection,
+    skills: record.skills.map(safeStage08AssistantSkill),
+  }
+}
 
 function safeStage08Citation(value: unknown): Stage08AssistantCitation {
   const record = jsonRecord(value)
@@ -705,7 +758,83 @@ function safeStage08AssistantSafeView(value: unknown): Stage08AssistantSafeView 
   if (new Set(citations.map((citation) => citation.ordinal)).size !== citations.length || new Set(degradationCodes).size !== degradationCodes.length) throw new Error('Invalid Stage08 collaboration response')
   const draftId = nullableStringValue(record.draft_id)
   if ((status === 'draft_pending') !== Boolean(draftId)) throw new Error('Invalid Stage08 collaboration response')
-  return { status: status as Stage08AssistantStatus, answer, citations, degradationCodes, draftId }
+  const skill = record.skill === null || record.skill === undefined ? null : (() => {
+    const summary = jsonRecord(record.skill)
+    if (!hasExactKeys(summary, ['skill_id', 'label', 'manifest_version', 'selection_mode']) || summary.selection_mode !== 'explicit' && summary.selection_mode !== 'auto') throw new Error('Invalid Stage08 collaboration response')
+    return { skillId: boundedStage08SkillString(summary.skill_id, 120), label: boundedStage08SkillString(summary.label, 120), manifestVersion: boundedStage08SkillString(summary.manifest_version, 120), selectionMode: summary.selection_mode as 'explicit' | 'auto' }
+  })()
+  return { status: status as Stage08AssistantStatus, answer, citations, degradationCodes, draftId, ...(record.skill === undefined ? {} : { skill }) }
+}
+
+function normalizedStage08AssistantRequest(request: Stage08AssistantQuery, idempotencyKey: string): Record<string, unknown> {
+  const query = request.query.trim()
+  const workspaceId = request.workspaceId.trim()
+  const employeeId = request.employeeId.trim()
+  const targetRecordId = request.targetRecordId?.trim() || null
+  const skillId = request.skillId?.trim() || null
+  if (!query || query.length > 600 || !workspaceId || workspaceId.length > 200 || !employeeId || employeeId.length > 200 || !idempotencyKey || !stage08Intents.has(request.intent) || !stage08RequestedActions.has(request.requestedAction)) throw new Error('Invalid Stage08 collaboration request')
+  if ((request.requestedAction === 'draft_update') !== Boolean(targetRecordId)) throw new Error('Invalid Stage08 collaboration request')
+  return {
+    workspace_id: workspaceId,
+    employee_id: employeeId,
+    intent: request.intent,
+    query,
+    requested_action: request.requestedAction,
+    ...(targetRecordId ? { target_record_id: targetRecordId } : {}),
+    idempotency_key: idempotencyKey,
+    skill_id: skillId,
+  }
+}
+
+function isAbortError(error: unknown): boolean {
+  return Boolean(error && typeof error === 'object' && 'name' in error && error.name === 'AbortError')
+}
+
+export async function queryStage08AssistantStream(
+  request: Stage08AssistantQuery,
+  idempotencyKey: string,
+  onEvent: (event: Stage08AssistantStreamEvent) => void,
+  init: RequestInit = {},
+): Promise<Stage08AssistantSafeView> {
+  const payload = normalizedStage08AssistantRequest(request, idempotencyKey)
+  const protectedRequestHeaders = protectedHeaders(init.headers)
+  const identityHeader = protectedRequestHeaders.get('X-Telegram-Init-Data')
+  const headers = Object.fromEntries(protectedRequestHeaders.entries())
+  delete headers.accept
+  delete headers['content-type']
+  delete headers['idempotency-key']
+  delete headers['x-telegram-init-data']
+  try {
+    const response = await fetch('/api/stage08/assistant/query-stream', {
+      credentials: 'same-origin',
+      ...init,
+      method: 'POST',
+      headers: {
+        ...headers,
+        Accept: 'text/event-stream',
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
+        ...(identityHeader ? { 'X-Telegram-Init-Data': identityHeader } : {}),
+      },
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) throw new ApiError(response.status, await safeErrorCode(response))
+    if (response.headers.get('Content-Type')?.split(';', 1)[0].trim().toLowerCase() !== 'text/event-stream' || !response.body) {
+      throw new Error('Invalid assistant stream response')
+    }
+    return await parseStage08AssistantStream(response.body, onEvent)
+  } catch (error) {
+    if (isAbortError(error)) throw new DOMException('Stopped viewing', 'AbortError')
+    if (
+      error instanceof ApiError
+      || (error instanceof Error && [
+        'Invalid assistant stream response',
+        'Invalid assistant stream',
+        'Assistant stream failed',
+      ].includes(error.message))
+    ) throw error
+    throw new Error('Assistant stream unavailable')
+  }
 }
 
 const stage08MemoryTypes = new Set<Stage08MemoryType>(['decision', 'preference', 'risk', 'customer_fact', 'project_fact'])
@@ -1504,21 +1633,22 @@ export const api = {
     ))
   },
   queryStage08Assistant: async (request: Stage08AssistantQuery, idempotencyKey: string, init?: RequestInit): Promise<Stage08AssistantSafeView> => {
-    const query = request.query.trim()
-    const workspaceId = request.workspaceId.trim()
-    const employeeId = request.employeeId.trim()
-    const targetRecordId = request.targetRecordId?.trim() || null
-    if (!query || query.length > 600 || !workspaceId || workspaceId.length > 200 || !employeeId || employeeId.length > 200 || !idempotencyKey || !stage08Intents.has(request.intent) || !stage08RequestedActions.has(request.requestedAction)) throw new Error('Invalid Stage08 collaboration request')
-    if ((request.requestedAction === 'draft_update') !== Boolean(targetRecordId)) throw new Error('Invalid Stage08 collaboration request')
-    return safeStage08AssistantSafeView(await postJson<unknown>('/api/stage08/assistant/query', {
-      workspace_id: workspaceId,
-      employee_id: employeeId,
-      intent: request.intent,
-      query,
-      requested_action: request.requestedAction,
-      ...(targetRecordId ? { target_record_id: targetRecordId } : {}),
-      idempotency_key: idempotencyKey,
-    }, idempotencyKey, init))
+    return safeStage08AssistantSafeView(await postJson<unknown>(
+      '/api/stage08/assistant/query',
+      normalizedStage08AssistantRequest(request, idempotencyKey),
+      idempotencyKey,
+      init,
+    ))
+  },
+  queryStage08AssistantStream,
+  listStage08AssistantSkills: async (workspaceId: string, employeeId: string, targetRecordId: string | null, init?: RequestInit): Promise<Stage08AssistantSkillCatalog> => {
+    const workspace = workspaceId.trim()
+    const employee = employeeId.trim()
+    const record = targetRecordId?.trim() || null
+    if (!workspace || !employee) throw new Error('Invalid Stage08 skill catalog request')
+    const parameters = new URLSearchParams({ workspace_id: workspace, employee_id: employee })
+    if (record) parameters.set('target_record_id', record)
+    return safeStage08AssistantSkillCatalog(await getJson<unknown>(`/api/stage08/assistant/skills?${parameters.toString()}`, init))
   },
   listStage08Memory: async (workspaceId: string, init?: RequestInit): Promise<Stage08MemoryPage> => safeStage08MemoryPage(
     await getJson<unknown>(`/api/stage08/memory?${new URLSearchParams({ workspace_id: workspaceId, status: 'active' }).toString()}`, init),

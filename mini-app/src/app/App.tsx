@@ -24,7 +24,7 @@ import { CollaborationWorkbench } from './CollaborationWorkbench'
 import { MemoryWorkbench } from './MemoryWorkbench'
 import { ViewBuilderPanel } from './ViewBuilderPanel'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
-import { clearAllProtectedQueries, clearAssistantContextQueries, clearDigitalEmployeeManagementQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTeamBotQueries, clearTelegramDeepLinkQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, digitalEmployeeManagementKeys, draftEmployeeKeys, governanceKeys, governanceWriteKeys, navigationKeys, protectedQueryKey, relationCandidateQueryKey, teamBotKeys, templateImportKeys, viewBuilderKeys } from './protectedQuery'
+import { clearAllProtectedQueries, clearAssistantContextQueries, clearDigitalEmployeeManagementQueries, clearDraftEmployeeTerminalQueries, clearFieldMutationQueries, clearGovernanceQueries, clearGovernanceWriteQueries, clearProtectedWorkspace, clearRecordMutationQueries, clearRelationCandidateQueries, clearTeamBotQueries, clearTelegramDeepLinkQueries, clearTemplateImportQueries, clearViewBuilderQueries, createProtectedQueryClient, digitalEmployeeManagementKeys, draftEmployeeKeys, governanceKeys, governanceWriteKeys, navigationKeys, protectedQueryKey, relationCandidateQueryKey, stage08AssistantKeys, teamBotKeys, templateImportKeys, viewBuilderKeys } from './protectedQuery'
 import { prepareTelegramMiniAppViewport, readTelegramMiniAppFullscreenState, readTelegramMiniAppLaunch, subscribeTelegramMiniAppFullscreen, type TelegramFullscreenState, type TelegramMiniAppLaunch } from './telegram-mini-app'
 import type { GovernanceAuditPage, GovernanceMemberPage } from './governance-types'
 import type { GovernanceEditableMemberPage, GovernanceFieldPermissionPage, GovernanceFieldPermissionPolicy } from './governance-write-types'
@@ -33,7 +33,7 @@ import type { TeamBotContact, TeamBotKnowledgeContextPage, TeamBotSelectedView, 
 import type { ManagedEmployeeDetail, ManagedEmployeeDirectory, ManagedEmployeeManagementContext, ManagedEmployeeUpdateValues } from './digital-employee-management-types'
 import type { CommitImportValues, CreateImportValues, ImportCommitReceipt, ImportPreview, TemplateSummary } from './template-import-types'
 import type { ViewBuilderContext, ViewBuilderResponse, ViewInitializationRequest, ViewMemberReplaceRequest, ViewPresentationPatchRequest } from './view-builder-types'
-import type { Stage08AssistantSafeView, Stage08CollaborationInvocation } from './stage08-collaboration-types'
+import type { Stage08AssistantSafeView, Stage08AssistantSkillCatalog, Stage08AssistantStreamEvent, Stage08CollaborationInvocation } from './stage08-collaboration-types'
 import type { Stage08MemoryItem } from './stage08-memory-types'
 
 type BaseCanvasState = {
@@ -150,9 +150,10 @@ type DigitalEmployeeManagementPanel = {
 
 type CollaborationPanel = {
   contacts: S5Contact[]
-  result: Stage08AssistantSafeView | null
   loading: boolean
   failed: boolean
+  skillCatalog: Stage08AssistantSkillCatalog | null
+  skillCatalogLoading: boolean
 }
 
 type MemoryPanel = {
@@ -806,26 +807,53 @@ function AppContent() {
     const isCurrent = () => !sessionInvalidated.current
       && collaborationRequestVersion.current === requestVersion
       && activeWorkspaceId.current === workspaceId
-    setCollaborationPanel({ contacts: [], result: null, loading: true, failed: false })
+    setCollaborationPanel({ contacts: [], loading: true, failed: false, skillCatalog: null, skillCatalogLoading: true })
     try {
       const contacts = await queryClient.fetchQuery({
         queryKey: draftEmployeeKeys.contacts(scope, null),
         queryFn: ({ signal }) => api.listS5Contacts(workspaceId, null, { signal }),
       })
       if (isCurrent()) {
-        setCollaborationPanel({ contacts: contacts.contacts, result: null, loading: false, failed: false })
+        setCollaborationPanel({ contacts: contacts.contacts, loading: false, failed: false, skillCatalog: null, skillCatalogLoading: true })
         return true
       }
     } catch (error) {
       if (!isCurrent() || isAbortError(error)) return false
       if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
       else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
-      else setCollaborationPanel({ contacts: [], result: null, loading: false, failed: true })
+      else setCollaborationPanel({ contacts: [], loading: false, failed: true, skillCatalog: null, skillCatalogLoading: false })
     }
     return false
   }
 
-  async function invokeCollaboration(request: Stage08CollaborationInvocation): Promise<Stage08AssistantSafeView> {
+  async function loadCollaborationSkillCatalog(employeeId: string): Promise<void> {
+    const workspaceId = readyState.home.workspace_id
+    const recordId = readyState.canvas?.detail?.id ?? null
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    const requestVersion = ++collaborationRequestVersion.current
+    const isCurrent = () => !sessionInvalidated.current
+      && collaborationRequestVersion.current === requestVersion
+      && activeWorkspaceId.current === workspaceId
+    setCollaborationPanel((current) => current ? { ...current, skillCatalog: null, skillCatalogLoading: true } : current)
+    try {
+      const skillCatalog = await queryClient.fetchQuery({
+        queryKey: stage08AssistantKeys.skills(scope, employeeId, recordId),
+        queryFn: ({ signal }) => api.listStage08AssistantSkills(workspaceId, employeeId, recordId, { signal }),
+      })
+      if (isCurrent()) setCollaborationPanel((current) => current ? { ...current, skillCatalog, skillCatalogLoading: false } : current)
+    } catch (error) {
+      if (!isCurrent() || isAbortError(error)) return
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      else setCollaborationPanel((current) => current ? { ...current, skillCatalog: null, skillCatalogLoading: false } : current)
+    }
+  }
+
+  async function invokeCollaborationStream(
+    request: Stage08CollaborationInvocation,
+    onEvent: (event: Stage08AssistantStreamEvent) => void,
+    signal: AbortSignal,
+  ): Promise<Stage08AssistantSafeView> {
     const panel = collaborationPanel
     if (!panel) throw new Error('Collaboration is unavailable')
     const workspaceId = readyState.home.workspace_id
@@ -834,17 +862,19 @@ function AppContent() {
     const isCurrent = () => !sessionInvalidated.current
       && collaborationRequestVersion.current === requestVersion
       && activeWorkspaceId.current === workspaceId
-    setCollaborationPanel({ ...panel, result: null, loading: true, failed: false })
     try {
-      const result = await api.queryStage08Assistant({ workspaceId, ...request }, crypto.randomUUID())
+      const result = await api.queryStage08AssistantStream(
+        { workspaceId, ...request },
+        crypto.randomUUID(),
+        onEvent,
+        { signal },
+      )
       if (!isCurrent()) throw new DOMException('Collaboration context changed', 'AbortError')
-      setCollaborationPanel({ ...panel, result, loading: false, failed: false })
       return result
     } catch (error) {
       if (!isCurrent() || isAbortError(error)) throw error
       if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
       else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
-      else setCollaborationPanel({ ...panel, result: null, loading: false, failed: true })
       throw error
     }
   }
@@ -2961,7 +2991,7 @@ function AppContent() {
   const content = readyState.canvasLoading
     ? <main className="app-state" aria-label="正在加载 Base">正在加载 Base…</main>
     : readyState.canvas
-    ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} canCreateRecords={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role)} canManageDigitalEmployees={selectedWorkspace.capabilities.can_manage_digital_employees === true} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; closeDigitalEmployeeManagement(); abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onOpenRecordReference={openBusinessRecordReference} onOpenEmployeeReference={openBusinessEmployeeReference} onOpenAssistantContext={(trigger) => { void openAssistantContext(trigger) }} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role) ? openCreateRecord : undefined} onCreateTable={(trigger) => { builderCreateReturnFocus.current = trigger; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={(requestedTableId) => { const canvas = readyState.canvas; const tableId = requestedTableId ?? canvas?.table?.id; const view = tableId ? canvas?.views.find((item) => item.table_id === tableId) : undefined; if (!tableId || !view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId, viewId: view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (!canvas?.table) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id, canvas.view.id) }} onSaveTemplate={(trigger) => { templateImportReturnFocus.current = trigger; setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base }) }} onImportIntoBase={(trigger) => openBaseImport(readyState.canvas!.base, trigger)} onOpenTableOperations={(trigger, tableId) => { void openTableOperationsForTable(trigger, tableId) }} onOpenCollaboration={(trigger) => { void openCollaboration(trigger) }} onOpenDraftHub={(trigger) => { void openDraftEmployeeHub(trigger) }} onOpenDigitalEmployeeManagement={(trigger) => { void openDigitalEmployeeManagement(trigger) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
+    ? <><BaseCanvas {...readyState.canvas} canManageSchema={selectedWorkspace.capabilities.can_manage_schema} canCreateViews={selectedWorkspace.capabilities.can_manage_schema} canManageViews={selectedWorkspace.capabilities.can_manage_schema && Boolean(readyState.canvas.view?.scope)} canCreateRecords={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role)} canManageDigitalEmployees={selectedWorkspace.capabilities.can_manage_digital_employees === true} onBack={() => { builderRequestVersion.current += 1; createFormRequestVersion.current += 1; closeDigitalEmployeeManagement(); abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setBuilderPanel(undefined); setState({ ...readyState, canvas: undefined }) }} onOpenRecord={openRecord} onOpenRecordReference={openBusinessRecordReference} onOpenEmployeeReference={openBusinessEmployeeReference} onOpenAssistantContext={(trigger) => { void openAssistantContext(trigger) }} onSelectTable={selectTable} onSelectView={selectView} onLoadMore={loadMoreRecords} onCreateRecord={['owner', 'admin', 'builder', 'operator'].includes(selectedWorkspace.role) ? openCreateRecord : undefined} onCreateTable={(trigger) => { builderCreateReturnFocus.current = trigger; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'table', base: readyState.canvas!.base }) }} onCreateField={(requestedTableId) => { const canvas = readyState.canvas; const tableId = requestedTableId ?? canvas?.table?.id; const view = tableId ? canvas?.views.find((item) => item.table_id === tableId) : undefined; if (!tableId || !view) return; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'field', tableId, viewId: view.id }) }} onCreateView={() => { const canvas = readyState.canvas; if (!canvas?.table) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id) }} onConfigureView={() => { const canvas = readyState.canvas; if (!canvas?.table || !canvas.view) return; rememberViewBuilderTrigger(); void openViewBuilder(canvas.table.id, canvas.view.id) }} onSaveTemplate={(trigger) => { templateImportReturnFocus.current = trigger; setTemplateImportPanel({ mode: 'save-template', base: readyState.canvas!.base }) }} onImportIntoBase={(trigger) => openBaseImport(readyState.canvas!.base, trigger)} onOpenTableOperations={(trigger, tableId) => { void openTableOperationsForTable(trigger, tableId) }} onOpenCollaboration={(trigger) => { void openCollaboration(trigger) }} onOpenDraftHub={(trigger) => { void openDraftEmployeeHub(trigger) }} onOpenDigitalEmployeeManagement={(trigger) => { void openDigitalEmployeeManagement(trigger) }} />{readyState.canvas.detail && <RecordDetailPanel detail={readyState.canvas.detail} schema={readyState.canvas.schema} onSave={saveRecord} loadRelationCandidates={loadRelationCandidates} onConflict={refreshRecordAfterConflict} onOpenCollaboration={(trigger) => { void openCollaboration(trigger) }} onClose={() => { abandonRecordDetail(readyState.canvas, readyState.home.workspace_id); setState({ ...readyState, canvas: { ...readyState.canvas!, detail: undefined } }) }} />}{readyState.canvas.createForm && <CreateRecordPanel form={readyState.canvas.createForm} onCreate={createRecord} onClose={() => { void closeCreateRecord() }} loadRelationCandidates={loadRelationCandidates} />}</>
       : navigationRoute === 'bases'
         ? <BaseDirectory state={baseDirectory.state} bases={baseDirectory.bases} onOpenBase={(base) => { void openBase(base) }} onHome={() => selectNavigation('home')} onRetry={() => { void loadBaseDirectory() }} />
         : <>{telegramRecoveryNotice}<WorkspaceHomeView home={readyState.home} workspace={selectedWorkspace} onOpenBase={openBase} onCreateBase={(trigger) => { builderCreateReturnFocus.current = trigger; builderRequestVersion.current += 1; setBuilderPanel({ mode: 'base' }) }} onOpenTemplateImport={(trigger) => { void openTemplateImportHub(trigger) }} onOpenTableOperations={(trigger) => openTableOperationCenter(trigger, { kind: 'workspace' })} onOpenDraftHub={(trigger, draftId) => { void openDraftEmployeeHub(trigger, draftId) }} onOpenAssistantContext={(trigger) => { void openAssistantContext(trigger) }} onOpenCollaboration={(trigger) => { void openCollaboration(trigger) }} onOpenMemory={(trigger) => { void openMemory(trigger) }} onOpenTeamBot={(trigger) => { void openTeamBot(trigger) }} onOpenRecordReference={openBusinessRecordReference} onOpenEmployeeReference={openBusinessEmployeeReference} /></>
@@ -3013,13 +3043,19 @@ function AppContent() {
     : null
   const collaborationOverlay = collaborationPanel
     ? <CollaborationWorkbench
-      variant={readyState.canvas ? 'side-panel' : 'dialog'}
       contacts={collaborationPanel.contacts}
       currentRecordId={readyState.canvas?.detail?.id ?? null}
+      currentBaseId={readyState.canvas?.base.id ?? null}
+      currentRecordWritable={false}
+      workspaceName={selectedWorkspace.name}
+      baseName={readyState.canvas?.base.name}
+      viewName={readyState.canvas?.view?.name}
       loading={collaborationPanel.loading}
       failed={collaborationPanel.failed}
-      result={collaborationPanel.result}
-      onInvoke={invokeCollaboration}
+      skillCatalog={collaborationPanel.skillCatalog}
+      skillCatalogLoading={collaborationPanel.skillCatalogLoading}
+      onEmployeeChange={(employeeId) => { void loadCollaborationSkillCatalog(employeeId) }}
+      onInvokeStream={invokeCollaborationStream}
       onOpenDraft={(draftId) => {
         const trigger = collaborationReturnFocus.current ?? document.body
         closeCollaboration()
