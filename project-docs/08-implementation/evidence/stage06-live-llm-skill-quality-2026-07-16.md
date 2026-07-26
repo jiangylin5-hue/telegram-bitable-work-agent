@@ -4,7 +4,7 @@
 
 - Scope: a bounded, synthetic-data, real OpenRouter evaluation of response quality and deterministic Stage06 skill-evidence boundaries.
 - Authorization: the user explicitly authorized real external calls, including Telegram. This evaluation uses only the real OpenRouter provider; it does not need a Telegram send or a persistent business-data write.
-- Execution status: planned; the result section is updated only after the run finishes.
+- Execution status: no dated real-provider result was recorded in this historical Stage06 document. The later Stage09 run is documented separately in `stage09-real-provider-quality-2026-07-26.md`; it must not be read back as a Stage06 pass.
 - Data boundary: every case constructs a new in-memory workspace and one synthetic record. No customer, chat, production, or persistent database data is read or written.
 - Retention boundary: raw prompts, model answers, citations, record identifiers, provider credentials, and Telegram identifiers must not be printed or persisted as evaluation evidence.
 
@@ -66,4 +66,4 @@ All of the following must hold for a passing batch:
 
 ## Result
 
-Pending real-provider execution.
+No result is claimed by this historical document. See the separately dated Stage09 evidence for the later real-provider batch and its failed outcome.
