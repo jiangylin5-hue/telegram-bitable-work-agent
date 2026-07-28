@@ -181,4 +181,22 @@ cp "$tmpdir/controlled-restricted.env" "$tmpdir/missing-chat-list.env"
 sed -i 's/^TELEGRAM_ALLOWED_CHAT_IDS=.*/TELEGRAM_ALLOWED_CHAT_IDS=/' "$tmpdir/missing-chat-list.env"
 assert_rejected_without_value_leak 'restricted-send-missing-chat-list' "$tmpdir/missing-chat-list.env"
 
+cp "$tmpdir/controlled-dry-run.env" "$tmpdir/stage10-valid.env"
+printf '%s\n' \
+    'AGENT_EVENT_RUNTIME_ENABLED=true' \
+    'AGENT_EVENT_RUNTIME_MODE=redis_worker' \
+    'AGENT_EVENT_RUNTIME_ALLOWED_WORKSPACE_IDS=11111111-1111-4111-8111-111111111111' \
+    'AGENT_RUNTIME_INPUT_KEY=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa=' \
+    'AGENT_RUNTIME_INPUT_KEY_VERSION=stage10-v1' \
+    'AGENT_RUNTIME_INPUT_TTL_SECONDS=300' >> "$tmpdir/stage10-valid.env"
+assert_pass 'stage10-distributed-contract' "$tmpdir/stage10-valid.env"
+
+cp "$tmpdir/stage10-valid.env" "$tmpdir/stage10-missing-key.env"
+sed -i 's/^AGENT_RUNTIME_INPUT_KEY=.*/AGENT_RUNTIME_INPUT_KEY=/' "$tmpdir/stage10-missing-key.env"
+assert_rejected_without_value_leak 'stage10-missing-private-input-key' "$tmpdir/stage10-missing-key.env"
+
+cp "$tmpdir/stage10-valid.env" "$tmpdir/stage10-embedded.env"
+sed -i 's/^AGENT_EVENT_RUNTIME_MODE=.*/AGENT_EVENT_RUNTIME_MODE=embedded/' "$tmpdir/stage10-embedded.env"
+assert_rejected_without_value_leak 'stage10-production-embedded-mode' "$tmpdir/stage10-embedded.env"
+
 printf '%s\n' 'runtime-preflight: PASS'

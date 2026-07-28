@@ -112,7 +112,7 @@ def test_online_alembic_upgrade_creates_stage02_fact_tables(
 
     with online_db.engine.connect() as connection:
         assert connection.scalar(text("select version_num from alembic_version")) == (
-            "20260706_0010"
+            "20260728_0034"
         )
 
 
@@ -216,14 +216,19 @@ def test_online_audit_view_reads_real_audit_events(
         for record in records
         if record["fields"]["trace_id"] == "tg:stage02-online-audit-update-1"
     ]
-    assert len(matching_records) == 1
-    assert matching_records[0]["fields"] == {
-        "trace_id": "tg:stage02-online-audit-update-1",
-        "actor_type": "telegram",
-        "event_type": "message_ingested",
-        "entity_type": "message",
-        "created_at": matching_records[0]["fields"]["created_at"],
+    assert len(matching_records) == 2
+    assert {
+        (record["fields"]["actor_type"], record["fields"]["event_type"])
+        for record in matching_records
+    } == {
+        ("telegram", "message_ingested"),
+        ("system", "telegram.binding.resolved"),
     }
+    assert all(
+        record["fields"]["entity_type"] == "message"
+        and record["fields"]["created_at"]
+        for record in matching_records
+    )
 
     with online_db.session_factory() as session:
         audit_event = session.scalar(
@@ -232,7 +237,7 @@ def test_online_audit_view_reads_real_audit_events(
             )
         )
         assert audit_event is not None
-        assert matching_records[0]["id"] == str(audit_event.id)
+        assert str(audit_event.id) in {record["id"] for record in matching_records}
 
 
 def test_online_mock_telegram_duplicate_update_is_idempotent_across_sessions(
@@ -826,6 +831,12 @@ def test_online_inventory_services_persist_assignment_and_view_status(
 
     app = create_app()
     app.dependency_overrides[get_session] = _session_override(online_db.session_factory)
+    app.dependency_overrides[get_system_actor] = lambda: Actor(
+        actor_type="user",
+        actor_id="sales-online",
+        role="sales",
+        customer_ids=frozenset({str(customer_id)}),
+    )
     with TestClient(app) as client:
         inventory_response = client.get(
             f"/inventory/accounts?status=allocated&customer_id={customer_id}"

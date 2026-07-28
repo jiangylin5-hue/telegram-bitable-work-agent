@@ -37,6 +37,7 @@ type CollaborationWorkbenchProps = {
   failed: boolean
   skillCatalog: Stage08AssistantSkillCatalog | null
   skillCatalogLoading: boolean
+  durableRuntimeEnabled?: boolean
   onEmployeeChange: (employeeId: string) => void
   onInvokeStream: (
     request: Stage08CollaborationInvocation,
@@ -96,6 +97,12 @@ type TimelineAction =
     clientId: string
   }
 
+type ComposerInvocationRoute = {
+  intent: Stage08AssistantIntent
+  requestedAction: Stage08RequestedAction
+  skill: Stage08AssistantSkill | null
+}
+
 const citationLabels: Record<Stage08CitationLabel, string> = {
   business_data: '业务表格',
   confirmed_memory: '长期记忆',
@@ -121,6 +128,20 @@ const phaseCopy: Record<Stage08AssistantStreamPhase, string> = {
   analysing: '正在整理结论与下一步',
   creating_draft: '正在生成待确认草稿',
   completed: '已完成',
+}
+
+export function resolveComposerInvocationRoute({
+  intent,
+  requestedAction,
+  selectedSkill,
+}: {
+  currentBaseId: string | null | undefined
+  currentRecordId: string | null
+  intent: Stage08AssistantIntent
+  requestedAction: Stage08RequestedAction
+  selectedSkill: Stage08AssistantSkill | null
+}): ComposerInvocationRoute {
+  return { intent, requestedAction, skill: selectedSkill }
 }
 
 function failTurn(turn: ConversationTurn, sequence = turn.lastSequence + 1): ConversationTurn {
@@ -357,6 +378,7 @@ export function CollaborationWorkbench({
   failed,
   skillCatalog,
   skillCatalogLoading,
+  durableRuntimeEnabled = false,
   onEmployeeChange,
   onInvokeStream,
   onOpenDraft,
@@ -421,9 +443,8 @@ export function CollaborationWorkbench({
     }
   }, [portalNode])
 
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => textboxRef.current?.focus())
-    return () => cancelAnimationFrame(frame)
+  useLayoutEffect(() => {
+    textboxRef.current?.focus()
   }, [])
 
   useEffect(() => {
@@ -526,7 +547,14 @@ export function CollaborationWorkbench({
   }
 
   function submit() {
-    startInvocation(query, intent, requestedAction, selectedSkill)
+    const route = resolveComposerInvocationRoute({
+      currentBaseId,
+      currentRecordId,
+      intent,
+      requestedAction,
+      selectedSkill,
+    })
+    startInvocation(query, route.intent, route.requestedAction, route.skill)
   }
 
   function applySkill(skill: Stage08AssistantSkill | null) {
@@ -536,7 +564,6 @@ export function CollaborationWorkbench({
     setSelectedSkillId(skill?.skillId ?? null)
     setIntent(skill?.supportedIntents[0] ?? 'mixed')
     setRequestedAction(draftAction ? 'draft_update' : 'read_only')
-    if (skill) setQuery(skill.description)
     requestAnimationFrame(() => textboxRef.current?.focus())
   }
 
@@ -627,8 +654,8 @@ export function CollaborationWorkbench({
             <button type="button" onClick={onRetry}>重试</button>
           </section> : loading ? <p className="collaboration-empty-ledger">正在读取当前权限范围内的数字员工…</p> : turns.length === 0 ? <section className="collaboration-empty-ledger">
             <ClipboardList aria-hidden="true" />
-            <strong>从一个具体问题开始</strong>
-            <p>选择下方技能或直接输入任务。这里只展示经过安全投影的阶段、答案、证据和草稿。</p>
+            <strong>从一句话开始</strong>
+            <p>{currentBaseId || currentRecordId ? '直接提问，或选择一个技能来限定工作方式。回答只会使用当前授权范围内的业务材料。' : '可以直接开始对话。打开业务 Base 后，我会把当前授权的表格、视图和记录作为分析上下文。'}</p>
           </section> : turns.map((turn, index) => <TimelineTurn
             key={turn.clientId}
             turn={turn}
@@ -654,6 +681,7 @@ export function CollaborationWorkbench({
             type="button"
             data-skill-id="auto"
             aria-label="自动选择"
+            aria-pressed={selectedSkillId === null}
             disabled={loading || skillCatalogLoading || !selectedEmployee}
             title="自动选择：由服务端在当前授权范围内决定技能"
             onClick={() => applySkill(null)}
@@ -666,6 +694,7 @@ export function CollaborationWorkbench({
               type="button"
               data-skill-id={skill.skillId}
               aria-label={skill.label}
+              aria-pressed={selectedSkillId === skill.skillId}
               key={skill.skillId}
               disabled={disabled}
               title={`${skill.label}：${skill.enabled ? skill.description : skill.disabledReason}`}
@@ -696,7 +725,11 @@ export function CollaborationWorkbench({
             />
           </label>
           <div className="collaboration-composer-actions">
-            <span>{requestedAction === 'draft_update' ? '草稿模式 · 确认后写入' : '只读模式 · 不写入'}</span>
+            <span>{requestedAction === 'draft_update'
+              ? '草稿模式 · 确认后写入'
+              : durableRuntimeEnabled
+                ? '只读模式 · 可恢复事件流'
+                : '只读模式 · 不写入'}</span>
             {inFlight ? <button className="collaboration-stop" type="button" onClick={stopViewing}><Square aria-hidden="true" />停止查看</button> : null}
             <button className="collaboration-send" type="submit" aria-label="发送问题" disabled={loading || inFlight || !selectedEmployee || !query.trim() || (requestedAction === 'draft_update' && !canDraft)}>
               <Send aria-hidden="true" />发送

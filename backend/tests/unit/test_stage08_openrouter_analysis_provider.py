@@ -27,13 +27,14 @@ def _command(
     *,
     intent: str = "business_fact",
     requested_action: str = "read_only",
+    query: str = "只回答当前授权的合成客户事实",
 ) -> object:
     return Stage08CollaborationContractFactory.command(
         workspace_id=_WORKSPACE_ID,
         employee_id=_EMPLOYEE_ID,
         actor_user_id="private-actor",
         intent=intent,
-        query="只回答当前授权的合成客户事实",
+        query=query,
         requested_action=requested_action,
         target_record_id=_RECORD_ID if requested_action == "draft_update" else None,
         idempotency_key="private-idempotency-key",
@@ -371,6 +372,17 @@ def test_valid_output_is_a_strict_safe_analysis_decision() -> None:
     assert outcome.decision.citation_ordinals == (1,)
     assert outcome.decision.action == "read_only"
     assert outcome.decision.draft_intent is None
+    user_prompt = json.loads(captured_body["messages"][1]["content"])
+    assert user_prompt["citation_policy"]["ordinal_scope"] == (
+        "citation_ordinals refer only to outer evidence[].ordinal; "
+        "never copy numbers from labels inside evidence[].content"
+    )
+    assert user_prompt["citation_policy"]["no_matching_evidence"] == (
+        "use action deny with citation_ordinals [] and explicitly say no matching record was found"
+    )
+    assert user_prompt["answer_policy"]["supporting_records"] == (
+        "for list or count questions, name every supporting record identifier present in the evidence"
+    )
     assert captured_body["response_format"] == {
         "type": "json_schema",
         "json_schema": {
@@ -385,7 +397,7 @@ def test_valid_output_is_a_strict_safe_analysis_decision() -> None:
                     "citation_ordinals": {
                         "type": "array",
                         "maxItems": 12,
-                        "items": {"type": "integer"},
+                        "items": {"type": "integer", "minimum": 1, "maximum": 1},
                     },
                     "action": {
                         "type": "string",
@@ -430,7 +442,7 @@ def test_general_advice_contract_is_explicit_and_empty_citations_are_valid() -> 
     try:
         outcome = provider.analyse(
             _provider_input("Synthetic context must not become advice evidence."),
-            _command(intent="general_advice"),
+            _command(intent="general_advice", query="Use English for general advice."),
             budget=CollaborationBudget(),
         )
     finally:
@@ -460,6 +472,146 @@ def test_general_advice_contract_is_explicit_and_empty_citations_are_valid() -> 
     assert outcome.decision.action == "general_advice"
 
 
+def test_chinese_general_advice_replaces_provider_language_refusal_with_safe_chinese_guidance() -> None:
+    captured_system_prompts: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        captured_system_prompts.append(body["messages"][0]["content"])
+        return httpx.Response(
+            200,
+            request=request,
+            json=_response_payload(
+                answer="I cannot answer questions in Chinese. Please use English.",
+                citation_ordinals=(),
+                action="general_advice",
+            ),
+        )
+
+    provider, client = _provider(handler)
+    try:
+        outcome = provider.analyse(
+            _provider_input("Synthetic context must not become advice evidence."),
+            _command(intent="general_advice", query="你好"),
+            budget=CollaborationBudget(),
+        )
+    finally:
+        client.close()
+
+    assert len(captured_system_prompts) == 2
+    assert all(prompt.startswith("你是受表格权限约束的数字员工分析器。") for prompt in captured_system_prompts)
+    assert all("Simplified Chinese" in prompt for prompt in captured_system_prompts)
+    assert outcome.status == "available"
+    assert outcome.reason_code == "none"
+    assert outcome.decision is not None
+    assert outcome.decision.answer == "你好，我在。你可以直接告诉我想讨论什么；打开业务 Base 后，我也可以结合授权数据协助分析。"
+    assert outcome.decision.citation_ordinals == ()
+    assert outcome.decision.action == "general_advice"
+    assert outcome.decision.draft_intent is None
+
+
+def test_provider_requires_structured_output_capability_and_bounds_completion_tokens() -> None:
+    captured_body: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_body.update(json.loads(request.content))
+        return httpx.Response(200, request=request, json=_response_payload())
+
+    provider, client = _provider(handler)
+    try:
+        outcome = provider.analyse(
+            _provider_input("[1] visible synthetic fact"),
+            _command(),
+            budget=CollaborationBudget(),
+        )
+    finally:
+        client.close()
+
+    assert outcome.status == "available"
+    assert captured_body["provider"] == {"require_parameters": True}
+    assert captured_body["max_tokens"] == 2200
+
+
+def test_provider_removes_source_local_ids_that_can_be_mistaken_for_citation_ordinals() -> None:
+    captured_body: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_body.update(json.loads(request.content))
+        return httpx.Response(200, request=request, json=_response_payload())
+
+    provider, client = _provider(handler)
+    try:
+        outcome = provider.analyse(
+            _provider_input(
+                '[business_data:10 label=business_data type=platform_record '
+                'scope=workspace/base/table/view]\n{"ticket_code":"MT-001"}'
+            ),
+            _command(),
+            budget=CollaborationBudget(),
+        )
+    finally:
+        client.close()
+
+    assert outcome.status == "available"
+    user_prompt = json.loads(captured_body["messages"][1]["content"])
+    content = user_prompt["evidence"][0]["content"]
+    assert "business_data:10" not in content
+    assert content.startswith("[label=business_data type=platform_record ")
+
+
+def test_provider_canonicalizes_duplicate_aggregate_citations() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            request=request,
+            json=_response_payload(citation_ordinals=(1, 1)),
+        )
+
+    provider, client = _provider(handler)
+    try:
+        outcome = provider.analyse(
+            _provider_input("visible synthetic fact"),
+            _command(),
+            budget=CollaborationBudget(),
+        )
+    finally:
+        client.close()
+
+    assert outcome.status == "available"
+    assert outcome.decision is not None
+    assert outcome.decision.citation_ordinals == (1,)
+
+
+def test_chinese_evidence_bound_request_rejects_language_refusal_without_fabricating_a_fact() -> None:
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(
+            200,
+            request=request,
+            json=_response_payload(
+                answer="I cannot answer questions in Chinese. Please use English.",
+            ),
+        )
+
+    provider, client = _provider(handler)
+    try:
+        outcome = provider.analyse(
+            _provider_input("[1] synthetic business fact"),
+            _command(query="请说明当前状态"),
+            budget=CollaborationBudget(),
+        )
+    finally:
+        client.close()
+
+    assert calls == 2
+    assert outcome.status == "unavailable"
+    assert outcome.reason_code == "invalid_input"
+    assert outcome.decision is None
+
+
 def test_business_fact_request_cannot_downgrade_to_uncited_general_advice() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -476,7 +628,10 @@ def test_business_fact_request_cannot_downgrade_to_uncited_general_advice() -> N
     try:
         outcome = provider.analyse(
             _provider_input("Synthetic business evidence."),
-            _command(intent="business_fact"),
+            _command(
+                intent="business_fact",
+                query="What is the current authorised customer fact?",
+            ),
             budget=CollaborationBudget(),
         )
     finally:
@@ -511,7 +666,10 @@ def test_invalid_semantic_payload_retries_once_before_failing_closed() -> None:
     try:
         outcome = provider.analyse(
             _provider_input("Synthetic business evidence."),
-            _command(intent="business_fact"),
+            _command(
+                intent="business_fact",
+                query="What is the current authorised customer fact?",
+            ),
             budget=CollaborationBudget(),
         )
     finally:
@@ -571,7 +729,7 @@ def test_general_advice_nonempty_citations_fail_closed() -> None:
     try:
         outcome = provider.analyse(
             _provider_input("Synthetic context must not become advice evidence."),
-            _command(intent="general_advice"),
+            _command(intent="general_advice", query="Use English for general advice."),
             budget=CollaborationBudget(),
         )
     finally:
@@ -609,7 +767,7 @@ def test_general_advice_accepts_only_approved_empty_citation_actions(
     try:
         outcome = provider.analyse(
             _provider_input("Synthetic context must not become advice evidence."),
-            _command(intent="general_advice"),
+            _command(intent="general_advice", query="Use English for general advice."),
             budget=CollaborationBudget(),
         )
     finally:

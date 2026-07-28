@@ -1,10 +1,14 @@
+import re
 from datetime import UTC, datetime
 from typing import Any, Protocol
 from uuid import UUID, uuid4
 
 from app.adapters.llm_openrouter import OpenRouterStructuredLLMClient
 from app.agents.interfaces import StructuredLLMClient, StructuredLLMResult
-from app.agents.stage06_live_digital_employee import run_stage06_live_employee
+from app.agents.stage06_live_digital_employee import (
+    run_stage06_live_employee,
+    validate_stage06_live_citations,
+)
 from app.agents.stage06_skill_matching import build_stage06_skill_evidence
 from app.models.agent import AgentRun
 from app.models.stage06_platform import Stage06TelegramBinding, WorkspaceMember
@@ -31,6 +35,11 @@ from app.services.stage06_platform import (
     list_view_records,
     read_base,
     update_record,
+)
+from app.services.stage09_table_retrieval import (
+    answer_covers_result_ticket_codes,
+    execute_visible_table_query,
+    parse_supported_table_query,
 )
 from app.services.stage08_memory import enqueue_confirmed_record_memory_event
 
@@ -348,6 +357,10 @@ def _invoke_live_digital_employee(
     schema = {
         "view_id": str(view_id),
         "visible_field_keys": visible_field_keys,
+        # The service produces authoritative result-set citations after the graph.
+        # Graph-level validation therefore checks only the JSON envelope; it must
+        # not reject an otherwise useful explanation for model-authored IDs.
+        "strict_citation_validation": False,
     }
     if action == "draft_update":
         if record_id is None:
@@ -356,6 +369,44 @@ def _invoke_live_digital_employee(
         if record is None:
             raise PlatformValidationError("record_not_found", str(record_id))
         _assert_table_in_scope(employee, record.table_id)
+
+    if action == "summarize" and (
+        _policy_refusal_required(skill_evidence) or _sensitive_field_request(prompt)
+    ):
+        return {
+            "action": action,
+            "employee_id": str(employee.id),
+            "view_id": str(view_id),
+            "record_count": 0,
+            "records": [],
+            "answer": "This field is unavailable.",
+            "citations": [],
+            "runtime": {"mode": "policy_refusal"},
+            "skill_evidence": skill_evidence,
+        }
+
+    if action == "summarize" and view_records_override is None:
+        intent = parse_supported_table_query(prompt, visible_records)
+        if intent is None:
+            return {
+                "action": action,
+                "employee_id": str(employee.id),
+                "view_id": str(view_id),
+                "record_count": 0,
+                "records": [],
+                "answer": "Please specify a visible field filter or record identifier.",
+                "citations": [],
+                "runtime": {"mode": "clarification_required"},
+                "skill_evidence": skill_evidence,
+            }
+        query_result = execute_visible_table_query(intent, visible_records)
+        visible_records = list(query_result.records)
+        schema = {
+            **schema,
+            "query_mode": query_result.mode,
+            "aggregate_value": query_result.aggregate_value,
+            "required_citation_record_ids": list(query_result.record_ids),
+        }
 
     client = llm_client or OpenRouterStructuredLLMClient()
     try:
@@ -375,6 +426,34 @@ def _invoke_live_digital_employee(
         raise PlatformValidationError("live_employee_invalid_output", str(exc)) from exc
 
     content = result.content
+    if action == "summarize" and view_records_override is None:
+        authoritative_answer = _authoritative_query_answer(
+            prompt=prompt,
+            query_mode=schema.get("query_mode"),
+            aggregate_value=schema.get("aggregate_value"),
+            records=visible_records,
+        )
+        content = {
+            **content,
+            **({"answer": authoritative_answer} if authoritative_answer else {}),
+            "citations": _canonical_result_citations(visible_records),
+        }
+        try:
+            validate_stage06_live_citations(
+                content.get("citations", []),
+                visible_records,
+                required_record_ids=schema.get("required_citation_record_ids", []),
+            )
+        except ValueError as exc:
+            raise PlatformValidationError("live_employee_invalid_output", str(exc)) from exc
+        if (
+            schema.get("query_mode") == "records"
+            and not answer_covers_result_ticket_codes(str(content.get("answer", "")), visible_records)
+        ):
+            raise PlatformValidationError(
+                "live_employee_incomplete_answer",
+                "result_ticket_code_coverage",
+            )
     response: dict[str, Any] = {
         "action": action,
         "employee_id": str(employee.id),
@@ -421,6 +500,94 @@ def _invoke_live_digital_employee(
         record_count=len(visible_records),
     )
     return response
+
+
+def _policy_refusal_required(skill_evidence: dict[str, object]) -> bool:
+    selected = skill_evidence.get("selected_skills")
+    if not isinstance(selected, list):
+        return False
+    selected_ids = {
+        item.get("skill_id")
+        for item in selected
+        if isinstance(item, dict) and isinstance(item.get("skill_id"), str)
+    }
+    if selected_ids == {"platform-shared-policy"}:
+        return True
+    return any(
+        item.get("skill_id") == "platform-shared-policy"
+        and item.get("selection") == "selected_guardrail"
+        for item in selected
+        if isinstance(item, dict)
+    )
+
+
+def _sensitive_field_request(prompt: str | None) -> bool:
+    text = (prompt or "").casefold()
+    return any(
+        marker in text
+        for marker in (
+            "private_notes",
+            "private-notes",
+            "private notes",
+            "internal_notes",
+            "internal-notes",
+            "internal notes",
+            "restricted_",
+            "restricted-",
+        )
+    )
+
+
+def _canonical_result_citations(
+    records: list[dict[str, Any]],
+) -> list[dict[str, object]]:
+    """Emit citation IDs from the deterministic result set, never model prose."""
+
+    citations: list[dict[str, object]] = []
+    for record in records:
+        record_id = record.get("id")
+        fields = record.get("fields")
+        if not isinstance(record_id, str) or not isinstance(fields, dict):
+            continue
+        field_keys = ["ticket_code"] if isinstance(fields.get("ticket_code"), str) else []
+        if not field_keys:
+            field_keys = [key for key in fields if isinstance(key, str)][:1]
+        if field_keys:
+            citations.append({"record_id": record_id, "field_keys": field_keys})
+    return citations
+
+
+def _authoritative_query_answer(
+    *,
+    prompt: str | None,
+    query_mode: object,
+    aggregate_value: object,
+    records: list[dict[str, Any]],
+) -> str | None:
+    """Render supported query facts from the deterministic projection only."""
+
+    codes = [
+        fields["ticket_code"]
+        for record in records
+        if isinstance(record.get("fields"), dict)
+        and isinstance((fields := record["fields"]).get("ticket_code"), str)
+    ]
+    if query_mode == "count" and isinstance(aggregate_value, int):
+        suffix = f" Supporting records: {', '.join(codes)}." if codes else ""
+        return f"Count: {aggregate_value}.{suffix}"
+    if query_mode != "records" or not codes:
+        identifier = re.search(r"\b[A-Z][A-Z0-9]*-\d{3,}\b", prompt or "", re.IGNORECASE)
+        return f"{identifier.group(0).upper()} was not found." if identifier else None
+    entries: list[str] = []
+    for record in records:
+        fields = record.get("fields")
+        if not isinstance(fields, dict) or not isinstance(fields.get("ticket_code"), str):
+            continue
+        entries.append(
+            f"{fields['ticket_code']}: status={fields.get('status', '')}; "
+            f"risk_level={fields.get('risk_level', '')}; summary={fields.get('summary', '')}"
+        )
+    return "\n".join(entries)
 
 
 def _normalize_live_view_records_override(

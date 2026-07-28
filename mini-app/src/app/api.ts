@@ -74,9 +74,15 @@ import type {
   ManagedEmployeeUpdateValues,
   ManagedEmployeeViewType,
 } from './digital-employee-management-types'
-import type { Stage08AssistantCitation, Stage08AssistantQuery, Stage08AssistantSafeView, Stage08AssistantSkill, Stage08AssistantSkillCatalog, Stage08AssistantStatus, Stage08AssistantStreamEvent, Stage08CitationLabel, Stage08DegradationCode, Stage08RequestedAction, Stage08SkillConfirmationPolicy, Stage08SkillDisabledReason } from './stage08-collaboration-types'
+import type { Stage08AssistantCitation, Stage08AssistantQuery, Stage08AssistantSafeView, Stage08AssistantSkill, Stage08AssistantSkillCatalog, Stage08AssistantStatus, Stage08AssistantStreamEvent, Stage08AssistantStreamPhase, Stage08CitationLabel, Stage08DegradationCode, Stage08RequestedAction, Stage08SkillConfirmationPolicy, Stage08SkillDisabledReason } from './stage08-collaboration-types'
 import type { Stage08MemoryItem, Stage08MemoryPage, Stage08MemoryType } from './stage08-memory-types'
 import { parseStage08AssistantStream } from './stage08-collaboration-stream'
+import {
+  initialAgentRunState,
+  parseAgentRunEventStream,
+  reduceAgentRunEvent,
+  type AgentRunEvent,
+} from './agent-run-events'
 
 export type {
   SafeViewErrorCode,
@@ -834,6 +840,113 @@ export async function queryStage08AssistantStream(
       ].includes(error.message))
     ) throw error
     throw new Error('Assistant stream unavailable')
+  }
+}
+
+const agentRunStatuses = new Set(['accepted', 'queued', 'running', 'completed', 'degraded', 'failed', 'waiting_approval', 'cancelled'])
+
+function safeAgentRunCreation(value: unknown): { runId: string; status: string; replayed: boolean } {
+  const record = jsonRecord(value)
+  if (!hasExactKeys(record, ['run_id', 'status', 'replayed']) || typeof record.run_id !== 'string' || typeof record.status !== 'string' || !agentRunStatuses.has(record.status) || typeof record.replayed !== 'boolean') throw new Error('Invalid agent run response')
+  return { runId: record.run_id, status: record.status, replayed: record.replayed }
+}
+
+function normalizedAgentRunRequest(request: Stage08AssistantQuery, idempotencyKey: string): Record<string, unknown> {
+  if (request.requestedAction !== 'read_only') throw new Error('Agent event runtime is read-only')
+  const query = request.query.trim()
+  const workspaceId = request.workspaceId.trim()
+  const employeeId = request.employeeId.trim()
+  const targetRecordId = request.targetRecordId?.trim() || null
+  const skillId = request.skillId?.trim() || null
+  if (!query || query.length > 600 || !workspaceId || !employeeId || !idempotencyKey || !stage08Intents.has(request.intent)) throw new Error('Invalid agent run request')
+  return {
+    workspace_id: workspaceId,
+    employee_id: employeeId,
+    intent: request.intent,
+    query,
+    requested_action: 'read_only',
+    target_record_id: targetRecordId,
+    idempotency_key: idempotencyKey,
+    skill_id: skillId,
+  }
+}
+
+function agentRunPhase(phase: Extract<AgentRunEvent, { event: 'status' }>['phase']): Stage08AssistantStreamPhase {
+  if (phase === 'accepted') return 'authorizing'
+  if (phase === 'queued') return 'planning_context'
+  if (phase === 'waiting_approval') return 'creating_draft'
+  return 'analysing'
+}
+
+export async function queryStage10AssistantRunStream(
+  request: Stage08AssistantQuery,
+  idempotencyKey: string,
+  onEvent: (event: Stage08AssistantStreamEvent) => void,
+  init: RequestInit = {},
+): Promise<Stage08AssistantSafeView> {
+  const payload = normalizedAgentRunRequest(request, idempotencyKey)
+  const creation = safeAgentRunCreation(await postJson<unknown>(
+    '/api/stage10/agent-runs',
+    payload,
+    idempotencyKey,
+    init,
+  ))
+  let state = initialAgentRunState(creation.runId)
+  let localSequence = 0
+  const requestId = creation.runId.replaceAll('-', '')
+  const forward = (event: AgentRunEvent) => {
+    state = reduceAgentRunEvent(state, event)
+    if (event.event === 'status') {
+      onEvent({ event: 'status', sequence: ++localSequence, requestId, phase: agentRunPhase(event.phase) })
+    } else if (event.event === 'result') {
+      if (event.safeView.answer) onEvent({ event: 'answer_delta', sequence: ++localSequence, requestId, text: event.safeView.answer })
+      onEvent({ event: 'result', sequence: ++localSequence, requestId, safeView: event.safeView })
+    } else if (event.event === 'error') {
+      onEvent({ event: 'error', sequence: ++localSequence, requestId, code: event.code, message: event.message })
+    } else if (event.event === 'done') {
+      onEvent({ event: 'done', sequence: ++localSequence, requestId })
+    }
+  }
+  let lastError: unknown
+  for (let attempt = 0; attempt < 2 && state.terminalStatus === null; attempt += 1) {
+    try {
+      const headers = protectedHeaders(init.headers)
+      headers.set('Accept', 'text/event-stream')
+      if (state.lastSequence > 0) headers.set('Last-Event-ID', String(state.lastSequence))
+      const response = await fetch(`/api/stage10/agent-runs/${encodeURIComponent(creation.runId)}/events`, {
+        credentials: 'same-origin',
+        ...init,
+        method: 'GET',
+        headers: Object.fromEntries(headers.entries()),
+        body: undefined,
+      })
+      if (!response.ok) throw new ApiError(response.status, await safeErrorCode(response))
+      if (response.headers.get('Content-Type')?.split(';', 1)[0].trim().toLowerCase() !== 'text/event-stream' || !response.body) throw new Error('Invalid agent run stream response')
+      await parseAgentRunEventStream(response.body, { runId: creation.runId, afterSequence: state.lastSequence, onEvent: forward })
+    } catch (error) {
+      if (isAbortError(error)) throw error
+      lastError = error
+      if (error instanceof ApiError || attempt === 1) throw error
+    }
+  }
+  if (state.errorCode) throw new Error('Assistant stream failed')
+  if (state.terminalStatus !== 'completed' || state.result === null) {
+    throw lastError instanceof Error ? lastError : new Error('Agent run stream incomplete')
+  }
+  return state.result
+}
+
+export async function queryStage10AssistantWithFallback(
+  request: Stage08AssistantQuery,
+  idempotencyKey: string,
+  onEvent: (event: Stage08AssistantStreamEvent) => void,
+  init: RequestInit = {},
+): Promise<Stage08AssistantSafeView> {
+  try {
+    return await queryStage10AssistantRunStream(request, idempotencyKey, onEvent, init)
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 404) throw error
+    return queryStage08AssistantStream(request, idempotencyKey, onEvent, init)
   }
 }
 
@@ -1641,6 +1754,8 @@ export const api = {
     ))
   },
   queryStage08AssistantStream,
+  queryStage10AssistantRunStream,
+  queryStage10AssistantWithFallback,
   listStage08AssistantSkills: async (workspaceId: string, employeeId: string, targetRecordId: string | null, init?: RequestInit): Promise<Stage08AssistantSkillCatalog> => {
     const workspace = workspaceId.trim()
     const employee = employeeId.trim()

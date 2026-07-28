@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.routes.confirmations import router as confirmations_router
+from app.api.routes.agent_runs import router as agent_runs_router
 from app.api.routes.health import router as health_router
 from app.api.routes.inventory import router as inventory_router
 from app.api.routes.mock_telegram import router as mock_telegram_router
@@ -40,6 +41,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
     validate_runtime_settings(settings)
     app = FastAPI(title=settings.app_name)
+    app.include_router(agent_runs_router)
     app.include_router(confirmations_router)
     app.include_router(health_router)
     app.include_router(inventory_router)

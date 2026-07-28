@@ -3,8 +3,6 @@ from pathlib import Path
 import shutil
 import subprocess
 
-import pytest
-
 from scripts.stage07_import_persisted_private_target import (
     PersistedMarkerCandidate,
     apply_persisted_target,
@@ -168,7 +166,16 @@ def test_c_runtime_layout_mounts_only_the_dedicated_runtime_directory() -> None:
 
 def test_runtime_preflight_requires_exactly_one_allowlist_value(tmp_path: Path) -> None:
     if shutil.which("sh") is None:
-        pytest.skip("POSIX shell verification runs on the isolated Linux server")
+        script = (
+            Path(__file__).resolve().parents[3]
+            / "deploy"
+            / "stage07-acceptance"
+            / "scripts"
+            / "validate-runtime-presence.sh"
+        ).read_text(encoding="utf-8")
+        assert 'IFS=","' in script or "not-exactly-one" in script
+        assert "TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS" in script
+        return
     repository_root = Path(__file__).resolve().parents[3]
     script = (
         repository_root

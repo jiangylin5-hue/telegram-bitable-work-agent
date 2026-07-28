@@ -1157,6 +1157,80 @@ def test_query_fingerprint_includes_resolved_skill_semantics() -> None:
     assert len(fingerprints) == 4
 
 
+@pytest.mark.parametrize("query", ["你好", "您好！", "hello", "你能帮我做什么？"])
+def test_auto_mixed_pure_conversation_is_normalized_server_side(query: str) -> None:
+    fixture = _fixture()
+    request = AssistantQueryRequest.model_validate(
+        _payload(fixture, intent="mixed", query=query)
+    )
+
+    effective = collaboration_route._effective_auto_conversation_request(request)
+
+    assert effective.intent == "general_advice"
+    assert effective.query == query
+
+
+@pytest.mark.parametrize(
+    ("query", "requested_action", "skill_id"),
+    [
+        ("你好，明日璀璨客户现在是什么阶段？", "read_only", None),
+        ("请介绍项目状态", "read_only", None),
+        ("你好", "read_only", "platform-base"),
+        ("你好", "draft_update", None),
+    ],
+)
+def test_business_explicit_or_write_request_is_never_downgraded_to_general_advice(
+    query: str,
+    requested_action: str,
+    skill_id: str | None,
+) -> None:
+    fixture = _fixture()
+    payload = _payload(
+        fixture,
+        intent="mixed",
+        query=query,
+        requested_action=requested_action,
+        skill_id=skill_id,
+    )
+    if requested_action == "draft_update":
+        payload["target_record_id"] = str(fixture.record.id)
+    request = AssistantQueryRequest.model_validate(payload)
+
+    effective = collaboration_route._effective_auto_conversation_request(request)
+
+    assert effective.intent == "mixed"
+
+
+def test_prepare_uses_server_normalized_general_advice_command(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fixture = _fixture()
+    captured: dict[str, object] = {}
+
+    def run(uow, command, actor, *, deps, now, runtime_control):
+        del uow, actor, deps, now, runtime_control
+        captured["command"] = _command_snapshot(command)
+        return AssistantQuerySafeView(
+            status="completed",
+            answer="你好，有什么需要我帮助的吗？",
+            citations=(
+                AssistantQuerySafeCitation(ordinal=1, label="general_advice"),
+            ),
+            degradation_codes=(),
+            draft_id=None,
+        )
+
+    monkeypatch.setattr(collaboration_route, "run_stage08_collaboration", run)
+    with _client(fixture) as client:
+        response = client.post(
+            PATH,
+            json=_payload(fixture, intent="mixed", query="你好"),
+        )
+
+    assert response.status_code == 200
+    assert captured["command"].intent == "general_advice"
+
+
 def test_assistant_query_derives_command_server_side_and_returns_only_safe_view(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

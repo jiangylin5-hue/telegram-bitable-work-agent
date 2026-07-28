@@ -37,7 +37,7 @@ test('opens Stage08 collaboration from Home and streams only the safe query cont
         safe_view: {
           status: 'completed',
           answer: '先确认预算节点。',
-          citations: [{ ordinal: 1, label: 'group_context' }],
+          citations: [],
           degradation_codes: [],
           draft_id: null,
         },
@@ -67,6 +67,6 @@ test('opens Stage08 collaboration from Home and streams only the safe query cont
   expect(body).toMatchObject({ workspace_id: 'workspace-1', employee_id: 'employee-1', intent: 'mixed', query: '客户下一步怎么推进？', requested_action: 'read_only' })
   expect(body).not.toHaveProperty('target_record_id')
   expect(await screen.findByText('先确认预算节点。')).toBeVisible()
-  expect(screen.getByText('已使用受权群聊上下文作为证据')).toBeVisible()
+  expect(screen.queryByText('已使用受权群聊上下文作为证据')).not.toBeInTheDocument()
   expect(screen.queryByText('must not render')).not.toBeInTheDocument()
 })

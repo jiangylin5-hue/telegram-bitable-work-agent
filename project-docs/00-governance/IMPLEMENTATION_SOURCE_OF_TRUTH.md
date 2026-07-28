@@ -4,7 +4,7 @@
 
 - Document status: active source of truth
 - Scope: 顶层产品目标、边界、阶段、技术基线、安全约束，以及当前 Stage08/Stage09 运行时与工作台方向
-- Current Progress: 2026-07-26 Stage06 is the accepted backend baseline. Stage07 supplied the Mini App and table-workspace surface. Stage08 added permission-filtered business context, controlled group projection, memory, pgvector retrieval and LangGraph-first collaboration execution. The user-approved Stage09 Codex-style AI conversation workbench, controlled SSE compatibility path and Stage06-registry skill launcher passed local final acceptance (209 selected backend tests; 398 Mini App tests with 2 historical skips; production build; internal/public rendered Nginx asset checks; bounded real OpenRouter smoke; populated desktop/compact Browser QA). `design-qa.md` records the exact retained visual evidence and the three resolved review findings. Deployment and Telegram writes remain unapproved; the local squash commit is recorded on this branch; no schema or permission-model expansion occurred.
+- Current Progress: 2026-07-28 Stage10 is the accepted deployed read-only Agent control plane on public r66. PostgreSQL is the durable truth for runs, checkpoints, commands, artifacts, events, outbox and encrypted expiring private inputs; Redis Streams is an at-least-once transport used by independent publisher and registered table-analysis Specialist services; SSE reconnects from PostgreSQL after current-scope authorization. Stage06 registry and Stage08 authorization/retrieval remain the only capability and data-access sources. Fresh evidence includes 1537 backend Unit+API tests, 71 server API tests, 411 Mini App tests, exact local/server static hashes, production head `20260728_0034`, real Redis crash recovery, a real OpenRouter Chinese 20-case multi-table report with all reported quality rates at 100%, and browser tests for explicit skill, automatic retrieval, pure greeting and greeting-plus-business routing. Telegram sends, automatic draft confirmation, business writes and unrestricted capabilities remain outside Stage10.
 
 ## 1. Product Goal
 
@@ -182,6 +182,12 @@ On 2026-07-26 the user additionally required UI skill tabs to invoke correspondi
 
 Task5 has locally verified rendered Nginx transport contracts for the exact SSE route in the internal and public HTTPS templates. This evidence proves only the repository assets: it is not a deployed-host check, a browser acceptance result or authorization for an external write.
 
+### Stage10 durable Agent control plane
+
+On 2026-07-28 the user approved the architecture and implementation of a durable supervisor/sub-agent runtime. PostgreSQL is authoritative for runs and redacted control checkpoints; Redis Streams is at-least-once transport; database uniqueness, leases and idempotent transitions provide exactly-once effects. LangGraph continues with `checkpointer=None` in v1 so private prompts, retrieved records and model output are not serialized into checkpoints.
+
+The first activation slice contains only `platform.tabular.analyse`, a read-only Specialist that reuses the existing Stage08 permission, skill selection, LangGraph/OpenRouter, idempotency and safe-view contracts. Browser SSE is a permission-rechecked projection and not the internal event bus. Stage10 does not authorize arbitrary delegation, direct table writes, self-confirmed drafts, Telegram sends or production traffic.
+
 ## 8. Historical Stage Documents
 
 Stage02 to Stage05 remain useful implementation history:
@@ -232,6 +238,8 @@ The current implementation entry is:
 - [Stage09 SSE transport task evidence](../08-implementation/evidence/stage09-codex-ai-conversation-sse-2026-07-26.md)
 - [Stage09 UI functional remediation plan](../08-implementation/STAGE_09_UI_FUNCTIONAL_REMEDIATION_PLAN.md)
 - [Stage09 r40 regression and live-readiness evidence](../08-implementation/evidence/stage09-r40-regression-and-live-readiness-2026-07-26.md)
+- [Stage10 Agent event-runtime architecture](../02-architecture/AGENT_EVENT_RUNTIME_PROPOSAL.md)
+- [Stage10 implementation and acceptance](../08-implementation/STAGE_10_AGENT_EVENT_RUNTIME_ACCEPTANCE.md)
 
 ## 11. Confirmation Rule
 

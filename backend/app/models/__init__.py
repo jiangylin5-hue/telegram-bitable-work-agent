@@ -7,6 +7,15 @@ from app.models.accounts import (
     AccountStatusEvent,
 )
 from app.models.agent import AgentRun
+from app.models.agent_event_runtime import (
+    AgentArtifact,
+    AgentCommand,
+    AgentEvent,
+    AgentOutboxEvent,
+    AgentPrivateInput,
+    AgentRunCheckpoint,
+    AgentWorkflowRun,
+)
 from app.models.bitable import (
     AutomationRule,
     FieldPermission,
@@ -86,6 +95,13 @@ __all__ = [
     "AccountDailyMetric",
     "AccountCardBinding",
     "AgentRun",
+    "AgentArtifact",
+    "AgentCommand",
+    "AgentEvent",
+    "AgentOutboxEvent",
+    "AgentPrivateInput",
+    "AgentRunCheckpoint",
+    "AgentWorkflowRun",
     "AutomationRule",
     "CompanyDailyReport",
     "Customer",

@@ -425,7 +425,7 @@ class _DeterministicAnalysisProvider:
         del budget
         self._telemetry.observe("invoked")
         try:
-            prompt, _, _ = _build_prompt(material, command)
+            prompt, *_ = _build_prompt(material, command)
             if not self._prompt_guard(prompt):
                 outcome = AnalysisProviderOutcome(
                     status="unavailable", reason_code="invalid_input", decision=None

@@ -55,10 +55,36 @@ _SYSTEM_PROMPT = (
     "written, created, updated, sent, or completed: a draft is only a proposal "
     "awaiting confirmation."
 )
+_ZH_SYSTEM_PROMPT = (
+    "你是受表格权限约束的数字员工分析器。用户使用中文提问时，必须使用简体中文"
+    "（Simplified Chinese）直接回答，不得因为输入是中文而拒答。"
+    "只能使用调用方给出的编号证据，不得补充常识、猜测或未授权数据。"
+    "必须只返回一个 JSON 对象，字段固定为 answer、citation_ordinals、action、draft。"
+    "允许的 action 只有 read_only、draft_update、general_advice、deny。"
+    "general_advice 和 deny 的 citation_ordinals 必须为空数组，draft 必须为 null。"
+    "read_only 必须引用至少一条真实证据，格式示例："
+    '{"answer":"基于证据的中文事实","citation_ordinals":[1],"action":"read_only","draft":null}。'
+    "只有 requested_action 为 draft_update 时才能使用 draft_update；此时 draft 必须只含"
+    " field_key 和 value，并至少引用一条证据。其他 action 的 draft 必须为 null。"
+    "草稿仅是等待用户确认的建议，绝不能声称记录已经写入、创建、更新、发送或完成。"
+    "记录编号、字段 key 和需要引用的原始标量值必须保持原样。"
+)
 _WRITE_COMPLETION_CLAIM_RE = re.compile(
     r"(?:已(?:写入|创建|执行|更新|提交|发送|完成)|已经(?:写入|创建|执行|更新|提交|发送|完成)|"
     r"\b(?:wrote|written|created|executed|updated|submitted|sent|completed)\b)",
     re.IGNORECASE,
+)
+_HAN_CHARACTER_RE = re.compile(r"[\u3400-\u9fff]")
+_CHINESE_LANGUAGE_REFUSAL_RE = re.compile(
+    r"(?:cannot answer questions? in chinese|please use english|"
+    r"不能(?:用|以)?中文(?:回答|作答)?|请(?:使用|用)英语)",
+    re.IGNORECASE,
+)
+_SOURCE_LOCAL_EVIDENCE_ID_RE = re.compile(
+    r"(?m)^\[[^\]\s]{1,120}\s+(?=label=[a-z][a-z0-9_]{0,63}\s+type=)"
+)
+_CHINESE_GENERAL_ADVICE_FALLBACK = (
+    "你好，我在。你可以直接告诉我想讨论什么；打开业务 Base 后，我也可以结合授权数据协助分析。"
 )
 ProviderEvent: TypeAlias = Literal[
     "invoked", "completed", "usage_metadata_present"
@@ -66,6 +92,7 @@ ProviderEvent: TypeAlias = Literal[
 ProviderAnalysisAction: TypeAlias = Literal[
     "read_only", "draft_update", "general_advice", "deny"
 ]
+ResponseLanguage: TypeAlias = Literal["zh-Hans", "other"]
 _MAX_SEMANTIC_OUTPUT_ATTEMPTS = 2
 
 
@@ -140,24 +167,29 @@ class OpenRouterStage08AnalysisProvider:
             return self._complete(_unavailable("analysis_provider_unavailable"))
 
         try:
+            command_snapshot = _command_snapshot(command)
             prompt, evidence_count, command_intent, allowed_provider_actions = _build_prompt(
                 material, command
             )
-            requested_action = _command_snapshot(command).requested_action
+            requested_action = command_snapshot.requested_action
+            response_language = _response_language_for_query(command_snapshot.query)
         except Exception:
             return self._complete(_unavailable("invalid_input"))
 
         json_body = {
             "model": self._model_name,
             "messages": (
-                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "system", "content": _system_prompt_for_language(response_language)},
                 {"role": "user", "content": prompt},
             ),
-            "response_format": _strict_response_format(),
+            "response_format": _strict_response_format(evidence_count),
+            "provider": {"require_parameters": True},
+            "max_tokens": 2200,
         }
         if not self._prompt_is_allowed(prompt):
             return self._complete(_unavailable("invalid_input"))
 
+        response_language_rejected = False
         for _ in range(_MAX_SEMANTIC_OUTPUT_ATTEMPTS):
             try:
                 timeout_seconds = _bounded_timeout_seconds(
@@ -189,11 +221,14 @@ class OpenRouterStage08AnalysisProvider:
                     requested_action=requested_action,
                     evidence_count=evidence_count,
                     allowed_provider_actions=allowed_provider_actions,
+                    response_language=response_language,
                 )
                 decision = validate_analysis_decision(
                     AnalysisDecision(
                         answer=payload.answer,
-                        citation_ordinals=payload.citation_ordinals,
+                        citation_ordinals=_canonical_citation_ordinals(
+                            payload.citation_ordinals
+                        ),
                         action=payload.action,
                         draft_intent=draft_intent,
                     )
@@ -206,9 +241,33 @@ class OpenRouterStage08AnalysisProvider:
                         decision=decision,
                     )
                 )
+            except ValueError as error:
+                if str(error) == "stage09_provider_response_language_invalid":
+                    response_language_rejected = True
+                continue
             except Exception:
                 continue
 
+        if (
+            response_language == "zh-Hans"
+            and command_intent == "general_advice"
+            and response_language_rejected
+        ):
+            self._notify_action("general_advice")
+            return self._complete(
+                AnalysisProviderOutcome(
+                    status="available",
+                    reason_code="none",
+                    decision=validate_analysis_decision(
+                        AnalysisDecision(
+                            answer=_CHINESE_GENERAL_ADVICE_FALLBACK,
+                            citation_ordinals=(),
+                            action="general_advice",
+                            draft_intent=None,
+                        )
+                    ),
+                )
+            )
         return self._complete(_unavailable("invalid_input"))
 
     def _prompt_is_allowed(self, prompt: str) -> bool:
@@ -280,7 +339,9 @@ def _bounded_timeout_seconds(
     )
 
 
-def _strict_response_format() -> dict[str, object]:
+def _strict_response_format(evidence_count: int) -> dict[str, object]:
+    if type(evidence_count) is not int or not 1 <= evidence_count <= 12:
+        raise ValueError("stage08_provider_evidence_count_invalid")
     return {
         "type": "json_schema",
         "json_schema": {
@@ -295,7 +356,11 @@ def _strict_response_format() -> dict[str, object]:
                     "citation_ordinals": {
                         "type": "array",
                         "maxItems": 12,
-                        "items": {"type": "integer"},
+                        "items": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": evidence_count,
+                        },
                     },
                     "action": {
                         "type": "string",
@@ -330,6 +395,25 @@ def _strict_response_format() -> dict[str, object]:
     }
 
 
+def _response_language_for_query(query: str) -> ResponseLanguage:
+    return "zh-Hans" if _HAN_CHARACTER_RE.search(query) else "other"
+
+
+def _system_prompt_for_language(response_language: ResponseLanguage) -> str:
+    if response_language == "zh-Hans":
+        return _ZH_SYSTEM_PROMPT
+    return _SYSTEM_PROMPT
+
+
+def _answer_meets_language_requirement(
+    answer: str, response_language: ResponseLanguage
+) -> bool:
+    return response_language != "zh-Hans" or (
+        _HAN_CHARACTER_RE.search(answer) is not None
+        and _CHINESE_LANGUAGE_REFUSAL_RE.search(answer) is None
+    )
+
+
 def _validate_payload(
     payload: _OpenRouterAnalysisPayload,
     *,
@@ -337,6 +421,7 @@ def _validate_payload(
     requested_action: str,
     evidence_count: int,
     allowed_provider_actions: tuple[str, ...] | None = None,
+    response_language: ResponseLanguage = "other",
 ) -> object | None:
     if (
         allowed_provider_actions is not None
@@ -350,6 +435,8 @@ def _validate_payload(
         raise ValueError("stage08_provider_action_invalid")
     if command_intent != "general_advice" and payload.action == "general_advice":
         raise ValueError("stage08_provider_action_invalid")
+    if not _answer_meets_language_requirement(payload.answer, response_language):
+        raise ValueError("stage09_provider_response_language_invalid")
     if any(ordinal > evidence_count for ordinal in payload.citation_ordinals):
         raise ValueError("stage08_provider_citation_invalid")
     if payload.action in {"general_advice", "deny"}:
@@ -405,6 +492,18 @@ def _build_prompt(material: object, command: object) -> tuple[str, int, str, tup
                 "citation_policy": {
                     "general_advice": "citation_ordinals must be []",
                     "deny": "citation_ordinals must be []",
+                    "no_matching_evidence": (
+                        "use action deny with citation_ordinals [] and explicitly say no matching record was found"
+                    ),
+                    "ordinal_scope": (
+                        "citation_ordinals refer only to outer evidence[].ordinal; "
+                        "never copy numbers from labels inside evidence[].content"
+                    ),
+                },
+                "answer_policy": {
+                    "supporting_records": (
+                        "for list or count questions, name every supporting record identifier present in the evidence"
+                    ),
                 },
                 "evidence": tuple(
                     {"ordinal": ordinal, "content": content}
@@ -423,10 +522,17 @@ def _build_prompt(material: object, command: object) -> tuple[str, int, str, tup
 def _analysis_evidence(payload: object) -> tuple[str, ...]:
     if type(payload) is not tuple or not 1 <= len(payload) <= 12:
         raise TypeError("stage08_provider_material_invalid")
-    rendered = tuple(_render_private_material(item) for item in payload)
+    rendered = tuple(
+        _SOURCE_LOCAL_EVIDENCE_ID_RE.sub("[", _render_private_material(item))
+        for item in payload
+    )
     if any(not item.strip() for item in rendered):
         raise TypeError("stage08_provider_material_invalid")
     return rendered
+
+
+def _canonical_citation_ordinals(values: tuple[int, ...]) -> tuple[int, ...]:
+    return tuple(dict.fromkeys(values))
 
 
 def _render_private_material(value: object) -> str:

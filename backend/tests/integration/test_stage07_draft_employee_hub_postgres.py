@@ -141,7 +141,9 @@ def test_s5_confirm_postgres_locks_second_command_and_rolls_back_its_ledger(
         outcomes = list(executor.map(confirm, ["s5-pg-confirm-a", "s5-pg-confirm-b"]))
 
     assert sorted(status for status, _code in outcomes) == [200, 409]
-    assert any(code == "record_change_draft_invalid_state" for _status, code in outcomes)
+    assert any(
+        code == "record_change_draft_invalid_state" for _status, code in outcomes
+    ), outcomes
     with stage06_postgres.session_factory() as session:
         draft = session.get(RecordChangeDraft, UUID(draft_id))
         record = SqlAlchemyStage06PlatformUnitOfWork(session).get_record(UUID(record_id))

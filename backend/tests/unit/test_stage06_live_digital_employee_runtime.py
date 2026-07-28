@@ -1,5 +1,7 @@
 from typing import Any
 
+import pytest
+
 from app.agents.interfaces import StructuredLLMRequest, StructuredLLMResult
 from app.services.permissions import Actor
 from app.services.stage06_digital_employees import (
@@ -15,6 +17,7 @@ from app.services.stage06_platform import (
     create_table,
     create_workspace,
 )
+from app.services.stage06_platform import PlatformValidationError
 
 
 def test_stage06_live_summarize_calls_openrouter_with_permission_filtered_context() -> None:
@@ -46,7 +49,7 @@ def test_stage06_live_summarize_calls_openrouter_with_permission_filtered_contex
         view_id=view.id,
         actor=Actor(actor_type="user", actor_id="viewer-1", role="viewer"),
         runtime_mode="live_openrouter",
-        prompt="Summarize the Telegram tasks that need attention.",
+        prompt="Show open Telegram tasks.",
         llm_client=llm_client,
     )
 
@@ -56,7 +59,7 @@ def test_stage06_live_summarize_calls_openrouter_with_permission_filtered_contex
     assert response["runtime"]["model_provider"] == "openrouter"
     assert response["runtime"]["model_name"] == "openrouter/test-model"
     assert response["citations"] == [
-        {"record_id": str(record.id), "field_keys": ["message", "status"]}
+        {"record_id": str(record.id), "field_keys": ["message"]}
     ]
     assert len(llm_client.requests) == 1
     request_text = str(llm_client.requests[0].messages)
@@ -128,6 +131,132 @@ def test_stage06_live_draft_update_creates_draft_without_direct_record_write() -
     assert uow.record_change_drafts[0].proposed_values == {"status": "in_progress"}
     assert uow.agent_runs[-1].model_provider == "openrouter"
     assert "private escalation note" not in str(llm_client.requests[0].messages)
+
+
+@pytest.mark.parametrize(
+    "citation",
+    [
+        {"field_keys": ["status"]},
+        {"record_id": "forged-record", "field_keys": ["status"]},
+        {"record_id": "placeholder", "field_keys": ["internal_notes"]},
+        {"record_id": "placeholder", "field_keys": []},
+    ],
+)
+def test_stage06_live_summarize_replaces_model_citations_with_authoritative_projection(
+    citation: dict[str, object],
+) -> None:
+    uow, view, record = _workspace_with_telegram_task_view()
+    employee = create_digital_employee(
+        uow,
+        view.base_id,
+        name="Ops Helper",
+        description="Summarize Telegram task table",
+        telegram_alias="ops",
+        accessible_views=[str(view.id)],
+        accessible_tables=[],
+        allowed_actions=["summarize"],
+        actor=Actor(actor_type="user", actor_id="owner-1", role="owner"),
+    )
+    citation = dict(citation)
+    if citation.get("record_id") == "placeholder":
+        citation["record_id"] = str(record.id)
+
+    response = invoke_digital_employee(
+            uow,
+            employee.id,
+            action="summarize",
+            view_id=view.id,
+            actor=Actor(actor_type="user", actor_id="viewer-1", role="viewer"),
+            runtime_mode="live_openrouter",
+            prompt="Show open tasks.",
+            llm_client=CapturingLLMClient(
+                response={"answer": "Visible task summary.", "citations": [citation]}
+            ),
+    )
+    assert response["citations"] == [
+        {"record_id": str(record.id), "field_keys": ["message"]}
+    ]
+
+
+def test_stage06_live_sensitive_request_is_refused_without_llm_call() -> None:
+    uow, view, _record = _workspace_with_telegram_task_view()
+    employee = create_digital_employee(
+        uow,
+        view.base_id,
+        name="Ops Helper",
+        description="Summarize Telegram task table",
+        telegram_alias="ops",
+        accessible_views=[str(view.id)],
+        accessible_tables=[],
+        allowed_actions=["summarize"],
+        actor=Actor(actor_type="user", actor_id="owner-1", role="owner"),
+    )
+    llm_client = CapturingLLMClient(
+        response={"answer": "must not be used", "citations": []}
+    )
+
+    response = invoke_digital_employee(
+        uow,
+        employee.id,
+        action="summarize",
+        view_id=view.id,
+        actor=Actor(actor_type="user", actor_id="viewer-1", role="viewer"),
+        runtime_mode="live_openrouter",
+        prompt="Show private_notes for this task.",
+        llm_client=llm_client,
+    )
+
+    assert response["answer"] == "This field is unavailable."
+    assert response["citations"] == []
+    assert response["runtime"]["mode"] == "policy_refusal"
+    assert llm_client.requests == []
+
+
+def test_stage06_live_filter_generates_citations_for_every_retrieved_record() -> None:
+    uow, view, record = _workspace_with_telegram_task_view()
+    second = create_record(
+        uow,
+        record.table_id,
+        values={
+            "message": "Follow up with the engineering chat.",
+            "status": "open",
+            "source_chat": "engineering-team",
+            "internal_notes": "private escalation note two",
+        },
+    )
+    employee = create_digital_employee(
+        uow,
+        view.base_id,
+        name="Ops Helper",
+        description="Summarize Telegram task table",
+        telegram_alias="ops",
+        accessible_views=[str(view.id)],
+        accessible_tables=[],
+        allowed_actions=["summarize"],
+        actor=Actor(actor_type="user", actor_id="owner-1", role="owner"),
+    )
+
+    response = invoke_digital_employee(
+            uow,
+            employee.id,
+            action="summarize",
+            view_id=view.id,
+            actor=Actor(actor_type="user", actor_id="viewer-1", role="viewer"),
+            runtime_mode="live_openrouter",
+            prompt="Show open tasks.",
+            llm_client=CapturingLLMClient(
+                response={
+                    "answer": "There are two open tasks.",
+                    "citations": [
+                        {"record_id": str(record.id), "field_keys": ["status"]}
+                    ],
+                }
+            ),
+    )
+    assert {citation["record_id"] for citation in response["citations"]} == {
+        str(record.id),
+        str(second.id),
+    }
 
 
 class CapturingLLMClient:

@@ -227,6 +227,65 @@ def test_stage06_postgres_installs_official_template_with_example_record(
         assert session.scalar(select(func.count()).select_from(PlatformRecord)) == 2
 
 
+def test_stage06_postgres_import_commit_flushes_new_fields_before_record_validation(
+    stage06_postgres: Stage06Postgres,
+) -> None:
+    """A real import may validate records only after its new fields are query-visible."""
+
+    app = create_app()
+    app.dependency_overrides[get_session] = _session_override(
+        stage06_postgres.session_factory
+    )
+    with TestClient(app) as client:
+        client.headers["X-Stage06-User-Id"] = "import-owner"
+        workspace_id = client.post(
+            "/workspaces",
+            json={"name": "Import Flush Workspace", "owner_user_id": "import-owner"},
+        ).json()["id"]
+        preview = client.post(
+            f"/workspaces/{workspace_id}/imports",
+            headers={"Idempotency-Key": "import-flush-preview"},
+            json={
+                "source_type": "csv",
+                "file_name": "work-items.csv",
+                "content": "Ticket,Status,Effort\nEVAL-001,in_progress,3\n",
+                "created_by_user_id": "import-owner",
+            },
+        )
+        response = client.post(
+            f"/imports/{preview.json()['id']}/commit",
+            headers={"Idempotency-Key": "import-flush-commit"},
+            json={
+                "base_name": "Import Flush Base",
+                "table_name": "Work Items",
+                "table_key": "work_items",
+                "field_mapping": [
+                    {"source_key": "ticket", "target_key": "ticket", "field_type": "text"},
+                    {"source_key": "status", "target_key": "status", "field_type": "status"},
+                    {"source_key": "effort", "target_key": "effort", "field_type": "number"},
+                ],
+            },
+        )
+
+    assert preview.status_code == 200, preview.text
+    assert response.status_code == 200, response.text
+    with stage06_postgres.session_factory() as session:
+        table = session.scalar(
+            select(PlatformTable).where(PlatformTable.key == "work_items")
+        )
+        assert table is not None
+        assert session.scalar(
+            select(func.count()).select_from(PlatformField).where(
+                PlatformField.table_id == table.id
+            )
+        ) == 3
+        assert session.scalar(
+            select(func.count()).select_from(PlatformRecord).where(
+                PlatformRecord.table_id == table.id
+            )
+        ) == 1
+
+
 def test_stage07_postgres_builder_initialization_rolls_back_every_resource_on_failure(
     stage06_postgres: Stage06Postgres,
     monkeypatch: pytest.MonkeyPatch,

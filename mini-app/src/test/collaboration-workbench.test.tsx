@@ -125,7 +125,7 @@ test('uses one Ledgerline context strip, continuous timeline and composer with a
 test('renders auto plus only server catalog skills and preserves disabled safe reasons', () => {
   renderWorkbench()
 
-  expect(screen.getByRole('button', { name: '自动选择' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: '自动选择' })).toHaveAttribute('aria-pressed', 'true')
   expect(screen.getByRole('button', { name: '查表问答' })).toBeEnabled()
   expect(screen.getByRole('button', { name: '生成跟进草稿' })).toBeEnabled()
   const disabled = screen.getByRole('button', { name: '群聊上下文' })
@@ -139,17 +139,47 @@ test('submits explicit selected skill_id and auto selection submits null', async
   renderWorkbench({ onInvokeStream })
   const textbox = screen.getByRole('textbox', { name: '协作问题' })
 
+  fireEvent.change(textbox, { target: { value: '不要覆盖这条真实问题' } })
   fireEvent.click(screen.getByRole('button', { name: '查表问答' }))
+  expect(screen.getByRole('button', { name: '查表问答' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: '自动选择' })).toHaveAttribute('aria-pressed', 'false')
+  expect(textbox).toHaveValue('不要覆盖这条真实问题')
   fireEvent.change(textbox, { target: { value: '查询当前状态' } })
   fireEvent.keyDown(textbox, { key: 'Enter' })
   await waitFor(() => expect(onInvokeStream).toHaveBeenCalledTimes(1))
-  expect(onInvokeStream).toHaveBeenLastCalledWith(expect.objectContaining({ skillId: 'platform-base' }), expect.any(Function), expect.any(AbortSignal))
+  expect(onInvokeStream).toHaveBeenLastCalledWith(expect.objectContaining({ skillId: 'platform-base', intent: 'business_fact' }), expect.any(Function), expect.any(AbortSignal))
 
   fireEvent.click(screen.getByRole('button', { name: '自动选择' }))
   fireEvent.change(textbox, { target: { value: '继续查询' } })
   fireEvent.keyDown(textbox, { key: 'Enter' })
   await waitFor(() => expect(onInvokeStream).toHaveBeenCalledTimes(2))
-  expect(onInvokeStream).toHaveBeenLastCalledWith(expect.objectContaining({ skillId: null }), expect.any(Function), expect.any(AbortSignal))
+  expect(onInvokeStream).toHaveBeenLastCalledWith(expect.objectContaining({ skillId: null, intent: 'mixed' }), expect.any(Function), expect.any(AbortSignal))
+})
+
+test('keeps an unscoped ordinary greeting on server-side mixed routing', async () => {
+  const onInvokeStream = successfulStream({
+    status: 'completed',
+    answer: '你好，我可以帮你梳理任务、解释技能，或在你打开业务表后分析授权数据。',
+    citations: [],
+    degradationCodes: [],
+    draftId: null,
+    skill: null,
+  })
+  renderWorkbench({ currentBaseId: null, currentRecordId: null, onInvokeStream })
+
+  const textbox = screen.getByRole('textbox', { name: '协作问题' })
+  fireEvent.change(textbox, { target: { value: '你好' } })
+  fireEvent.keyDown(textbox, { key: 'Enter' })
+
+  await waitFor(() => expect(onInvokeStream).toHaveBeenCalledTimes(1))
+  expect(onInvokeStream).toHaveBeenLastCalledWith(expect.objectContaining({
+    intent: 'mixed',
+    requestedAction: 'read_only',
+    targetRecordId: null,
+    skillId: null,
+  }), expect.any(Function), expect.any(AbortSignal))
+  expect(await screen.findByText('你好，我可以帮你梳理任务、解释技能，或在你打开业务表后分析授权数据。')).toBeVisible()
+  expect(screen.queryByText('当前材料不足，未生成可用答案')).not.toBeInTheDocument()
 })
 
 test('resets a selected explicit skill across employee or record scope changes', () => {
@@ -221,54 +251,6 @@ test('Enter sends once while Shift+Enter keeps editing the composer', async () =
   expect(onInvokeStream).toHaveBeenCalledTimes(1)
 })
 
-test.skip('historical static skill mappings are removed', async () => {
-  const onInvokeStream = successfulStream()
-  renderWorkbench({ onInvokeStream })
-  const mappings = [
-    ['business_summary', '智能汇总', '请汇总当前已授权范围内的业务进展与下一步。', 'mixed', 'read_only'],
-    ['table_lookup', '查表问答', '请基于当前已授权表格回答这个问题：', 'business_fact', 'read_only'],
-    ['group_context', '群聊总结', '请总结当前已授权的群聊上下文与待办。', 'mixed', 'read_only'],
-    ['risk_review', '风险识别', '请识别当前材料中的风险，并区分事实与分析。', 'mixed', 'read_only'],
-    ['memory_lookup', '调用长期记忆', '请调用长期记忆，补充与当前事项相关的已确认信息。', 'memory_lookup', 'read_only'],
-    ['follow_up_draft', '生成跟进草稿', '请生成当前记录的跟进草稿，提交前由我确认。', 'mixed', 'draft_update'],
-  ] as const
-
-  for (const [tagId, label, prefill, intent, requestedAction] of mappings) {
-    const skill = screen.getByRole('button', { name: label })
-    expect(skill).toHaveAttribute('data-skill-id', tagId)
-    expect(skill.tabIndex).toBe(0)
-    fireEvent.click(skill)
-    const textbox = screen.getByRole('textbox', { name: '协作问题' })
-    expect(textbox).toHaveValue(prefill)
-    expect(onInvokeStream).toHaveBeenCalledTimes(mappings.indexOf(mappings.find((item) => item[0] === tagId)!))
-    fireEvent.keyDown(textbox, { key: 'Enter', shiftKey: false })
-    await waitFor(() => expect(onInvokeStream).toHaveBeenCalledTimes(mappings.indexOf(mappings.find((item) => item[0] === tagId)!) + 1))
-    expect(onInvokeStream).toHaveBeenLastCalledWith(
-      {
-        employeeId: 'employee-1',
-        intent,
-        query: prefill,
-        requestedAction,
-        targetRecordId: requestedAction === 'draft_update' ? 'record-1' : null,
-      },
-      expect.any(Function),
-      expect.any(AbortSignal),
-    )
-  }
-})
-
-test.skip('historical employee-intent draft gate is removed', () => {
-  const first = renderWorkbench({ currentRecordId: null })
-  expect(screen.getByRole('button', { name: '生成跟进草稿' })).toBeDisabled()
-  first.unmount()
-
-  renderWorkbench({
-    contacts: [{ ...draftCapableContact, availableIntents: ['summarize'] }],
-    currentRecordId: 'record-1',
-  })
-  expect(screen.getByRole('button', { name: '生成跟进草稿' })).toBeDisabled()
-})
-
 test('appends real statuses, progressive answer, safe evidence and pending draft in event order', async () => {
   const result: Stage08AssistantSafeView = {
     status: 'draft_pending',
@@ -292,7 +274,9 @@ test('appends real statuses, progressive answer, safe evidence and pending draft
   renderWorkbench({ onInvokeStream, onOpenDraft })
 
   fireEvent.click(screen.getByRole('button', { name: '生成跟进草稿' }))
-  fireEvent.keyDown(screen.getByRole('textbox', { name: '协作问题' }), { key: 'Enter' })
+  const textbox = screen.getByRole('textbox', { name: '协作问题' })
+  fireEvent.change(textbox, { target: { value: '生成一份跟进草稿' } })
+  fireEvent.keyDown(textbox, { key: 'Enter' })
 
   const turn = await screen.findByRole('article', { name: '协作请求 01' })
   const content = turn.textContent ?? ''
@@ -315,7 +299,9 @@ test('stop only ends viewing, stays inline, and never offers automatic draft ret
   }))
   renderWorkbench({ onInvokeStream })
   fireEvent.click(screen.getByRole('button', { name: '生成跟进草稿' }))
-  fireEvent.keyDown(screen.getByRole('textbox', { name: '协作问题' }), { key: 'Enter' })
+  const textbox = screen.getByRole('textbox', { name: '协作问题' })
+  fireEvent.change(textbox, { target: { value: '生成一份跟进草稿' } })
+  fireEvent.keyDown(textbox, { key: 'Enter' })
   fireEvent.click(await screen.findByRole('button', { name: '停止查看' }))
 
   expect(await screen.findByText('已停止查看结果')).toBeVisible()
@@ -434,6 +420,18 @@ test('focuses the composer, traps Tab, and closes through Escape', async () => {
   expect(document.activeElement).toBe(screen.getByRole('button', { name: '范围与审计' }))
   fireEvent.keyDown(dialog, { key: 'Escape' })
   expect(onClose).toHaveBeenCalledTimes(1)
+})
+
+test('focuses the composer before a deferred animation frame is available', () => {
+  vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1))
+  vi.stubGlobal('cancelAnimationFrame', vi.fn())
+  try {
+    renderWorkbench()
+
+    expect(screen.getByRole('textbox', { name: '协作问题' })).toHaveFocus()
+  } finally {
+    vi.unstubAllGlobals()
+  }
 })
 
 test('auto-follows only when the transcript was already near its bottom edge', async () => {

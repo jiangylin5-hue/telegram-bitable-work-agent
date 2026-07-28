@@ -5,6 +5,7 @@ description = "Stage 02 backend kernel for Telegram Bitable work agents."
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.13",
+    "cryptography>=42.0",
     "fastapi>=0.110",
     "httpx>=0.27",
     "langgraph>=0.2",

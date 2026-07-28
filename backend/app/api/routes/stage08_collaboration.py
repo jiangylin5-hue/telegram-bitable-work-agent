@@ -88,6 +88,34 @@ _AUTO_SKILL_INTENTS = {
     "platform-task": frozenset({"business_fact", "mixed"}),
     "platform-telegram-im": frozenset({"mixed"}),
 }
+_PURE_AUTO_CONVERSATION_QUERIES = frozenset(
+    {
+        "hi",
+        "hello",
+        "hey",
+        "help",
+        "你好",
+        "你好呀",
+        "你好啊",
+        "您好",
+        "嗨",
+        "哈喽",
+        "哈啰",
+        "在吗",
+        "早安",
+        "早上好",
+        "晚上好",
+        "帮助",
+        "你是谁",
+        "你能做什么",
+        "你可以做什么",
+        "你能帮我做什么",
+        "有什么功能",
+        "怎么使用",
+        "如何使用",
+    }
+)
+_CONVERSATION_TRAILING_PUNCTUATION = "!！?？。.,，～~"
 
 
 @dataclass(frozen=True, slots=True)
@@ -209,6 +237,23 @@ def query_assistant_stream(
     )
 
 
+def _effective_auto_conversation_request(
+    request: AssistantQueryRequest,
+) -> AssistantQueryRequest:
+    if (
+        request.intent != "mixed"
+        or request.requested_action != "read_only"
+        or request.skill_id is not None
+    ):
+        return request
+    normalized_query = re.sub(r"\s+", "", request.query).casefold().rstrip(
+        _CONVERSATION_TRAILING_PUNCTUATION
+    )
+    if normalized_query not in _PURE_AUTO_CONVERSATION_QUERIES:
+        return request
+    return request.model_copy(update={"intent": "general_advice"})
+
+
 def prepare_assistant_query(
     request: AssistantQueryRequest,
     identity: Stage06RequestIdentity,
@@ -216,10 +261,13 @@ def prepare_assistant_query(
 ) -> PreparedAssistantQuery:
     reservation = None
     try:
-        workspace_id = UUID(request.workspace_id)
-        employee_id = UUID(request.employee_id)
+        effective_request = _effective_auto_conversation_request(request)
+        workspace_id = UUID(effective_request.workspace_id)
+        employee_id = UUID(effective_request.employee_id)
         target_record_id = (
-            None if request.target_record_id is None else UUID(request.target_record_id)
+            None
+            if effective_request.target_record_id is None
+            else UUID(effective_request.target_record_id)
         )
         actor = authorize_workspace_action(
             uow,
@@ -232,11 +280,11 @@ def prepare_assistant_query(
             workspace_id=workspace_id,
             employee_id=employee_id,
             target_record_id=target_record_id,
-            requested_action=request.requested_action,
+            requested_action=effective_request.requested_action,
             actor=actor,
         )
         skill_profile = _resolve_assistant_skill_profile(
-            request,
+            effective_request,
             uow,
             workspace_id=workspace_id,
             employee_id=employee_id,
@@ -244,14 +292,14 @@ def prepare_assistant_query(
             actor=actor,
         )
         fingerprint = _query_fingerprint(
-            request,
+            effective_request,
             identity.user_id,
             skill_profile=skill_profile,
         )
         decision = _begin_query_idempotency(
             uow,
             workspace_id=workspace_id,
-            idempotency_key=request.idempotency_key,
+            idempotency_key=effective_request.idempotency_key,
             request_fingerprint=fingerprint,
         )
         reservation = decision.record if decision.status == "started" else None
@@ -267,11 +315,11 @@ def prepare_assistant_query(
             workspace_id=workspace_id,
             employee_id=employee_id,
             actor_user_id=identity.user_id,
-            intent=request.intent,
-            query=request.query,
-            requested_action=request.requested_action,
+            intent=effective_request.intent,
+            query=effective_request.query,
+            requested_action=effective_request.requested_action,
             target_record_id=target_record_id,
-            idempotency_key=request.idempotency_key,
+            idempotency_key=effective_request.idempotency_key,
             skill_profile=skill_profile,
         )
         return PreparedAssistantQuery(
@@ -324,6 +372,73 @@ def complete_assistant_query(
         _rollback_if_sqlalchemy(uow)
         _discard_in_memory_reservation(uow, prepared.reservation)
         raise _AssistantQueryCompletionError(_INTERNAL_CODE) from exc
+
+
+def resume_assistant_query(
+    request: AssistantQueryRequest,
+    identity: Stage06RequestIdentity,
+    uow: Stage06PlatformUnitOfWork,
+) -> PreparedAssistantQuery:
+    """Rebuild an already-reserved query after current-scope reauthorization."""
+    effective_request = _effective_auto_conversation_request(request)
+    workspace_id = UUID(effective_request.workspace_id)
+    employee_id = UUID(effective_request.employee_id)
+    target_record_id = (
+        None
+        if effective_request.target_record_id is None
+        else UUID(effective_request.target_record_id)
+    )
+    actor = authorize_workspace_action(
+        uow, identity, workspace_id, "digital_employee.invoke"
+    )
+    _require_current_query_scope(
+        uow,
+        workspace_id=workspace_id,
+        employee_id=employee_id,
+        target_record_id=target_record_id,
+        requested_action=effective_request.requested_action,
+        actor=actor,
+    )
+    skill_profile = _resolve_assistant_skill_profile(
+        effective_request,
+        uow,
+        workspace_id=workspace_id,
+        employee_id=employee_id,
+        target_record_id=target_record_id,
+        actor=actor,
+    )
+    fingerprint = _query_fingerprint(
+        effective_request, identity.user_id, skill_profile=skill_profile
+    )
+    reservation = uow.get_idempotency_record(
+        workspace_id, _OPERATION, effective_request.idempotency_key
+    )
+    if (
+        reservation is None
+        or reservation.status != "in_progress"
+        or reservation.request_fingerprint != fingerprint
+    ):
+        raise PlatformValidationError(
+            "stage08_collaboration_resume_invalid",
+            "stage08_collaboration_resume_invalid",
+        )
+    command = Stage08CollaborationContractFactory.command(
+        workspace_id=workspace_id,
+        employee_id=employee_id,
+        actor_user_id=identity.user_id,
+        intent=effective_request.intent,
+        query=effective_request.query,
+        requested_action=effective_request.requested_action,
+        target_record_id=target_record_id,
+        idempotency_key=effective_request.idempotency_key,
+        skill_profile=skill_profile,
+    )
+    return PreparedAssistantQuery(
+        command=command,
+        actor=actor,
+        reservation=reservation,
+        replay_safe_view=None,
+    )
 
 
 def execute_assistant_query(
@@ -948,5 +1063,6 @@ __all__ = [
     "execute_assistant_query",
     "iter_assistant_stream_events",
     "prepare_assistant_query",
+    "resume_assistant_query",
     "router",
 ]

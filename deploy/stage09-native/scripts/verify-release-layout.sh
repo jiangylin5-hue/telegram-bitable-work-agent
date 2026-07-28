@@ -33,6 +33,7 @@ for required in \
     backend/alembic.ini \
     backend/alembic/versions/20260720_0032_stage08_knowledge_indexing.py \
     backend/alembic/versions/20260723_0033_mini_app_browser_handoffs.py \
+    backend/alembic/versions/20260728_0034_agent_event_runtime.py \
     mini-app/dist/browser-handoff.html \
     deploy/stage09-native/runtime/runtime.env.example \
     deploy/stage09-native/nginx/stage09-p1.conf.template \
@@ -60,6 +61,7 @@ for required in \
     deploy/stage09-native/scripts/test-public-ingress-assets.sh \
     deploy/stage09-native/scripts/render-native-public-nginx.sh \
     deploy/stage09-native/scripts/test-native-public-ingress-assets.sh \
+    deploy/stage09-native/scripts/verify-static-artifact-parity.sh \
     deploy/stage09-native/scripts/verify-activation-readiness.sh \
     deploy/stage09-native/scripts/test-readiness-gate.sh \
     deploy/stage09-native/scripts/retire-legacy-stage03-docker.sh \

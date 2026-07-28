@@ -25,6 +25,17 @@ class RedisStreams(Protocol):
     def ack(self, stream_name: str, *, group_name: str, entry_id: str) -> bool:
         pass
 
+    def claim_pending(
+        self,
+        stream_name: str,
+        *,
+        group_name: str,
+        consumer_name: str,
+        min_idle_ms: int,
+        count: int = 10,
+    ) -> list["RedisStreamJob"]:
+        pass
+
 
 @dataclass(frozen=True)
 class RedisStreamJob:
@@ -97,6 +108,33 @@ class RedisStreamsClient:
         acknowledged = self._redis.xack(stream_name, group_name, entry_id)
         return bool(acknowledged)
 
+    def claim_pending(
+        self,
+        stream_name: str,
+        *,
+        group_name: str,
+        consumer_name: str,
+        min_idle_ms: int,
+        count: int = 10,
+    ) -> list[RedisStreamJob]:
+        self._ensure_group(stream_name, group_name)
+        response = self._redis.xautoclaim(
+            stream_name,
+            group_name,
+            consumer_name,
+            min_idle_ms,
+            start_id="0-0",
+            count=count,
+        )
+        entries = response[1] if len(response) >= 2 else []
+        return [
+            RedisStreamJob(
+                entry_id=_decode_value(entry_id),
+                fields=_decode_fields(fields),
+            )
+            for entry_id, fields in entries
+        ]
+
     def _ensure_group(self, stream_name: str, group_name: str) -> None:
         group_key = (stream_name, group_name)
         if group_key in self._known_groups:
@@ -121,6 +159,7 @@ class RedisStreamEntry:
     fields: dict[str, str]
     delivered_groups: set[str] = field(default_factory=set)
     acknowledged_groups: set[str] = field(default_factory=set)
+    delivered_consumer_by_group: dict[str, str] = field(default_factory=dict)
 
 
 class InMemoryRedisStreams:
@@ -155,7 +194,6 @@ class InMemoryRedisStreams:
         consumer_name: str,
         count: int = 10,
     ) -> list[RedisStreamJob]:
-        del consumer_name
         jobs: list[RedisStreamJob] = []
         for entry in self._entries_by_stream.get(stream_name, []):
             if group_name in entry.acknowledged_groups:
@@ -163,6 +201,35 @@ class InMemoryRedisStreams:
             if group_name in entry.delivered_groups:
                 continue
             entry.delivered_groups.add(group_name)
+            entry.delivered_consumer_by_group[group_name] = consumer_name
+            jobs.append(
+                RedisStreamJob(
+                    entry_id=entry.entry_id,
+                    fields=dict(entry.fields),
+                )
+            )
+            if len(jobs) >= count:
+                break
+        return jobs
+
+    def claim_pending(
+        self,
+        stream_name: str,
+        *,
+        group_name: str,
+        consumer_name: str,
+        min_idle_ms: int,
+        count: int = 10,
+    ) -> list[RedisStreamJob]:
+        if min_idle_ms < 0:
+            raise ValueError("redis_stream_min_idle_invalid")
+        jobs: list[RedisStreamJob] = []
+        for entry in self._entries_by_stream.get(stream_name, []):
+            if group_name not in entry.delivered_groups:
+                continue
+            if group_name in entry.acknowledged_groups:
+                continue
+            entry.delivered_consumer_by_group[group_name] = consumer_name
             jobs.append(
                 RedisStreamJob(
                     entry_id=entry.entry_id,

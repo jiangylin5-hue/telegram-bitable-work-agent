@@ -307,7 +307,7 @@ def test_group_context_migration_has_timezone_and_partial_active_mapping_contrac
         projection_columns["source_chat_type"].get("default", "")
     )
     assert ScriptDirectory.from_config(Config("alembic.ini")).get_heads() == [
-        "20260720_0032"
+        "20260728_0034"
     ]
     for name, nullable in (
         ("event_at", False),

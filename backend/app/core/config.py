@@ -1,6 +1,8 @@
 from dataclasses import dataclass
+import base64
 import os
 import re
+from uuid import UUID
 
 
 PRODUCTION_LIKE_ENVIRONMENTS = {"staging", "production"}
@@ -40,6 +42,12 @@ class Settings:
     agent_llm_timeout_seconds: int = 30
     agent_save_full_prompt: bool = False
     agent_save_full_response: bool = False
+    agent_event_runtime_enabled: bool = False
+    agent_event_runtime_mode: str = "embedded"
+    agent_event_runtime_allowed_workspace_ids: tuple[str, ...] = ()
+    agent_runtime_input_key: str | None = None
+    agent_runtime_input_key_version: str = "stage10-v1"
+    agent_runtime_input_ttl_seconds: int = 300
 
 
 def get_settings() -> Settings:
@@ -95,6 +103,23 @@ def get_settings() -> Settings:
             "AGENT_SAVE_FULL_RESPONSE",
             Settings.agent_save_full_response,
         ),
+        agent_event_runtime_enabled=_env_bool(
+            "AGENT_EVENT_RUNTIME_ENABLED",
+            Settings.agent_event_runtime_enabled,
+        ),
+        agent_event_runtime_mode=os.getenv(
+            "AGENT_EVENT_RUNTIME_MODE", Settings.agent_event_runtime_mode
+        ),
+        agent_event_runtime_allowed_workspace_ids=_env_csv_tuple(
+            "AGENT_EVENT_RUNTIME_ALLOWED_WORKSPACE_IDS"
+        ),
+        agent_runtime_input_key=os.getenv("AGENT_RUNTIME_INPUT_KEY"),
+        agent_runtime_input_key_version=os.getenv(
+            "AGENT_RUNTIME_INPUT_KEY_VERSION", Settings.agent_runtime_input_key_version
+        ),
+        agent_runtime_input_ttl_seconds=_env_int(
+            "AGENT_RUNTIME_INPUT_TTL_SECONDS", Settings.agent_runtime_input_ttl_seconds
+        ),
     )
 
 
@@ -112,6 +137,33 @@ def validate_runtime_settings(settings: Settings | None = None) -> Settings:
             "Missing required Stage 05 OpenRouter environment variables: "
             "OPENROUTER_API_KEY"
         )
+    if settings.agent_event_runtime_enabled:
+        if settings.agent_event_runtime_mode not in {"embedded", "redis_worker"}:
+            raise RuntimeError(
+                "Invalid AGENT_EVENT_RUNTIME_MODE: expected embedded or redis_worker"
+            )
+        if settings.agent_event_runtime_mode == "redis_worker":
+            _validate_agent_runtime_key(settings.agent_runtime_input_key)
+        if not 30 <= settings.agent_runtime_input_ttl_seconds <= 900:
+            raise RuntimeError(
+                "Invalid AGENT_RUNTIME_INPUT_TTL_SECONDS: expected 30..900"
+            )
+        for value in settings.agent_event_runtime_allowed_workspace_ids:
+            try:
+                UUID(value)
+            except ValueError as exc:
+                raise RuntimeError(
+                    "Invalid AGENT_EVENT_RUNTIME_ALLOWED_WORKSPACE_IDS"
+                ) from exc
+        if settings.environment in PRODUCTION_LIKE_ENVIRONMENTS:
+            if settings.agent_event_runtime_mode != "redis_worker":
+                raise RuntimeError(
+                    "Invalid AGENT_EVENT_RUNTIME_MODE: production-like Stage10 requires redis_worker"
+                )
+            if not settings.agent_event_runtime_allowed_workspace_ids:
+                raise RuntimeError(
+                    "Missing AGENT_EVENT_RUNTIME_ALLOWED_WORKSPACE_IDS"
+                )
     if settings.environment in PRODUCTION_LIKE_ENVIRONMENTS:
         missing = [
             name
@@ -200,3 +252,14 @@ def _env_csv_tuple(name: str) -> tuple[str, ...]:
     if not value:
         return ()
     return tuple(part.strip() for part in value.split(",") if part.strip())
+
+
+def _validate_agent_runtime_key(value: str | None) -> None:
+    if value is None:
+        raise RuntimeError("Missing AGENT_RUNTIME_INPUT_KEY")
+    try:
+        key = base64.b64decode(value.encode("ascii"), altchars=b"-_", validate=True)
+    except (ValueError, UnicodeError) as exc:
+        raise RuntimeError("Invalid AGENT_RUNTIME_INPUT_KEY") from exc
+    if len(key) != 32:
+        raise RuntimeError("Invalid AGENT_RUNTIME_INPUT_KEY")

@@ -121,8 +121,11 @@ assert_exact_sse_location_contains 'sse-forward-proto-preserved' '        proxy_
 
 if command -v nginx >/dev/null 2>&1; then
     cat > "$tmpdir/nginx.conf" <<EOF
+pid "$tmpdir/nginx.pid";
+error_log "$tmpdir/error.log";
 events {}
 http {
+    access_log "$tmpdir/access.log";
     include "$tmpdir/stage09-p1.conf";
 }
 EOF
@@ -204,3 +207,13 @@ assert_fixture_verifier_rejects 'spaced-root-user' "$tmpdir/spaced-root-user"
 
 sh "$verifier"
 printf '%s\n' 'native-service-assets: PASS'
+
+grep -Fqx 'ExecStart=/opt/stage09-p1/current-venv/bin/python -m app.workers.agent_event_outbox_runtime' \
+    "$script_dir/../systemd/stage09-p1-agent-outbox-publisher.service" || fail 'stage10-publisher-unit'
+grep -Fqx 'ExecStart=/opt/stage09-p1/current-venv/bin/python -m app.workers.agent_tabular_runtime' \
+    "$script_dir/../systemd/stage09-p1-agent-tabular-worker.service" || fail 'stage10-worker-unit'
+grep -Fq 'location ~ ^/api/stage10/agent-runs/' \
+    "$script_dir/../nginx/stage09-p1.conf.template" || fail 'stage10-internal-sse-location'
+grep -Fq 'location ~ ^/api/stage10/agent-runs/' \
+    "$script_dir/../nginx/stage09-p1-public-https.conf.template" || fail 'stage10-public-sse-location'
+printf '%s\n' 'stage10-native-assets: PASS'

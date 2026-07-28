@@ -39,7 +39,7 @@ test('opens the Ledgerline collaboration flow and consumes only the safe Stage08
         safe_view: {
           status: 'completed',
           answer: '当前有一项需要优先复核。',
-          citations: [{ ordinal: 1, label: 'business_data' }],
+          citations: [],
           degradation_codes: [],
           draft_id: null,
         },
@@ -76,7 +76,7 @@ test('opens the Ledgerline collaboration flow and consumes only the safe Stage08
     skill_id: null,
   })
   expect(await screen.findByText('当前有一项需要优先复核。')).toBeVisible()
-  expect(screen.getByText('业务表格')).toBeVisible()
+  expect(screen.queryByText('业务表格')).not.toBeInTheDocument()
   expect(screen.queryByText('detail')).not.toBeInTheDocument()
 })
 

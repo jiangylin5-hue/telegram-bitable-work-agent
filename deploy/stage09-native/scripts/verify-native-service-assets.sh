@@ -63,6 +63,12 @@ verify_unit 'stage09-p1-worker.service' \
 verify_unit 'stage09-p1-outbox-bridge.service' \
     'ExecStart=/opt/stage09-p1/current-venv/bin/python -m app.workers.stage03_outbox_bridge_runtime' \
     1
+verify_unit 'stage09-p1-agent-outbox-publisher.service' \
+    'ExecStart=/opt/stage09-p1/current-venv/bin/python -m app.workers.agent_event_outbox_runtime' \
+    0
+verify_unit 'stage09-p1-agent-tabular-worker.service' \
+    'ExecStart=/opt/stage09-p1/current-venv/bin/python -m app.workers.agent_tabular_runtime' \
+    0
 
 [ -r "$template" ] || fail
 grep -Fqx '    listen {{STAGE09_P1_NGINX_BIND_ADDRESS}}:{{STAGE09_P1_NGINX_INTERNAL_PORT}};' "$template" || fail

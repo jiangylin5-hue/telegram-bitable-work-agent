@@ -12,12 +12,13 @@ renderer="$script_dir/render-native-public-nginx.sh"
 ingress_test="$script_dir/test-native-public-ingress-assets.sh"
 readiness="$script_dir/verify-activation-readiness.sh"
 readiness_test="$script_dir/test-readiness-gate.sh"
+static_parity="$script_dir/verify-static-artifact-parity.sh"
 retire="$script_dir/retire-legacy-stage03-docker.sh"
 retire_test="$script_dir/test-retire-legacy-stage03-docker.sh"
 http_template="$script_dir/../nginx/stage09-p1-public-http.conf.template"
 https_template="$script_dir/../nginx/stage09-p1-public-https.conf.template"
 
-for script in "$layout" "$manifest" "$migration" "$test_script" "$renderer" "$ingress_test" "$readiness" "$readiness_test" "$retire" "$retire_test" "$0"; do sh -n "$script" || fail; done
+for script in "$layout" "$manifest" "$migration" "$test_script" "$renderer" "$ingress_test" "$readiness" "$readiness_test" "$static_parity" "$retire" "$retire_test" "$0"; do sh -n "$script" || fail; done
 grep -Fq 'release_base=/opt/stage09-p1/releases' "$layout" || fail
 grep -Fq 'static-assets: external-p1-b-required' "$layout" || fail
 grep -Fq "find \"\$release_root\" -type l" "$layout" || fail
@@ -26,6 +27,7 @@ for required_path in \
     backend/alembic.ini \
     backend/alembic/versions/20260720_0032_stage08_knowledge_indexing.py \
     backend/alembic/versions/20260723_0033_mini_app_browser_handoffs.py \
+    backend/alembic/versions/20260728_0034_agent_event_runtime.py \
     mini-app/dist/browser-handoff.html \
     deploy/stage09-native/runtime/runtime.env.example \
     deploy/stage09-native/nginx/stage09-p1.conf.template \
@@ -50,6 +52,7 @@ for required_path in \
     deploy/stage09-native/scripts/inspect-native-host-readiness.sh \
     deploy/stage09-native/scripts/render-native-public-nginx.sh \
     deploy/stage09-native/scripts/test-native-public-ingress-assets.sh \
+    deploy/stage09-native/scripts/verify-static-artifact-parity.sh \
     deploy/stage09-native/scripts/verify-activation-readiness.sh \
     deploy/stage09-native/scripts/test-readiness-gate.sh \
     deploy/stage09-native/scripts/retire-legacy-stage03-docker.sh \
@@ -74,7 +77,7 @@ grep -Fq 'python_bin="$venv_root/bin/python"' "$migration" || fail
 grep -Fq 'resolved_python=$(realpath "$python_bin") || fail' "$migration" || fail
 grep -Fq '"$venv_root"/*|/usr/bin/python3|/usr/bin/python3.12' "$migration" || fail
 grep -Fq 'for utility in env grep mktemp mv realpath rm; do' "$migration" || fail
-grep -Fqx 'target_revision=20260723_0033' "$migration" || fail
+grep -Fqx 'target_revision=20260728_0034' "$migration" || fail
 if grep -Fq '[ ! -L "$python_bin" ]' "$migration"; then fail; fi
 if grep -Fq 'python_bin="$resolved_python"' "$migration"; then fail; fi
 if grep -Eq 'runtime\.env|source[[:space:]]|ads_agent' "$migration"; then fail; fi
@@ -90,7 +93,7 @@ grep -Fq 'migration-external-python-symlink-output-created' "$test_script" || fa
 grep -Fq 'missing-critical-unit-layout-accepted' "$test_script" || fail
 grep -Fq 'missing-critical-unit-manifest-accepted' "$test_script" || fail
 grep -Fq 'stage09-p1-api.service' "$test_script" || fail
-grep -Fqx 'ExecStart=/opt/stage09-p1/current-venv/bin/alembic upgrade 20260723_0033' "$script_dir/../systemd/stage09-p1-migrate.service" || fail
+grep -Fqx 'ExecStart=/opt/stage09-p1/current-venv/bin/alembic upgrade 20260728_0034' "$script_dir/../systemd/stage09-p1-migrate.service" || fail
 if grep -Eq 'cat[[:space:]]*>|<<' "$test_script"; then fail; fi
 grep -Fqx 'project_name=telegram-bitable-stage03' "$retire" || fail
 grep -Fqx 'PATH=/usr/sbin:/usr/bin:/sbin:/bin' "$retire" || fail
@@ -132,6 +135,11 @@ grep -Fqx 'retry_attempt=0' "$readiness" || fail
 grep -Fqx 'deadline_epoch=$((start_epoch + total_deadline_seconds))' "$readiness" || fail
 grep -Fq -- '--connect-timeout "$curl_timeout" --max-time "$curl_timeout"' "$readiness" || fail
 grep -Fq 'listener_row_owned_only_by_nginx' "$readiness" || fail
+grep -Fqx 'source_base=/opt/stage09-p1/releases' "$static_parity" || fail
+grep -Fqx 'venv_base=/opt/stage09-p1/venv' "$static_parity" || fail
+grep -Fqx 'static_base=/var/www/stage09-p1' "$static_parity" || fail
+grep -Fq 'static-manifest.sha256' "$static_parity" || fail
+grep -Fq 'static-parity: pass' "$static_parity" || fail
 grep -Fq 'stage09-p1-api' "$readiness" || fail
 grep -Fq 'stage09-p1-worker' "$readiness" || fail
 grep -Fq 'stage09-p1-outbox-bridge' "$readiness" || fail

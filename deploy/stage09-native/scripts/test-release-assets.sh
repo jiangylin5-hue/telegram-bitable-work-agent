@@ -12,13 +12,14 @@ retire="$script_dir/retire-legacy-stage03-docker.sh"
 retire_test="$script_dir/test-retire-legacy-stage03-docker.sh"
 readiness="$script_dir/verify-activation-readiness.sh"
 readiness_test="$script_dir/test-readiness-gate.sh"
+static_parity="$script_dir/verify-static-artifact-parity.sh"
 
 fail() {
     printf '%s\n' "$1: FAIL" >&2
     exit 1
 }
 
-for script in "$layout" "$manifest" "$migration" "$readiness" "$readiness_test" "$0"; do
+for script in "$layout" "$manifest" "$migration" "$readiness" "$readiness_test" "$static_parity" "$0"; do
     sh -n "$script" || fail shell-syntax
 done
 
@@ -31,10 +32,12 @@ grep -Fq '[ -f "$script" ] && [ -x "$script" ] || fail' "$layout" || fail releas
 
 grep -Fq 'release_base=/opt/stage09-p1/releases' "$layout" || fail fixed-release-root
 grep -Fq 'static-assets: external-p1-b-required' "$layout" || fail external-static-assets
+grep -Fq 'deploy/stage09-native/scripts/verify-static-artifact-parity.sh' "$layout" || fail required-static-parity-verifier
 grep -Fq "find \"\$release_root\" -type l" "$layout" || fail symlink-rejection
 grep -Fq 'realpath "$release_root"' "$layout" || fail canonical-release-root
 grep -Fq 'backend/alembic/versions/20260720_0032_stage08_knowledge_indexing.py' "$layout" || fail required-migration
 grep -Fq 'backend/alembic/versions/20260723_0033_mini_app_browser_handoffs.py' "$layout" || fail required-browser-handoff-migration
+grep -Fq 'backend/alembic/versions/20260728_0034_agent_event_runtime.py' "$layout" || fail required-agent-event-runtime-migration
 grep -Fq 'mini-app/dist/browser-handoff.html' "$layout" || fail required-browser-handoff
 grep -Fq 'handoff_asset="$release_root/mini-app/dist/browser-handoff.html"' "$layout" || fail browser-handoff-asset-binding
 grep -Fq "grep -Eq 'tgWebAppData|ticket=' \"\$handoff_asset\"" "$layout" || fail browser-handoff-credential-scan
@@ -54,6 +57,11 @@ grep -Fq 'deploy/stage09-native/scripts/render-native-public-nginx.sh' "$layout"
 grep -Fq 'deploy/stage09-native/scripts/test-native-public-ingress-assets.sh' "$layout" || fail required-native-public-ingress-test
 grep -Fq 'deploy/stage09-native/scripts/verify-activation-readiness.sh' "$layout" || fail required-readiness-verifier
 grep -Fq 'deploy/stage09-native/scripts/test-readiness-gate.sh' "$layout" || fail required-readiness-test
+grep -Fqx 'source_base=/opt/stage09-p1/releases' "$static_parity" || fail static-parity-source-root
+grep -Fqx 'venv_base=/opt/stage09-p1/venv' "$static_parity" || fail static-parity-venv-root
+grep -Fqx 'static_base=/var/www/stage09-p1' "$static_parity" || fail static-parity-static-root
+grep -Fq 'static-manifest.sha256' "$static_parity" || fail static-parity-manifest
+grep -Fq 'static-parity: pass' "$static_parity" || fail static-parity-success
 grep -Fq 'deploy/stage09-native/scripts/retire-legacy-stage03-docker.sh' "$layout" || fail required-legacy-retire-script
 grep -Fq 'deploy/stage09-native/scripts/test-retire-legacy-stage03-docker.sh' "$layout" || fail required-legacy-retire-test
 grep -Fqx 'project_name=telegram-bitable-stage03' "$retire" || fail retire-fixed-project
@@ -71,7 +79,7 @@ grep -Fq 'failed_retire_receipt' "$retire" || fail retire-failed-receipt
 grep -Fq 'sha256sum' "$retire" || fail retire-manifest
 grep -Fq 'custom_image_bytes_before' "$retire" || fail retire-image-byte-semantics
 grep -Fq 'released_bytes' "$retire" && fail retire-released-bytes
-grep -Fq 'target_revision=20260723_0033' "$migration" || fail fixed-browser-handoff-migration
+grep -Fq 'target_revision=20260728_0034' "$migration" || fail fixed-agent-event-runtime-migration
 grep -Fq "offline_database_url='postgresql+psycopg://stage09_p1:offline-placeholder@127.0.0.1:5432/stage09_p1'" "$migration" || fail fixed-offline-database-url
 grep -Fq 'env -u DATABASE_URL "DATABASE_URL=$offline_database_url"' "$migration" || fail explicit-offline-database-url
 if grep -Eq 'runtime\.env|source[[:space:]]|ads_agent' "$migration"; then fail migration-secret-or-history; fi
@@ -134,6 +142,7 @@ for required_fixture_path in \
     backend/alembic.ini \
     backend/alembic/versions/20260720_0032_stage08_knowledge_indexing.py \
     backend/alembic/versions/20260723_0033_mini_app_browser_handoffs.py \
+    backend/alembic/versions/20260728_0034_agent_event_runtime.py \
     deploy/stage09-native/runtime/runtime.env.example \
     deploy/stage09-native/nginx/stage09-p1.conf.template \
     deploy/stage09-native/nginx/stage09-p1-public-http.conf.template \
@@ -160,6 +169,7 @@ for required_fixture_path in \
     deploy/stage09-native/scripts/test-public-ingress-assets.sh \
     deploy/stage09-native/scripts/render-native-public-nginx.sh \
     deploy/stage09-native/scripts/test-native-public-ingress-assets.sh \
+    deploy/stage09-native/scripts/verify-static-artifact-parity.sh \
     deploy/stage09-native/scripts/verify-activation-readiness.sh \
     deploy/stage09-native/scripts/test-readiness-gate.sh \
     deploy/stage09-native/scripts/retire-legacy-stage03-docker.sh \
@@ -263,11 +273,11 @@ fake_marker="$fixture_root/fake-alembic.marker"
     printf '%s\n' 'marker=${FAKE_ALEMBIC_MARKER:?}'
     printf '%s\n' 'if [ "$#" -eq 3 ] && [ "$1" = '\''-m'\'' ] && [ "$2" = '\''alembic'\'' ] && [ "$3" = '\''heads'\'' ]; then'
     printf '%s\n' '    printf '\''%s\n'\'' '\''heads-fixed-stage09-offline-url'\'' >> "$marker"'
-    printf '%s\n' '    printf '\''%s\n'\'' '\''20260723_0033 (head)'\'''
-    printf '%s\n' 'elif [ "$#" -eq 5 ] && [ "$1" = '\''-m'\'' ] && [ "$2" = '\''alembic'\'' ] && [ "$3" = '\''upgrade'\'' ] && [ "$4" = '\''20260723_0033'\'' ] && [ "$5" = '\''--sql'\'' ]; then'
+    printf '%s\n' '    printf '\''%s\n'\'' '\''20260728_0034 (head)'\'''
+    printf '%s\n' 'elif [ "$#" -eq 5 ] && [ "$1" = '\''-m'\'' ] && [ "$2" = '\''alembic'\'' ] && [ "$3" = '\''upgrade'\'' ] && [ "$4" = '\''20260728_0034'\'' ] && [ "$5" = '\''--sql'\'' ]; then'
     printf '%s\n' '    printf '\''%s\n'\'' '\''upgrade-fixed-stage09-offline-url'\'' >> "$marker"'
     printf '%s\n' '    printf '\''%s\n'\'' '\''-- Stage09 fixed offline migration SQL'\'''
-    printf '%s\n' '    printf '\''%s\n'\'' '\''-- 20260723_0033'\'''
+    printf '%s\n' '    printf '\''%s\n'\'' '\''-- 20260728_0034'\'''
     printf '%s\n' 'else'
     printf '%s\n' '    exit 93'
     printf '%s\n' 'fi'
@@ -296,7 +306,7 @@ migration_output=$(FAKE_ALEMBIC_MARKER="$fake_marker" DATABASE_URL='fixture-secr
 artifact-id: $artifact_id
 migration-verified: true" ] || fail migration-output
 case "$migration_output" in *fixture-secret-value*|*ads_agent*) fail migration-output-leak ;; esac
-[ -f "$migration_sql" ] && grep -Fq '20260723_0033' "$migration_sql" || fail migration-sql
+[ -f "$migration_sql" ] && grep -Fq '20260728_0034' "$migration_sql" || fail migration-sql
 [ "$(cat "$fake_marker")" = 'heads-fixed-stage09-offline-url
 upgrade-fixed-stage09-offline-url' ] || fail migration-fixed-url-or-command
 

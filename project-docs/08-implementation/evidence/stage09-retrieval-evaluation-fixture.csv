@@ -1,0 +1,25 @@
+ticket_code,project,status,priority,risk_level,due_date,workstream,summary,effort_points
+EVAL-001,Atlas,in_progress,high,medium,2026-08-03,platform,Complete workspace access review,8
+EVAL-002,Atlas,blocked,high,high,2026-07-29,platform,Resolve import mapping conflict,5
+EVAL-003,Atlas,planned,medium,low,2026-08-12,platform,Document view permission matrix,3
+EVAL-004,Atlas,done,low,low,2026-07-18,platform,Verify base navigation states,2
+EVAL-005,Beacon,in_progress,high,high,2026-07-30,automation,Investigate provider timeout budget,8
+EVAL-006,Beacon,blocked,medium,high,2026-08-01,automation,Repair controlled draft serialization,5
+EVAL-007,Beacon,planned,low,low,2026-08-15,automation,Prepare queue observability checklist,3
+EVAL-008,Beacon,done,medium,low,2026-07-20,automation,Close retry idempotency audit,2
+EVAL-009,Cedar,in_progress,medium,medium,2026-08-05,experience,Polish compact table density,5
+EVAL-010,Cedar,blocked,high,high,2026-07-28,experience,Confirm mobile focus return behavior,3
+EVAL-011,Cedar,planned,medium,low,2026-08-18,experience,Review empty state language,2
+EVAL-012,Cedar,done,low,low,2026-07-21,experience,Capture responsive visual evidence,3
+EVAL-013,Atlas,in_progress,high,medium,2026-08-06,quality,Measure citation validity,5
+EVAL-014,Atlas,blocked,high,high,2026-07-27,quality,Fix structured answer contract,8
+EVAL-015,Atlas,planned,medium,low,2026-08-20,quality,Expand factual oracle coverage,3
+EVAL-016,Atlas,done,low,low,2026-07-22,quality,Archive stale evaluation report,2
+EVAL-017,Beacon,in_progress,medium,medium,2026-08-04,retrieval,Measure filtered lookup recall,5
+EVAL-018,Beacon,blocked,high,high,2026-07-31,retrieval,Validate negative query behavior,5
+EVAL-019,Beacon,planned,low,low,2026-08-16,retrieval,Add source visibility assertions,3
+EVAL-020,Beacon,done,medium,low,2026-07-23,retrieval,Check view projection determinism,2
+EVAL-021,Cedar,in_progress,high,medium,2026-08-02,safety,Verify excluded field refusal,5
+EVAL-022,Cedar,blocked,medium,high,2026-07-26,safety,Audit draft confirmation language,3
+EVAL-023,Cedar,planned,medium,low,2026-08-14,safety,Review audit retention boundary,2
+EVAL-024,Cedar,done,low,low,2026-07-24,safety,Confirm notification dry run,3

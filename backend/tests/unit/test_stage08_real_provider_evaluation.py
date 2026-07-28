@@ -424,7 +424,7 @@ def test_general_advice_f1_mock_enforces_action_and_citation_contract(
     def handler(request: httpx.Request) -> httpx.Response:
         content = json.dumps(
             {
-                "answer": "Use a short next-action checklist.",
+                "answer": "请使用简短的下一步行动清单。",
                 "citation_ordinals": citation_ordinals,
                 "action": action,
             }
@@ -491,7 +491,7 @@ def test_group_freshness_accepts_safe_deny_without_current_context() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         content = json.dumps(
             {
-                "answer": "No current authorised group context is available.",
+                "answer": "当前没有可用的已授权群组上下文。",
                 "citation_ordinals": [],
                 "action": "deny",
                 "draft": None,
@@ -548,7 +548,7 @@ def test_draft_pressure_records_a_safe_draft_update_action() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         content = json.dumps(
             {
-                "answer": "A confirmation draft is ready.",
+                "answer": "草稿建议已生成，正在等待确认。",
                 "citation_ordinals": [1],
                 "action": "draft_update",
                 "draft": {"field_key": "title", "value": "Controlled proposal"},

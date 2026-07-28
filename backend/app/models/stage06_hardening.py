@@ -19,7 +19,7 @@ class Stage06IdempotencyRecord(UuidPrimaryKeyMixin, TimestampMixin, Base):
         ),
         UniqueConstraint("trace_id", name="uq_stage06_idempotency_trace_id"),
         CheckConstraint(
-            "status IN ('in_progress', 'completed')",
+            "status IN ('in_progress', 'completed', 'failed')",
             name="ck_stage06_idempotency_status",
         ),
     )

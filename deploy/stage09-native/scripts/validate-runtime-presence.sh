@@ -78,6 +78,32 @@ save_full_prompt=$(value_for AGENT_SAVE_FULL_PROMPT)
 save_full_response=$(value_for AGENT_SAVE_FULL_RESPONSE)
 [ "$save_full_response" = "false" ] || fail "unsafe-AGENT_SAVE_FULL_RESPONSE"
 
+agent_event_runtime_enabled=$(value_for AGENT_EVENT_RUNTIME_ENABLED)
+case "$agent_event_runtime_enabled" in
+    ''|false) ;;
+    true)
+        agent_event_runtime_mode=$(value_for AGENT_EVENT_RUNTIME_MODE)
+        [ "$agent_event_runtime_mode" = "redis_worker" ] || \
+            fail "unsafe-AGENT_EVENT_RUNTIME_MODE"
+        require_value AGENT_EVENT_RUNTIME_ALLOWED_WORKSPACE_IDS
+        require_value AGENT_RUNTIME_INPUT_KEY
+        require_value AGENT_RUNTIME_INPUT_KEY_VERSION
+        require_value AGENT_RUNTIME_INPUT_TTL_SECONDS
+        workspace_ids=$(value_for AGENT_EVENT_RUNTIME_ALLOWED_WORKSPACE_IDS)
+        printf '%s\n' "$workspace_ids" | grep -Eq \
+            '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}(,[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})*$' || \
+            fail "unsafe-AGENT_EVENT_RUNTIME_ALLOWED_WORKSPACE_IDS"
+        input_key=$(value_for AGENT_RUNTIME_INPUT_KEY)
+        printf '%s\n' "$input_key" | grep -Eq '^[A-Za-z0-9_-]{43}=$' || \
+            fail "unsafe-AGENT_RUNTIME_INPUT_KEY"
+        input_ttl=$(value_for AGENT_RUNTIME_INPUT_TTL_SECONDS)
+        case "$input_ttl" in ''|*[!0-9]*) fail "unsafe-AGENT_RUNTIME_INPUT_TTL_SECONDS" ;; esac
+        [ "$input_ttl" -ge 30 ] && [ "$input_ttl" -le 900 ] || \
+            fail "unsafe-AGENT_RUNTIME_INPUT_TTL_SECONDS"
+        ;;
+    *) fail "unsafe-AGENT_EVENT_RUNTIME_ENABLED" ;;
+esac
+
 telegram_test_send_allowed_chat_ids=$(value_for TELEGRAM_TEST_SEND_ALLOWED_CHAT_IDS)
 telegram_allowed_chat_ids=$(value_for TELEGRAM_ALLOWED_CHAT_IDS)
 telegram_allowed_user_ids=$(value_for TELEGRAM_ALLOWED_USER_IDS)
@@ -168,4 +194,5 @@ printf '%s\n' "AGENT_WORKFLOW_MODE: $agent_workflow_mode"
 printf '%s\n' "PROVIDER_MODE: disabled"
 printf '%s\n' "AGENT_SAVE_FULL_PROMPT: false"
 printf '%s\n' "AGENT_SAVE_FULL_RESPONSE: false"
+printf '%s\n' "AGENT_EVENT_RUNTIME_ENABLED: ${agent_event_runtime_enabled:-false}"
 printf '%s\n' "runtime-validation: pass"

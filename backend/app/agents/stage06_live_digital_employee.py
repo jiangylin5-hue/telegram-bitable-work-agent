@@ -120,6 +120,18 @@ def _validate_output(state: Stage06LiveEmployeeState) -> Stage06LiveEmployeeStat
     citations = content.get("citations", [])
     if not isinstance(citations, list):
         raise ValueError("Stage06 live digital employee citations must be a list")
+    schema = state.get("schema", {})
+    required_record_ids = (
+        schema.get("required_citation_record_ids", [])
+        if isinstance(schema, dict)
+        else []
+    )
+    if schema.get("strict_citation_validation", False) is True:
+        validate_stage06_live_citations(
+            citations,
+            state.get("records", []),
+            required_record_ids=required_record_ids,
+        )
     if state["action"] == "draft_update":
         draft = content.get("draft")
         if not isinstance(draft, dict):
@@ -132,6 +144,52 @@ def _validate_output(state: Stage06LiveEmployeeState) -> Stage06LiveEmployeeStat
     return state
 
 
+def validate_stage06_live_citations(
+    citations: list[object],
+    records: list[dict[str, Any]],
+    *,
+    required_record_ids: object,
+) -> None:
+    visible_record_ids = {
+        record["id"]
+        for record in records
+        if isinstance(record, dict) and isinstance(record.get("id"), str)
+    }
+    visible_field_keys = {
+        key
+        for record in records
+        if isinstance(record, dict) and isinstance(record.get("fields"), dict)
+        for key in record["fields"]
+        if isinstance(key, str)
+    }
+    cited_record_ids: set[str] = set()
+    for citation in citations:
+        if not isinstance(citation, dict) or set(citation) != {
+            "record_id",
+            "field_keys",
+        }:
+            raise ValueError("Stage06 live citation shape is invalid")
+        record_id = citation.get("record_id")
+        field_keys = citation.get("field_keys")
+        if (
+            not isinstance(record_id, str)
+            or record_id not in visible_record_ids
+            or not isinstance(field_keys, list)
+            or not field_keys
+            or any(
+                not isinstance(field_key, str)
+                or field_key not in visible_field_keys
+                for field_key in field_keys
+            )
+        ):
+            raise ValueError("Stage06 live citation visibility is invalid")
+        cited_record_ids.add(record_id)
+    if isinstance(required_record_ids, list) and not {
+        record_id for record_id in required_record_ids if isinstance(record_id, str)
+    }.issubset(cited_record_ids):
+        raise ValueError("Stage06 live citation coverage is incomplete")
+
+
 def _response_schema(action: str) -> dict[str, Any]:
     base_schema: dict[str, Any] = {
         "type": "object",
@@ -142,6 +200,8 @@ def _response_schema(action: str) -> dict[str, Any]:
                 "type": "array",
                 "items": {
                     "type": "object",
+                    "required": ["record_id", "field_keys"],
+                    "additionalProperties": False,
                     "properties": {
                         "record_id": {"type": "string"},
                         "field_keys": {"type": "array", "items": {"type": "string"}},

@@ -23,10 +23,16 @@
 - Real browser import is now verified through the authorized Home → template/import panel → new Base → file-selection dialog. The final file upload and new acceptance Base commit remain blocked on the Chrome extension's file URL permission; no import write has occurred in this attempt.
 - The current authorized Home capture and a same-height comparison against the retained Feishu Home reference are saved under `evidence/screenshots/2026-07-25-stage09-closure/`. The empty-state Home preserves the intended navigation, color cues and relationship entry points, but cannot yet prove populated-table density or status-tag rendering; those require the separate acceptance Base import.
 
+### r56 backend-only release and current UI recovery — 2026-07-27
+
+- The active native source/venv release is `stage09-p1-20260726-r56-authoritative-answer`. It is a backend-only candidate under the split source/static delivery contract; the public static pointer intentionally remains on `stage09-p1-20260725-r39` until a separately verified Mini App static artifact is activated.
+- This means r56 is not evidence that the current uncommitted Mini App source is publicly live. Any candidate that changes `mini-app/**` must activate a complete matching static artifact; source-only activation is not allowed for this UI recovery change.
+- The Mini App's previously terminal non-auth failure screen now has a safe Home-bound retry. Its unit, serial regression and production-build evidence is recorded in `STAGE_09_UI_RECOVERY_AND_ARTIFACT_PARITY_PLAN.md`. The browser check proves the unavailable-API retry action is visible and invokes a retry; it cannot claim a populated, authorized real-browser flow because no verified Telegram/browser identity is available in this session.
+
 - Document status: active implementation plan
 - Visual source of truth: `project-docs/08-implementation/evidence/design-references/stage09-feishu-bitable/README.md` and its five retained reference images. UI changes must compare to the matching image rather than reconstructing the target from conversation history.
 - Scope: 已上线 Mini App 中已经声明为可用的表格、模板、导入、导航、数字员工与协作入口的可操作性收口。
-- Current Progress: 2026-07-25 r37 已将真实 OpenRouter 12-Case 安全/结构评测收口为 `12 / 12` 通过，并保留前两次失败的原因与修复证据。导入 UI 已在真实授权 Chrome 中走到文件选择步骤；隔离 CSV 的上传、字段映射、提交独立验收 Base、打开网格并核对状态/优先级色标签仍待完成，因此不能据此称为完整产品验收。
+- Current Progress: 2026-07-27 r57 now activates a complete matching source/venv/static candidate (`stage09-p1-20260727-r57-ai-workbench-static`), replacing public r39 after server-side sealed-layout, release-assets, static-parity and bounded readiness gates passed. The public root references the r57 Vite bundle and health remains `200`; full local evidence is in `evidence/stage09-r57-ledgerline-static-deployment-2026-07-27.md`. The local UI recovery repair has passed its serial Mini App regression (77 files / 402 passed / 2 historical skips), backend unit regression (1370 passed / 1 POSIX-only skip), build and static-artifact gate. The current production build now partitions stable dependencies and has no oversized-chunk advisory; the AI workbench composer focus is synchronous after its portal mounts. A real authorized browser flow still requires a valid Telegram/browser session: r57 must be refreshed and visually checked for the Ledgerline timeline/composer dialog; the r39 legacy three-column form is an explicit rejection condition. Earlier r37 OpenRouter and r34/r39 interaction evidence remain historical and do not make the current source fully accepted.
 
 ## 目标
 

@@ -21,6 +21,8 @@ import { SaveTemplatePanel } from './SaveTemplatePanel'
 import { TemplateImportHub } from './TemplateImportHub'
 import { TableOperationCenter, type TableOperationScope } from './TableOperationCenter'
 import { CollaborationWorkbench } from './CollaborationWorkbench'
+
+const agentEventRuntimeEnabled = import.meta.env.VITE_AGENT_EVENT_RUNTIME_ENABLED === 'true'
 import { MemoryWorkbench } from './MemoryWorkbench'
 import { ViewBuilderPanel } from './ViewBuilderPanel'
 import { WorkspaceHome as WorkspaceHomeView } from './WorkspaceHome'
@@ -439,11 +441,35 @@ function AppContent() {
     }
   }, [bootstrapQuery.error, queryClient])
 
+  function retryWorkspaceLoad() {
+    if (sessionInvalidated.current) return
+    const bootstrap = bootstrapQuery.data
+    const workspace = bootstrap?.workspaces.find((item) => item.id === activeWorkspaceId.current)
+      ?? bootstrap?.workspaces[0]
+    if (!bootstrap || !workspace) {
+      void bootstrapQuery.refetch()
+      return
+    }
+    setState({ status: 'loading' })
+    void loadWorkspaceHome(bootstrap, workspace.id)
+  }
+
+  const networkRecovery = <main className="app-state" aria-label="网络错误">
+    <div className="app-state-message">
+      <p>暂时无法加载工作区，请稍后重试。</p>
+      <button className="app-state-retry" type="button" onClick={retryWorkspaceLoad} disabled={bootstrapQuery.isFetching || sessionInvalidated.current}>
+        {bootstrapQuery.isFetching ? '正在重新加载…' : '重新加载工作区'}
+      </button>
+    </div>
+  </main>
+
   if (state.status === 'denied') return <main className="app-state" aria-label="无工作区访问权限">{state.postCommitNotice ? <p>{state.postCommitNotice}</p> : null}<p>当前浏览器工作台会话已失效或无访问权限，请返回 Telegram 重新打开工作区。</p></main>
-  if (bootstrapQuery.isError) return <main className="app-state" aria-label={bootstrapQuery.error instanceof ApiError && (bootstrapQuery.error.status === 401 || bootstrapQuery.error.status === 403) ? '无工作区访问权限' : '网络错误'}>{bootstrapQuery.error instanceof ApiError && (bootstrapQuery.error.status === 401 || bootstrapQuery.error.status === 403) ? '当前浏览器工作台会话已失效或无访问权限，请返回 Telegram 重新打开工作区。' : '暂时无法加载工作区，请稍后重试。'}</main>
+  if (bootstrapQuery.isError) return bootstrapQuery.error instanceof ApiError && (bootstrapQuery.error.status === 401 || bootstrapQuery.error.status === 403)
+    ? <main className="app-state" aria-label="无工作区访问权限">当前浏览器工作台会话已失效或无访问权限，请返回 Telegram 重新打开工作区。</main>
+    : networkRecovery
   if (bootstrapQuery.isPending || state.status === 'loading') return <main className="app-state" aria-label="正在加载工作区">正在加载工作区…</main>
 
-  if (state.status === 'error') return <main className="app-state" aria-label="网络错误">暂时无法加载工作区，请稍后重试。</main>
+  if (state.status === 'error') return networkRecovery
 
   const readyState = state
   const activeWorkspace = readyState.bootstrap.workspaces.find((item) => item.id === readyState.home.workspace_id) ?? readyState.bootstrap.workspaces[0]
@@ -863,7 +889,9 @@ function AppContent() {
       && collaborationRequestVersion.current === requestVersion
       && activeWorkspaceId.current === workspaceId
     try {
-      const result = await api.queryStage08AssistantStream(
+      const result = await (agentEventRuntimeEnabled && request.requestedAction === 'read_only'
+        ? api.queryStage10AssistantWithFallback
+        : api.queryStage08AssistantStream)(
         { workspaceId, ...request },
         crypto.randomUUID(),
         onEvent,
@@ -3054,6 +3082,7 @@ function AppContent() {
       failed={collaborationPanel.failed}
       skillCatalog={collaborationPanel.skillCatalog}
       skillCatalogLoading={collaborationPanel.skillCatalogLoading}
+      durableRuntimeEnabled={agentEventRuntimeEnabled}
       onEmployeeChange={(employeeId) => { void loadCollaborationSkillCatalog(employeeId) }}
       onInvokeStream={invokeCollaborationStream}
       onOpenDraft={(draftId) => {

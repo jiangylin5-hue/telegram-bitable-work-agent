@@ -1609,6 +1609,7 @@ class SqlAlchemyStage06PlatformUnitOfWork:
 
     def add_field(self, field: PlatformField) -> None:
         self.session.add(field)
+        self.session.flush()
 
     def get_field(self, field_id: UUID) -> PlatformField | None:
         return self.session.get(PlatformField, field_id)
@@ -2236,6 +2237,7 @@ class SqlAlchemyStage06PlatformUnitOfWork:
             select(RecordChangeDraft)
             .where(RecordChangeDraft.id == draft_id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
 
     def list_record_change_drafts(self, base_id: UUID) -> list[RecordChangeDraft]:

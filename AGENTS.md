@@ -4,12 +4,12 @@
 
 - Document status: active project collaboration rule
 - Scope: Generic Telegram-first multidimensional table, no-code workspace and table-bound digital employee platform
-- Current Progress: 2026-07-26 Stage06 remains the accepted backend baseline; Stage07 delivered the Mini App/table workspace foundation; Stage08 implemented the permission-filtered context, memory, retrieval and LangGraph-first collaboration runtime. The approved Stage09 Codex-style workbench, controlled `POST /api/stage08/assistant/query-stream` SSE path and LarkSuite-registry skill launcher have passed final local acceptance: 209 selected backend tests, 398 Mini App tests (2 historical skips), production build, internal/public rendered Nginx asset checks, real OpenRouter in-memory smoke and populated desktop/compact Browser QA. `design-qa.md` records the resolved `/api` proxy, modal-layer and compact current-record findings. The local squash commit is recorded on this branch; no deployment, real production write, Telegram send, schema change or permission-model expansion occurred.
+- Current Progress: 2026-07-28 Stage10 read-only Agent event runtime is implemented, deployed and accepted on public artifact `stage09-p1-20260728-r66-conversation-routing`. PostgreSQL owns run/checkpoint/command/artifact/event/outbox state and short-lived AES-GCM private inputs; independent publisher/specialist services use Redis Streams with lease, fencing, idempotency and XAUTOCLAIM recovery; SSE reauthorizes and projects safe events only. The React workbench now keeps automatic queries as `mixed`, exposes mutually exclusive `aria-pressed` skill state and never replaces the user's query with skill copy; the backend alone recognizes bounded pure greetings while greeting-plus-business text still performs table retrieval. Fresh evidence: 1537 backend Unit+API tests, 71 server API tests, 79 Mini App files/411 tests, production build and exact static parity, production Alembic head `20260728_0034`, real Redis/PostgreSQL/OpenRouter 20-case Chinese evaluation with 100% skill hit/precision/recall/readiness/answer accuracy, and public browser verification with zero application console errors. Telegram send, automatic draft confirmation, business-record writes and unrestricted Agent capabilities remain excluded.
 
 ## Current Handoff
 
-- New sessions must read `project-docs/00-governance/HANDOFF_2026-07-26_CODEX_STYLE_AI_CONVERSATION.md` before continuing Stage08/Stage09 work.
-- The current confirmed implementation is defined by `project-docs/08-implementation/STAGE_09_CODEX_STYLE_AI_CONVERSATION_DESIGN.md`: a Codex-style AI conversation workbench with a controlled SSE API and a Stage06-registry skill launcher. Task5 transport assets are locally verified only; deployment remains unapproved.
+- New sessions must read root `HANDOFF.md`, `project-docs/08-implementation/STAGE_10_AGENT_EVENT_RUNTIME_ACCEPTANCE.md` and its linked r66 evidence before extending the Agent runtime.
+- The current confirmed implementation is the deployed Stage10 read-only distributed runtime; Stage08 remains the compatibility and draft-confirmation path. New capabilities require a new documented stage and must not broaden write authority implicitly.
 - Branch/worktree ownership, document tiers, retention and generated-artifact cleanup follow `project-docs/00-governance/PROJECT_STRUCTURE_AND_DOCUMENT_LIFECYCLE.md`. `.superpowers/` is execution scratch and must remain Git-ignored.
 
 ## 1. Project Positioning
@@ -138,6 +138,14 @@ Current Stage09 AI conversation rule:
 - The current approval does not authorize schema changes, permission-model changes, persistent chat history, raw model-token/reasoning exposure, deployment or real external/business writes.
 - Deployment and any real draft, import, table or Telegram write remain separate action-level gates.
 
+Current Stage10 Agent event-runtime rule:
+
+- The approved architecture and detailed implementation boundary are defined by `project-docs/02-architecture/AGENT_EVENT_RUNTIME_PROPOSAL.md` and `project-docs/08-implementation/STAGE_10_AGENT_EVENT_RUNTIME_ACCEPTANCE.md`.
+- PostgreSQL is the durable truth; Redis Streams is at-least-once transport only. Exactly-once effects rely on database uniqueness, leases and idempotent state transitions.
+- LangGraph private state remains in memory with `checkpointer=None` in v1. Durable checkpoints contain redacted control fields only.
+- The first capability is read-only `platform.tabular.analyse`. Draft, write, external-send and generic delegation capabilities are not enabled.
+- Stage10 traffic remains feature-flagged until full local recovery, security and browser acceptance pass; deployment remains a separate confirmation gate.
+
 Stage02 to Stage08 documents remain historical or accepted implementation evidence according to the active indexes. They must not override the current top-level source of truth and handoff.
 
 ## 6. Confirmed Technical Baseline
@@ -200,6 +208,7 @@ Forbidden:
 - Do not claim production readiness without production readiness evidence.
 - The Stage09 SSE route and synchronous assistant route must share authorization, scope, idempotency, audit and execution services.
 - The frontend may render only the approved event allowlist and the final validated `SafeView`; hidden reasoning, raw tool output and raw group content remain forbidden.
+- Stage10 checkpoints, commands, artifacts, events, outbox messages and SSE must not persist or expose raw queries, prompts, provider responses, retrieved record values, credentials or private LangGraph state.
 - Deployment and real draft/import/table/Telegram writes require their own current evidence and confirmation gates.
 - Temporary files, scripts, test data and artifacts created during a stage must be cleaned before deployment or documented as retained artifacts.
 

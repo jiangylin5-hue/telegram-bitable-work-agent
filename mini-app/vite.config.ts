@@ -23,6 +23,18 @@ export function createLocalApiProxy(acceptanceActor?: string) {
   }]))
 }
 
+export function createBuildOutputOptions() {
+  return {
+    manualChunks(moduleId: string) {
+      const normalizedId = moduleId.replaceAll('\\', '/')
+      if (normalizedId.includes('/node_modules/react/') || normalizedId.includes('/node_modules/react-dom/')) return 'vendor-react'
+      if (normalizedId.includes('/node_modules/@tanstack/react-query/')) return 'vendor-query'
+      if (normalizedId.includes('/node_modules/lucide-react/')) return 'vendor-icons'
+      return null
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const environment = loadEnv(mode, '.', '')
 
@@ -30,6 +42,11 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     server: {
       proxy: createLocalApiProxy(environment.STAGE07_LOCAL_ACCEPTANCE_USER_ID),
+    },
+    build: {
+      rolldownOptions: {
+        output: createBuildOutputOptions(),
+      },
     },
   }
 })

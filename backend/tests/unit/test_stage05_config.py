@@ -19,6 +19,12 @@ RUNTIME_ENV_VARS = [
     "AGENT_LLM_TIMEOUT_SECONDS",
     "AGENT_SAVE_FULL_PROMPT",
     "AGENT_SAVE_FULL_RESPONSE",
+    "AGENT_EVENT_RUNTIME_ENABLED",
+    "AGENT_EVENT_RUNTIME_MODE",
+    "AGENT_EVENT_RUNTIME_ALLOWED_WORKSPACE_IDS",
+    "AGENT_RUNTIME_INPUT_KEY",
+    "AGENT_RUNTIME_INPUT_KEY_VERSION",
+    "AGENT_RUNTIME_INPUT_TTL_SECONDS",
     "PROVIDER_MODE",
 ]
 
@@ -45,6 +51,7 @@ def test_stage05_agent_defaults_are_safe(monkeypatch: pytest.MonkeyPatch) -> Non
     assert settings.agent_llm_timeout_seconds == 30
     assert settings.agent_save_full_prompt is False
     assert settings.agent_save_full_response is False
+    assert settings.agent_event_runtime_enabled is False
     assert settings.telegram_send_mode == "dry_run"
     validate_runtime_settings(settings)
 
@@ -101,3 +108,47 @@ def test_prompt_and_response_debug_storage_can_be_enabled_explicitly(
 
     assert settings.agent_save_full_prompt is True
     assert settings.agent_save_full_response is True
+
+
+def test_agent_event_runtime_requires_an_explicit_feature_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _clear_runtime_env(monkeypatch)
+    monkeypatch.setenv("AGENT_EVENT_RUNTIME_ENABLED", "true")
+
+    assert get_settings().agent_event_runtime_enabled is True
+
+
+def test_stage10_distributed_runtime_reads_mode_key_and_workspace_allowlist(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import base64
+
+    workspace_id = "11111111-1111-4111-8111-111111111111"
+    monkeypatch.setenv("AGENT_EVENT_RUNTIME_ENABLED", "true")
+    monkeypatch.setenv("AGENT_EVENT_RUNTIME_MODE", "redis_worker")
+    monkeypatch.setenv(
+        "AGENT_RUNTIME_INPUT_KEY",
+        base64.urlsafe_b64encode(b"k" * 32).decode("ascii"),
+    )
+    monkeypatch.setenv("AGENT_EVENT_RUNTIME_ALLOWED_WORKSPACE_IDS", workspace_id)
+
+    settings = get_settings()
+
+    assert settings.agent_event_runtime_mode == "redis_worker"
+    assert settings.agent_runtime_input_key is not None
+    assert settings.agent_event_runtime_allowed_workspace_ids == (workspace_id,)
+
+
+def test_staging_stage10_fails_closed_without_distributed_runtime_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("APP_ENV", "staging")
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://stage/test")
+    monkeypatch.setenv("REDIS_URL", "redis://127.0.0.1:6379/9")
+    monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "test-secret")
+    monkeypatch.setenv("AGENT_EVENT_RUNTIME_ENABLED", "true")
+    monkeypatch.setenv("AGENT_EVENT_RUNTIME_MODE", "embedded")
+
+    with pytest.raises(RuntimeError, match="AGENT_EVENT_RUNTIME_MODE"):
+        validate_runtime_settings()

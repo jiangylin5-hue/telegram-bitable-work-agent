@@ -1,6 +1,16 @@
 import { expect, test } from 'vitest'
 
-import { createLocalApiProxy } from '../../vite.config'
+import { createBuildOutputOptions, createLocalApiProxy } from '../../vite.config'
+
+test('partitions stable framework dependencies into deterministic cacheable build chunks', () => {
+  const { manualChunks } = createBuildOutputOptions()
+
+  expect(manualChunks('D:/workspace/node_modules/react/index.js')).toBe('vendor-react')
+  expect(manualChunks('D:/workspace/node_modules/react-dom/client.js')).toBe('vendor-react')
+  expect(manualChunks('D:/workspace/node_modules/@tanstack/react-query/build/index.js')).toBe('vendor-query')
+  expect(manualChunks('D:/workspace/node_modules/lucide-react/dist/cjs/lucide-react.js')).toBe('vendor-icons')
+  expect(manualChunks('D:/workspace/src/app/App.tsx')).toBeNull()
+})
 
 test('proxies every Mini App API namespace, including Stage08 /api routes, to the local FastAPI server', () => {
   const proxy = createLocalApiProxy()

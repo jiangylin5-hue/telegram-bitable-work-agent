@@ -21,6 +21,14 @@ POLICY_DENIAL_TRIGGERS = (
     "restricted field",
     "private records",
     "raw sql",
+    "private_notes",
+    "private-notes",
+    "private notes",
+    "internal_notes",
+    "internal-notes",
+    "internal notes",
+    "restricted_",
+    "restricted-",
 )
 DATA_ACCESS_SKILLS = frozenset(
     {
