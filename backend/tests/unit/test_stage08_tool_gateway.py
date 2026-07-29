@@ -11,6 +11,8 @@ from app.models.stage08_runtime import Stage08ExecutionTicket
 from app.runtime.stage08_collaboration_contracts import Stage08CollaborationContractFactory
 from app.runtime.stage08_contracts import ExecutionBudget, ExecutionPlan, ExecutionTicketState, ToolInvocation
 from app.runtime.stage08_tool_gateway import Stage08ToolGateway, Stage08ToolGatewayError
+from app.schemas.agent_controlled_actions import CreateTaskProposal, ReminderRequestProposal
+from app.services.agent_tool_gateway import AgentControlledToolGateway
 from app.services.permissions import Actor
 from app.services.stage06_digital_employees import (
     confirm_record_change_draft,
@@ -105,10 +107,11 @@ def test_tool_catalog_returns_exact_allowlist_without_manifest_text() -> None:
 
     result = fixture.execute(employee, "tool_catalog.inspect", {})
 
-    assert result.counts == {"tool_count": 7}
+    assert result.counts == {"tool_count": 8}
     assert result.entity_refs == [
         "contact.resolve",
         "import.preview",
+        "notification.request",
         "record.query",
         "record_change_draft.create",
         "table.summarize",
@@ -116,6 +119,125 @@ def test_tool_catalog_returns_exact_allowlist_without_manifest_text() -> None:
         "tool_catalog.inspect",
     ]
     assert result.visible_field_keys == []
+
+
+def test_notification_request_is_persisted_blocked_and_never_sent() -> None:
+    fixture = _gateway_fixture()
+    employee = fixture.employee(actions=["notification.request"])
+
+    result = fixture.execute(
+        employee,
+        "notification.request",
+        {
+            "base_id": str(fixture.base.id),
+            "source_record_id": str(fixture.record.id),
+            "channel": "telegram",
+            "target": {"telegram_chat_id": "test-chat-1"},
+            "message_payload": {"text": "请今天反馈逾期原因"},
+            "send_policy": {"confirmation": "required"},
+        },
+    )
+
+    assert len(fixture.uow.notification_requests) == 1
+    request = fixture.uow.notification_requests[0]
+    assert request.status == "blocked"
+    assert result.entity_refs == [str(request.id)]
+    assert result.counts == {
+        "notification_request_count": 1,
+        "confirmation_required": 1,
+        "external_send_count": 0,
+    }
+
+
+def test_agent_controlled_gateway_materializes_task_as_pending_draft_with_ticket() -> None:
+    fixture = _gateway_fixture(with_record=False)
+    employee = fixture.employee(actions=["draft_create"], tables=[fixture.table.id])
+    proposal = CreateTaskProposal(
+        proposal_id=uuid4(),
+        action_type="create_task",
+        table_id=fixture.table.id,
+        proposed_values={"status": "open"},
+        reason="为逾期项目创建跟进任务",
+    )
+
+    materialized = AgentControlledToolGateway().materialize(
+        fixture.uow,
+        workspace_id=fixture.workspace.id,
+        employee_id=employee.id,
+        actor=fixture.operator,
+        proposal=proposal,
+    )
+
+    assert materialized.action_type == "create_task"
+    assert materialized.resource_status == "pending_confirmation"
+    assert materialized.external_send_count == 0
+    assert fixture.uow.records == []
+    assert fixture.uow.execution_tickets[0].status == "succeeded"
+    assert fixture.uow.record_change_drafts[0].id == materialized.resource_id
+
+    replayed = AgentControlledToolGateway().materialize(
+        fixture.uow,
+        workspace_id=fixture.workspace.id,
+        employee_id=employee.id,
+        actor=fixture.operator,
+        proposal=proposal,
+    )
+    assert replayed.replayed is True
+    assert replayed.resource_id == materialized.resource_id
+    assert len(fixture.uow.record_change_drafts) == 1
+    assert len(fixture.uow.execution_tickets) == 1
+
+
+def test_agent_controlled_gateway_materializes_reminder_as_blocked_request() -> None:
+    fixture = _gateway_fixture()
+    employee = fixture.employee(actions=["notification.request"])
+    proposal = ReminderRequestProposal(
+        proposal_id=uuid4(),
+        action_type="request_reminder",
+        base_id=fixture.base.id,
+        source_record_id=fixture.record.id,
+        target={"telegram_chat_id": "test-chat-1"},
+        message_payload={"text": "请今天反馈逾期原因"},
+        reason="提醒负责人处理逾期事项",
+    )
+
+    materialized = AgentControlledToolGateway().materialize(
+        fixture.uow,
+        workspace_id=fixture.workspace.id,
+        employee_id=employee.id,
+        actor=fixture.operator,
+        proposal=proposal,
+    )
+
+    assert materialized.resource_status == "blocked"
+    assert materialized.external_send_count == 0
+    assert fixture.uow.notification_requests[0].status == "blocked"
+
+
+def test_agent_controlled_gateway_permission_denial_has_zero_side_effects() -> None:
+    fixture = _gateway_fixture(with_record=False)
+    employee = fixture.employee(actions=["query"], tables=[fixture.table.id])
+    proposal = CreateTaskProposal(
+        proposal_id=uuid4(),
+        action_type="create_task",
+        table_id=fixture.table.id,
+        proposed_values={"status": "open"},
+        reason="无权创建的任务",
+    )
+
+    with pytest.raises(PlatformValidationError) as exc_info:
+        AgentControlledToolGateway().materialize(
+            fixture.uow,
+            workspace_id=fixture.workspace.id,
+            employee_id=employee.id,
+            actor=fixture.operator,
+            proposal=proposal,
+        )
+
+    assert exc_info.value.code == "stage08_policy_denied"
+    assert fixture.uow.execution_tickets == []
+    assert fixture.uow.record_change_drafts == []
+    assert fixture.uow.records == []
 
 
 def test_task_create_draft_does_not_create_record_until_confirmed() -> None:

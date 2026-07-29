@@ -19,6 +19,7 @@ from app.api.routes.stage08_collaboration import (
     complete_assistant_query,
     prepare_assistant_query,
 )
+from app.agents.agent_capability_registry import get_capability
 from app.core.config import Settings, get_settings
 from app.core.database import get_session
 from app.core.errors import error_detail
@@ -39,12 +40,15 @@ from app.services.agent_event_runtime import (
     create_agent_run,
 )
 from app.services.agent_orchestrator import (
+    SpecialistCommandDispatch,
     SpecialistSafeResult,
     build_authorization_hash,
     dispatch_specialist_command,
+    dispatch_specialist_commands,
     execute_read_only_specialist,
     fail_specialist_command,
 )
+from app.services.agent_task_gateway import TaskGatewayRequest, TaskPlanNode, build_task_plan
 from app.services.agent_private_inputs import seal_agent_private_input
 from app.services.stage06_idempotency import fail_idempotent_operation
 from app.services.agent_sse_projection import project_safe_run_events
@@ -75,6 +79,49 @@ def create_agent_run_endpoint(
     runtime_uow: AgentEventRuntimeUnitOfWork = Depends(get_agent_event_runtime_uow),
 ) -> AgentRunCreateResponse:
     settings = _require_enabled(request.workspace_id)
+    task_plan = build_task_plan(
+        TaskGatewayRequest(
+            workspace_id=request.workspace_id,
+            employee_id=request.employee_id,
+            actor_user_id=identity.user_id,
+            intent=request.intent,
+            requested_action=request.requested_action,
+            query=request.query,
+            target_record_id=request.target_record_id,
+            idempotency_key=request.idempotency_key,
+            skill_id=request.skill_id,
+        )
+    )
+    read_nodes = tuple(
+        item
+        for item in task_plan.nodes
+        if item.capability_id != "platform.action.propose"
+    )
+    if len(read_nodes) > 1:
+        try:
+            return _create_multi_specialist_run(
+                request=request,
+                identity=identity,
+                platform_uow=platform_uow,
+                runtime_uow=runtime_uow,
+                settings=settings,
+                nodes=read_nodes,
+            )
+        except (Stage06AuthorizationError, PlatformValidationError, ValueError) as exc:
+            _rollback(runtime_uow)
+            raise _http_error(exc) from exc
+        except HTTPException:
+            _rollback(runtime_uow)
+            raise
+        except Exception as exc:
+            _rollback(runtime_uow)
+            raise HTTPException(
+                status_code=500,
+                detail=error_detail(
+                    "agent_run_internal_failure",
+                    "agent_run_internal_failure",
+                ),
+            ) from exc
     failed_command_id: UUID | None = None
     failed_authorization_hash: str | None = None
     failed_reservation = None
@@ -82,14 +129,15 @@ def create_agent_run_endpoint(
         {
             "workspace_id": str(request.workspace_id),
             "employee_id": str(request.employee_id),
-            "intent": request.intent,
+            "intent": _stage08_intent(request.intent),
             "query": request.query,
             "requested_action": "read_only",
             "target_record_id": (
                 None if request.target_record_id is None else str(request.target_record_id)
             ),
             "idempotency_key": request.idempotency_key,
-            "skill_id": request.skill_id,
+            "skill_id": request.skill_id
+            or get_capability("platform.tabular.analyse").execution_skill_id,
         }
     )
     try:
@@ -154,11 +202,11 @@ def create_agent_run_endpoint(
                     actor_user_id=prepared.actor.actor_id,
                     workspace_id=request.workspace_id,
                     employee_id=request.employee_id,
-                    intent=request.intent,
+                    intent=_stage08_intent(request.intent),
                     query=request.query,
                     target_record_id=request.target_record_id,
                     idempotency_key=request.idempotency_key,
-                    skill_id=request.skill_id,
+                    skill_id=assistant_request.skill_id,
                 ),
                 key_b64=settings.agent_runtime_input_key,
                 key_version=settings.agent_runtime_input_key_version,
@@ -259,6 +307,221 @@ def create_agent_run_endpoint(
             status_code=500,
             detail=error_detail("agent_run_internal_failure", "agent_run_internal_failure"),
         ) from exc
+
+
+def _create_multi_specialist_run(
+    *,
+    request: AgentRunCreateRequest,
+    identity: Stage06RequestIdentity,
+    platform_uow: Stage06PlatformUnitOfWork,
+    runtime_uow: AgentEventRuntimeUnitOfWork,
+    settings: Settings,
+    nodes: tuple[TaskPlanNode, ...],
+) -> AgentRunCreateResponse:
+    prepared_items: list[tuple[TaskPlanNode, object, AssistantQueryRequest]] = []
+    for node in nodes:
+        suffix = node.capability_id.removeprefix("platform.").replace(".", "-")
+        idempotency_key = (
+            request.idempotency_key
+            if node.capability_id == "platform.tabular.analyse"
+            else f"{request.idempotency_key[:96]}:{suffix}"
+        )
+        assistant_request = AssistantQueryRequest.model_validate(
+            {
+                "workspace_id": str(request.workspace_id),
+                "employee_id": str(request.employee_id),
+                "intent": _stage08_intent(request.intent),
+                "query": request.query,
+                "requested_action": "read_only",
+                "target_record_id": (
+                    None
+                    if request.target_record_id is None
+                    else str(request.target_record_id)
+                ),
+                "idempotency_key": idempotency_key,
+                "skill_id": (
+                    request.skill_id
+                    if node.capability_id == "platform.tabular.analyse"
+                    and request.skill_id is not None
+                    else get_capability(node.capability_id).execution_skill_id
+                ),
+            }
+        )
+        prepared = prepare_assistant_query(assistant_request, identity, platform_uow)
+        prepared_items.append((node, prepared, assistant_request))
+
+    primary_prepared = next(
+        prepared
+        for node, prepared, _assistant_request in prepared_items
+        if node.capability_id == "platform.tabular.analyse"
+    )
+    authorization_hash = build_authorization_hash(
+        workspace_id=request.workspace_id,
+        employee_id=request.employee_id,
+        target_record_id=request.target_record_id,
+        actor_user_id=primary_prepared.actor.actor_id,
+    )
+    run_key_hash = hashlib.sha256(
+        (
+            f"stage11:{request.workspace_id}:{primary_prepared.actor.actor_id}:"
+            f"{request.idempotency_key}"
+        ).encode("utf-8")
+    ).hexdigest()
+    now = datetime.now(UTC)
+    creation = create_agent_run(
+        runtime_uow,
+        workspace_id=request.workspace_id,
+        root_employee_id=request.employee_id,
+        target_record_id=request.target_record_id,
+        scope_hash=authorization_hash,
+        idempotency_key_hash=run_key_hash,
+        deadline_at=now + timedelta(seconds=90),
+        now=now,
+        workflow_version="stage11.coordination.v1",
+    )
+    run = creation.run
+    if creation.replayed:
+        _commit(runtime_uow)
+        return AgentRunCreateResponse(run_id=run.id, status=run.status, replayed=True)
+
+    command_specs: list[tuple[TaskPlanNode, object, AssistantQueryRequest, UUID, UUID, str]] = []
+    dispatches: list[SpecialistCommandDispatch] = []
+    for node, prepared, assistant_request in prepared_items:
+        reservation = prepared.reservation or platform_uow.get_idempotency_record(
+            request.workspace_id,
+            _STAGE08_OPERATION,
+            assistant_request.idempotency_key,
+        )
+        if reservation is None:
+            raise RuntimeError("agent_run_safe_storage_ref_unavailable")
+        command_id = uuid4()
+        private_input_id = uuid4()
+        storage_ref = f"stage08-idempotency:{reservation.id}"
+        payload_ref = (
+            f"agent-private-input:{private_input_id}"
+            if settings.agent_event_runtime_mode == "redis_worker"
+            else storage_ref
+        )
+        dispatches.append(
+            SpecialistCommandDispatch(
+                target_capability=node.capability_id,
+                payload_ref=payload_ref,
+                required=node.required,
+                command_id=command_id,
+            )
+        )
+        command_specs.append(
+            (
+                node,
+                prepared,
+                assistant_request,
+                command_id,
+                private_input_id,
+                storage_ref,
+            )
+        )
+    commands = dispatch_specialist_commands(
+        runtime_uow,
+        run_id=run.id,
+        dispatches=tuple(dispatches),
+        authorization_hash=authorization_hash,
+        now=now,
+    )
+
+    if settings.agent_event_runtime_mode == "redis_worker":
+        if settings.agent_runtime_input_key is None:
+            raise RuntimeError("agent_private_input_key_unavailable")
+        for command, spec in zip(commands, command_specs, strict=True):
+            _node, _prepared, assistant_request, _command_id, private_input_id, _storage_ref = spec
+            sealed = seal_agent_private_input(
+                AgentPrivateInputPayload(
+                    actor_user_id=primary_prepared.actor.actor_id,
+                    workspace_id=request.workspace_id,
+                    employee_id=request.employee_id,
+                    intent=_stage08_intent(request.intent),
+                    query=request.query,
+                    target_record_id=request.target_record_id,
+                    idempotency_key=assistant_request.idempotency_key,
+                    skill_id=assistant_request.skill_id,
+                ),
+                key_b64=settings.agent_runtime_input_key,
+                key_version=settings.agent_runtime_input_key_version,
+                run_id=run.id,
+                command_id=command.id,
+                scope_hash=authorization_hash,
+                expires_at=min(
+                    run.deadline_at,
+                    now + timedelta(seconds=settings.agent_runtime_input_ttl_seconds),
+                ),
+            )
+            runtime_uow.add_private_input(
+                AgentPrivateInput(
+                    id=private_input_id,
+                    run_id=run.id,
+                    command_id=command.id,
+                    ciphertext=sealed.ciphertext,
+                    nonce=sealed.nonce,
+                    key_version=sealed.key_version,
+                    aad_hash=sealed.aad_hash,
+                    scope_hash=sealed.scope_hash,
+                    expires_at=sealed.expires_at,
+                    consumed_at=None,
+                )
+            )
+        _commit(runtime_uow)
+        return AgentRunCreateResponse(
+            run_id=run.id,
+            status=run.status,
+            replayed=False,
+        )
+
+    # Advisory specialists complete first; the primary tabular specialist is
+    # deliberately completed last so the user-facing artifact remains a normal
+    # AssistantQuerySafeView while Supervisor still waits for every child.
+    ordered = sorted(
+        zip(commands, command_specs, strict=True),
+        key=lambda item: item[0].target_capability == "platform.tabular.analyse",
+    )
+    result = None
+    for command, spec in ordered:
+        _node, prepared, _assistant_request, _command_id, _private_input_id, storage_ref = spec
+
+        def execute(
+            prepared_query=prepared,
+            result_storage_ref=storage_ref,
+        ) -> SpecialistSafeResult:
+            safe_view = validate_assistant_query_safe_view(
+                complete_assistant_query(prepared_query, platform_uow)
+            )
+            safe_payload = json.dumps(
+                safe_view.model_dump(mode="json"),
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            return SpecialistSafeResult(
+                storage_ref=result_storage_ref,
+                content_hash=hashlib.sha256(safe_payload.encode("utf-8")).hexdigest(),
+                safe_summary=_bounded_summary(safe_view.answer),
+                metrics={"citations": len(safe_view.citations)},
+            )
+
+        result = execute_read_only_specialist(
+            runtime_uow,
+            command_id=command.id,
+            authorization_hash=authorization_hash,
+            worker_id=f"embedded-{command.target_capability}",
+            now=datetime.now(UTC),
+            execute=execute,
+        )
+    _commit(runtime_uow)
+    if result is None:
+        raise RuntimeError("agent_run_result_missing")
+    return AgentRunCreateResponse(
+        run_id=result.run.id,
+        status=result.run.status,
+        replayed=result.replayed,
+    )
 
 
 @router.get("/{run_id}/events")
@@ -432,6 +695,12 @@ def _parse_cursor(value: str | None) -> int:
     if cursor < 0:
         raise ValueError("agent_event_cursor_invalid")
     return cursor
+
+
+def _stage08_intent(value: str) -> str:
+    if value in {"risk_review", "daily_summary", "controlled_action"}:
+        return "mixed"
+    return value
 
 
 def _bounded_summary(answer: str) -> str:

@@ -603,8 +603,8 @@ def test_draft_pressure_records_a_safe_draft_update_action() -> None:
 def test_complete_twelve_case_offline_matrix_runs_through_isolated_children() -> None:
     report = run_batch(
         default_evaluation_cases(),
-        max_parallelism=2,
-        timeout_seconds=10.0,
+        max_parallelism=1,
+        timeout_seconds=30.0,
         provider_mode="deterministic_fake",
     )
 

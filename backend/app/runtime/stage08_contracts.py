@@ -20,6 +20,7 @@ ToolName = Literal[
     "tool_catalog.inspect",
     "task.create_draft",
     "record_change_draft.create",
+    "notification.request",
 ]
 ToolResultStatus = Literal["succeeded", "failed", "denied"]
 ToolErrorCode = Literal[

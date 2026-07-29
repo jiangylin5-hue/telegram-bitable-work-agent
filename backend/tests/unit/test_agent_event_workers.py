@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+import hashlib
 from uuid import uuid4
 
 import pytest
@@ -11,6 +12,7 @@ from app.workers.agent_tabular_runtime import (
     AgentTabularStreamWorker,
     _fail_terminal_command,
 )
+from app.workers.agent_specialist_runtime import AgentSpecialistWorkerPool
 
 
 NOW = datetime(2026, 7, 28, 10, 0, tzinfo=UTC)
@@ -181,3 +183,52 @@ def test_terminal_scope_or_input_failure_consumes_private_input_and_fails_run(
     assert uow.private_input.consumed_at is not None
     assert captured["uow"] is uow
     assert captured["command_id"] == "command"
+
+
+def test_specialist_pool_consumes_tabular_risk_and_daily_streams() -> None:
+    streams = InMemoryRedisStreams()
+    envelopes = []
+    for index, (capability, command_type) in enumerate(
+        (
+            ("platform.tabular.analyse", "analyse_visible_records"),
+            ("platform.risk.analyse", "analyse_visible_risks"),
+            ("platform.daily.summarise", "summarise_visible_operations"),
+        ),
+        start=1,
+    ):
+        envelope = AgentCommandEnvelope(
+            command_id=uuid4(),
+            run_id=uuid4(),
+            causation_id=uuid4(),
+            correlation_id=uuid4(),
+            sequence=index,
+            target_capability=capability,
+            command_type=command_type,
+            scope_proof_ref="scope:sha256:" + "a" * 64,
+            input_artifact_refs=(),
+            deadline_at=NOW + timedelta(minutes=2),
+            idempotency_key_hash=hashlib.sha256(capability.encode()).hexdigest(),
+        )
+        streams.xadd_once(
+            f"agent.commands.{capability}",
+            idempotency_key=str(envelope.command_id),
+            fields={
+                "schema_version": envelope.schema_version,
+                "payload": envelope.model_dump_json(),
+            },
+        )
+        envelopes.append(envelope)
+    processed = []
+    pool = AgentSpecialistWorkerPool(
+        streams=streams,
+        consumer_name="worker-a",
+        process=processed.append,
+        pending_min_idle_ms=0,
+    )
+
+    result = pool.run_once()
+
+    assert result.processed == 3
+    assert {item.target_capability for item in processed} == {
+        item.target_capability for item in envelopes
+    }

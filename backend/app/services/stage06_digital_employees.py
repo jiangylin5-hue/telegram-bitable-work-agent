@@ -53,6 +53,7 @@ WRITE_LIKE_ACTIONS = frozenset({"draft_create", "draft_update", "status_advance"
 STAGE08_TOOL_CATALOG = (
     "contact.resolve",
     "import.preview",
+    "notification.request",
     "record.query",
     "record_change_draft.create",
     "table.summarize",

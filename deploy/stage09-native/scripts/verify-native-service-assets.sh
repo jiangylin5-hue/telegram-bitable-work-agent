@@ -67,7 +67,7 @@ verify_unit 'stage09-p1-agent-outbox-publisher.service' \
     'ExecStart=/opt/stage09-p1/current-venv/bin/python -m app.workers.agent_event_outbox_runtime' \
     0
 verify_unit 'stage09-p1-agent-tabular-worker.service' \
-    'ExecStart=/opt/stage09-p1/current-venv/bin/python -m app.workers.agent_tabular_runtime' \
+    'ExecStart=/opt/stage09-p1/current-venv/bin/python -m app.workers.agent_specialist_runtime' \
     0
 
 [ -r "$template" ] || fail

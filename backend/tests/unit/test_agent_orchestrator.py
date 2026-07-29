@@ -212,8 +212,11 @@ def test_failed_specialist_is_redacted_and_terminal() -> None:
 
     assert failed.status == "failed"
     assert command.status == "failed"
-    assert uow.events[-1].event_type == "agent.failed"
-    assert uow.events[-1].safe_summary == "只读分析未能完成"
+    assert uow.events[-2].event_type == "agent.failed"
+    assert uow.events[-2].source_role == "specialist"
+    assert uow.events[-1].event_type == "run.failed"
+    assert uow.events[-1].source_role == "supervisor"
+    assert uow.events[-2].safe_summary == "只读分析未能完成"
 
 
 def test_failed_specialist_after_deadline_converges_to_timed_out() -> None:

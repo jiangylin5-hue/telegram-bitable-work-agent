@@ -412,7 +412,14 @@ def test_valid_output_is_a_strict_safe_analysis_decision() -> None:
                                 "required": ["field_key", "value"],
                                 "properties": {
                                     "field_key": {"type": "string", "minLength": 1, "maxLength": 120},
-                                    "value": {},
+                                    "value": {
+                                        "anyOf": [
+                                            {"type": "string"},
+                                            {"type": "number"},
+                                            {"type": "boolean"},
+                                            {"type": "null"},
+                                        ]
+                                    },
                                 },
                             },
                         ],

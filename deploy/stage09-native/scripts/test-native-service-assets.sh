@@ -210,7 +210,7 @@ printf '%s\n' 'native-service-assets: PASS'
 
 grep -Fqx 'ExecStart=/opt/stage09-p1/current-venv/bin/python -m app.workers.agent_event_outbox_runtime' \
     "$script_dir/../systemd/stage09-p1-agent-outbox-publisher.service" || fail 'stage10-publisher-unit'
-grep -Fqx 'ExecStart=/opt/stage09-p1/current-venv/bin/python -m app.workers.agent_tabular_runtime' \
+grep -Fqx 'ExecStart=/opt/stage09-p1/current-venv/bin/python -m app.workers.agent_specialist_runtime' \
     "$script_dir/../systemd/stage09-p1-agent-tabular-worker.service" || fail 'stage10-worker-unit'
 grep -Fq 'location ~ ^/api/stage10/agent-runs/' \
     "$script_dir/../nginx/stage09-p1.conf.template" || fail 'stage10-internal-sse-location'

@@ -52,6 +52,8 @@ class AgentEventRuntimeUnitOfWork(Protocol):
 
     def add_checkpoint(self, checkpoint: AgentRunCheckpoint) -> None: ...
 
+    def list_checkpoints(self, run_id: UUID) -> list[AgentRunCheckpoint]: ...
+
     def next_event_sequence(self, run_id: UUID) -> int: ...
 
     def add_event(self, event: AgentEvent) -> None: ...
@@ -63,6 +65,8 @@ class AgentEventRuntimeUnitOfWork(Protocol):
     def get_private_input(self, input_id: UUID, *, for_update: bool = False) -> AgentPrivateInput | None: ...
 
     def get_command(self, command_id: UUID, *, for_update: bool = False) -> AgentCommand | None: ...
+
+    def list_commands(self, run_id: UUID, *, for_update: bool = False) -> list[AgentCommand]: ...
 
     def next_command_sequence(self, run_id: UUID) -> int: ...
 
@@ -120,6 +124,12 @@ class InMemoryAgentEventRuntimeUnitOfWork:
     def add_checkpoint(self, checkpoint: AgentRunCheckpoint) -> None:
         self.checkpoints.append(checkpoint)
 
+    def list_checkpoints(self, run_id: UUID) -> list[AgentRunCheckpoint]:
+        return sorted(
+            (item for item in self.checkpoints if item.run_id == run_id),
+            key=lambda item: item.checkpoint_no,
+        )
+
     def next_event_sequence(self, run_id: UUID) -> int:
         return 1 + max(
             (item.sequence for item in self.events if item.run_id == run_id),
@@ -142,6 +152,13 @@ class InMemoryAgentEventRuntimeUnitOfWork:
     def get_command(self, command_id: UUID, *, for_update: bool = False) -> AgentCommand | None:
         del for_update
         return next((item for item in self.commands if item.id == command_id), None)
+
+    def list_commands(self, run_id: UUID, *, for_update: bool = False) -> list[AgentCommand]:
+        del for_update
+        return sorted(
+            (item for item in self.commands if item.run_id == run_id),
+            key=lambda item: item.sequence,
+        )
 
     def next_command_sequence(self, run_id: UUID) -> int:
         return 1 + max(
@@ -232,6 +249,24 @@ class SqlAlchemyAgentEventRuntimeUnitOfWork:
     def add_checkpoint(self, checkpoint: AgentRunCheckpoint) -> None:
         self.session.add(checkpoint)
 
+    def list_checkpoints(self, run_id: UUID) -> list[AgentRunCheckpoint]:
+        persisted = list(
+            self.session.scalars(
+                select(AgentRunCheckpoint)
+                .where(AgentRunCheckpoint.run_id == run_id)
+                .order_by(AgentRunCheckpoint.checkpoint_no)
+            )
+        )
+        persisted_ids = {item.id for item in persisted}
+        pending = [
+            item
+            for item in self.session.new
+            if isinstance(item, AgentRunCheckpoint)
+            and item.run_id == run_id
+            and item.id not in persisted_ids
+        ]
+        return sorted((*persisted, *pending), key=lambda item: item.checkpoint_no)
+
     def next_event_sequence(self, run_id: UUID) -> int:
         current = self.session.scalar(
             select(func.max(AgentEvent.sequence)).where(AgentEvent.run_id == run_id)
@@ -276,6 +311,25 @@ class SqlAlchemyAgentEventRuntimeUnitOfWork:
         if for_update:
             statement = statement.with_for_update()
         return self.session.scalar(statement)
+
+    def list_commands(self, run_id: UUID, *, for_update: bool = False) -> list[AgentCommand]:
+        statement = (
+            select(AgentCommand)
+            .where(AgentCommand.run_id == run_id)
+            .order_by(AgentCommand.sequence)
+        )
+        if for_update:
+            statement = statement.with_for_update()
+        persisted = list(self.session.scalars(statement))
+        persisted_ids = {item.id for item in persisted}
+        pending = [
+            item
+            for item in self.session.new
+            if isinstance(item, AgentCommand)
+            and item.run_id == run_id
+            and item.id not in persisted_ids
+        ]
+        return sorted((*persisted, *pending), key=lambda item: item.sequence)
 
     def next_command_sequence(self, run_id: UUID) -> int:
         current = self.session.scalar(
@@ -341,6 +395,7 @@ def create_agent_run(
     idempotency_key_hash: str,
     deadline_at: datetime,
     now: datetime,
+    workflow_version: str = "stage10-agent-event-runtime.v1",
 ) -> AgentRunCreation:
     _require_hash(scope_hash)
     _require_hash(idempotency_key_hash)
@@ -359,7 +414,7 @@ def create_agent_run(
         root_employee_id=root_employee_id,
         target_record_id=target_record_id,
         parent_run_id=None,
-        workflow_version="stage10-agent-event-runtime.v1",
+        workflow_version=workflow_version,
         status="accepted",
         scope_hash=scope_hash,
         data_version_hash=None,

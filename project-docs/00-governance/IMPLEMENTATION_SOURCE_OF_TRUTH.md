@@ -3,8 +3,8 @@
 ## Status
 
 - Document status: active source of truth
-- Scope: 顶层产品目标、边界、阶段、技术基线、安全约束，以及当前 Stage08/Stage09 运行时与工作台方向
-- Current Progress: 2026-07-28 Stage10 is the accepted deployed read-only Agent control plane on public r66. PostgreSQL is the durable truth for runs, checkpoints, commands, artifacts, events, outbox and encrypted expiring private inputs; Redis Streams is an at-least-once transport used by independent publisher and registered table-analysis Specialist services; SSE reconnects from PostgreSQL after current-scope authorization. Stage06 registry and Stage08 authorization/retrieval remain the only capability and data-access sources. Fresh evidence includes 1537 backend Unit+API tests, 71 server API tests, 411 Mini App tests, exact local/server static hashes, production head `20260728_0034`, real Redis crash recovery, a real OpenRouter Chinese 20-case multi-table report with all reported quality rates at 100%, and browser tests for explicit skill, automatic retrieval, pure greeting and greeting-plus-business routing. Telegram sends, automatic draft confirmation, business writes and unrestricted capabilities remain outside Stage10.
+- Scope: 顶层产品目标、边界、阶段、技术基线、安全约束，以及当前 Stage11 多 Agent 协调运行时与工作台方向
+- Current Progress: 2026-07-29 Stage11 coordination middleware is deployed on public r76 over the accepted Stage10 control plane. PostgreSQL remains the durable truth; Redis Streams carries registered read Specialists; SSE reauthorizes and projects safe events. Task Gateway decomposes multi-semantic Chinese requests into a DAG, Agent Registry fixes capability-to-skill/tool/risk bindings, Supervisor owns fan-out/fan-in terminal state, and Tool Gateway only creates pending drafts or blocked notification requests. A real isolated r75 48-case run completed 48/48 using production identity, PostgreSQL, Redis, SSE and `google/gemini-2.5-flash`, with permission/external-send safety at 1.00 and zero Telegram sends; r76 adds only atomic terminalization of unfinished sibling commands after required failure. Fresh backend verification covers 1561/1561 tests. This is not a quality acceptance: retrieval precision/recall and action accuracy remain below protocol gates, and public durable action orchestration is not yet enabled.
 
 ## 1. Product Goal
 
@@ -188,6 +188,14 @@ On 2026-07-28 the user approved the architecture and implementation of a durable
 
 The first activation slice contains only `platform.tabular.analyse`, a read-only Specialist that reuses the existing Stage08 permission, skill selection, LangGraph/OpenRouter, idempotency and safe-view contracts. Browser SSE is a permission-rechecked projection and not the internal event bus. Stage10 does not authorize arbitrary delegation, direct table writes, self-confirmed drafts, Telegram sends or production traffic.
 
+### Stage11 coordination middleware
+
+Stage11 extends the Stage10 run/command/event/checkpoint model rather than creating another Agent framework. A deterministic Task Gateway identifies multiple objectives in one request and creates a registered capability DAG. The Agent Registry owns capability, command, schema version, failure policy, allowed tools, write boundary and fixed execution-skill binding. Supervisor alone owns run terminal state and waits for every required child command; optional failures produce an explicit degraded result.
+
+`platform.tabular.analyse`, `platform.risk.analyse` and `platform.daily.summarise` are durable Redis-stream commands. `platform.action.propose` is currently evaluated through a post-read backend adapter with an already permission-filtered target/field allowlist; it is not yet a fourth public durable command. Tool Gateway can persist only `pending_confirmation` drafts or `blocked` notification requests and cannot confirm, update a business record, or send Telegram messages.
+
+The r75 real 48-case report is the current evidence source. Its successful runtime and safety results must be preserved together with its failed quality metrics. The next stage must improve retrieval/grounding before changing the scorer, then define and approve an explicit action-slot and authorized-candidate API before adding a durable action worker or UI contract.
+
 ## 8. Historical Stage Documents
 
 Stage02 to Stage05 remain useful implementation history:
@@ -230,7 +238,7 @@ The current Stage09 AI conversation slice does not include:
 
 The current implementation entry is:
 
-- [Current handoff](HANDOFF_2026-07-26_CODEX_STYLE_AI_CONVERSATION.md)
+- [Current root handoff](../../../HANDOFF.md)
 - [Project structure and document lifecycle](PROJECT_STRUCTURE_AND_DOCUMENT_LIFECYCLE.md)
 - [Stage09 Codex-style AI conversation design](../08-implementation/STAGE_09_CODEX_STYLE_AI_CONVERSATION_DESIGN.md)
 - [Stage09 Codex-style AI conversation implementation plan](../08-implementation/STAGE_09_CODEX_STYLE_AI_CONVERSATION_IMPLEMENTATION_PLAN.md)
@@ -240,6 +248,10 @@ The current implementation entry is:
 - [Stage09 r40 regression and live-readiness evidence](../08-implementation/evidence/stage09-r40-regression-and-live-readiness-2026-07-26.md)
 - [Stage10 Agent event-runtime architecture](../02-architecture/AGENT_EVENT_RUNTIME_PROPOSAL.md)
 - [Stage10 implementation and acceptance](../08-implementation/STAGE_10_AGENT_EVENT_RUNTIME_ACCEPTANCE.md)
+- [Stage11 coordination middleware architecture](../02-architecture/STAGE_11_MULTI_AGENT_COORDINATION_MIDDLEWARE.md)
+- [Stage11 complex Chinese evaluation protocol](../08-implementation/STAGE_11_COMPLEX_CHINESE_EVALUATION_PROTOCOL.md)
+- [Stage11 implementation and acceptance](../08-implementation/STAGE_11_ACCEPTANCE.md)
+- [Stage11 r75 real 48-case report](../08-implementation/evidence/stage11-r75-real-48case-report-2026-07-28.md)
 
 ## 11. Confirmation Rule
 

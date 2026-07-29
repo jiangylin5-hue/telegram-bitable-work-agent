@@ -282,9 +282,51 @@ def test_provider_failure_leaves_a_redacted_durable_terminal_event(monkeypatch) 
     assert response.status_code == 500
     assert len(runtime.runs) == 1
     assert runtime.runs[0].status == "failed"
-    assert runtime.events[-1].event_type == "agent.failed"
+    assert runtime.events[-2].event_type == "agent.failed"
+    assert runtime.events[-2].source_role == "specialist"
+    assert runtime.events[-1].event_type == "run.failed"
+    assert runtime.events[-1].source_role == "supervisor"
     serialized = json.dumps(runtime.events[-1].safe_summary, ensure_ascii=False)
     assert "provider secret" not in serialized
+
+
+def test_multi_semantic_query_dispatches_three_specialists_and_returns_one_chat_result(
+    monkeypatch,
+) -> None:
+    fixture = _fixture()
+    runtime = InMemoryAgentEventRuntimeUnitOfWork()
+    monkeypatch.setattr(
+        agent_run_routes,
+        "get_settings",
+        lambda: replace(Settings(), agent_event_runtime_enabled=True),
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "complete_assistant_query",
+        lambda prepared, uow: _complete(prepared, "复杂任务分析完成"),
+    )
+    payload = _payload(fixture)
+    payload["query"] = "汇总今天的逾期和阻塞项目，判断风险并生成运营日报"
+    payload["intent"] = "mixed"
+
+    with _client(fixture, runtime) as client:
+        created = client.post("/api/stage10/agent-runs", json=payload)
+        assert created.status_code == 202, created.text
+        streamed = client.get(
+            f"/api/stage10/agent-runs/{created.json()['run_id']}/events"
+        )
+
+    assert streamed.status_code == 200
+    assert runtime.runs[0].workflow_version == "stage11.coordination.v1"
+    assert {item.target_capability for item in runtime.commands} == {
+        "platform.tabular.analyse",
+        "platform.risk.analyse",
+        "platform.daily.summarise",
+    }
+    assert all(item.status == "completed" for item in runtime.commands)
+    assert runtime.runs[0].status == "completed"
+    assert streamed.text.count("event: result") == 1
+    assert streamed.text.count("event: done") == 1
 
 
 def test_safe_projection_corruption_is_not_misreported_as_scope_denial(monkeypatch) -> None:

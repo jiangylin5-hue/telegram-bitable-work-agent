@@ -21,6 +21,7 @@ _TOOL_REQUIRED_ACTIONS: dict[ToolName, str] = {
     "tool_catalog.inspect": "tool_catalog.inspect",
     "task.create_draft": "draft_create",
     "record_change_draft.create": "draft_update",
+    "notification.request": "notification.request",
 }
 
 

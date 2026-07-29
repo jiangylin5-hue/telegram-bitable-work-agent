@@ -14,6 +14,7 @@ from app.runtime.stage08_contracts import ExecutionTicketState, RedactedToolResu
 from app.services.permissions import Actor
 from app.services.stage06_digital_employees import (
     create_create_record_draft,
+    create_notification_request,
     get_stage08_tool_catalog,
     invoke_digital_employee,
     resolve_active_workspace_member,
@@ -31,6 +32,7 @@ _TOOL_ACTIONS: dict[ToolName, str] = {
     "tool_catalog.inspect": "tool_catalog.inspect",
     "task.create_draft": "draft_create",
     "record_change_draft.create": "draft_update",
+    "notification.request": "notification.request",
 }
 _SENSITIVE_INPUT_KEYS = frozenset({"prompt", "response", "api_key", "token", "raw_text"})
 
@@ -51,6 +53,7 @@ class Stage08ToolGateway:
             "tool_catalog.inspect": self._tool_catalog_inspect,
             "task.create_draft": self._task_create_draft,
             "record_change_draft.create": self._record_change_draft_create,
+            "notification.request": self._notification_request,
         }
 
     def execute(
@@ -561,6 +564,43 @@ class Stage08ToolGateway:
         draft_id = _response_uuid(response, "draft_id")
         return _draft_result("record_change_draft.create", draft_id, record_id)
 
+    def _notification_request(
+        self,
+        uow: Stage06PlatformUnitOfWork,
+        ticket: Stage08ExecutionTicket,
+        actor: Actor,
+        value: Any,
+        *,
+        safe_context: Stage08SafeExecutionContext | None = None,
+    ) -> RedactedToolResult:
+        del safe_context
+        payload = _notification_input(value)
+        request = create_notification_request(
+            uow,
+            workspace_id=ticket.workspace_id,
+            base_id=payload["base_id"],
+            source_record_id=payload["source_record_id"],
+            channel=payload["channel"],
+            target=payload["target"],
+            message_payload=payload["message_payload"],
+            send_policy={**payload["send_policy"], "confirmation": "required"},
+            actor=actor,
+            server_mode="disabled",
+            server_allowlist=(),
+        )
+        return RedactedToolResult(
+            tool_name="notification.request",
+            status="succeeded",
+            entity_refs=[str(request.id)],
+            visible_field_keys=[],
+            counts={
+                "notification_request_count": 1,
+                "confirmation_required": 1,
+                "external_send_count": 0,
+            },
+            error_code=None,
+        )
+
 
 def _safe_tool_result(result: RedactedToolResult) -> RedactedToolResult:
     return RedactedToolResult(
@@ -629,6 +669,53 @@ def _draft_input(value: Any, id_key: str) -> tuple[UUID, dict[str, Any]]:
     if not isinstance(proposed_values, dict) or not _safe_json_value(proposed_values):
         raise Stage08ToolGatewayError("invalid_input")
     return record_id, dict(proposed_values)
+
+
+def _notification_input(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict) or set(value) != {
+        "base_id",
+        "source_record_id",
+        "channel",
+        "target",
+        "message_payload",
+        "send_policy",
+    }:
+        raise Stage08ToolGatewayError("invalid_input")
+    if value["channel"] != "telegram":
+        raise Stage08ToolGatewayError("invalid_input")
+    try:
+        base_id = None if value["base_id"] is None else UUID(value["base_id"])
+        source_record_id = (
+            None
+            if value["source_record_id"] is None
+            else UUID(value["source_record_id"])
+        )
+    except (TypeError, ValueError) as exc:
+        raise Stage08ToolGatewayError("invalid_input") from exc
+    target = value["target"]
+    message_payload = value["message_payload"]
+    send_policy = value["send_policy"]
+    if (
+        not isinstance(target, dict)
+        or not isinstance(target.get("telegram_chat_id"), str)
+        or not target["telegram_chat_id"].strip()
+        or not isinstance(message_payload, dict)
+        or not isinstance(message_payload.get("text"), str)
+        or not message_payload["text"].strip()
+        or not isinstance(send_policy, dict)
+        or not _safe_json_value(target)
+        or not _safe_json_value(message_payload)
+        or not _safe_json_value(send_policy)
+    ):
+        raise Stage08ToolGatewayError("invalid_input")
+    return {
+        "base_id": base_id,
+        "source_record_id": source_record_id,
+        "channel": "telegram",
+        "target": dict(target),
+        "message_payload": dict(message_payload),
+        "send_policy": dict(send_policy),
+    }
 
 
 def _empty_input(value: Any) -> None:

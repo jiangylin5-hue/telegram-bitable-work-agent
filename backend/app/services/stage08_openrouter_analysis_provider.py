@@ -384,7 +384,14 @@ def _strict_response_format(evidence_count: int) -> dict[str, object]:
                                         "minLength": 1,
                                         "maxLength": 120,
                                     },
-                                    "value": {},
+                                    "value": {
+                                        "anyOf": [
+                                            {"type": "string"},
+                                            {"type": "number"},
+                                            {"type": "boolean"},
+                                            {"type": "null"},
+                                        ]
+                                    },
                                 },
                             },
                         ],

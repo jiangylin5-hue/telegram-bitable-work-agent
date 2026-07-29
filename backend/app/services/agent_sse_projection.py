@@ -51,13 +51,21 @@ def project_safe_run_events(
     return [
         projected
         for event in uow.list_events(run_id, after_sequence=after_sequence)
-        if (projected := _project_event(event, resolve_safe_view=resolve_safe_view)) is not None
+        if (
+            projected := _project_event(
+                event,
+                uow=uow,
+                resolve_safe_view=resolve_safe_view,
+            )
+        )
+        is not None
     ]
 
 
 def _project_event(
     event: AgentEvent,
     *,
+    uow: AgentEventRuntimeUnitOfWork,
     resolve_safe_view: Callable[[UUID], AssistantQuerySafeView] | None,
 ) -> SafeRunStreamEvent | None:
     common = {
@@ -66,6 +74,11 @@ def _project_event(
         "sequence": event.sequence,
     }
     if event.event_type == "agent.completed" and event.artifact_ref is not None:
+        artifact = uow.get_artifact(event.artifact_ref)
+        if artifact is None:
+            raise RuntimeNotFound("agent_result_artifact_missing")
+        if artifact.kind != "assistant_safe_view":
+            return None
         if resolve_safe_view is None:
             raise RuntimeNotFound("agent_safe_result_resolver_missing")
         return SafeRunResultEvent(
@@ -76,6 +89,10 @@ def _project_event(
         )
     if event.event_type == "run.completed":
         return SafeRunDoneEvent(**common, event="done", status="completed")
+    if event.event_type == "run.degraded":
+        return SafeRunDoneEvent(**common, event="done", status="degraded")
+    if event.event_type == "run.failed":
+        return SafeRunDoneEvent(**common, event="done", status="failed")
     if event.event_type in _ERROR_EVENT:
         code, fallback = _ERROR_EVENT[event.event_type]
         return SafeRunErrorEvent(

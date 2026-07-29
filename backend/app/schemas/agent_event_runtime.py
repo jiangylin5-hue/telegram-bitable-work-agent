@@ -20,8 +20,18 @@ ScopeProofRef = Annotated[
     str,
     StringConstraints(pattern=r"^scope:sha256:[0-9a-f]{64}$", max_length=80),
 ]
-Capability = Literal["platform.tabular.analyse"]
-CommandType = Literal["analyse_visible_records"]
+Capability = Literal[
+    "platform.tabular.analyse",
+    "platform.risk.analyse",
+    "platform.daily.summarise",
+    "platform.action.propose",
+]
+CommandType = Literal[
+    "analyse_visible_records",
+    "analyse_visible_risks",
+    "summarise_visible_operations",
+    "propose_controlled_action",
+]
 EventType = Literal[
     "run.accepted",
     "command.dispatched",
@@ -34,6 +44,8 @@ EventType = Literal[
     "run.cancelled",
     "run.timed_out",
     "run.completed",
+    "run.degraded",
+    "run.failed",
 ]
 RuntimeStatus = Literal[
     "accepted",
@@ -99,6 +111,9 @@ class AgentEventEnvelope(_StrictRuntimeModel):
 class RunCheckpointControl(_StrictRuntimeModel):
     completed_command_ids: tuple[UUID, ...] = Field(max_length=64)
     pending_command_ids: tuple[UUID, ...] = Field(max_length=64)
+    failed_command_ids: tuple[UUID, ...] = Field(default=(), max_length=64)
+    required_command_ids: tuple[UUID, ...] = Field(default=(), max_length=64)
+    optional_command_ids: tuple[UUID, ...] = Field(default=(), max_length=64)
     retry_count: int = Field(ge=0, le=8)
     next_action: Literal[
         "dispatch",
@@ -117,9 +132,23 @@ class AgentRunCreateRequest(_StrictRuntimeModel):
 
     workspace_id: UUID
     employee_id: UUID
-    intent: Literal["business_fact", "memory_lookup", "mixed", "general_advice"]
+    intent: Literal[
+        "business_fact",
+        "memory_lookup",
+        "mixed",
+        "general_advice",
+        "risk_review",
+        "daily_summary",
+        "controlled_action",
+    ]
     query: str = Field(min_length=1, max_length=600)
-    requested_action: Literal["read_only"] = "read_only"
+    requested_action: Literal[
+        "read_only",
+        "draft_create",
+        "draft_update",
+        "task_create",
+        "reminder_request",
+    ] = "read_only"
     target_record_id: UUID | None = None
     idempotency_key: str = Field(min_length=1, max_length=128)
     skill_id: str | None = Field(default=None, min_length=1, max_length=120)

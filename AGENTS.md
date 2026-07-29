@@ -4,12 +4,12 @@
 
 - Document status: active project collaboration rule
 - Scope: Generic Telegram-first multidimensional table, no-code workspace and table-bound digital employee platform
-- Current Progress: 2026-07-28 Stage10 read-only Agent event runtime is implemented, deployed and accepted on public artifact `stage09-p1-20260728-r66-conversation-routing`. PostgreSQL owns run/checkpoint/command/artifact/event/outbox state and short-lived AES-GCM private inputs; independent publisher/specialist services use Redis Streams with lease, fencing, idempotency and XAUTOCLAIM recovery; SSE reauthorizes and projects safe events only. The React workbench now keeps automatic queries as `mixed`, exposes mutually exclusive `aria-pressed` skill state and never replaces the user's query with skill copy; the backend alone recognizes bounded pure greetings while greeting-plus-business text still performs table retrieval. Fresh evidence: 1537 backend Unit+API tests, 71 server API tests, 79 Mini App files/411 tests, production build and exact static parity, production Alembic head `20260728_0034`, real Redis/PostgreSQL/OpenRouter 20-case Chinese evaluation with 100% skill hit/precision/recall/readiness/answer accuracy, and public browser verification with zero application console errors. Telegram send, automatic draft confirmation, business-record writes and unrestricted Agent capabilities remain excluded.
+- Current Progress: 2026-07-29 Stage11 coordination middleware is implemented and deployed on public artifact `stage09-p1-20260729-r76-stage11-terminal-fan-in`, with database head `20260728_0034` and no new migration. It adds deterministic multi-objective planning, a versioned capability registry with fixed Lark-derived skill bindings, durable tabular/risk/daily commands, Supervisor fan-out/fan-in and fail/degrade semantics, a specialist worker pool, strict OpenRouter action proposals, and a Tool Gateway limited to pending drafts or blocked notification requests. The isolated real r75 48-case Chinese evaluation completed 48/48 through HTTP, PostgreSQL, Redis, SSE and `google/gemini-2.5-flash`; permission and external-send safety were both 1.00 with 9 pending drafts, 7 blocked reminders and zero Telegram sends. r76 only adds atomic terminalization of unfinished sibling commands after a required failure. Fresh final backend coverage is 1561/1561 across complementary commands. Quality is not accepted: record precision/recall were 0.566/0.6521, retrieval readiness 0.7917, action/field/persistence accuracy 0.8229 and total score 83.8144 against an 85 target. The public durable endpoint currently dispatches read capabilities only; action proposal/materialization remains a post-read acceptance adapter and must not be represented as a unified public action worker.
 
 ## Current Handoff
 
-- New sessions must read root `HANDOFF.md`, `project-docs/08-implementation/STAGE_10_AGENT_EVENT_RUNTIME_ACCEPTANCE.md` and its linked r66 evidence before extending the Agent runtime.
-- The current confirmed implementation is the deployed Stage10 read-only distributed runtime; Stage08 remains the compatibility and draft-confirmation path. New capabilities require a new documented stage and must not broaden write authority implicitly.
+- New sessions must read root `HANDOFF.md`, `project-docs/02-architecture/STAGE_11_MULTI_AGENT_COORDINATION_MIDDLEWARE.md`, `project-docs/08-implementation/STAGE_11_ACCEPTANCE.md` and the linked r75 evidence before extending the Agent runtime.
+- The current implementation is the deployed Stage11 read-side coordination runtime plus a bounded action acceptance adapter. Retrieval quality remediation and an explicit action-slot/public durable command contract are the next gates. New capabilities must not broaden write or send authority implicitly.
 - Branch/worktree ownership, document tiers, retention and generated-artifact cleanup follow `project-docs/00-governance/PROJECT_STRUCTURE_AND_DOCUMENT_LIFECYCLE.md`. `.superpowers/` is execution scratch and must remain Git-ignored.
 
 ## 1. Project Positioning
@@ -145,6 +145,14 @@ Current Stage10 Agent event-runtime rule:
 - LangGraph private state remains in memory with `checkpointer=None` in v1. Durable checkpoints contain redacted control fields only.
 - The first capability is read-only `platform.tabular.analyse`. Draft, write, external-send and generic delegation capabilities are not enabled.
 - Stage10 traffic remains feature-flagged until full local recovery, security and browser acceptance pass; deployment remains a separate confirmation gate.
+
+Current Stage11 coordination rule:
+
+- `project-docs/02-architecture/STAGE_11_MULTI_AGENT_COORDINATION_MIDDLEWARE.md` and `project-docs/08-implementation/STAGE_11_COMPLEX_CHINESE_EVALUATION_PROTOCOL.md` define the implemented control-plane and evaluation boundary.
+- Task Gateway may decompose one query into multiple objectives, but only registered capabilities can become commands; capability-to-skill binding is fixed server-side.
+- PostgreSQL remains authoritative and Redis Streams remains transport. SSE is a safe browser projection, not the Agent-to-Agent protocol.
+- Read capabilities are durable commands. Action proposals remain constrained by an authorized target/field allowlist and can only create pending or blocked artifacts through Tool Gateway.
+- The r75 48-case report proves runtime and safety behavior but does not pass the retrieval/action quality gates or prove autonomous public action-slot selection.
 
 Stage02 to Stage08 documents remain historical or accepted implementation evidence according to the active indexes. They must not override the current top-level source of truth and handoff.
 
