@@ -416,22 +416,41 @@ def build_section_ordering_request(
     return ComposerSectionOrderingRequestV1.model_validate(values)
 
 
-class ComposerProviderRequestV2(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
-
-    version: Literal["composer-provider-request.v2"] = "composer-provider-request.v2"
-    claim_graph: ClaimGraphV1
-    scope_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
-    schema_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
-    field_policy_version: Literal["stage12-field-policy.v2"]
-    field_policy_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
-    presentation: ComposerPresentationContextV1
-
-    @model_validator(mode="after")
-    def validate_scope(self) -> "ComposerProviderRequestV2":
-        if self.claim_graph.scope_hash != self.scope_hash:
-            raise ValueError("composer_provider_scope_mismatch")
-        return self
+def expand_ordering_plan(
+    section_set: DeterministicSectionSetV1,
+    ordering: ComposerSectionOrderingPlanV1,
+) -> ComposerAnswerPlanV2:
+    section_by_handle = {item.section_handle: item for item in section_set.sections}
+    expected_handles = set(section_by_handle)
+    ordered_handles = ordering.ordered_section_handles
+    if (
+        len(ordered_handles) != len(expected_handles)
+        or len(set(ordered_handles)) != len(expected_handles)
+        or set(ordered_handles) != expected_handles
+        or set(ordering.connector_by_handle) != expected_handles
+    ):
+        raise ValueError("composer_section_ordering_invalid")
+    sections = []
+    for rank, handle in enumerate(ordered_handles):
+        private = section_by_handle[handle]
+        connector = ordering.connector_by_handle[handle]
+        if (
+            connector not in private.allowed_connector_codes
+            or (rank == 0 and connector != "direct")
+            or (rank > 0 and connector == "direct")
+        ):
+            raise ValueError("composer_section_ordering_invalid")
+        sections.append(
+            ComposerAnswerSectionPlanV2(
+                section_id=private.section.section_id,
+                section_kind=private.section.section_kind,
+                objective_ids=private.section.objective_ids,
+                claim_ids=private.section.claim_ids,
+                action_slot_ids=private.section.action_slot_ids,
+                connector_code=connector,
+            )
+        )
+    return ComposerAnswerPlanV2(sections=tuple(sections))
 
 
 def _deterministic_answer(
@@ -629,6 +648,12 @@ _SECTION_TITLES = {
     "denial": "无法执行",
     "degradation": "降级说明",
 }
+_CONNECTOR_PREFIXES: dict[ConnectorCode, str] = {
+    "direct": "",
+    "next": "接下来，",
+    "however": "不过，",
+    "safety_boundary": "安全边界：",
+}
 
 
 def _render_plan(
@@ -690,6 +715,7 @@ def _render_plan(
         if not sentences:
             sentences.append("当前没有可展示的已验证事实。")
         rendered_sections.append(
+            f"{_CONNECTOR_PREFIXES[section.connector_code]}"
             f"{_SECTION_TITLES[section.section_kind]}：" + "；".join(sentences) + "。"
         )
     return (
@@ -779,12 +805,14 @@ def _base_status(graph: ClaimGraphV1) -> tuple[str, tuple[str, ...]]:
 def compose_claim_graph(
     graph: ClaimGraphV1,
     *,
-    provider: Callable[[ComposerProviderRequestV2], ComposerAnswerPlanV2] | None = None,
+    provider: (
+        Callable[[ComposerSectionOrderingRequestV1], ComposerSectionOrderingPlanV1]
+        | None
+    ) = None,
     authorized_schema: AuthorizedSchemaSnapshot | None = None,
     presentation: ComposerPresentationContextV1 | None = None,
 ) -> ComposerResultV1:
     valid_claims = tuple(item for item in graph.claims if item.status == "valid")
-    allowed_claims = {item.claim_id for item in valid_claims}
     allowed_evidence = {
         evidence_id for item in valid_claims for evidence_id in item.evidence_ids
     }
@@ -811,52 +839,17 @@ def compose_claim_graph(
             )
         else:
             provider_calls = 1
-            request = ComposerProviderRequestV2(
-                claim_graph=graph,
-                scope_hash=authorized_schema.scope_hash,
-                schema_hash=authorized_schema.schema_hash,
-                field_policy_version=authorized_schema.field_policy_version,
-                field_policy_hash=authorized_schema.field_policy_hash,
-                presentation=presentation,
+            section_set = build_deterministic_section_set(plan, graph)
+            request = build_section_ordering_request(
+                section_set,
+                graph=graph,
+                authorized_schema=authorized_schema,
             )
             try:
-                draft = provider(request)
-                if not isinstance(draft, ComposerAnswerPlanV2):
-                    raise ValueError("composer_provider_plan_invalid")
-                expected_claim_ids = set(allowed_claims)
-                selected_claim_ids = tuple(
-                    claim_id
-                    for section in draft.sections
-                    for claim_id in section.claim_ids
-                )
-                selected_objective_ids = tuple(
-                    objective_id
-                    for section in draft.sections
-                    for objective_id in section.objective_ids
-                )
-                selected_action_ids = tuple(
-                    slot_id
-                    for section in draft.sections
-                    for slot_id in section.action_slot_ids
-                )
-                selected_claims = {item.claim_id: item for item in valid_claims}
-                expected_evidence = {
-                    evidence_id
-                    for claim_id in selected_claim_ids
-                    if claim_id in selected_claims
-                    for evidence_id in selected_claims[claim_id].evidence_ids
-                }
-                if (
-                    len(set(selected_claim_ids)) != len(selected_claim_ids)
-                    or set(selected_claim_ids) != expected_claim_ids
-                    or len(set(selected_objective_ids)) != len(selected_objective_ids)
-                    or set(selected_objective_ids)
-                    != {item.objective_id for item in graph.objective_statuses}
-                    or len(set(selected_action_ids)) != len(selected_action_ids)
-                    or set(selected_action_ids)
-                    != {item.slot_id for item in graph.action_statuses}
-                ):
-                    raise ValueError("composer_provider_unsupported_claim")
+                ordering = provider(request)
+                if not isinstance(ordering, ComposerSectionOrderingPlanV1):
+                    raise ValueError("composer_provider_ordering_invalid")
+                expanded_plan = expand_ordering_plan(section_set, ordering)
             except Exception as exc:
                 provider_code = getattr(exc, "code", None)
                 if provider_code not in set(get_args(ProviderFailureCode)):
@@ -866,11 +859,10 @@ def compose_claim_graph(
                     sorted(set(degradation_codes) | {provider_code})
                 )
             else:
-                plan = draft
+                plan = expanded_plan
                 answer, objective_ids, claim_ids, action_ids = _render_plan(
                     graph, plan, presentation
                 )
-                evidence_ids = tuple(sorted(expected_evidence))
 
     receipt = _render_receipt(
         graph=graph,
@@ -908,7 +900,6 @@ __all__ = [
     "ComposerObjectiveContextV1",
     "ComposerPresentationContextV1",
     "ComposerProviderDraftV1",
-    "ComposerProviderRequestV2",
     "ComposerSectionCandidateV1",
     "ComposerSectionOrderingPlanV1",
     "ComposerSectionOrderingRequestV1",
@@ -918,4 +909,5 @@ __all__ = [
     "build_deterministic_section_set",
     "build_section_ordering_request",
     "compose_claim_graph",
+    "expand_ordering_plan",
 ]

@@ -218,6 +218,226 @@ def test_ordering_request_projection_excludes_private_graph_data() -> None:
         assert forbidden not in serialized
 
 
+def test_expand_ordering_plan_restores_only_original_private_sections() -> None:
+    plan, graph = _two_section_plan_and_graph()
+    section_set = composer_module.build_deterministic_section_set(plan, graph)
+    facts, degradation = section_set.sections
+    ordering = composer_module.ComposerSectionOrderingPlanV1(
+        ordered_section_handles=(
+            degradation.section_handle,
+            facts.section_handle,
+        ),
+        connector_by_handle={
+            degradation.section_handle: "direct",
+            facts.section_handle: "next",
+        },
+    )
+
+    expanded = composer_module.expand_ordering_plan(section_set, ordering)
+
+    assert tuple(item.section_kind for item in expanded.sections) == (
+        "degradation",
+        "facts",
+    )
+    assert expanded.sections[0].objective_ids == plan.sections[1].objective_ids
+    assert expanded.sections[0].claim_ids == plan.sections[1].claim_ids
+    assert expanded.sections[0].action_slot_ids == plan.sections[1].action_slot_ids
+    assert expanded.sections[1].objective_ids == plan.sections[0].objective_ids
+    assert expanded.sections[1].claim_ids == plan.sections[0].claim_ids
+    assert expanded.sections[1].action_slot_ids == plan.sections[0].action_slot_ids
+
+
+def test_expand_ordering_plan_rejects_forged_handle_or_connector() -> None:
+    plan, graph = _two_section_plan_and_graph()
+    section_set = composer_module.build_deterministic_section_set(plan, graph)
+    facts, degradation = section_set.sections
+    unknown = "section:sha256:" + "f" * 64
+    forged_handle = composer_module.ComposerSectionOrderingPlanV1.model_construct(
+        ordered_section_handles=(facts.section_handle, unknown),
+        connector_by_handle={facts.section_handle: "direct", unknown: "however"},
+    )
+    forged_connector = composer_module.ComposerSectionOrderingPlanV1.model_construct(
+        ordered_section_handles=(facts.section_handle, degradation.section_handle),
+        connector_by_handle={
+            facts.section_handle: "direct",
+            degradation.section_handle: "next",
+        },
+    )
+
+    with pytest.raises(ValueError, match="composer_section_ordering_invalid"):
+        composer_module.expand_ordering_plan(section_set, forged_handle)
+    with pytest.raises(ValueError, match="composer_section_ordering_invalid"):
+        composer_module.expand_ordering_plan(section_set, forged_connector)
+
+
+def _four_section_graph_and_presentation():
+    facts = _facts(
+        records=(
+            {
+                "record_id": RECORD_ID,
+                "table_id": TABLE_ID,
+                "values": ({"field_id": FIELD_ID, "value": "blocked"},),
+            },
+        )
+    )
+    graph = build_claim_graph(
+        claims=(
+            ClaimInputV1(
+                objective_id="facts",
+                subject_ref=f"record:{RECORD_ID}",
+                predicate=f"field:{FIELD_ID}",
+                value="blocked",
+                evidence_ids=("ev-1",),
+                source_version=2,
+            ),
+        ),
+        outcomes=(
+            ObjectiveOutcomeInputV1("facts", "completed", True),
+            ObjectiveOutcomeInputV1("action", "proposed", True),
+            ObjectiveOutcomeInputV1("denied", "denied", False, "policy_denied"),
+            ObjectiveOutcomeInputV1("degraded", "failed", False, "risk_failed"),
+        ),
+        actions=(
+            ActionDependencyV1(
+                slot_id="act-1",
+                proposal_status="proposed",
+                required_claim_refs=(),
+            ),
+        ),
+        scope_hash=SCOPE,
+        source_artifacts=(facts,),
+    )
+    presentation = composer_module.ComposerPresentationContextV1(
+        query="汇总事实、动作和边界。",
+        objectives=(
+            composer_module.ComposerObjectiveContextV1(
+                objective_id="facts", kind="fact_query", required=True
+            ),
+            composer_module.ComposerObjectiveContextV1(
+                objective_id="action", kind="record_change", required=True
+            ),
+            composer_module.ComposerObjectiveContextV1(
+                objective_id="denied", kind="risk_analysis", required=False
+            ),
+            composer_module.ComposerObjectiveContextV1(
+                objective_id="degraded", kind="risk_analysis", required=False
+            ),
+        ),
+        subject_labels={f"record:{RECORD_ID}": "MT-014"},
+        predicate_labels={f"field:{FIELD_ID}": "status"},
+    )
+    return graph, presentation
+
+
+def test_ordering_connectors_render_only_fixed_chinese_prefixes() -> None:
+    graph, presentation = _four_section_graph_and_presentation()
+
+    def provider(request):
+        handles = {
+            item.section_kind: item.section_handle for item in request.candidates
+        }
+        return composer_module.ComposerSectionOrderingPlanV1(
+            ordered_section_handles=(
+                handles["facts"],
+                handles["actions"],
+                handles["denial"],
+                handles["degradation"],
+            ),
+            connector_by_handle={
+                handles["facts"]: "direct",
+                handles["actions"]: "next",
+                handles["denial"]: "however",
+                handles["degradation"]: "safety_boundary",
+            },
+        )
+
+    result = compose_claim_graph(
+        graph,
+        provider=provider,
+        authorized_schema=_authorized_schema(),
+        presentation=presentation,
+    )
+
+    assert result.answer.splitlines()[0].startswith("已验证事实：")
+    assert result.answer.splitlines()[1].startswith("接下来，待确认动作：")
+    assert result.answer.splitlines()[2].startswith("不过，无法执行：")
+    assert result.answer.splitlines()[3].startswith("安全边界：降级说明：")
+
+
+@pytest.mark.parametrize(
+    "failure_code",
+    (
+        "provider_schema_invalid",
+        "provider_semantic_invalid",
+        "provider_timeout",
+        "provider_rate_limited",
+        "provider_quota_exhausted",
+        "provider_http_error",
+        "deadline_exhausted",
+    ),
+)
+def test_ordering_provider_failure_preserves_complete_deterministic_receipt(
+    failure_code: str,
+) -> None:
+    graph, presentation = _four_section_graph_and_presentation()
+    deterministic = compose_claim_graph(graph, presentation=presentation)
+
+    def provider(_request):
+        raise ComposerProviderInvocationError(failure_code)
+
+    result = compose_claim_graph(
+        graph,
+        provider=provider,
+        authorized_schema=_authorized_schema(),
+        presentation=presentation,
+    )
+
+    assert (
+        result.render_receipt.covered_objective_ids
+        == deterministic.render_receipt.covered_objective_ids
+    )
+    assert (
+        result.render_receipt.covered_claim_ids
+        == deterministic.render_receipt.covered_claim_ids
+    )
+    assert (
+        result.render_receipt.covered_action_slot_ids
+        == deterministic.render_receipt.covered_action_slot_ids
+    )
+    assert result.provider_call_count == 1
+    assert failure_code in result.degradation_codes
+    assert result.answer == deterministic.answer
+
+
+def test_invalid_ordering_falls_back_to_complete_deterministic_receipt() -> None:
+    graph, presentation = _four_section_graph_and_presentation()
+    deterministic = compose_claim_graph(graph, presentation=presentation)
+
+    def provider(request):
+        first = request.candidates[0].section_handle
+        unknown = "section:sha256:" + "f" * 64
+        return composer_module.ComposerSectionOrderingPlanV1.model_construct(
+            ordered_section_handles=(first, unknown),
+            connector_by_handle={first: "direct", unknown: "however"},
+        )
+
+    result = compose_claim_graph(
+        graph,
+        provider=provider,
+        authorized_schema=_authorized_schema(),
+        presentation=presentation,
+    )
+
+    assert result.status == "degraded"
+    assert set(result.degradation_codes) == {
+        "policy_denied",
+        "provider_semantic_invalid",
+        "risk_failed",
+    }
+    assert result.render_receipt == deterministic.render_receipt
+    assert result.answer == deterministic.answer
+
+
 def test_deterministic_composer_returns_grounded_chinese_result() -> None:
     graph = _graph()
     result = compose_claim_graph(graph)
@@ -263,18 +483,11 @@ def test_bounded_provider_plan_renders_safe_labels_and_hashed_receipt() -> None:
     )
 
     def provider(request):
-        assert request.presentation == presentation
-        return composer_module.ComposerAnswerPlanV2(
-            sections=(
-                composer_module.ComposerAnswerSectionPlanV2(
-                    section_id="facts",
-                    section_kind="facts",
-                    objective_ids=("obj-1",),
-                    claim_ids=(graph.claims[0].claim_id,),
-                    action_slot_ids=(),
-                    connector_code="direct",
-                ),
-            ),
+        assert not hasattr(request, "presentation")
+        handle = request.candidates[0].section_handle
+        return composer_module.ComposerSectionOrderingPlanV1(
+            ordered_section_handles=(handle,),
+            connector_by_handle={handle: "direct"},
         )
 
     result = compose_claim_graph(
