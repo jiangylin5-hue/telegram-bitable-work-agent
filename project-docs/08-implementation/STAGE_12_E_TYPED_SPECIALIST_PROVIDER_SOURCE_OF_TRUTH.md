@@ -139,7 +139,7 @@ deadline_exhausted
 
 Only timeout, 429 and recoverable 5xx may retry within the total deadline, with at most two Provider attempts. Schema/semantic invalid may receive one repair attempt containing only the original schema, objective, validation path and prior bounded output. Permission denial, ambiguity and insufficient evidence do not retry. Deterministic fallback must never be counted as a successful Provider invocation.
 
-The Stage11 `google/gemini-2.5-flash` profile is retained as baseline. A focused synthetic role benchmark may compare candidate profiles, but changing the bound Stage12 role profile requires a measured Technical Decision and user confirmation.
+The Stage11 `google/gemini-2.5-flash` profile is retained as historical baseline evidence. TDR-023 records the user-authorized, measured Stage12 Grounded Composer correction. Gemini rejected the unchanged full schema; Qwen 235B reached only `7/12`; Qwen Next 80B reached only `2/12`. The corrected fixed P1/P2/P3 candidate is `deepseek/deepseek-v3.2`, selected after a corrected-prompt unchanged-schema four-shape `4/4` result with more output headroom and lower worst measured latency than Qwen 235B. Automatic model fallback and per-case switching are forbidden.
 
 ## 7. Fan-in Boundary
 

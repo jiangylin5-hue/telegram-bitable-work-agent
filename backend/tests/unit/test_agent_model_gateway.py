@@ -179,6 +179,56 @@ def test_gateway_does_not_retry_non_recoverable_http_error() -> None:
     assert len(client.requests) == 1
 
 
+def test_gateway_records_sanitized_schema_state_limit_transport_fingerprint() -> None:
+    raw_provider_error = json.dumps(
+        {
+            "error": {
+                "code": 400,
+                "status": "INVALID_ARGUMENT",
+                "message": "secret schema produces too many states for serving",
+            }
+        }
+    )
+    response = httpx.Response(
+        400,
+        request=httpx.Request(
+            "POST", "https://openrouter.ai/api/v1/chat/completions"
+        ),
+        json={
+            "error": {
+                "code": 400,
+                "message": "Provider returned error",
+                "metadata": {
+                    "provider_name": "Google AI Studio",
+                    "provider_error_code": "400",
+                    "raw": raw_provider_error,
+                },
+            }
+        },
+    )
+
+    result = _gateway(_Client([response])).invoke(
+        role="risk",
+        messages=({"role": "user", "content": "private evidence"},),
+        response_schema={"type": "object"},
+        validate=_validator,
+        deadline_at=NOW + timedelta(seconds=30),
+    )
+
+    assert result.failure_code == "provider_http_error"
+    assert len(result.transport_diagnostics) == 1
+    diagnostic = result.transport_diagnostics[0]
+    assert diagnostic.http_status == 400
+    assert diagnostic.provider_name == "Google AI Studio"
+    assert diagnostic.provider_error_status == "INVALID_ARGUMENT"
+    assert diagnostic.error_category == "schema_state_limit"
+    assert diagnostic.response_sha256
+    dumped = diagnostic.model_dump_json()
+    assert "private evidence" not in dumped
+    assert "secret schema" not in dumped
+    assert "too many states" not in dumped
+
+
 def test_gateway_repairs_schema_once_without_new_evidence() -> None:
     client = _Client(
         [

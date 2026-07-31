@@ -346,3 +346,26 @@
   - Let a generic Outbox worker consume all event types with missing handlers: it can dead-letter unrelated product events.
 - Gate: local RED/GREEN implementation is authorized. Task 5 remains `in_progress` until bootstrap catch-up, filtered worker runtime and requirement-level regression evidence pass; no Stage12 production activation is authorized.
 - Implementation evidence: Task 5 completed locally on 2026-07-30. New-registration-only bootstrap, page/continuation authority revalidation, stale-continuation discard and query-level event/workspace filtering pass unit and real disposable PostgreSQL evidence. The runtime remains default-off and no deployment/activation is authorized. See `project-docs/08-implementation/evidence/stage12-task5-retrieval-runtime-2026-07-30.md`.
+
+## TDR-023 Stage12 Grounded Composer Domestic Model Candidate
+
+- Status: accepted for bounded Stage12 P1/P2/P3 evaluation; explicitly authorized by the user on 2026-07-31
+- Date: 2026-07-31
+- Trigger: the first Grounded Answer P1 attempt against `google/gemini-2.5-flash` failed `12/12` before generation with HTTP `400`. A bounded diagnostic request identified Google AI Studio `INVALID_ARGUMENT`: the complete `GroundedAnswerPlanV2` schema produced too many serving states. This is a model/provider schema-serving limit, not proof that OpenRouter, the key or structured output is generally unavailable.
+- Measured selection probe: using the same synthetic authorized request, unchanged full response schema, production adapter and zero fallback, `qwen/qwen3-235b-a22b-2507` completed in `8104 ms`, `deepseek/deepseek-v3.2` completed in `13041 ms`, and `z-ai/glm-4.7` failed at the HTTP boundary. These one-call probes prove compatibility only; they do not satisfy P1 or final answer quality acceptance.
+- P1 attempt 02 correction: the first Qwen 235B full P1 reached HTTP `12/12` but only `7/12` real grounded completions (`provider_language_invalid=3`, `provider_schema_invalid=2`), with `424050 ms` aggregate latency and `69364 ms` maximum observation. A tightened non-repetition prompt made the 4-claim shape valid, but the model remained too slow. Under the same corrected prompt and full schema, `qwen/qwen3-next-80b-a3b-instruct` completed the 4-claim probe in `8900 ms`; Qwen 30B completed in `23525 ms`, while MiniMax M2.5 failed grounding.
+- P1 attempt 03 correction: Qwen Next 80B completed HTTP `12/12` but only `2/12` grounded responses (`provider_language_invalid=5`, `provider_schema_invalid=5`); five responses reached the `1600` output-token cap. It is rejected. A corrected-prompt, full-schema four-shape comparison then produced DeepSeek V3.2 `4/4` with 7-claim output `1076` tokens and Qwen 235B `4/4` with 7-claim output `1386` tokens. DeepSeek had the lower measured worst latency (`60770 ms` versus `92917 ms`) and more output headroom.
+- P1 attempt 04 correction: DeepSeek V3.2 reached `11/12`; the only failure was one 2-claim response that expanded to the `1600` output-token cap and became invalid JSON. OpenRouter model metadata reports reasoning as optional/default-off and supports explicit `reasoning.effort=none`.
+- P1 attempt 05 rejected experiment: adding `seed=0` and `temperature=0.0` reduced the result to `9/12`, with three deterministic token-cap truncations. The seed/temperature experiment is therefore reverted. The retained DeepSeek profile uses `temperature=0.1`, explicit `reasoning.effort=none` and no seed.
+- Decision:
+  1. Bind the Stage12 Grounded Composer P1/P2/P3 candidate to `deepseek/deepseek-v3.2`. The failed Gemini, Qwen 235B and Qwen Next 80B attempts remain measured historical evidence, not runtime fallbacks.
+  2. Keep the complete fixed-property/fixed-array `GroundedAnswerPlanV2` schema and deterministic Pydantic/grounding validation unchanged; do not weaken the contract to accommodate Gemini.
+  3. Retain `google/gemini-2.5-flash` as historical Stage11/r75 comparison evidence only. It is not an automatic runtime fallback for Stage12 acceptance.
+  4. Do not add automatic multi-model routing, silent failover or per-case model switching in Stage12.
+  5. Freeze one Composer model for every complete P1/P2/P3 campaign. Any later candidate replacement requires a new complete campaign and updated decision evidence.
+- Guardrails: synthetic/authorized Provider inputs only during local evaluation; no raw prompt/output, secret or Gold payload persistence; fallback cannot pass a real-model gate; Stage11 remains production authority until P1, P2, full regression, native candidate, P3 and Telegram gates pass.
+- Scope: this decision changes only the Stage12 Composer candidate profile. It does not change the embedding profile, Planner/Analysis/Action model bindings, public API, schema, permission model, deployment authority or production activation state.
+- References:
+  - `docs/superpowers/specs/2026-07-31-stage12-grounded-answer-provider-v2-design.md`
+  - `docs/superpowers/plans/2026-07-31-stage12-grounded-answer-provider-v2.md`
+  - `project-docs/08-implementation/STAGE_12_E_TYPED_SPECIALIST_PROVIDER_SOURCE_OF_TRUTH.md`

@@ -68,12 +68,54 @@ class ModelProfileV1(_StrictFrozenModel):
         return self
 
 
+class ProviderTransportFingerprintV1(_StrictFrozenModel):
+    version: Literal["provider-transport-fingerprint.v1"]
+    attempt: StrictInt = Field(ge=1, le=2)
+    transport_kind: Literal[
+        "http_response", "timeout", "http_error", "unexpected_exception"
+    ]
+    http_status: Annotated[StrictInt, Field(ge=100, le=599)] | None
+    response_bytes: StrictInt = Field(ge=0)
+    response_sha256: Sha256Hex
+    provider_name: StrictStr | None
+    provider_error_code: StrictStr | None
+    provider_error_status: StrictStr | None
+    error_category: Literal[
+        "none",
+        "schema_state_limit",
+        "invalid_argument",
+        "rate_limited",
+        "quota_exhausted",
+        "http_error",
+        "timeout",
+        "transport_error",
+        "unexpected_error",
+    ]
+    content_hash: Sha256Hex
+
+    @model_validator(mode="after")
+    def validate_fingerprint(self) -> "ProviderTransportFingerprintV1":
+        if (self.transport_kind == "http_response") != (self.http_status is not None):
+            raise ValueError("provider_transport_http_status_mismatch")
+        if self.http_status == 200 and self.error_category != "none":
+            raise ValueError("provider_transport_success_category_mismatch")
+        if self.http_status != 200 and self.error_category == "none":
+            raise ValueError("provider_transport_failure_category_mismatch")
+        expected = specialist_payload_sha256(
+            self.model_dump(mode="json", exclude={"content_hash"})
+        )
+        if self.content_hash != expected:
+            raise ValueError("provider_transport_fingerprint_hash_mismatch")
+        return self
+
+
 @dataclass(frozen=True, slots=True)
 class ProviderGatewayResult:
     status: Literal["completed", "failed"]
     payload: BaseModel | None
     failure_code: ProviderFailureCode | None
     observations: tuple[ProviderAttemptObservationV1, ...]
+    transport_diagnostics: tuple[ProviderTransportFingerprintV1, ...] = ()
 
 
 def model_profile_sha256(value: BaseModel | dict[str, object]) -> str:
@@ -129,6 +171,7 @@ class ModelGatewayV1:
         response_schema: dict[str, object],
         validate: Callable[[str], BaseModel],
         deadline_at: datetime,
+        reasoning_effort: Literal["none"] | None = None,
     ) -> ProviderGatewayResult:
         profile = self._profiles.get(role)
         if profile is None:
@@ -136,6 +179,7 @@ class ModelGatewayV1:
         if deadline_at.tzinfo is None or deadline_at.utcoffset() is None:
             raise ValueError("model_gateway_deadline_timezone_required")
         observations: list[ProviderAttemptObservationV1] = []
+        transport_diagnostics: list[ProviderTransportFingerprintV1] = []
         repair: tuple[ProviderFailureCode, str, str] | None = None
         semaphore = self._semaphores[role]
         for attempt in range(1, profile.max_attempts + 1):
@@ -175,25 +219,31 @@ class ModelGatewayV1:
                             ),
                         }
                     )
-                response = self._post(
-                    json_body={
-                        "model": profile.model_id,
-                        "messages": request_messages,
-                        "response_format": {
-                            "type": "json_schema",
-                            "json_schema": {
-                                "name": f"stage12_{role}_response",
-                                "strict": True,
-                                "schema": response_schema,
-                            },
+                json_body: dict[str, object] = {
+                    "model": profile.model_id,
+                    "messages": request_messages,
+                    "response_format": {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": f"stage12_{role}_response",
+                            "strict": True,
+                            "schema": response_schema,
                         },
-                        "provider": {"require_parameters": True},
-                        "temperature": profile.temperature,
-                        "max_tokens": profile.max_output_tokens,
                     },
+                    "provider": {"require_parameters": True},
+                    "temperature": profile.temperature,
+                    "max_tokens": profile.max_output_tokens,
+                }
+                if reasoning_effort is not None:
+                    json_body["reasoning"] = {"effort": reasoning_effort}
+                response = self._post(
+                    json_body=json_body,
                     timeout_seconds=min(
                         float(profile.request_timeout_seconds), remaining
                     ),
+                )
+                transport_diagnostics.append(
+                    _http_transport_fingerprint(response, attempt=attempt)
                 )
                 if response.status_code != 200:
                     failure_code = _http_failure_code(response.status_code)
@@ -218,6 +268,7 @@ class ModelGatewayV1:
                         payload=None,
                         failure_code=failure_code,
                         observations=tuple(observations),
+                        transport_diagnostics=tuple(transport_diagnostics),
                     )
                 content, input_tokens, output_tokens = _response_content(response)
                 try:
@@ -243,6 +294,7 @@ class ModelGatewayV1:
                         payload=None,
                         failure_code=exc.code,
                         observations=tuple(observations),
+                        transport_diagnostics=tuple(transport_diagnostics),
                     )
                 observation = self._observation(
                     role=role,
@@ -261,13 +313,29 @@ class ModelGatewayV1:
                     payload=payload,
                     failure_code=None,
                     observations=tuple(observations),
+                    transport_diagnostics=tuple(transport_diagnostics),
                 )
             except httpx.TimeoutException:
                 failure_code = "provider_timeout"
+                transport_diagnostics.append(
+                    _exception_transport_fingerprint(
+                        attempt=attempt, transport_kind="timeout"
+                    )
+                )
             except httpx.HTTPError:
                 failure_code = "provider_http_error"
+                transport_diagnostics.append(
+                    _exception_transport_fingerprint(
+                        attempt=attempt, transport_kind="http_error"
+                    )
+                )
             except Exception:
                 failure_code = "provider_http_error"
+                transport_diagnostics.append(
+                    _exception_transport_fingerprint(
+                        attempt=attempt, transport_kind="unexpected_exception"
+                    )
+                )
             finally:
                 semaphore.release()
             observation = self._observation(
@@ -288,12 +356,14 @@ class ModelGatewayV1:
                 payload=None,
                 failure_code=failure_code,
                 observations=tuple(observations),
+                transport_diagnostics=tuple(transport_diagnostics),
             )
         return ProviderGatewayResult(
             status="failed",
             payload=None,
             failure_code="provider_http_error",
             observations=tuple(observations),
+            transport_diagnostics=tuple(transport_diagnostics),
         )
 
     def _post(
@@ -402,9 +472,108 @@ def _response_content(response: httpx.Response) -> tuple[str, int | None, int | 
     return content, input_tokens, output_tokens
 
 
+def _safe_transport_scalar(value: object) -> str | None:
+    if not isinstance(value, (str, int)):
+        return None
+    rendered = str(value).strip()
+    return rendered[:128] if rendered else None
+
+
+def _http_transport_fingerprint(
+    response: httpx.Response, *, attempt: int
+) -> ProviderTransportFingerprintV1:
+    raw = response.content
+    provider_name = None
+    provider_error_code = None
+    provider_error_status = None
+    provider_error_message = ""
+    try:
+        payload = response.json()
+    except (ValueError, json.JSONDecodeError):
+        payload = None
+    error = payload.get("error") if isinstance(payload, dict) else None
+    metadata = error.get("metadata") if isinstance(error, dict) else None
+    if isinstance(metadata, dict):
+        provider_name = _safe_transport_scalar(metadata.get("provider_name"))
+        provider_error_code = _safe_transport_scalar(
+            metadata.get("provider_error_code")
+        )
+        provider_raw = metadata.get("raw")
+        if isinstance(provider_raw, str):
+            try:
+                provider_payload = json.loads(provider_raw)
+            except json.JSONDecodeError:
+                provider_payload = None
+            nested_error = (
+                provider_payload.get("error")
+                if isinstance(provider_payload, dict)
+                else None
+            )
+            if isinstance(nested_error, dict):
+                provider_error_status = _safe_transport_scalar(
+                    nested_error.get("status")
+                )
+                message = nested_error.get("message")
+                if isinstance(message, str):
+                    provider_error_message = message.lower()
+    if response.status_code == 200:
+        category = "none"
+    elif "too many states" in provider_error_message:
+        category = "schema_state_limit"
+    elif provider_error_status == "INVALID_ARGUMENT":
+        category = "invalid_argument"
+    elif response.status_code == 429:
+        category = "rate_limited"
+    elif response.status_code in {402, 403}:
+        category = "quota_exhausted"
+    else:
+        category = "http_error"
+    values = {
+        "version": "provider-transport-fingerprint.v1",
+        "attempt": attempt,
+        "transport_kind": "http_response",
+        "http_status": response.status_code,
+        "response_bytes": len(raw),
+        "response_sha256": sha256(raw).hexdigest(),
+        "provider_name": provider_name,
+        "provider_error_code": provider_error_code,
+        "provider_error_status": provider_error_status,
+        "error_category": category,
+    }
+    values["content_hash"] = specialist_payload_sha256(values)
+    return ProviderTransportFingerprintV1.model_validate(values)
+
+
+def _exception_transport_fingerprint(
+    *,
+    attempt: int,
+    transport_kind: Literal["timeout", "http_error", "unexpected_exception"],
+) -> ProviderTransportFingerprintV1:
+    category = {
+        "timeout": "timeout",
+        "http_error": "transport_error",
+        "unexpected_exception": "unexpected_error",
+    }[transport_kind]
+    values = {
+        "version": "provider-transport-fingerprint.v1",
+        "attempt": attempt,
+        "transport_kind": transport_kind,
+        "http_status": None,
+        "response_bytes": 0,
+        "response_sha256": sha256(b"").hexdigest(),
+        "provider_name": None,
+        "provider_error_code": None,
+        "provider_error_status": None,
+        "error_category": category,
+    }
+    values["content_hash"] = specialist_payload_sha256(values)
+    return ProviderTransportFingerprintV1.model_validate(values)
+
+
 __all__ = [
     "ModelGatewayV1",
     "ModelProfileV1",
     "ProviderGatewayResult",
+    "ProviderTransportFingerprintV1",
     "model_profile_sha256",
 ]

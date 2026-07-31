@@ -3,12 +3,26 @@
 ## Status
 
 - Status: Task 6 and bounded Composer corrections `implemented-local`; integrated Stage12 release remains `FAIL`
-- Date: 2026-07-30
+- Date: 2026-07-31
 - Scope: typed Specialist contracts and handlers, durable typed artifact ownership, sealed command inputs, Provider V2, ClaimGraph, grounded Composer and default-off shadow
 - Runtime authority: Stage11 V1 remains the only user-answer and dispatch authority
 - Deployment status: isolated/default-off native candidate authorized after P1/P2/full regression; not performed
 - Superseding audit: `STAGE_12_COMPREHENSIVE_ARCHITECTURE_AUDIT.md`; Task 6 now supplies fresh direct evidence for the previously disproved runtime-wiring and unsupported-fact claims, but Task 7 A–F execution and final Case acceptance remain open
 - Current integrated result: the post-correction real campaign passed all final-answer/Case gates `144/144`, but Composer availability regressed to unavailable `36/48`, `47/48`, `37/48`, dominated by schema-invalid responses. The deterministic fallback is complete and safe; real Provider composition is not release-reliable.
+
+## 2026-07-31 Grounded Answer P1 Status
+
+Grounded Answer Provider V2 contracts, request projection, deterministic grounding validation/rendering, real adapter, real-origin scoring and the exact 12-call P1 runner are implemented locally. Focused verification is `37 passed`. P1 remains `FAIL`; P2/P3 and deployment have not started.
+
+Immutable failed attempts are retained under `evidence/stage12-grounded-answer-p1-2026-07-31-attempt-01-failed` through `attempt-05-failed`:
+
+- Gemini: HTTP `0/12`, upstream schema serving-state limit.
+- Qwen 235B before prompt correction: real grounded `7/12`.
+- Qwen Next 80B: real grounded `2/12`.
+- DeepSeek V3.2 best attempt: real grounded `11/12`, one token-cap JSON truncation.
+- DeepSeek fixed-seed experiment: regressed to `9/12`; the experiment was rejected and reverted.
+
+Current measured root causes are long private Provider handles/output-token pressure and the absence of a true wall-clock transport deadline. No failed attempt used fallback, selective retry, business data, confirmed Action, write or Telegram send. The next proposed private contract correction requires explicit confirmation before implementation.
 
 ## 2026-07-30 Audit Correction Result
 

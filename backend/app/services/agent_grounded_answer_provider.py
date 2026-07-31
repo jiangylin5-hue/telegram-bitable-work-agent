@@ -23,7 +23,12 @@ from app.services.agent_grounded_answer_validation import (
     ProviderValidationError as GroundingValidationError,
     validate_grounded_answer_plan,
 )
-from app.services.agent_model_gateway import ProviderGatewayResult
+from app.services.agent_model_gateway import (
+    ModelProfileV1,
+    ProviderGatewayResult,
+    ProviderTransportFingerprintV1,
+    model_profile_sha256,
+)
 from app.services.agent_provider_validation import (
     ProviderValidationError as GatewayValidationError,
 )
@@ -37,6 +42,30 @@ class GroundedAnswerProviderInvocationError(RuntimeError):
     def __init__(self, code: ProviderFailureCode) -> None:
         super().__init__(code)
         self.code = code
+
+
+GROUNDED_COMPOSER_MODEL_ID = "deepseek/deepseek-v3.2"
+GROUNDED_COMPOSER_PROFILE_ID = "composer.zh.grounded.deepseek-v3.2.v2"
+
+
+def build_grounded_composer_profile(*, max_attempts: int = 2) -> ModelProfileV1:
+    values: dict[str, object] = {
+        "version": "model-profile.v1",
+        "profile_id": GROUNDED_COMPOSER_PROFILE_ID,
+        "provider": "openrouter-compatible",
+        "model_id": GROUNDED_COMPOSER_MODEL_ID,
+        "allowed_roles": ("composer",),
+        "supports_strict_json_schema": True,
+        "response_language": "zh-Hans",
+        "temperature": 0.1,
+        "max_output_tokens": 1600,
+        "request_timeout_seconds": 25,
+        "max_attempts": max_attempts,
+        "max_concurrency": 2,
+        "data_policy": "permission-filtered-only",
+    }
+    values["content_hash"] = model_profile_sha256(values)
+    return ModelProfileV1.model_validate(values)
 
 
 def _json_shape(content: str) -> tuple[str, tuple[str, ...], int, int]:
@@ -112,6 +141,7 @@ class GroundedAnswerProviderAdapterV2:
         self._deadline_seconds = deadline_seconds
         self.observations: tuple[ProviderAttemptObservationV1, ...] = ()
         self.diagnostics: tuple[ProviderResponseFingerprintV1, ...] = ()
+        self.transport_diagnostics: tuple[ProviderTransportFingerprintV1, ...] = ()
         self.failure_code: ProviderFailureCode | None = None
 
     def __call__(
@@ -119,6 +149,7 @@ class GroundedAnswerProviderAdapterV2:
     ) -> GroundedAnswerPlanV2:
         self.observations = ()
         self.diagnostics = ()
+        self.transport_diagnostics = ()
         self.failure_code = None
         diagnostics: list[ProviderResponseFingerprintV1] = []
 
@@ -171,7 +202,11 @@ class GroundedAnswerProviderAdapterV2:
                         "事实、数字、实体、状态和引用必须与所引用 claim 完全一致，不能编造。"
                         "每条事实、分析或建议必须给出完整 claim/evidence 引用闭包。"
                         "Action 只能说明待确认、拒绝、延后或冲突，绝不能声称已执行。"
-                        "不要在可见文本中输出任何内部句柄。"
+                        "使用最少必要的 section 和 statement；每个 claim 只出现一次，"
+                        "不要重复事实、解释规则或复述引用。"
+                        "除非用户 Query 明确要求分析或建议，否则只写简短事实结论。"
+                        "不要输出推理过程，直接输出最终 JSON 对象。"
+                        "不要在可见 text 或 heading 中输出 handle；引用只放在对应数组中。"
                         "仅返回符合 GroundedAnswerPlanV2 JSON Schema 的对象。"
                     ),
                 },
@@ -188,8 +223,10 @@ class GroundedAnswerProviderAdapterV2:
             response_schema=GroundedAnswerPlanV2.model_json_schema(),
             validate=validate,
             deadline_at=self._now() + timedelta(seconds=self._deadline_seconds),
+            reasoning_effort="none",
         )
         self.observations = result.observations
+        self.transport_diagnostics = result.transport_diagnostics
         if result.status != "completed" or not isinstance(
             result.payload, GroundedAnswerPlanV2
         ):
@@ -199,6 +236,9 @@ class GroundedAnswerProviderAdapterV2:
 
 
 __all__ = [
+    "GROUNDED_COMPOSER_MODEL_ID",
+    "GROUNDED_COMPOSER_PROFILE_ID",
     "GroundedAnswerProviderAdapterV2",
     "GroundedAnswerProviderInvocationError",
+    "build_grounded_composer_profile",
 ]

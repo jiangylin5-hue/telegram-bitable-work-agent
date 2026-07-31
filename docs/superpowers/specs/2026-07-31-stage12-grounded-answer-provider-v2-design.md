@@ -21,7 +21,7 @@ The current Provider role only reorders sealed section handles and chooses conne
 4. the retained evidence intentionally omits raw Provider output, so it proves validation failure but not the exact malformed field;
 5. the Stage12 acceptance definition can pass user-visible answers while the intended real-model path is mostly unused.
 
-Official capability checks do not support the claim that the selected model lacks structured-output support. OpenRouter currently lists `structured_outputs` and `response_format` for `google/gemini-2.5-flash`, and Google documents structured output for Gemini 2.5 Flash. The next implementation must diagnose the actual response shape instead of treating the dynamic connector map hypothesis as proven.
+Official capability checks do not support the claim that the selected model lacks structured-output support. OpenRouter lists `structured_outputs` and `response_format` for `google/gemini-2.5-flash`, and Google documents structured output for Gemini 2.5 Flash. The first Grounded Answer P1 attempt subsequently proved a narrower incompatibility: Google AI Studio rejected the complete response schema with HTTP `400 INVALID_ARGUMENT` because it produced too many serving states. TDR-023 therefore selects a measured domestic Composer candidate without weakening the contract.
 
 Authoritative references:
 
@@ -51,7 +51,7 @@ Authoritative references:
 - No business-context architecture; it remains explicitly outside Stage12.
 - No use of fallback results to claim real-model success.
 - No production-wide Stage12 activation before the isolated server and Telegram gates pass.
-- No model/profile replacement in this correction. A profile change remains a separate measured technical decision.
+- TDR-023 supersedes the original no-profile-replacement constraint for the Stage12 Grounded Composer only. Gemini, Qwen 235B and Qwen Next 80B failed complete P1 attempts; the measured fixed P1/P2/P3 candidate is `deepseek/deepseek-v3.2` after an unchanged-schema four-shape `4/4` comparison. No automatic multi-model routing or per-case failover is added.
 
 ## 4. Chosen Architecture
 

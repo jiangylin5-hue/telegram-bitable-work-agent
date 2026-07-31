@@ -6,13 +6,13 @@
 
 **Architecture:** Build a private fixed-array `GroundedAnswerProviderRequestV2` from `TaskSpecV2`, the authorized schema, sealed `ClaimGraphV1`, typed Specialist findings and pending-only Action status. The real Provider returns model-authored Chinese statements with exact claim/evidence/action references. A deterministic validator enforces schema, reference closure, citation closure, canonical factual atoms, Action status, objective coverage and permission/version binding before rendering. The runtime keeps safe deterministic fallback but records it as `answer_source=deterministic_fallback`, which fails every real-model acceptance gate.
 
-**Tech Stack:** Python 3.12+, Pydantic v2, FastAPI, LangGraph-first runtime, OpenRouter OpenAI-compatible API, Gemini 2.5 Flash baseline, PostgreSQL/pgvector, Redis, pytest, React/Vite/TypeScript, native Nginx/systemd deployment.
+**Tech Stack:** Python 3.12+, Pydantic v2, FastAPI, LangGraph-first runtime, OpenRouter OpenAI-compatible API, TDR-023 fixed `deepseek/deepseek-v3.2` Grounded Composer candidate, PostgreSQL/pgvector, Redis, pytest, React/Vite/TypeScript, native Nginx/systemd deployment.
 
 ## Global Constraints
 
 - Stage11/r76 remains production authority until every local, real-Provider, native-server and Telegram gate passes.
 - No Docker image, Docker Compose command or container migration.
-- No model/profile replacement in this plan.
+- TDR-023 authorizes the measured Stage12 Grounded Composer candidate correction to `deepseek/deepseek-v3.2`. Gemini and failed Qwen P1 attempts remain historical comparison evidence; no automatic model fallback or per-case switching is allowed.
 - No Provider-authored database fact, join, aggregate, permission, Action target, execution ticket or confirmation.
 - Provider-facing response schemas use fixed properties and arrays; no dynamic-key map.
 - Fallback is allowed for runtime safety but never counts as a real-model acceptance pass.
@@ -348,26 +348,26 @@ git commit -m "feat: score real grounded answers"
 **Files:**
 - Create: `backend/scripts/stage12_grounded_answer_preflight.py`
 - Create: `backend/tests/unit/test_stage12_grounded_answer_preflight.py`
-- Create after real execution: `project-docs/08-implementation/evidence/stage12-grounded-answer-p1-2026-07-31.json`
-- Create after real execution: `project-docs/08-implementation/evidence/stage12-grounded-answer-p1-2026-07-31.md`
+- Create after real execution: `project-docs/08-implementation/evidence/stage12-grounded-answer-p1-2026-07-31/`
+- Retain failed baselines without overwrite under a suffixed immutable attempt directory.
 
 **Interfaces:**
-- Consumes: local protected OpenRouter env, frozen baseline profile, four synthetic authorized shapes.
+- Consumes: local protected OpenRouter env, TDR-023 frozen Qwen Composer profile, four synthetic authorized shapes.
 - Produces: exactly 12 real calls and a sanitized immutable P1 report.
 
-- [ ] **Step 1: Write RED campaign-shape tests**
+- [x] **Step 1: Write RED campaign-shape tests**
 
 Assert shapes `(1, 2, 4, 7) × 3`, exact call count 12, abort-before-call on missing capability/config, zero fallback requirement, atomic output directory creation and no raw prompt/output fields.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `cd backend; pytest -q tests/unit/test_stage12_grounded_answer_preflight.py`
 
-- [ ] **Step 3: Implement P0/P1 runner**
+- [x] **Step 3: Implement P0/P1 runner**
 
 Query the OpenRouter model metadata endpoint for `structured_outputs` and `response_format`, then execute the 12 calls through the production adapter. Retain only diagnostics, hashes, latency/tokens and pass/fail.
 
-- [ ] **Step 4: Run unit GREEN**
+- [x] **Step 4: Run unit GREEN**
 
 ```powershell
 cd backend
@@ -394,7 +394,7 @@ If any count fails, stop before P2 and fix from the sanitized error path/shape e
 - [ ] **Step 6: Validate and commit P1 evidence**
 
 ```powershell
-git add -- backend/scripts/stage12_grounded_answer_preflight.py backend/tests/unit/test_stage12_grounded_answer_preflight.py project-docs/08-implementation/evidence/stage12-grounded-answer-p1-2026-07-31.json project-docs/08-implementation/evidence/stage12-grounded-answer-p1-2026-07-31.md
+git add -- backend/scripts/stage12_grounded_answer_preflight.py backend/tests/unit/test_stage12_grounded_answer_preflight.py project-docs/08-implementation/evidence/stage12-grounded-answer-p1-2026-07-31 project-docs/08-implementation/evidence/stage12-grounded-answer-p1-2026-07-31-attempt-01-failed
 git commit -m "test: prove grounded provider compatibility"
 ```
 

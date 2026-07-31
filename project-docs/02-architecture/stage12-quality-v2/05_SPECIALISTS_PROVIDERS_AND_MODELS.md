@@ -245,7 +245,7 @@ deadline_exhausted
 | Action | 严格字段和值生成 | 0 | 1,200 | Safety、schema、target accuracy 优先 |
 | Composer | 多结果合并、自然对话 | 0.1 | 2,000 | 不新增事实、中文可读性优先 |
 
-当前 `google/gemini-2.5-flash` 只保留为 r75 baseline profile。Stage12 模型选择通过 V2 Case 对当前 profile 和候选 profile 做盲测；在结果出来前不预设“更贵模型必然更好”。允许不同角色选择不同 profile，但同一角色在一个评测 round 内必须固定。
+当前 `google/gemini-2.5-flash` 只保留为 r75/Stage11 历史 baseline profile。TDR-023 基于不变完整 Schema 的实测和 Gemini/Qwen 完整 P1 失败证据，将 Stage12 Grounded Composer P1/P2/P3 候选修订为 `deepseek/deepseek-v3.2`。不得自动多模型路由、静默 failover 或按 Case 切换模型；每次完整 campaign 内同一角色必须固定 profile。
 
 ### 11.6 Prompt 组成与 Token 预算
 

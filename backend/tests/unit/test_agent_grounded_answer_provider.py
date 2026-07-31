@@ -9,6 +9,7 @@ import pytest
 from app.services.agent_grounded_answer_provider import (
     GroundedAnswerProviderAdapterV2,
     GroundedAnswerProviderInvocationError,
+    build_grounded_composer_profile,
 )
 from app.services.agent_model_gateway import (
     ModelGatewayV1,
@@ -91,6 +92,9 @@ def test_adapter_requests_strict_fixed_schema_and_model_authored_answer() -> Non
     assert body["response_format"]["type"] == "json_schema"
     assert body["response_format"]["json_schema"]["strict"] is True
     assert body["provider"] == {"require_parameters": True}
+    assert body["reasoning"] == {"effort": "none"}
+    assert "seed" not in body
+    assert body["temperature"] == _profile().temperature
     encoded_schema = json.dumps(
         body["response_format"]["json_schema"]["schema"], sort_keys=True
     )
@@ -98,9 +102,23 @@ def test_adapter_requests_strict_fixed_schema_and_model_authored_answer() -> Non
     messages = body["messages"]
     assert "完整最终中文回答" in messages[0]["content"]
     assert "不能编造" in messages[0]["content"]
+    assert "每个 claim 只出现一次" in messages[0]["content"]
+    assert "最少必要" in messages[0]["content"]
+    assert "可见 text 或 heading 中输出 handle" in messages[0]["content"]
     assert _request().query in messages[1]["content"]
     assert len(adapter.diagnostics) == 1
     assert adapter.diagnostics[0].validation_error_types == ()
+
+
+def test_grounded_composer_profile_freezes_tdr_023_qwen_candidate() -> None:
+    profile = build_grounded_composer_profile(max_attempts=1)
+
+    assert profile.model_id == "deepseek/deepseek-v3.2"
+    assert profile.profile_id == "composer.zh.grounded.deepseek-v3.2.v2"
+    assert profile.allowed_roles == ("composer",)
+    assert profile.max_attempts == 1
+    assert profile.supports_strict_json_schema is True
+    assert profile.temperature == 0.1
 
 
 def test_schema_failure_records_shape_without_raw_output() -> None:
