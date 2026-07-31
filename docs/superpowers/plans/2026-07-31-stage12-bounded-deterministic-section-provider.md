@@ -1,6 +1,6 @@
 # Stage12 Bounded Deterministic-Section Provider Implementation Plan
 
-- Status: `approved-for-inline-implementation`
+- Status: `local-acceptance-passed-real-campaign-pending`
 - Scope: Stage12 internal Composer Provider contract correction and independent acceptance campaign only
 - Approval: user confirmed the written design and inline continuation on 2026-07-31
 
@@ -50,7 +50,7 @@
 - Consumes: existing `ComposerAnswerSectionPlanV2`, `ComposerAnswerPlanV2`, `ClaimGraphV1`, `AuthorizedSchemaSnapshot`, `specialist_payload_sha256`.
 - Produces: `DeterministicComposerSectionV1`, `DeterministicSectionSetV1`, `ComposerSectionCandidateV1`, `ComposerSectionOrderingRequestV1`, `ComposerSectionOrderingPlanV1`, `build_deterministic_section_set()`, `build_section_ordering_request()`.
 
-- [ ] **Step 1: Write RED strict-model and hash tests**
+- [x] **Step 1: Write RED strict-model and hash tests**
 
 Add tests that construct a two-section deterministic plan and assert:
 
@@ -71,7 +71,7 @@ with pytest.raises(ValidationError, match="deterministic_section_rank_invalid"):
 
 Also assert mutation raises Pydantic's frozen-instance error and unknown fields are rejected.
 
-- [ ] **Step 2: Run the focused RED test**
+- [x] **Step 2: Run the focused RED test**
 
 Run:
 
@@ -82,7 +82,7 @@ python -m pytest tests/unit/test_agent_composer_v2.py -k "deterministic_section 
 
 Expected: FAIL because the new contracts and builders do not exist.
 
-- [ ] **Step 3: Implement strict models and canonical hashes**
+- [x] **Step 3: Implement strict models and canonical hashes**
 
 Add `ConnectorCode` and the five approved models. Use these exact patterns:
 
@@ -103,7 +103,7 @@ completed, proposed, degraded, denied, failed
 
 Use the connector allowlist table from the approved spec. Reject section kinds, handles, hashes, ranks, or proof hashes that do not validate.
 
-- [ ] **Step 4: Write and run RED sanitization tests**
+- [x] **Step 4: Write and run RED sanitization tests**
 
 Serialize `ComposerSectionOrderingRequestV1` and assert it contains section handles/kinds/statuses but none of:
 
@@ -117,7 +117,7 @@ for forbidden in (
 
 Run the same focused command; expected first run: FAIL until the projection excludes every private field.
 
-- [ ] **Step 5: Complete the sanitized projection and make Task 1 green**
+- [x] **Step 5: Complete the sanitized projection and make Task 1 green**
 
 Run:
 
@@ -127,7 +127,7 @@ python -m pytest tests/unit/test_agent_composer_v2.py -k "deterministic_section 
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit Task 1**
+- [x] **Step 6: Commit Task 1**
 
 ```powershell
 git add backend/app/services/agent_composer_v2.py backend/tests/unit/test_agent_composer_v2.py
@@ -144,7 +144,7 @@ git commit -m "feat: seal Stage12 composer sections"
 - Consumes: `ComposerSectionOrderingRequestV1`, `ComposerSectionOrderingPlanV1`, `ModelGatewayV1.invoke()`.
 - Produces: `ComposerProviderAdapterV1.__call__(request: ComposerSectionOrderingRequestV1) -> ComposerSectionOrderingPlanV1` and exact semantic validation before a Provider attempt is marked completed.
 
-- [ ] **Step 1: Replace the happy-path adapter test with the bounded payload**
+- [x] **Step 1: Replace the happy-path adapter test with the bounded payload**
 
 Build a request with handles `section:sha256:` plus 64 `a` characters and `section:sha256:` plus 64 `b` characters. Make the fake Gateway return the corresponding complete literals:
 
@@ -164,7 +164,7 @@ Build a request with handles `section:sha256:` plus 64 `a` characters and `secti
 
 Assert the outbound Provider messages contain no Objective/Claim/Action IDs, facts, evidence, query, or values, and the response schema is strict.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```powershell
 python -m pytest tests/unit/test_agent_composer_provider.py -q
@@ -172,7 +172,7 @@ python -m pytest tests/unit/test_agent_composer_provider.py -q
 
 Expected: FAIL because the adapter still accepts `ComposerProviderRequestV2` and returns `ComposerAnswerPlanV2`.
 
-- [ ] **Step 3: Implement exact ordering validation**
+- [x] **Step 3: Implement exact ordering validation**
 
 Replace `_validate_plan_references` with:
 
@@ -193,7 +193,7 @@ def _validate_ordering_plan(
 
 The Gateway `validate` callback must parse `ComposerSectionOrderingPlanV1`, run this function, and only then return the payload.
 
-- [ ] **Step 4: Add adversarial RED/GREEN cases**
+- [x] **Step 4: Add adversarial RED/GREEN cases**
 
 Cover, as separate tests:
 
@@ -209,11 +209,11 @@ Cover, as separate tests:
 
 Run the full adapter file after each minimal implementation slice.
 
-- [ ] **Step 5: Verify the prompt and token boundary**
+- [x] **Step 5: Verify the prompt and token boundary**
 
 Assert the system prompt says the model may only permute supplied handles and choose supplied connectors. Assert the user payload equals the ordering request projection, not `ClaimGraphV1` or presentation content. Keep response `max_tokens` under the existing profile limit; do not change the profile.
 
-- [ ] **Step 6: Run Task 2 green**
+- [x] **Step 6: Run Task 2 green**
 
 ```powershell
 python -m pytest tests/unit/test_agent_composer_provider.py tests/unit/test_agent_model_gateway.py -q
@@ -221,7 +221,7 @@ python -m pytest tests/unit/test_agent_composer_provider.py tests/unit/test_agen
 
 Expected: PASS with existing Gateway retry/taxonomy tests unchanged.
 
-- [ ] **Step 7: Commit Task 2**
+- [x] **Step 7: Commit Task 2**
 
 ```powershell
 git add backend/app/services/agent_composer_provider.py backend/tests/unit/test_agent_composer_provider.py
@@ -238,7 +238,7 @@ git commit -m "feat: bound Stage12 provider ordering"
 - Consumes: Task 1 section set/request models and Task 2 ordering Provider callable.
 - Produces: `expand_ordering_plan(section_set, ordering) -> ComposerAnswerPlanV2`, connector rendering, and `compose_claim_graph()` with complete fallback.
 
-- [ ] **Step 1: Write RED expansion tests**
+- [x] **Step 1: Write RED expansion tests**
 
 Assert a reversed valid ordering returns the exact original private IDs in reversed section order:
 
@@ -251,7 +251,7 @@ assert expanded.sections[1].claim_ids == original_facts.claim_ids
 
 Add direct calls that forge an unknown handle or invalid connector and assert fail-closed exceptions even if model construction was bypassed with `model_construct`.
 
-- [ ] **Step 2: Run RED and implement pure expansion**
+- [x] **Step 2: Run RED and implement pure expansion**
 
 ```powershell
 python -m pytest tests/unit/test_agent_composer_v2.py -k "expand_ordering" -q
@@ -259,7 +259,7 @@ python -m pytest tests/unit/test_agent_composer_v2.py -k "expand_ordering" -q
 
 Expected RED: function absent. Implement lookup-only expansion and revalidate the resulting `ComposerAnswerPlanV2`.
 
-- [ ] **Step 3: Write RED connector-rendering tests**
+- [x] **Step 3: Write RED connector-rendering tests**
 
 Build four sections with `direct`, `next`, `however`, and `safety_boundary`; assert exact prefixes:
 
@@ -272,11 +272,11 @@ direct -> ""
 
 Assert Provider output never contributes arbitrary prose.
 
-- [ ] **Step 4: Implement fixed connector rendering**
+- [x] **Step 4: Implement fixed connector rendering**
 
 Add a constant mapping and prefix the existing fixed section title/rendered sentences. Do not allow connector text from Provider input.
 
-- [ ] **Step 5: Write RED complete-fallback tests**
+- [x] **Step 5: Write RED complete-fallback tests**
 
 Inject providers that raise each existing failure class and one provider that returns a plan with an unknown handle. For every case assert:
 
@@ -289,7 +289,7 @@ assert failure_code in result.degradation_codes
 assert result.answer
 ```
 
-- [ ] **Step 6: Change `compose_claim_graph` to the ordering port**
+- [x] **Step 6: Change `compose_claim_graph` to the ordering port**
 
 Inside the existing authorized-field-policy gate:
 
@@ -312,7 +312,7 @@ else:
 
 Do not call Provider when field-policy proof is absent or mismatched.
 
-- [ ] **Step 7: Run the full Composer matrix**
+- [x] **Step 7: Run the full Composer matrix**
 
 ```powershell
 python -m pytest tests/unit/test_agent_composer_v2.py tests/unit/test_agent_composer_provider.py tests/unit/test_agent_claim_graph.py tests/unit/test_agent_specialist_results.py -q
@@ -320,7 +320,7 @@ python -m pytest tests/unit/test_agent_composer_v2.py tests/unit/test_agent_comp
 
 Expected: PASS; deterministic receipt hashes may change only where fixed connector text changes, and tests must assert the new actual hashes rather than bypass validation.
 
-- [ ] **Step 8: Commit Task 3**
+- [x] **Step 8: Commit Task 3**
 
 ```powershell
 git add backend/app/services/agent_composer_v2.py backend/tests/unit/test_agent_composer_v2.py
@@ -339,7 +339,7 @@ git commit -m "fix: preserve deterministic composer fallback"
 - Consumes: corrected `ComposerProviderAdapterV1` and ordering port.
 - Produces: complete raw-query traces for every Provider failure, exact fake `48 × 3` accounting, and sanitized per-round execution/Provider failure counts.
 
-- [ ] **Step 1: Migrate fake Providers in RED**
+- [x] **Step 1: Migrate fake Providers in RED**
 
 Change `_ObservedComposerProvider` and `_ValidComposerProvider` to read ordering candidates and return an identity permutation with `direct` for the first handle and the first allowed non-direct connector for later handles. Before implementation, run:
 
@@ -349,11 +349,11 @@ python -m pytest tests/unit/test_stage12_isolated_af_runner.py tests/unit/test_s
 
 Expected: RED because runtime still expects full `ComposerAnswerPlanV2` responses.
 
-- [ ] **Step 2: Update isolated runner typing and Provider trace projection**
+- [x] **Step 2: Update isolated runner typing and Provider trace projection**
 
 Keep observation extraction from `ComposerProviderAdapterV1.observations`. Do not add raw ordering content to `IsolatedAFRunObservationV1`. Ensure a Provider semantic failure produces a completed/degraded runtime trace with Planner, Query, Retrieval, Specialist, ClaimGraph, Composer, Action, total latency, and safe final receipt all observed.
 
-- [ ] **Step 3: Add explicit regression for the two collapsed Cases**
+- [x] **Step 3: Add explicit regression for the two collapsed Cases**
 
 For `mixed_02` and `mixed_08`, inject an invalid ordering Provider and assert:
 
@@ -369,7 +369,7 @@ assert trace.safety.external_send_count == 0
 
 `RuntimeTraceV2` owns the receipt only at `trace.answer.render_receipt`; do not add a parallel receipt field.
 
-- [ ] **Step 4: Prove fake valid campaign shape**
+- [x] **Step 4: Prove fake valid campaign shape**
 
 The final-campaign test must assert:
 
@@ -383,11 +383,11 @@ assert bundle.summary.release_gate_pass is True
 
 Also assert exact retrieval calls `[1, 2, 3]`, no temporary files, no secrets, and zero confirmation/write/send counts.
 
-- [ ] **Step 5: Prove fake invalid campaign remains auditable**
+- [x] **Step 5: Prove fake invalid campaign remains auditable**
 
 Inject schema-invalid and semantic-invalid attempts for selected Cases. Assert fallback answers remain quality-valid while Provider unavailable and failure counts make the aggregate release gate fail. The result must still contain 144 complete traces.
 
-- [ ] **Step 6: Run Task 4 green**
+- [x] **Step 6: Run Task 4 green**
 
 ```powershell
 python -m pytest tests/unit/test_stage12_isolated_af_runner.py tests/unit/test_stage12_final_provider_campaign.py -q
@@ -395,7 +395,7 @@ python -m pytest tests/unit/test_stage12_isolated_af_runner.py tests/unit/test_s
 
 Expected: PASS, with the 48-Case full hard-gate regression still `48/48` and effects `0/0/0`.
 
-- [ ] **Step 7: Commit Task 4**
+- [x] **Step 7: Commit Task 4**
 
 ```powershell
 git add backend/scripts/stage12_isolated_af_runner.py backend/scripts/stage12_final_provider_campaign.py backend/tests/unit/test_stage12_isolated_af_runner.py backend/tests/unit/test_stage12_final_provider_campaign.py
@@ -412,7 +412,7 @@ git commit -m "test: integrate bounded composer campaign"
 - Consumes: Tasks 1–4 implementation.
 - Produces: current local evidence proving the corrected code is eligible for a new real campaign.
 
-- [ ] **Step 1: Run focused affected tests**
+- [x] **Step 1: Run focused affected tests**
 
 ```powershell
 cd backend
@@ -421,7 +421,7 @@ python -m pytest -q tests/unit/test_agent_composer_v2.py tests/unit/test_agent_c
 
 Record exact passed/failed counts and duration.
 
-- [ ] **Step 2: Run expanded Stage12/Planner/Query/Specialist regression**
+- [x] **Step 2: Run expanded Stage12/Planner/Query/Specialist regression**
 
 ```powershell
 python -m pytest tests/unit -q -k "stage12 or agent_task_planner_v2 or agent_query_lexical or authorized_query or authorized_table_query or agent_specialist or agent_composer_v2 or agent_claim_graph"
@@ -429,7 +429,7 @@ python -m pytest tests/unit -q -k "stage12 or agent_task_planner_v2 or agent_que
 
 Record exact passed and deselected counts. Any failure blocks the real campaign.
 
-- [ ] **Step 3: Recompute the deterministic 48-Case hard gates**
+- [x] **Step 3: Recompute the deterministic 48-Case hard gates**
 
 Run the existing full-set test:
 
@@ -439,7 +439,7 @@ python -m pytest tests/unit/test_stage12_isolated_af_runner.py -q -k full_final_
 
 Require every Planner/Query/Retrieval/Answer/final-answer/Action/Safety/Durability and complete release gate `48/48`, total latency observed `48/48`, and confirmed/write/send `0/0/0`.
 
-- [ ] **Step 4: Run full backend from the correct working directory**
+- [x] **Step 4: Run full backend from the correct working directory**
 
 ```powershell
 cd backend
@@ -448,7 +448,7 @@ python -m pytest tests -q
 
 Do not run `python -m pytest backend/tests` from the repository root because historical migration tests resolve `alembic/` relative to `backend/`. Classify every skip; do not count skips as passes.
 
-- [ ] **Step 5: Run the real disposable PostgreSQL/pgvector Stage12 matrix**
+- [x] **Step 5: Run the real disposable PostgreSQL/pgvector Stage12 matrix**
 
 Use only the existing disposable database whose name contains `stage06`, `test`, or `smoke`:
 
@@ -459,7 +459,7 @@ python -m pytest -q tests/integration/test_stage12_authorized_query_postgres.py 
 
 Require `7 passed`, Alembic current/head `20260730_0039`, pgvector present, and zero `stage12_%` temporary schemas. Never point this suite at the primary `ads_agent` database.
 
-- [ ] **Step 6: Run hygiene and static verification**
+- [x] **Step 6: Run hygiene and static verification**
 
 ```powershell
 python -m black --check app/services/agent_composer_v2.py app/services/agent_composer_provider.py scripts/stage12_isolated_af_runner.py scripts/stage12_final_provider_campaign.py tests/unit/test_agent_composer_v2.py tests/unit/test_agent_composer_provider.py tests/unit/test_stage12_isolated_af_runner.py tests/unit/test_stage12_final_provider_campaign.py
@@ -471,11 +471,11 @@ rg -n "OPENROUTER_API_KEY|sk-or-|Bearer " ../project-docs/08-implementation/evid
 
 Production Case-ID/Gold-key and evidence secret scans must be empty. Black, compileall, and diff check must pass.
 
-- [ ] **Step 7: Clean generated temporary files**
+- [x] **Step 7: Clean generated temporary files**
 
 List exact contents under `backend/.tmp`. Delete only directories created by this correction, verify their resolved paths remain under `backend/.tmp`, and preserve pre-existing retained artifacts such as `stage12-task9b-20260731` unless the active retention document says otherwise.
 
-- [ ] **Step 8: Record local acceptance and commit**
+- [x] **Step 8: Record local acceptance and commit**
 
 Update this plan and audit evidence with changed files, actual verification, skips, remaining risks, and cleanup. Do not claim Stage12 acceptance or Provider improvement yet.
 
@@ -483,6 +483,19 @@ Update this plan and audit evidence with changed files, actual verification, ski
 git add docs/superpowers/plans/2026-07-31-stage12-bounded-deterministic-section-provider.md project-docs/08-implementation/evidence/stage12-final-provider-campaign-2026-07-31/AUDIT.md
 git commit -m "docs: record bounded composer local audit"
 ```
+
+#### Task 5 execution evidence
+
+- Implementation commits: `db5ff5c`, `76130b6`, `ab069df`, `b6338f8`, `622784e`.
+- Focused affected matrix: `113 passed in 35.14s`.
+- Expanded Stage12/Planner/Query/Specialist regression: `446 passed, 1627 deselected in 40.32s`.
+- Deterministic Human-Gold gate: `1 passed, 52 deselected`; the test iterated all 48 Cases, every Planner/Query/Retrieval/Answer/final-answer/Action/Safety/Durability/release gate passed, every trace contained total latency, and confirmed/write/send totals were `0/0/0`.
+- Full backend from `backend/`: `2411 passed, 40 skipped in 434.80s`. Skips were 3 Stage10 Redis, 17 Stage02 online PostgreSQL, 3 Stage08 collaboration PostgreSQL, and 17 Stage08 pgvector tests; none are counted as passed.
+- Disposable `ads_agent_stage12_test` PostgreSQL matrix: `7 passed in 8.09s`; PostgreSQL `18.4`, pgvector `0.8.3`, Alembic current/head `20260730_0039`, retained `stage12_%` schemas `0`.
+- Black check for the eight affected implementation/test files, compileall, target/global diff checks, and production Gold/Case scan passed. Precise evidence secret-value scan was empty; the broader scan found only a historical Stage07 mention of the environment-variable name `OPENROUTER_API_KEY`, with no value.
+- Temporary cleanup: this correction created no retained directory under `backend/.tmp`. Existing `pytest-of-29230`, `stage12-task2-a`, and `stage12-task9b-20260731` directories were preserved.
+- Production status: unchanged. No deployment, production migration, confirmed Action, business write, notification, or Telegram send occurred.
+- Remaining risk: local gates prove contract integrity and deterministic fallback, but do not prove real Provider availability or latency. Stage12 remains `FAIL` on the immutable pre-correction bundle until Task 6 produces one new independent real `48 × 3` bundle.
 
 ### Task 6: Run one new independent real campaign and close or retain the gate
 
