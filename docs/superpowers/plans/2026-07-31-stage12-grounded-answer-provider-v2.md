@@ -442,21 +442,20 @@ git add -- backend/scripts/stage12_final_provider_campaign.py backend/tests/unit
 git commit -m "test: verify grounded answer preflight"
 ```
 
-### Task 9: Full Regression and Final P3 Campaign
+### Task 9: Full Regression and Native Release Candidate Gate
 
 **Files:**
 - Modify: `backend/scripts/stage12_real_quality_report.py`
 - Modify: `backend/tests/unit/test_stage12_real_quality_report.py`
-- Create after real execution: `project-docs/08-implementation/evidence/stage12-grounded-answer-p3-2026-07-31/`
 - Modify: active Stage12 acceptance/audit/handoff documents.
 
 **Interfaces:**
-- Consumes: P2-passing revision, frozen 48-case Human Gold, disposable PostgreSQL/pgvector and real Redis fixtures.
-- Produces: full regression evidence and exactly one `48 × 3` real P3 campaign.
+- Consumes: P2-passing revision, disposable PostgreSQL/pgvector and real Redis fixtures.
+- Produces: full local regression evidence and a committed native release candidate; it does not claim final P3 acceptance.
 
-- [ ] **Step 1: Add P3 report gates in RED/GREEN**
+- [ ] **Step 1: Add future P3 report gates in RED/GREEN**
 
-Require `144/144 answer_source=real_provider`, `fallback_count=0`, separate transport/schema/grounding/language rates, unchanged final-answer/safety metrics and total P95 `<= 8000 ms`.
+Require any later P3 bundle to contain `144/144 answer_source=real_provider`, `fallback_count=0`, separate transport/schema/grounding/language rates, unchanged final-answer/safety metrics and total P95 `<= 8000 ms`.
 
 - [ ] **Step 2: Run focused and full backend verification**
 
@@ -466,13 +465,13 @@ Run Stage12 focused tests, full backend pytest with at least a 10-minute budget,
 
 Run the full Mini App suite, TypeScript/build and relevant Action/SSE UI tests. Do not infer visual acceptance from unit tests.
 
-- [ ] **Step 4: Execute exactly one P3 campaign**
+- [ ] **Step 4: Run native release asset preflight locally**
 
-No selective retry, extra round or merged output. A fallback, missing model answer, safety failure or SLO failure keeps Stage12 `FAIL`.
+Verify sealed-source layout, shell LF/CRLF, runtime-presence assets, migration head, static parity inputs and rollback assets without connecting to the server.
 
-- [ ] **Step 5: Update acceptance and commit**
+- [ ] **Step 5: Update candidate evidence and commit**
 
-Record changed files, verification, skipped tests, remaining risks and temporary cleanup. Commit only if evidence bundles validate and secret/raw-output scans pass.
+Record changed files, verification, skipped tests, remaining risks and temporary cleanup. Explicitly state that P3/server/Telegram remain pending. Commit only if P1/P2 bundles validate and secret/raw-output scans pass.
 
 ### Task 10: Publish the Audited Branch
 
@@ -511,7 +510,7 @@ Verify local HEAD equals the remote branch SHA and update the deployment evidenc
 
 **Interfaces:**
 - Consumes: pushed immutable commit and existing native Stage09 release scripts.
-- Produces: default-off native server candidate, isolated Stage12 allowlist and real backend evidence.
+- Produces: default-off native server candidate, isolated Stage12 allowlist and real backend P2-equivalent evidence.
 
 - [ ] **Step 1: Build sealed artifacts from the pushed commit**
 
@@ -527,38 +526,43 @@ Run additive migration only after backup/current-head checks. Keep Stage12 globa
 
 - [ ] **Step 4: Run real deployed backend tests**
 
-Exercise public/loopback health, FastAPI identity, LangGraph, PostgreSQL/pgvector, Redis Specialist workers, real OpenRouter and SSE. Every accepted answer must be `real_provider`; fallback fails server validation.
+Exercise public/loopback health, FastAPI identity, LangGraph, PostgreSQL/pgvector, Redis Specialist workers, real OpenRouter and SSE. Re-run the frozen representative P2 set through the deployed backend. Every accepted answer must be `real_provider`; fallback fails server validation.
 
 - [ ] **Step 5: Verify rollback**
 
 Prove Stage12 flags can be disabled and Stage11/r76 answer authority restored without data deletion. If activation or health fails, roll back immediately.
 
-### Task 12: Bounded Real Telegram Test and Final Audit
+### Task 12: Server P3, Bounded Real Telegram Test and Final Audit
 
 **Files:**
+- Create after real execution: `project-docs/08-implementation/evidence/stage12-grounded-answer-p3-2026-07-31/`
 - Create: `project-docs/08-implementation/evidence/stage12-real-telegram-validation-2026-07-31.md`
 - Modify: final Stage12 acceptance/handoff documents.
 
 **Interfaces:**
-- Consumes: server-backend-passing candidate, existing verified webhook and one factual allowlisted test chat.
-- Produces: real inbound Telegram → Stage12 real Provider → safe answer evidence, optional same-chat restricted reply receipt, and cleanup audit.
+- Consumes: server-backend-P2-passing candidate, frozen 48-case Human Gold, existing verified webhook and one factual allowlisted test chat.
+- Produces: exactly one server `48 × 3` P3 campaign, real inbound Telegram → Stage12 real Provider → safe answer evidence, optional same-chat restricted reply receipt, and cleanup audit.
 
-- [ ] **Step 1: Verify bounded Telegram state**
+- [ ] **Step 1: Execute exactly one P3 campaign on the deployed native candidate**
+
+Run frozen 48 Human-Gold cases for exactly three independent real rounds through the server-side FastAPI/LangGraph/PostgreSQL/pgvector/Redis/OpenRouter path. Require `144/144 answer_source=real_provider`, zero fallback, all final-answer/safety gates and total P95 `<= 8000 ms`. No selective retry, extra round or merged output.
+
+- [ ] **Step 2: Verify bounded Telegram state**
 
 Use the existing bot/webhook, one factual test chat and exact allowlists. Record only booleans/hashes/status counts; never retain raw chat/user/message IDs or original message text.
 
-- [ ] **Step 2: Receive one unique nonce and execute one read-only query**
+- [ ] **Step 3: Receive one unique nonce and execute one read-only query**
 
 Verify webhook ingestion, authorized workspace resolution, Stage12 trace, `answer_source=real_provider`, citations, audit and terminal SSE.
 
-- [ ] **Step 3: Test optional outbound reply only within existing authorization**
+- [ ] **Step 4: Test optional outbound reply only within existing authorization**
 
 If the approved Telegram test includes outbound delivery, use the same allowlisted chat and controlled send path. Do not confirm an Action or mutate business records.
 
-- [ ] **Step 4: Cleanup and final requirement-by-requirement audit**
+- [ ] **Step 5: Cleanup and final requirement-by-requirement audit**
 
 Remove temporary session/release/upload/test artifacts, restore the documented safe runtime profile, verify zero unauthorized writes/sends, and audit every design Acceptance Criterion against direct evidence.
 
-- [ ] **Step 5: Keep production activation separate**
+- [ ] **Step 6: Keep production activation separate**
 
 Report the candidate result. Do not enable Stage12 for all production workspaces until the user reviews the evidence and explicitly approves final activation.
