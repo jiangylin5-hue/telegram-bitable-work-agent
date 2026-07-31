@@ -479,7 +479,7 @@ Record changed files, verification, skipped tests, remaining risks and temporary
 - Modify as evidence requires: `AGENTS.md`, `HANDOFF.md`, `project-docs/00-governance/IMPLEMENTATION_SOURCE_OF_TRUTH.md`, `project-docs/08-implementation/README.md`.
 
 **Interfaces:**
-- Consumes: P3-passing committed revision and clean worktree.
+- Consumes: P1/P2-passing, full-regression-passing native release candidate and clean worktree; server P3 remains pending.
 - Produces: pushed `codex/stage09-ai-conversation-sse` branch.
 
 - [ ] **Step 1: Audit Git scope**
