@@ -3,7 +3,7 @@
 ## Status
 
 - Document status: active approved architecture index
-- Stage status: architecture approved; correction packages and bounded Composer are implemented locally. The post-correction real `48 × 3` campaign passes all returned-answer/Case gates `48/48` per round but overall release is `FAIL` on Composer schema availability and total latency. Production remains Stage11/r76.
+- Stage status: complete A–F local source is checkpointed at `e30eef1`, but release remains `FAIL`. The post-correction campaign had only `24/144` completed real Composer results and `120/144` deterministic fallbacks. Grounded Answer Provider V2 is approved/planned; implementation and P1/P2/P3/native-server/Telegram gates remain pending. Production remains Stage11/r76.
 - Scope: 评测可信度、Planner、结构化多表查询、Embedding/Chunk、Specialist、Provider/Model、Durable Action、API/SSE、实施与验收
 - Baseline commit: `09b9d5f`
 - Active production release: `stage09-p1-20260729-r76-stage11-terminal-fan-in`
@@ -88,3 +88,5 @@ Stage12-D 保留检索组件级证据；E/F 验收已重开。当前全量回归
 - 无上下文交接入口：`../../../HANDOFF.md`
 
 Stage12 文档描述已批准的目标架构，但 `../../08-implementation/STAGE_12_COMPREHENSIVE_ARCHITECTURE_AUDIT.md` 已证明当前实现尚未形成 A–F 集成链，并存在需修复或重新确认的评测、权限、Specialist 与 Composer 门禁。只有完成该审计的修复清单、最终评测、生产迁移、激活、线上验证和发布批准后，才能解释为当前生产能力。
+
+2026-07-31 的最终回答修正由 `../../../docs/superpowers/specs/2026-07-31-stage12-grounded-answer-provider-v2-design.md` 和 `../../../docs/superpowers/plans/2026-07-31-stage12-grounded-answer-provider-v2.md` 管理。ordering-only Composer 与 fallback 证据只保留为历史失败/安全证据，不再构成 Stage12 真实模型质量通过条件。部署继续使用原生 Nginx/systemd/FastAPI/PostgreSQL/pgvector/Redis，不使用 Docker Compose。

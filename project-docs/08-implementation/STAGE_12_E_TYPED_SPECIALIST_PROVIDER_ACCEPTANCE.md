@@ -6,7 +6,7 @@
 - Date: 2026-07-30
 - Scope: typed Specialist contracts and handlers, durable typed artifact ownership, sealed command inputs, Provider V2, ClaimGraph, grounded Composer and default-off shadow
 - Runtime authority: Stage11 V1 remains the only user-answer and dispatch authority
-- Deployment status: not authorized and not performed
+- Deployment status: isolated/default-off native candidate authorized after P1/P2/full regression; not performed
 - Superseding audit: `STAGE_12_COMPREHENSIVE_ARCHITECTURE_AUDIT.md`; Task 6 now supplies fresh direct evidence for the previously disproved runtime-wiring and unsupported-fact claims, but Task 7 A–F execution and final Case acceptance remain open
 - Current integrated result: the post-correction real campaign passed all final-answer/Case gates `144/144`, but Composer availability regressed to unavailable `36/48`, `47/48`, `37/48`, dominated by schema-invalid responses. The deterministic fallback is complete and safe; real Provider composition is not release-reliable.
 
@@ -80,10 +80,14 @@ Detailed evidence: `evidence/stage12-e-typed-specialist-provider-2026-07-30.md`.
 3. The real Provider benchmark contains only three focused synthetic cases. It confirms transport/schema/grounding behavior, not product-wide answer quality or variance.
 4. Retrieval V2 is still not materialized into the live answer path, so users cannot yet receive the complete A-D-E chain.
 5. Action execution, draft persistence, confirmation UI, record-version conflict at commit time and durable external side-effect controls belong to Stage12-F.
-6. Human Gold sign-off, production migration/activation and the 48-case three-round real-model campaign remain open.
+6. Human Gold is signed `48/48`, but Grounded V2 implementation, P1/P2, native server validation, P3, Telegram and final activation remain open.
 
 ## Temporary Cleanup
 
 - Local OpenRouter credentials were transient and never persisted to tracked evidence.
 - The disposable PostgreSQL database was restored to migration `0035`; no fixture business records or temporary files were retained.
 - No deployment, Telegram send, record write, draft creation or production migration occurred.
+
+## Grounded Answer V2 Reopened Gate
+
+The `144/144` returned-answer result cannot be cited as real-model acceptance because only `24/144` cases completed the real Composer path and `120/144` used deterministic fallback. The failure taxonomy contains 240 schema-invalid attempts and the total-latency P95 gate also failed. Stage12-E therefore remains `FAIL` until the approved Grounded Answer Provider V2 produces real model-authored answers and passes P1/P2/P3 with zero fallback in P3.

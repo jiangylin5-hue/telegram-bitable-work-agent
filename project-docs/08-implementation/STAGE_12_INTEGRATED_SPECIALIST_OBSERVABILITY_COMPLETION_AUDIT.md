@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `implemented-local-audit-green-awaiting-human-gold-signoff`
+- Status: `implemented-local; human-gold-complete; real-provider-release-fail`
 - Date: 2026-07-31
 - Scope: completion audit against the already-approved Stage12 correction packages 7–9 and the literal observability contract
 - Architecture decision: ISO-01 internal evaluation trace contract approved by the user on 2026-07-31; no public API, database schema, permission semantic, model/embedding profile or production activation changes
@@ -132,3 +132,9 @@ Production Case-ID/Gold-key scans are empty. The regenerated 48-Case manifest re
 
 - Twelve audit/pytest temporary trees created by this completion pass were emptied and removed. The pre-existing retained `stage12-task9b-20260731` marker remains unchanged.
 - No database, Redis, Provider session, proposal confirmation, business write, notification or Telegram resource was created.
+
+## 2026-07-31 Real Provider Reopen
+
+Human Gold subsequently reached `48/48`, and the bounded deterministic-section correction fixed collapsed final answers. The real post-correction Campaign nevertheless proves a hard failure: only `24/144` cases completed the real Composer result, `120/144` used fallback, schema-invalid attempts reached `240`, Provider unavailable mean was `0.833333`, and total-latency P95 mean was `11636.716667 ms`.
+
+The audit is therefore not green for Stage12 release. The user approved Grounded Answer Provider V2, zero-fallback real-model acceptance, Git push after P1/P2/full regression, native server candidate validation and bounded real Telegram testing. Until those direct gates pass, Stage11/r76 remains production answer authority.

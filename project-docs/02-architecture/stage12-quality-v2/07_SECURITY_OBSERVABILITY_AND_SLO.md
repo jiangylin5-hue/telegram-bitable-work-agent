@@ -105,3 +105,14 @@ total_ms
 | Stage12 总验收 | 上表全部发布门，至少三轮真实模型均值、最差值和方差 | 无 |
 
 Stage12-B 的分母必须只包含规划期可知事实；被排除的数据依赖项必须以 `deferred_to_stage12_c` 或 `deferred_to_stage12_f` 明示，不能记为通过，也不能记为 Planner 失败后用 Overall score 抵消。
+
+### 15.4 Real-model answer source hard gate
+
+Stage12 最终回答新增不可补偿的 `answer_source` 门：
+
+- `real_provider`：真实 Provider 输出通过 schema、grounding、citation、Action、权限/版本和中文校验，实际返回文本来自模型；
+- `deterministic_fallback`：安全 fallback 已返回，但不计入真实模型成功。
+
+P1 必须 `12/12 real_provider`，P2 必须冻结代表集三轮全部 `real_provider`，P3 必须 `144/144 real_provider` 且 `fallback_count=0`。`provider_http_error`、`provider_timeout`、`provider_schema_invalid`、`provider_grounding_invalid`、`provider_language_invalid` 与 `deterministic_fallback_used` 分开统计；不得再用统称 `provider_unavailable` 隐藏故障层。
+
+P1/P2 通过前不得启动 P3。P3 仍保留 P95 total latency `<= 8 s`、全部质量门和安全门。任何 fallback、未授权写入、越权引用或 Telegram 非 allowlist 发送都使 Stage12 保持 `FAIL`。

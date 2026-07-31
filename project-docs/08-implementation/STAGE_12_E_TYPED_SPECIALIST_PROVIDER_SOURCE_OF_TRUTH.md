@@ -6,9 +6,10 @@
 - Stage: Stage12-E Typed Specialist, Provider V2 and Supervisor fan-in
 - Date: 2026-07-30
 - Runtime authority: Stage11 V1 remains the only dispatch and user-answer authority until a separate activation gate
-- Deployment status: not authorized
+- Deployment status: default-off/isolated native server candidate is authorized only after P1/P2/full regression; not performed
 - Parent architecture: `project-docs/02-architecture/stage12-quality-v2/05_SPECIALISTS_PROVIDERS_AND_MODELS.md`
 - Code-level plan: `docs/superpowers/plans/2026-07-30-stage12-e-typed-specialist-provider-v2.md`
+- Grounded answer correction: `docs/superpowers/plans/2026-07-31-stage12-grounded-answer-provider-v2.md`
 - Audit correction: `STAGE_12_COMPREHENSIVE_ARCHITECTURE_AUDIT.md` proves risk/daily are unavailable in the real worker, the cited PostgreSQL test is not typed E fan-in, ClaimGraph trusts arbitrary values and Composer accepts unsupported prose
 
 ## 1. Goal
@@ -185,3 +186,7 @@ Those boundaries remain Stage12-F or final Stage12 acceptance work.
 ## 10. Current Progress
 
 The comprehensive audit reopened the earlier local acceptance, and architecture-correction Task 6 is now `implemented-local` on 2026-07-30. The real worker registry owns four distinct typed processors; durable outbox/input reconstruction, capability-specific typed output persistence, sealed value/evidence/version ClaimGraph checks, deterministic Composer validation and optional-last-failure convergence now have direct tests. Fresh evidence is E-focused `84 passed`, unit/API `2061 passed`, real local PostgreSQL typed Risk fan-in `1 passed`, and retained `google/gemini-2.5-flash` synthetic Provider smoke `3/3`. Stage11 remains runtime authority; Task 7 isolated A–F integration, E activation and final 48-case ×3 acceptance remain open. See `STAGE_12_E_TYPED_SPECIALIST_PROVIDER_ACCEPTANCE.md` and `evidence/stage12-task6-typed-worker-composer-2026-07-30.md`.
+
+## 11. 2026-07-31 Grounded Answer Supersession
+
+The bounded ordering Composer is not the final Stage12 Provider contract. The latest real campaign completed only `24/144` real Composer results and used deterministic fallback for `120/144`; 240 attempts were schema-invalid. Grounded Answer Provider V2 is the approved successor: the real model authors complete Chinese statements from sealed authorized artifacts, while the backend validates exact claim/evidence/action grounding. Fallback remains safe but fails real-model acceptance. Implementation must pass P1/P2 before any P3, and P3 requires `144/144` Provider-origin answers with zero fallback.

@@ -5,13 +5,13 @@
 ## Status
 
 - Document status: approved staged delivery and acceptance contract
-- Current Stage: correction Tasks 1–9/Task9B, HG-01–HG-10, ISO-01, Human Gold `48/48` and bounded Composer are implemented locally. The post-correction real `48 × 3` campaign passes all returned-answer/Case gates `48/48` per round and effects `0/0/0`, but overall release is `FAIL` because Composer schema availability and total-latency P95 miss unchanged gates. Another full campaign is not authorized before a focused compatibility decision.
+- Current Stage: the complete Stage12 A–F local source is checkpointed at `e30eef1`; Human Gold is `48/48`, but release remains `FAIL`. The post-correction real `48 × 3` campaign produced only `24/144` completed real Composer results, `120/144` fallback answers and `240` schema-invalid attempts. Grounded Answer Provider V2 is approved and planned; implementation/P1/P2/P3/server/Telegram evidence is pending.
 - Current completion audit: `../../08-implementation/STAGE_12_INTEGRATED_SPECIALIST_OBSERVABILITY_COMPLETION_AUDIT.md`
 - Stage12-B acceptance: `project-docs/08-implementation/STAGE_12_B_TASKSPEC_PLANNER_ACCEPTANCE.md`
 - Stage12-C code-level plan: `docs/superpowers/plans/2026-07-29-stage12-c-authorized-query-engine.md`
 - Stage12-D code-level plan: `docs/superpowers/plans/2026-07-29-stage12-d-retrieval-embedding-v2.md`
 - Stage12-D acceptance: `project-docs/08-implementation/STAGE_12_D_RETRIEVAL_EMBEDDING_ACCEPTANCE.md`
-- Approval: 用户于 2026-07-29 确认 Quality Architecture V2 方向、schema/API/权限边界和 A–F 顺序；生产部署、真实业务写入和 Telegram 发送仍需独立授权
+- Approval: 用户于 2026-07-29 确认 Quality Architecture V2；于 2026-07-31 确认 Grounded Answer Provider V2、Git push、原生服务器候选部署、真实服务器后端和受限 Telegram 测试。Stage12 全生产 workspace 激活仍需最终独立确认
 - Stage12-A code-level plan: `docs/superpowers/plans/2026-07-29-stage12-a-evaluation-v2.md`
 - Execution rule: 严格逐阶段 TDD 和逐条证据验收；发现需要偏离本文的更优方案时暂停并与用户讨论
 
@@ -331,4 +331,4 @@ mini-app/src/test/collaboration-workbench.test.tsx                 modify in Sta
 
 当前 Decision：**ARCHITECTURE APPROVED — IMPLEMENTATION ACCEPTANCE REOPENED; STAGE12 INTEGRATED QUALITY GATE NOT ACCEPTED**。
 
-执行顺序：先按 `project-docs/08-implementation/STAGE_12_COMPREHENSIVE_ARCHITECTURE_AUDIT.md` 关闭已证实的 evaluator、runtime parity、retrieval/specialist wiring、ClaimGraph/Composer、permission/field-policy 与 activation 缺口；需要改变 contract/schema/权限语义的项先取得用户确认。随后补齐真正消费 A–F typed artifacts 的隔离 runner，完成 48/48 人工 Gold sign-off，最后执行 48 Case × 3 real-LLM 总验收并报告均值、最差值和方差。现有 Stage11 trace adapter 只能做历史兼容，不能作为 Stage12 A–F 集成验收。
+执行顺序：按已批准 Grounded V2 计划先完成 fixed-array contract、grounding validator、真实 Provider adapter 和 `answer_source` trace；随后执行 12-call P1、冻结代表集三轮 P2、全量回归、push、原生服务器 default-off/allowlist candidate 和服务器后端验证。仅这些门全部通过后，才在服务器执行一次 48 Case × 3 P3；要求 `144/144 answer_source=real_provider`、zero fallback、质量/安全/SLO 全部通过。最后执行受限真实 Telegram 测试。现有 Stage11 trace adapter 和 deterministic fallback 均不能作为真实模型验收替代品。

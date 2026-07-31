@@ -38,15 +38,15 @@
 - Consumes: approved design `docs/superpowers/specs/2026-07-31-stage12-grounded-answer-provider-v2-design.md`.
 - Produces: active Stage12 truth that explicitly supersedes ordering-only Composer acceptance.
 
-- [ ] **Step 1: Record the failed real baseline exactly**
+- [x] **Step 1: Record the failed real baseline exactly**
 
 Add the immutable facts `24/144` completed real Composer results, `120/144` fallback cases, `240` schema-invalid attempts, Provider-unavailable mean `0.833333`, and total-latency P95 mean `11636.716667 ms`.
 
-- [ ] **Step 2: Freeze the new contract and gates**
+- [x] **Step 2: Freeze the new contract and gates**
 
 Document `GroundedAnswerProviderRequestV2`, `GroundedAnswerPlanV2`, split failure taxonomy, `answer_source`, P0/P1/P2/P3, zero-fallback Stage12 acceptance and native-only deployment.
 
-- [ ] **Step 3: Prove no contradictory active wording remains**
+- [x] **Step 3: Prove no contradictory active wording remains**
 
 Run:
 
@@ -56,7 +56,7 @@ rg -n "ordering-only|connector_by_handle|fallback.*PASS|Docker Compose|24/144|Gr
 
 Expected: ordering-only material is marked historical/superseded; no document claims fallback proves real-model quality.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add -- project-docs/02-architecture/stage12-quality-v2 project-docs/08-implementation/STAGE_12_E_TYPED_SPECIALIST_PROVIDER_SOURCE_OF_TRUTH.md project-docs/08-implementation/STAGE_12_E_TYPED_SPECIALIST_PROVIDER_ACCEPTANCE.md project-docs/08-implementation/STAGE_12_INTEGRATED_SPECIALIST_OBSERVABILITY_COMPLETION_AUDIT.md

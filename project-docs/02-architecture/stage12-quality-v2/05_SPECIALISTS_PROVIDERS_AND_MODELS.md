@@ -296,3 +296,22 @@ $.assignments.priority: value "urgent" not in allowed enum
 ```
 
 Repair 仍失败时保留具体失败类并进入 degraded/denied，不再进行第三次“碰运气”调用。
+
+## 13.6 Grounded Answer Provider V2（2026-07-31 修正）
+
+`ComposerSectionOrderingPlanV1` 只允许真实模型重排 section handle 和选择 connector，不能证明真实模型生成最终回答。后修正真实 Campaign 中，144 个 Case 虽均由确定性 fallback 保住最终答案，但只有 `24/144` 得到 completed real Composer result；其余 120 个 Case 各耗尽两次 schema-invalid attempt，共 `240` 次 `provider_schema_invalid`。该结果是 Stage12 release hard failure。
+
+用户已确认以 `Grounded Answer Provider V2` 取代 ordering-only Composer 作为最终验收路径：
+
+```text
+TaskSpecV2 + authorized structured results + typed Specialist artifacts
+-> sealed ClaimGraphV1 + evidence/version/action status
+-> fixed-array GroundedAnswerProviderRequestV2
+-> real Provider-authored Chinese sections/statements
+-> schema/reference/citation/canonical-atom/action/permission validation
+-> answer_source=real_provider
+```
+
+Provider output 不再使用动态 key map；每个 statement 必须声明 `statement_kind`、`text`、`claim_handles[]`、`evidence_handles[]` 和 `action_handles[]`。模型负责完整中文分析与表达；表格事实、Join、Aggregate、权限、版本和 Action authority 仍由结构化引擎和后端控制。
+
+确定性 fallback 继续作为运行时安全路径，但必须标记 `answer_source=deterministic_fallback`，且在 P1/P2/P3 真实模型验收中一律计为失败。实施真源为 `docs/superpowers/specs/2026-07-31-stage12-grounded-answer-provider-v2-design.md` 和 `docs/superpowers/plans/2026-07-31-stage12-grounded-answer-provider-v2.md`。
