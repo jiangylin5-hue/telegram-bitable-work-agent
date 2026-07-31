@@ -200,6 +200,26 @@ def test_gateway_repairs_schema_once_without_new_evidence() -> None:
     assert "validation_path" in repair_messages[-1]["content"]
 
 
+def test_gateway_repairs_grounding_failure_once_inside_same_deadline() -> None:
+    client = _Client([_response("{}"), _response("{}")])
+
+    def invalid_grounding(_content):
+        raise ProviderValidationError(
+            "provider_grounding_invalid", "$.sections.0.statements.0"
+        )
+
+    result = _gateway(client).invoke(
+        role="risk",
+        messages=({"role": "user", "content": "bounded"},),
+        response_schema={"type": "object"},
+        validate=invalid_grounding,
+        deadline_at=NOW + timedelta(seconds=30),
+    )
+
+    assert result.failure_code == "provider_grounding_invalid"
+    assert len(client.requests) == 2
+
+
 def test_gateway_does_not_retry_permission_or_exhausted_deadline() -> None:
     client = _Client([_response('{"answer":"建议。","evidence_ids":[]}')])
 

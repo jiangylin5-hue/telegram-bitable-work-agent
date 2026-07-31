@@ -375,6 +375,7 @@ def _repairable(code: ProviderFailureCode) -> bool:
     return code in {
         "provider_schema_invalid",
         "provider_semantic_invalid",
+        "provider_grounding_invalid",
         "provider_language_invalid",
         "provider_citation_invalid",
     }

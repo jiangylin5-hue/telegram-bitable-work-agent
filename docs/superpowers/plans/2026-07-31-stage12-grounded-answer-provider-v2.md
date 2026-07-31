@@ -245,7 +245,7 @@ git commit -m "feat: validate grounded answer output"
 - Consumes: `ModelGatewayV1`, `GroundedAnswerProviderRequestV2`, strict response schema and validator.
 - Produces: `GroundedAnswerProviderAdapterV2`, exact attempt observations, sanitized `ProviderResponseFingerprintV1` records.
 
-- [ ] **Step 1: Write RED tests for request shape and diagnostics**
+- [x] **Step 1: Write RED tests for request shape and diagnostics**
 
 Assert `response_format.type=json_schema`, `strict=true`, `provider.require_parameters=true`, model-authored answer instructions, no dynamic response map, and no Gold/hidden fields.
 
@@ -261,26 +261,26 @@ def test_schema_failure_records_shape_without_raw_output() -> None:
     assert "wrong" not in fingerprint.model_dump_json()
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `cd backend; pytest -q tests/unit/test_agent_grounded_answer_provider.py`
 
-- [ ] **Step 3: Implement adapter and in-memory repair**
+- [x] **Step 3: Implement adapter and in-memory repair**
 
 Allow at most two attempts under the existing UTC deadline. Raw synthetic output may exist only inside the validation/repair call stack; persisted diagnostics contain paths/types/keys/counts/length/hash/tokens only.
 
-- [ ] **Step 4: Split failure taxonomy**
+- [x] **Step 4: Split failure taxonomy**
 
 Preserve transport codes. Map Pydantic failure to `provider_schema_invalid`, grounding/reference/atom failure to `provider_grounding_invalid`, and Chinese policy failure to `provider_language_invalid`.
 
-- [ ] **Step 5: Run GREEN and gateway regression**
+- [x] **Step 5: Run GREEN and gateway regression**
 
 ```powershell
 cd backend
 pytest -q tests/unit/test_agent_grounded_answer_provider.py tests/unit/test_agent_model_gateway.py tests/unit/test_agent_provider_validation.py
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add -- backend/app/services/agent_grounded_answer_provider.py backend/app/services/agent_model_gateway.py backend/tests/unit/test_agent_grounded_answer_provider.py backend/tests/unit/test_agent_model_gateway.py
