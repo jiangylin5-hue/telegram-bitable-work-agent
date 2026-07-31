@@ -105,4 +105,3 @@ total_ms
 | Stage12 总验收 | 上表全部发布门，至少三轮真实模型均值、最差值和方差 | 无 |
 
 Stage12-B 的分母必须只包含规划期可知事实；被排除的数据依赖项必须以 `deferred_to_stage12_c` 或 `deferred_to_stage12_f` 明示，不能记为通过，也不能记为 Planner 失败后用 Overall score 抵消。
-

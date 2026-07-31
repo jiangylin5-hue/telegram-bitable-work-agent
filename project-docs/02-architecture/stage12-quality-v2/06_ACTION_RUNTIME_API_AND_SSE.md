@@ -234,5 +234,3 @@ run.failed
 ```
 
 SSE 不返回原始 Prompt、隐藏字段、Provider raw response 或内部 stack trace。客户端用 `Last-Event-ID` 恢复；terminal event 之后同一 run 不再产生新的业务事件，只允许审计/清理事件进入内部流。
-
-

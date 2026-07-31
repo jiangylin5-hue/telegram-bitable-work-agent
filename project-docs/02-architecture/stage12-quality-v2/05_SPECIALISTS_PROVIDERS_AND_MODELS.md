@@ -296,5 +296,3 @@ $.assignments.priority: value "urgent" not in allowed enum
 ```
 
 Repair 仍失败时保留具体失败类并进入 degraded/denied，不再进行第三次“碰运气”调用。
-
-
