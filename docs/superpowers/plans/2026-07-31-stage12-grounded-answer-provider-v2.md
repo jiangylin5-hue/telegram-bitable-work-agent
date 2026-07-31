@@ -195,7 +195,7 @@ git commit -m "feat: project grounded answer requests"
 - Consumes: sealed `GroundedAnswerProviderRequestV2` and Provider `GroundedAnswerPlanV2`.
 - Produces: `validate_grounded_answer_plan(request: GroundedAnswerProviderRequestV2, plan: GroundedAnswerPlanV2) -> None`, `render_grounded_answer(request: GroundedAnswerProviderRequestV2, plan: GroundedAnswerPlanV2, graph: ClaimGraphV1, presentation: ComposerPresentationContextV1) -> GroundedComposerResultV2`.
 
-- [ ] **Step 1: Write one RED test per invariant**
+- [x] **Step 1: Write one RED test per invariant**
 
 Cover unknown/duplicate references, citation under/over-claim, invented entity/code/number/date/currency/percentage/status atoms, executed-Action wording against pending status, missing required objective, invalid limitation, non-Chinese output, scope/policy/version drift and prohibited internal handles in visible text.
 
@@ -207,26 +207,26 @@ def test_valid_claim_ids_cannot_cover_invented_budget_text() -> None:
     assert captured.value.code == "provider_grounding_invalid"
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `cd backend; pytest -q tests/unit/test_agent_grounded_answer_validation.py`
 
-- [ ] **Step 3: Implement ordered validators**
+- [x] **Step 3: Implement ordered validators**
 
 Validate schema, reference closure, exact citation union, canonical atom allowlist, Action status language, permission/version binding, objective coverage and language. Do not use only ID-subset checks or completion-verb regex.
 
-- [ ] **Step 4: Implement exact receipt rendering**
+- [x] **Step 4: Implement exact receipt rendering**
 
 Render Provider-authored statement text in Provider section order, calculate answer/receipt hashes, preserve claim/evidence/action edges, and set `answer_source="real_provider"`, `provider_result_status="completed"`.
 
-- [ ] **Step 5: Run GREEN and historical exploit regression**
+- [x] **Step 5: Run GREEN and historical exploit regression**
 
 ```powershell
 cd backend
 pytest -q tests/unit/test_agent_grounded_answer_validation.py tests/unit/test_agent_composer_v2.py -k "unsupported or bankruptcy or grounded or provider"
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add -- backend/app/services/agent_grounded_answer_validation.py backend/tests/unit/test_agent_grounded_answer_validation.py
