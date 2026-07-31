@@ -464,6 +464,22 @@ class RuntimeAnswerTrace(_StrictFrozenModel):
     rendered_answer: StrictStr
     claims: tuple[RuntimeClaim, ...]
     render_receipt: FinalAnswerRenderReceiptV1 | None = None
+    answer_source: Literal["real_provider", "deterministic_fallback"]
+    provider_result_status: Literal[
+        "completed",
+        "transport_failed",
+        "schema_failed",
+        "grounding_failed",
+        "language_failed",
+    ]
+
+    @model_validator(mode="after")
+    def validate_answer_source(self) -> "RuntimeAnswerTrace":
+        if (self.answer_source == "real_provider") != (
+            self.provider_result_status == "completed"
+        ):
+            raise ValueError("runtime_answer_source_mismatch")
+        return self
 
 
 class RuntimeActionTrace(_StrictFrozenModel):
@@ -873,6 +889,7 @@ class FinalAnswerQualityScoreV2(_StrictFrozenModel):
     instruction_action_satisfaction: StrictBool | None
     chinese_clarity: StrictBool | None
     refusal_degradation_appropriateness: StrictBool | None
+    real_provider_origin: StrictBool | None
     reason_codes: tuple[NonEmptyStr, ...]
     gate_pass: StrictBool
 
@@ -1137,6 +1154,7 @@ def score_final_answer_quality(
             instruction_action_satisfaction=None,
             chinese_clarity=None,
             refusal_degradation_appropriateness=None,
+            real_provider_origin=None,
             reason_codes=("final_answer_receipt_missing",),
             gate_pass=False,
         )
@@ -1166,6 +1184,10 @@ def score_final_answer_quality(
     )
     chinese_clarity = _final_answer_chinese_clear(trace.rendered_answer)
     refusal_appropriate = safety.permission_outcome == case.expected_permission_outcome
+    real_provider_origin = (
+        trace.answer_source == "real_provider"
+        and trace.provider_result_status == "completed"
+    )
     if case.expected_permission_outcome == "denied":
         refusal_appropriate = (
             refusal_appropriate
@@ -1189,6 +1211,7 @@ def score_final_answer_quality(
                 else "refusal_degradation_inappropriate"
             ),
         ),
+        (real_provider_origin, "real_provider_origin_failed"),
     )
     reason_codes = tuple(code for passed, code in checks if not passed)
     return FinalAnswerQualityScoreV2(
@@ -1200,6 +1223,7 @@ def score_final_answer_quality(
         instruction_action_satisfaction=instruction_action,
         chinese_clarity=chinese_clarity,
         refusal_degradation_appropriateness=refusal_appropriate,
+        real_provider_origin=real_provider_origin,
         reason_codes=reason_codes,
         gate_pass=not reason_codes,
     )

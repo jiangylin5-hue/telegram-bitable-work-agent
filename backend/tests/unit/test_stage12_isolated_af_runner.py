@@ -8,8 +8,13 @@ from app.schemas.agent_specialist_results import (
     ProviderAttemptObservationV1,
     specialist_payload_sha256,
 )
-from app.services.agent_composer_v2 import (
-    ComposerSectionOrderingPlanV1,
+from app.schemas.agent_grounded_answer_v2 import (
+    GroundedAnswerPlanV2,
+    GroundedAnswerSectionV2,
+    GroundedAnswerStatementV2,
+)
+from app.services.agent_grounded_answer_provider import (
+    GroundedAnswerProviderInvocationError,
 )
 from app.services.agent_specialists_v2.daily import DailySpecialistV2
 from app.services.agent_specialists_v2.risk import RiskSpecialistV2
@@ -39,13 +44,13 @@ def _execute_case(case_id: str, *, materialize_actions: bool = False):
     return IsolatedAFExecutor()(request)
 
 
-class _ObservedComposerProvider:
+class _ObservedGroundedAnswerProvider:
     def __init__(self) -> None:
         self.call_count = 0
         values = {
             "version": "provider-attempt.v1",
             "role": "composer",
-            "profile_id": "composer.zh.baseline.v1",
+            "profile_id": "composer.zh.grounded.v2",
             "provider": "openrouter-compatible",
             "model_id": "google/gemini-2.5-flash",
             "attempt": 1,
@@ -53,7 +58,7 @@ class _ObservedComposerProvider:
             "failure_code": None,
             "latency_ms": 11,
             "input_tokens": 25,
-            "output_tokens": 9,
+            "output_tokens": 30,
             "repair": False,
         }
         values["observation_hash"] = specialist_payload_sha256(values)
@@ -61,34 +66,44 @@ class _ObservedComposerProvider:
 
     def __call__(self, request):
         self.call_count += 1
-        handles = tuple(item.section_handle for item in request.candidates)
-        return ComposerSectionOrderingPlanV1(
-            ordered_section_handles=handles,
-            connector_by_handle={
-                item.section_handle: (
-                    "direct"
-                    if index == 0
-                    else next(
-                        code
-                        for code in item.allowed_connector_codes
-                        if code != "direct"
-                    )
-                )
-                for index, item in enumerate(request.candidates)
-            },
+        statements = tuple(
+            GroundedAnswerStatementV2(
+                statement_kind="fact",
+                text=(
+                    f"{claim.subject_label} 的 {claim.predicate_label}为"
+                    f" {claim.value_text}。"
+                ),
+                claim_handles=(claim.claim_handle,),
+                evidence_handles=claim.evidence_handles,
+                action_handles=(),
+            )
+            for claim in request.claims
+            if claim.status == "valid"
+        )
+        return GroundedAnswerPlanV2(
+            sections=(
+                GroundedAnswerSectionV2(
+                    section_kind="answer",
+                    heading="模型结论",
+                    statements=statements,
+                ),
+            )
         )
 
 
-class _InvalidOrderingComposerProvider:
+class _SchemaFailingGroundedAnswerProvider:
+    observations: tuple[ProviderAttemptObservationV1, ...] = ()
+    failure_code = "provider_schema_invalid"
+
+    def __call__(self, _request):
+        raise GroundedAnswerProviderInvocationError("provider_schema_invalid")
+
+
+class _ProgrammingBugGroundedAnswerProvider:
     observations: tuple[ProviderAttemptObservationV1, ...] = ()
 
-    def __call__(self, request):
-        first = request.candidates[0].section_handle
-        unknown = "section:sha256:" + "f" * 64
-        return ComposerSectionOrderingPlanV1.model_construct(
-            ordered_section_handles=(first, unknown),
-            connector_by_handle={first: "direct", unknown: "however"},
-        )
+    def __call__(self, _request):
+        raise RuntimeError("programming_bug")
 
 
 def test_isolated_runner_rejects_gold_action_target_field_and_value_hints() -> None:
@@ -157,7 +172,7 @@ def test_isolated_runner_emits_real_composer_provider_metadata() -> None:
         runtime_context={"workspace_mode": "fresh_in_memory"},
         materialize_actions=False,
     )
-    provider = _ObservedComposerProvider()
+    provider = _ObservedGroundedAnswerProvider()
     executor = IsolatedAFExecutor(composer_provider=provider)
 
     trace = executor(request)
@@ -166,14 +181,76 @@ def test_isolated_runner_emits_real_composer_provider_metadata() -> None:
     assert trace.provider is not None
     assert trace.provider.provider == "openrouter-compatible"
     assert trace.provider.model == "google/gemini-2.5-flash"
-    assert trace.provider.profile == "composer.zh.baseline.v1"
+    assert trace.provider.profile == "composer.zh.grounded.v2"
     assert provider.call_count == 1
     assert observation.provider_attempts == provider.observations
     assert observation.provider_attempts[0].latency_ms == 11
 
 
+def test_real_provider_answer_is_the_scored_runtime_answer() -> None:
+    case = _case("join_01")
+    request = build_execution_request(
+        case,
+        round_id="round-01",
+        runtime_context={"workspace_mode": "fresh_in_memory"},
+        materialize_actions=False,
+    )
+    provider = _ObservedGroundedAnswerProvider()
+
+    trace = IsolatedAFExecutor(composer_provider=provider)(request)
+    score = score_case_v2(case, trace)
+
+    assert trace.answer.answer_source == "real_provider"
+    assert trace.answer.provider_result_status == "completed"
+    assert "模型结论" in trace.answer.rendered_answer
+    assert provider.call_count == 1
+    assert score.final_answer.real_provider_origin is True
+
+
+def test_fallback_is_safe_but_fails_real_model_gate() -> None:
+    case = _case("join_01")
+    request = build_execution_request(
+        case,
+        round_id="round-01",
+        runtime_context={"workspace_mode": "fresh_in_memory"},
+        materialize_actions=False,
+    )
+
+    trace = IsolatedAFExecutor(
+        composer_provider=_SchemaFailingGroundedAnswerProvider()
+    )(request)
+    score = score_case_v2(case, trace)
+
+    assert trace.answer.rendered_answer
+    assert trace.answer.answer_source == "deterministic_fallback"
+    assert trace.answer.provider_result_status == "schema_failed"
+    assert score.final_answer.real_provider_origin is False
+    assert "real_provider_origin_failed" in score.final_answer.reason_codes
+    assert score.final_answer.gate_pass is False
+    assert score.release_gate_pass is False
+
+
+def test_unexpected_provider_programming_error_is_not_hidden_by_fallback() -> None:
+    case = _case("join_01")
+    request = build_execution_request(
+        case,
+        round_id="round-01",
+        runtime_context={"workspace_mode": "fresh_in_memory"},
+        materialize_actions=False,
+    )
+    executor = IsolatedAFExecutor(
+        composer_provider=_ProgrammingBugGroundedAnswerProvider()
+    )
+
+    executor(request)
+    observation = executor.observations[request["runtime_context"]["execution_id"]]
+
+    assert observation.status == "failed"
+    assert observation.failure_code == "programming_bug"
+
+
 @pytest.mark.parametrize("case_id", ("mixed_02", "mixed_08"))
-def test_invalid_composer_ordering_keeps_complete_safe_trace(case_id: str) -> None:
+def test_invalid_grounded_provider_keeps_complete_safe_trace(case_id: str) -> None:
     case = _case(case_id)
     request = build_execution_request(
         case,
@@ -181,7 +258,9 @@ def test_invalid_composer_ordering_keeps_complete_safe_trace(case_id: str) -> No
         runtime_context={"workspace_mode": "fresh_in_memory"},
         materialize_actions=False,
     )
-    executor = IsolatedAFExecutor(composer_provider=_InvalidOrderingComposerProvider())
+    executor = IsolatedAFExecutor(
+        composer_provider=_SchemaFailingGroundedAnswerProvider()
+    )
 
     trace = executor(request)
     observation = executor.observations[request["runtime_context"]["execution_id"]]
@@ -191,6 +270,8 @@ def test_invalid_composer_ordering_keeps_complete_safe_trace(case_id: str) -> No
     assert trace.query.observation_status == "observed"
     assert trace.answer.observation_status == "observed"
     assert trace.answer.render_receipt is not None
+    assert trace.answer.answer_source == "deterministic_fallback"
+    assert trace.answer.provider_result_status == "schema_failed"
     assert trace.safety.unauthorized_effect_count == 0
     assert trace.safety.external_send_count == 0
 
@@ -314,7 +395,7 @@ def test_isolated_runner_emits_complete_approved_observability_ledger() -> None:
         runtime_context={"workspace_mode": "fresh_in_memory"},
         materialize_actions=False,
     )
-    provider = _ObservedComposerProvider()
+    provider = _ObservedGroundedAnswerProvider()
     executor = IsolatedAFExecutor(composer_provider=provider)
 
     trace = executor(request)
@@ -332,7 +413,7 @@ def test_isolated_runner_emits_complete_approved_observability_ledger() -> None:
     assert ledger.relation_traversal_count == len(trace.query.relation_paths)
     assert ledger.provider_attempt_count == 1
     assert ledger.input_tokens == 25
-    assert ledger.output_tokens == 9
+    assert ledger.output_tokens == 30
     assert sum(ledger.objective_status_counts.values()) == len(trace.planner.objectives)
     assert sum(ledger.action_slot_status_counts.values()) == len(trace.actions)
     assert ledger.scope_revalidation_count >= 2
@@ -861,7 +942,7 @@ def test_isolated_campaign_writes_atomic_sanitized_round_and_aggregate_artifacts
     assert not tuple(tmp_path.glob("*.tmp"))
 
 
-def test_full_final_answer_gate_covers_all_48_cases_and_total_latency() -> None:
+def test_deterministic_fallback_cannot_satisfy_48_case_release_gate() -> None:
     executor = IsolatedAFExecutor()
     failures = {}
 
@@ -892,7 +973,10 @@ def test_full_final_answer_gate_covers_all_48_cases_and_total_latency() -> None:
             failures[case.case_id] = failed_dimensions
         assert "total" in trace.latency.segments_ms
 
-    assert failures == {}
+    assert failures == {
+        case.case_id: ("final_answer", "release")
+        for case in build_stage12_truth_cases()
+    }
     assert len(executor.observations) == 48
     assert (
         sum(item.confirmed_action_count for item in executor.observations.values()) == 0

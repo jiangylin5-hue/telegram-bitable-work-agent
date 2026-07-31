@@ -17,12 +17,33 @@ from scripts.stage12_quality_evaluation import (
     ExpectedQueryResult,
     ExpectedTaskSpec,
     GoldAudit,
+    RuntimeAnswerTrace,
     RuntimeQueryTrace,
     RuntimeRetrievalTrace,
     RuntimeSpecialistTraceV1,
     RuntimeTraceV2,
     canonical_sha256,
 )
+
+
+@pytest.mark.parametrize(
+    ("answer_source", "provider_result_status"),
+    (
+        ("real_provider", "schema_failed"),
+        ("deterministic_fallback", "completed"),
+    ),
+)
+def test_runtime_answer_source_must_match_provider_status(
+    answer_source: str, provider_result_status: str
+) -> None:
+    with pytest.raises(ValidationError, match="runtime_answer_source_mismatch"):
+        RuntimeAnswerTrace(
+            observation_status="observed",
+            rendered_answer="安全回答。",
+            claims=(),
+            answer_source=answer_source,
+            provider_result_status=provider_result_status,
+        )
 
 
 def _objective(objective_id: str = "obj-01") -> ExpectedObjective:
@@ -294,6 +315,8 @@ def test_runtime_trace_does_not_derive_candidates_from_answer() -> None:
             "observation_status": "observed",
             "rendered_answer": "结果为 MT-001。",
             "claims": (),
+            "answer_source": "real_provider",
+            "provider_result_status": "completed",
         },
         actions=(),
         safety={

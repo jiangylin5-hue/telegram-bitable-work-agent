@@ -92,6 +92,8 @@ def test_final_answer_denial_false_success_fails_non_compensable_gate() -> None:
             "observation_status": "observed",
             "rendered_answer": answer,
             "claims": (),
+            "answer_source": "real_provider",
+            "provider_result_status": "completed",
             "render_receipt": _receipt(
                 answer,
                 objective_ids=tuple(
@@ -188,6 +190,8 @@ def test_final_answer_wrong_claim_to_evidence_edge_fails_citation_gate() -> None
         observation_status="observed",
         rendered_answer=answer,
         claims=claims,
+        answer_source="real_provider",
+        provider_result_status="completed",
         render_receipt=_receipt(
             answer,
             objective_ids=tuple(
@@ -227,6 +231,8 @@ def test_final_answer_missing_required_action_slot_fails_instruction_gate() -> N
         observation_status="observed",
         rendered_answer=answer,
         claims=(),
+        answer_source="real_provider",
+        provider_result_status="completed",
         render_receipt=_receipt(
             answer,
             objective_ids=tuple(
@@ -317,6 +323,8 @@ def test_final_answer_wrong_relation_path_fails_relation_aggregate_gate() -> Non
         observation_status="observed",
         rendered_answer=answer,
         claims=claims,
+        answer_source="real_provider",
+        provider_result_status="completed",
         render_receipt=_receipt(
             answer,
             objective_ids=tuple(
@@ -367,6 +375,8 @@ def test_final_answer_unreadable_or_internal_output_fails_chinese_clarity(
         observation_status="observed",
         rendered_answer=answer,
         claims=(),
+        answer_source="real_provider",
+        provider_result_status="completed",
         render_receipt=_receipt(
             answer,
             objective_ids=tuple(
@@ -410,6 +420,8 @@ def test_fully_valid_final_answer_passes_all_seven_dimensions() -> None:
         observation_status="observed",
         rendered_answer=answer,
         claims=(),
+        answer_source="real_provider",
+        provider_result_status="completed",
         render_receipt=_receipt(
             answer,
             objective_ids=tuple(
@@ -488,6 +500,8 @@ def test_answer_uses_typed_claim_evidence_and_required_record_coverage() -> None
     trace = RuntimeAnswerTrace(
         observation_status="observed",
         rendered_answer="正文不参与评分，即使这里没有记录编号。",
+        answer_source="real_provider",
+        provider_result_status="completed",
         claims=(
             RuntimeClaim(
                 claim_id="claim-1",
@@ -522,6 +536,8 @@ def test_answer_unsupported_claim_is_not_hidden_by_non_empty_text() -> None:
     trace = RuntimeAnswerTrace(
         observation_status="observed",
         rendered_answer="这是一段很长但没有可靠依据的答案。",
+        answer_source="real_provider",
+        provider_result_status="completed",
         claims=(
             RuntimeClaim(
                 claim_id="claim-unsupported",
@@ -573,6 +589,8 @@ def test_answer_rejects_wrong_value_even_when_evidence_id_is_allowed() -> None:
     trace = RuntimeAnswerTrace(
         observation_status="observed",
         rendered_answer="MT-004 已完成。",
+        answer_source="real_provider",
+        provider_result_status="completed",
         claims=(
             RuntimeClaim(
                 claim_id="claim-wrong-value",
@@ -630,6 +648,8 @@ def test_answer_typed_aggregate_mismatch_fails_independently() -> None:
             observation_status="observed",
             rendered_answer="聚合摘要",
             claims=claims,
+            answer_source="real_provider",
+            provider_result_status="completed",
         ),
         facts=(),
     )

@@ -126,6 +126,8 @@ def collect_stage11_runtime_trace(
             observation_status="observed" if answer_observed else "not_observed",
             rendered_answer=answer_value if isinstance(answer_value, str) else "",
             claims=(),
+            answer_source="deterministic_fallback",
+            provider_result_status="transport_failed",
         ),
         actions=action_traces,
         safety=RuntimeSafetyTrace(

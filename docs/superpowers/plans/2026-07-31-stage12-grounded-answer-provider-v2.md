@@ -300,7 +300,7 @@ git commit -m "feat: call grounded answer provider"
 - Consumes: request builder, V2 adapter, validator/renderer and existing deterministic Composer.
 - Produces: runtime trace with `answer_source`, `provider_result_status`, provider/validation latency and exact fallback code.
 
-- [ ] **Step 1: Write RED trace tests**
+- [x] **Step 1: Write RED trace tests**
 
 ```python
 def test_real_provider_answer_is_the_scored_runtime_answer() -> None:
@@ -317,26 +317,26 @@ def test_fallback_is_safe_but_fails_real_model_gate() -> None:
     assert score_final_answer(trace).real_provider_gate_pass is False
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `cd backend; pytest -q tests/unit/test_stage12_isolated_af_runner.py tests/unit/test_stage12_quality_evaluation_contracts.py`
 
-- [ ] **Step 3: Replace ordering-only call in the isolated runner**
+- [x] **Step 3: Replace ordering-only call in the isolated runner**
 
 Build the grounded request after ClaimGraph creation, invoke V2 Provider, validate/render the actual model text, and use deterministic Composer only inside an explicit fallback branch.
 
-- [ ] **Step 4: Update scoring**
+- [x] **Step 4: Update scoring**
 
 Score the actual returned answer, retain final-answer quality metrics, and add a non-compensable real-Provider-origin gate. Do not give fallback a passing Provider score.
 
-- [ ] **Step 5: Run GREEN and all 48 deterministic traces**
+- [x] **Step 5: Run GREEN and all 48 deterministic traces**
 
 ```powershell
 cd backend
 pytest -q tests/unit/test_stage12_isolated_af_runner.py tests/unit/test_stage12_quality_evaluation_contracts.py tests/unit/test_stage12_quality_answer_action_safety_scores.py
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add -- backend/scripts/stage12_isolated_af_runner.py backend/scripts/stage12_quality_evaluation.py backend/tests/unit/test_stage12_isolated_af_runner.py backend/tests/unit/test_stage12_quality_evaluation_contracts.py backend/tests/unit/test_stage12_quality_answer_action_safety_scores.py

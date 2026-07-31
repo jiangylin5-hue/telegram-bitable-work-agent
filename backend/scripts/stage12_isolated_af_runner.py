@@ -27,6 +27,10 @@ from app.schemas.agent_specialist_results import (
     StructuredFactSetV1,
     specialist_payload_sha256,
 )
+from app.schemas.agent_grounded_answer_v2 import (
+    GroundedAnswerPlanV2,
+    GroundedAnswerProviderRequestV2,
+)
 from app.services.agent_claim_graph import (
     ActionDependencyV1,
     ClaimInputV1,
@@ -36,9 +40,15 @@ from app.services.agent_claim_graph import (
 from app.services.agent_composer_v2 import (
     ComposerObjectiveContextV1,
     ComposerPresentationContextV1,
-    ComposerSectionOrderingPlanV1,
-    ComposerSectionOrderingRequestV1,
     compose_claim_graph,
+)
+from app.services.agent_grounded_answer_request import build_grounded_answer_request
+from app.services.agent_grounded_answer_provider import (
+    GroundedAnswerProviderInvocationError,
+)
+from app.services.agent_grounded_answer_validation import (
+    ProviderValidationError as GroundedAnswerValidationError,
+    render_grounded_answer,
 )
 from app.services.agent_event_runtime import InMemoryAgentEventRuntimeUnitOfWork
 from app.services.agent_field_policy_v2 import build_stage12_field_policy_v2
@@ -236,17 +246,17 @@ def validate_isolated_execution_request(request: object) -> dict[str, object]:
     }
 
 
-class _ComposerOrderingProvider(Protocol):
+class _GroundedAnswerProvider(Protocol):
     observations: tuple[ProviderAttemptObservationV1, ...]
 
     def __call__(
-        self, request: ComposerSectionOrderingRequestV1
-    ) -> ComposerSectionOrderingPlanV1: ...
+        self, request: GroundedAnswerProviderRequestV2
+    ) -> GroundedAnswerPlanV2: ...
 
 
 class IsolatedAFExecutor:
     def __init__(
-        self, *, composer_provider: _ComposerOrderingProvider | None = None
+        self, *, composer_provider: _GroundedAnswerProvider | None = None
     ) -> None:
         self.observations: dict[str, IsolatedAFRunObservationV1] = {}
         self._composer_provider = composer_provider
@@ -322,7 +332,7 @@ def _execute_pipeline(
     execution_id: str,
     materialize_actions: bool,
     stages: list[StageObservationV1],
-    composer_provider: _ComposerOrderingProvider | None = None,
+    composer_provider: _GroundedAnswerProvider | None = None,
     diagnostics: _PipelineDiagnostics,
 ) -> RuntimeTraceV2:
     admission_started = perf_counter_ns()
@@ -645,12 +655,43 @@ def _execute_pipeline(
         fixture,
         query_trace,
     )
-    composer = compose_claim_graph(
-        graph,
-        provider=composer_provider,
-        authorized_schema=(snapshot if composer_provider is not None else None),
-        presentation=presentation,
-    )
+    answer_source = "deterministic_fallback"
+    provider_result_status = "transport_failed"
+    composer = None
+    if composer_provider is not None:
+        try:
+            grounded_request = build_grounded_answer_request(
+                query=query,
+                task_spec=plan_artifact.task_spec,
+                graph=graph,
+                authorized_schema=snapshot,
+                presentation=presentation,
+                specialist_findings=(*fact_sets, *risk_sets, *daily_briefs),
+            )
+            grounded_plan = composer_provider(grounded_request)
+            composer = render_grounded_answer(
+                grounded_request,
+                grounded_plan,
+                graph=graph,
+                presentation=presentation,
+                provider_call_count=max(
+                    1, len(getattr(composer_provider, "observations", ()))
+                ),
+            )
+        except (
+            GroundedAnswerProviderInvocationError,
+            GroundedAnswerValidationError,
+        ) as exc:
+            provider_result_status = _provider_result_status(exc)
+        except ValueError as exc:
+            if not str(exc).startswith("grounded_request_"):
+                raise
+            provider_result_status = "grounding_failed"
+        else:
+            answer_source = "real_provider"
+            provider_result_status = "completed"
+    if composer is None:
+        composer = compose_claim_graph(graph, presentation=presentation)
     diagnostics.fan_in_ms = _elapsed_ms(claim_started)
     stages.append(
         _observation(
@@ -680,6 +721,8 @@ def _execute_pipeline(
             rendered_answer=composer.answer,
             claims=_runtime_claims(graph, uow, fixture, query_trace),
             render_receipt=composer.render_receipt,
+            answer_source=answer_source,
+            provider_result_status=provider_result_status,
         ),
         actions=actions,
         safety=RuntimeSafetyTrace(
@@ -1770,6 +1813,8 @@ def _composer_presentation(query, task_spec, graph, uow, fixture, query_trace):
                 predicate_labels[claim.predicate] = field_key_by_id.get(
                     field_id, "已授权字段"
                 )
+        elif claim.predicate == "risk_severity":
+            predicate_labels[claim.predicate] = "风险等级"
     optional_targets = {
         item.to_objective_id for item in task_spec.dependency_edges if not item.required
     }
@@ -2394,7 +2439,7 @@ def _single_slot_target_code(slot) -> str | None:
 
 
 def _provider_trace(
-    composer_provider: _ComposerOrderingProvider | None,
+    composer_provider: _GroundedAnswerProvider | None,
 ) -> ProviderTrace:
     if composer_provider is None:
         return ProviderTrace(
@@ -2415,6 +2460,21 @@ def _provider_trace(
         model="unobserved",
         profile="composer.zh.baseline.v1",
     )
+
+
+def _provider_result_status(exc: Exception) -> str:
+    code = getattr(exc, "code", None)
+    if code == "provider_schema_invalid":
+        return "schema_failed"
+    if code in {
+        "provider_grounding_invalid",
+        "provider_semantic_invalid",
+        "provider_citation_invalid",
+    } or str(exc).startswith("grounded_request_"):
+        return "grounding_failed"
+    if code == "provider_language_invalid":
+        return "language_failed"
+    return "transport_failed"
 
 
 def _failed_trace(execution_id: str, round_id: str) -> RuntimeTraceV2:
@@ -2448,6 +2508,8 @@ def _failed_trace(execution_id: str, round_id: str) -> RuntimeTraceV2:
             observation_status="observed",
             rendered_answer="当前任务已安全终止，未执行任何动作。",
             claims=(),
+            answer_source="deterministic_fallback",
+            provider_result_status="transport_failed",
         ),
         actions=(),
         safety=RuntimeSafetyTrace(
@@ -2610,7 +2672,7 @@ def run_isolated_af_campaign(
     output_dir: Path,
     rounds: int,
     materialize_actions: bool,
-    composer_provider: _ComposerOrderingProvider | None = None,
+    composer_provider: _GroundedAnswerProvider | None = None,
 ) -> dict[str, object]:
     if rounds < 1:
         raise ValueError("isolated_af_rounds_invalid")

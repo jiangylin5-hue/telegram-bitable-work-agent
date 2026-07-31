@@ -72,6 +72,8 @@ def _unobserved_trace(case_id: str, round_id: str) -> RuntimeTraceV2:
             observation_status="not_observed",
             rendered_answer="",
             claims=(),
+            answer_source="deterministic_fallback",
+            provider_result_status="transport_failed",
         ),
         actions=(),
         safety=RuntimeSafetyTrace(
@@ -148,6 +150,7 @@ def _literal_score(
             instruction_action_satisfaction=True,
             chinese_clarity=True,
             refusal_degradation_appropriateness=True,
+            real_provider_origin=True,
             reason_codes=(
                 () if final_answer_grounded else ("citation_grounding_failed",)
             ),
