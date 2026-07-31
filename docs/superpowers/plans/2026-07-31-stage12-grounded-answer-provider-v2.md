@@ -74,7 +74,7 @@ git commit -m "docs: freeze grounded Stage12 provider contract"
 - Consumes: `ClaimGraphV1`, `ActionStatusV1`, `FinalAnswerRenderReceiptV1`, `specialist_payload_sha256`.
 - Produces: `GroundedAnswerProviderRequestV2`, `GroundedClaimCandidateV2`, `GroundedEvidenceCandidateV2`, `GroundedActionCandidateV2`, `GroundedAnswerStatementV2`, `GroundedAnswerSectionV2`, `GroundedAnswerPlanV2`, `GroundedComposerResultV2`, `ProviderResponseFingerprintV1`, `AnswerSource`, `ProviderResultStatus`.
 
-- [ ] **Step 1: Write the fixed-schema RED tests**
+- [x] **Step 1: Write the fixed-schema RED tests**
 
 ```python
 def test_provider_response_schema_contains_no_dynamic_object_map() -> None:
@@ -95,28 +95,28 @@ def test_grounded_statement_requires_reference_by_kind() -> None:
         )
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `cd backend; pytest -q tests/unit/test_agent_grounded_answer_contracts.py`
 
 Expected: collection/import failure because the new module does not exist.
 
-- [ ] **Step 3: Implement minimal strict contracts**
+- [x] **Step 3: Implement minimal strict contracts**
 
 Use `ConfigDict(extra="forbid", frozen=True, strict=True)`, bounded tuples, fixed enums and canonical `content_hash` validation. Add `provider_grounding_invalid` and `deterministic_fallback_used` to the Stage12 failure taxonomy without deleting existing V1 codes.
 
-- [ ] **Step 4: Verify provider-schema portability**
+- [x] **Step 4: Verify provider-schema portability**
 
 Add assertions that every object node has boolean `additionalProperties`, no `dict[str, T]` response field exists, nesting is bounded, and all output properties have descriptions.
 
-- [ ] **Step 5: Run GREEN and adjacent contracts**
+- [x] **Step 5: Run GREEN and adjacent contracts**
 
 ```powershell
 cd backend
 pytest -q tests/unit/test_agent_grounded_answer_contracts.py tests/unit/test_agent_specialist_results.py tests/unit/test_agent_model_gateway.py
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add -- backend/app/schemas/agent_grounded_answer_v2.py backend/app/schemas/agent_specialist_results.py backend/tests/unit/test_agent_grounded_answer_contracts.py
