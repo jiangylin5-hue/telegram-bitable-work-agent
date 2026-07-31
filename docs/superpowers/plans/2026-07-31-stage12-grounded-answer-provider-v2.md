@@ -133,7 +133,7 @@ git commit -m "feat: add grounded answer contracts"
 - Consumes: raw authorized query, `TaskSpecV2`, `AuthorizedSchemaSnapshot`, `ClaimGraphV1`, typed Risk/Daily/Tabular artifacts and safe citation labels.
 - Produces: `build_grounded_answer_request(*, query: str, task_spec: TaskSpecV2, graph: ClaimGraphV1, authorized_schema: AuthorizedSchemaSnapshot, presentation: ComposerPresentationContextV1, specialist_findings: Sequence[StructuredFactSetV1 | RiskAssessmentSetV1 | DailyBriefV1]) -> GroundedAnswerProviderRequestV2`.
 
-- [ ] **Step 1: Write request-boundary RED tests**
+- [x] **Step 1: Write request-boundary RED tests**
 
 ```python
 def test_request_contains_authorized_claims_but_no_gold_or_hidden_fields() -> None:
@@ -157,28 +157,28 @@ def test_request_contains_authorized_claims_but_no_gold_or_hidden_fields() -> No
     )
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `cd backend; pytest -q tests/unit/test_agent_grounded_answer_request.py`
 
 Expected: import failure for the missing builder.
 
-- [ ] **Step 3: Implement deterministic projection**
+- [x] **Step 3: Implement deterministic projection**
 
 Map claims to safe subject/predicate/value labels, exact evidence closure and source versions. Include only pending/denied/deferred Action summaries already present in the sealed graph. Bind `scope_hash`, `field_policy_version`, `field_policy_hash`, `schema_hash` and `content_hash`.
 
-- [ ] **Step 4: Add tamper and scope tests**
+- [x] **Step 4: Add tamper and scope tests**
 
 Reject missing field-policy proof, scope mismatch, hidden labels, unknown evidence, duplicate handles, stale/conflicted facts presented as valid and content-hash tampering.
 
-- [ ] **Step 5: Run GREEN**
+- [x] **Step 5: Run GREEN**
 
 ```powershell
 cd backend
 pytest -q tests/unit/test_agent_grounded_answer_request.py tests/unit/test_agent_claim_graph.py tests/unit/test_agent_schema_binding.py
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add -- backend/app/services/agent_grounded_answer_request.py backend/tests/unit/test_agent_grounded_answer_request.py
