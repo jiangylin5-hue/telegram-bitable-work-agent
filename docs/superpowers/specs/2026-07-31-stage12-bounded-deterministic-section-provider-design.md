@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `approved-design-pending-written-spec-review`
+- Status: `approved-for-implementation-planning`
 - Scope: Stage12 internal Composer Provider contract correction only
 - Trigger evidence: real Human-Gold `48 × 3` campaign bundle `1642b7ff5124f710477033b6d29c76a2328f0b57d976971723f2d9f515cb13e6`
 - Production status: unchanged; Stage11/r76 remains authoritative
@@ -82,6 +82,17 @@ summary, facts, risks, daily, actions, denial, degradation
 ```
 
 Maximum section count is therefore seven. Section-kind uniqueness is a deterministic invariant, not a Provider preference.
+
+`DeterministicSectionSetV1` owns the private immutable collection:
+
+```python
+class DeterministicSectionSetV1(StrictFrozenModel):
+    version: Literal["deterministic-section-set.v1"]
+    sections: tuple[DeterministicComposerSectionV1, ...]  # 1..7
+    content_hash: Sha256Hex
+```
+
+It validates unique section handles, section kinds, and contiguous `default_rank` values `0..len(sections)-1`; every child hash and the set `content_hash` must match canonical payloads. Tuple order must equal `default_rank` order.
 
 ### 5.2 Public Provider candidate
 
@@ -234,7 +245,7 @@ No raw Provider response, prompt, query, API key, record value, Gold object, or 
 - `ComposerAnswerPlanV2` remains the internal rendering plan, so deterministic callers and receipts do not need a V3 migration.
 - `ComposerProviderAdapterV1` changes its internal callable boundary to ordering request/response types. Existing test fakes must be migrated; there is no deployed Stage12 consumer requiring dual-write or backward compatibility.
 - No feature flag is activated. The corrected path remains limited to Stage12 local evaluation/shadow boundaries.
-- The failed bundle `1642b7ff...13e6` is immutable and remains the pre-correction baseline.
+- The failed bundle `1642b7ff5124f710477033b6d29c76a2328f0b57d976971723f2d9f515cb13e6` is immutable and remains the pre-correction baseline.
 
 ## 12. Verification and Acceptance
 
