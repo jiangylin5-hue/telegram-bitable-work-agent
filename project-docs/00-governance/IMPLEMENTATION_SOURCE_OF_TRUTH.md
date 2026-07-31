@@ -2,9 +2,11 @@
 
 ## Status
 
+- Current Progress Update (2026-07-31, bounded Composer campaign): Human Gold `48/48`; the approved bounded deterministic-section correction is implemented locally and one new real auditable `48 × 3` campaign completed with release `FAIL`. Every Case and final-answer dimension passed `48/48` in every round, `mixed_02`/`mixed_08` no longer collapse, Retrieval Recall@20 is `1.0`, and all confirmed action/write/send counts are zero. Composer unavailable is `36/48`, `47/48`, `37/48`, dominated by schema-invalid responses; Provider-unavailable mean/worst are `0.833333/0.979167`, and total-latency P95 mean/worst are `11636.716667/13775.8 ms`. Current bundle hash: `6b15446524a5a084d744dfc82564a73354d1477260c8e2e705375e9c392f1aa8`; the pre-correction bundle `1642b7ff5124f710477033b6d29c76a2328f0b57d976971723f2d9f515cb13e6` remains historical evidence. Stage12 is not accepted, deployed or activated. Another full campaign must not run before a separately approved Provider-schema compatibility or acceptance-contract correction.
+
 - Document status: active source of truth
 - Scope: 顶层产品目标、边界、阶段、技术基线、安全约束，以及当前 Stage11 多 Agent 协调运行时与工作台方向
-- Current Progress: 2026-07-29 Stage11 coordination middleware is deployed on public r76 over the accepted Stage10 control plane. PostgreSQL remains the durable truth; Redis Streams carries registered read Specialists; SSE reauthorizes and projects safe events. Task Gateway decomposes multi-semantic Chinese requests into a DAG, Agent Registry fixes capability-to-skill/tool/risk bindings, Supervisor owns fan-out/fan-in terminal state, and Tool Gateway only creates pending drafts or blocked notification requests. A real isolated r75 48-case run completed 48/48 using production identity, PostgreSQL, Redis, SSE and `google/gemini-2.5-flash`, with permission/external-send safety at 1.00 and zero Telegram sends; r76 adds only atomic terminalization of unfinished sibling commands after required failure. Fresh backend verification covers 1561/1561 tests. This is not a quality acceptance: retrieval precision/recall and action accuracy remain below protocol gates, and public durable action orchestration is not yet enabled.
+- Previous local-audit snapshot: Tasks 1–9/Task9B, HG-01–HG-10 and ISO-01 were implemented before Human Gold and the real campaign. Its pending-signoff counts are superseded by the later Current Progress Update above.
 
 ## 1. Product Goal
 
@@ -238,7 +240,7 @@ The current Stage09 AI conversation slice does not include:
 
 The current implementation entry is:
 
-- [Current root handoff](../../../HANDOFF.md)
+- [Current root handoff](../../HANDOFF.md)
 - [Project structure and document lifecycle](PROJECT_STRUCTURE_AND_DOCUMENT_LIFECYCLE.md)
 - [Stage09 Codex-style AI conversation design](../08-implementation/STAGE_09_CODEX_STYLE_AI_CONVERSATION_DESIGN.md)
 - [Stage09 Codex-style AI conversation implementation plan](../08-implementation/STAGE_09_CODEX_STYLE_AI_CONVERSATION_IMPLEMENTATION_PLAN.md)
@@ -252,6 +254,7 @@ The current implementation entry is:
 - [Stage11 complex Chinese evaluation protocol](../08-implementation/STAGE_11_COMPLEX_CHINESE_EVALUATION_PROTOCOL.md)
 - [Stage11 implementation and acceptance](../08-implementation/STAGE_11_ACCEPTANCE.md)
 - [Stage11 r75 real 48-case report](../08-implementation/evidence/stage11-r75-real-48case-report-2026-07-28.md)
+- [Stage12 Quality Architecture V2 proposal index](../02-architecture/stage12-quality-v2/README.md)
 
 ## 11. Confirmation Rule
 

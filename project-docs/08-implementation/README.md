@@ -2,24 +2,41 @@
 
 ## Status
 
+- **Current Progress Update (2026-07-31):** Human Gold is `48/48`. The bounded deterministic-section correction and its new independent real `48 × 3` campaign are complete, but release remains `FAIL`. All returned-answer and Case gates are `48/48` per round; Retrieval passes; `mixed_02`/`mixed_08` no longer collapse; confirmed/write/send are zero. Composer unavailable is `36/48`, `47/48`, `37/48`, and total-latency P95 worst is `13775.8 ms`. Current bundle hash `6b15446524a5a084d744dfc82564a73354d1477260c8e2e705375e9c392f1aa8`; old bundle `1642b7ff5124f710477033b6d29c76a2328f0b57d976971723f2d9f515cb13e6` remains historical. Stage12 remains local and inactive pending a separately approved Provider-schema compatibility or acceptance-contract decision.
+
 - **Document status:** active implementation index
-- **Current Stage:** Stage09 Codex-style AI conversation SSE
-- **Current Progress:** 当前隔离分支为 `codex/stage09-ai-conversation-sse`。阶段/worktree/文档生命周期治理、后端 SSE 和前端 stream client 已完成并复核；Ledgerline 工作台初版已完成，Task 4 review 问题待收口。后端 LLM skill launcher 设计已获用户确认，进入严格 TDD 实施。Nginx、全量验收、视觉 QA、审计、清理和单次最终提交尚未完成。
+- **Current Stage:** Stage12 comprehensive audit reopened A/B/E/F and cross-stage acceptance; the nine-package correction is approved for local implementation; C/D retain component evidence
+- **Previous local-audit snapshot:** Tasks 1–9/Task9B、HG-01～HG-10 与 ISO-01 的实现与本地验收数字保留为历史；其 Human Gold/Provider pending 计数已被上方最新进展取代。
 
 ## 1. Current Execution Entry
 
 按以下顺序读取当前实现：
 
-1. [Current handoff](../00-governance/HANDOFF_2026-07-26_CODEX_STYLE_AI_CONVERSATION.md)
-2. [Project structure and document lifecycle](../00-governance/PROJECT_STRUCTURE_AND_DOCUMENT_LIFECYCLE.md)
-3. [Stage09 Codex-style AI conversation design](STAGE_09_CODEX_STYLE_AI_CONVERSATION_DESIGN.md)
-4. [Stage09 Codex-style AI conversation implementation plan](STAGE_09_CODEX_STYLE_AI_CONVERSATION_IMPLEMENTATION_PLAN.md)
-5. [Approved Stage09 LLM skill launcher design](STAGE_09_LLM_SKILL_LAUNCHER_DESIGN.md)
-6. [LLM skill launcher detailed TDD plan](../../docs/superpowers/plans/2026-07-26-stage09-llm-skill-launcher.md)
-7. [SSE and Ledgerline detailed TDD plan](../../docs/superpowers/plans/2026-07-26-stage09-codex-ai-conversation-sse.md)
-8. [Stage09 r40 regression and live-readiness evidence](evidence/stage09-r40-regression-and-live-readiness-2026-07-26.md)
+1. [Current root handoff](../../HANDOFF.md)
+2. [Implementation Source Of Truth](../00-governance/IMPLEMENTATION_SOURCE_OF_TRUTH.md)
+3. [Stage12 comprehensive audit](STAGE_12_COMPREHENSIVE_ARCHITECTURE_AUDIT.md)
+4. [Stage12 architecture correction source](STAGE_12_ARCHITECTURE_CORRECTION_SOURCE_OF_TRUTH.md)
+5. [Stage12 Task 9 final-answer correction proposal](STAGE_12_TASK9_FINAL_ANSWER_QUALITY_CORRECTION_PROPOSAL.md)
+6. [Stage12 Task 9 preflight evidence](evidence/stage12-task9-final-answer-preflight-2026-07-30.md)
+7. [Stage12 Task 9 final-answer correction evidence](evidence/stage12-task9-final-answer-correction-2026-07-30.md)
+8. [Stage12 Task9B core-quality correction source of truth](STAGE_12_TASK9B_CORE_QUALITY_CORRECTION_SOURCE_OF_TRUTH.md)
+9. [Stage12 Task9B core-quality correction evidence](evidence/stage12-task9b-core-quality-correction-2026-07-31.md)
+10. [Stage12 Quality Architecture V2 index](../02-architecture/stage12-quality-v2/README.md)
+11. [Stage12-C acceptance](STAGE_12_C_AUTHORIZED_QUERY_ENGINE_ACCEPTANCE.md)
+10. [Stage12 Retrieval/Embedding architecture](../02-architecture/stage12-quality-v2/04_RETRIEVAL_EMBEDDING_AND_CHUNK.md)
+11. [Stage12-D code-level plan](../../docs/superpowers/plans/2026-07-29-stage12-d-retrieval-embedding-v2.md)
+12. [Stage12-D focused profile evidence](evidence/stage12-d-embedding-profile-benchmark-2026-07-29.md)
+13. [Stage12-D acceptance](STAGE_12_D_RETRIEVAL_EMBEDDING_ACCEPTANCE.md)
+14. [Stage12-D final evidence](evidence/stage12-d-retrieval-embedding-2026-07-29.md)
+15. [Stage12-E source](STAGE_12_E_TYPED_SPECIALIST_PROVIDER_SOURCE_OF_TRUTH.md)
+16. [Stage12-E code-level plan](../../docs/superpowers/plans/2026-07-30-stage12-e-typed-specialist-provider-v2.md)
+17. [Stage12-E acceptance](STAGE_12_E_TYPED_SPECIALIST_PROVIDER_ACCEPTANCE.md)
+18. [Stage12-E evidence](evidence/stage12-e-typed-specialist-provider-2026-07-30.md)
+19. [Stage12-F architecture](../02-architecture/stage12-quality-v2/06_ACTION_RUNTIME_API_AND_SSE.md)
+20. [Stage11 acceptance](STAGE_11_ACCEPTANCE.md)
+21. [Stage11 real 48-case report](evidence/stage11-r75-real-48case-report-2026-07-28.md)
 
-当前任务不需要顺序读取 Stage02–Stage08 全部文档。
+当前任务不需要顺序读取 Stage02–Stage10 全部文档。只有调查历史实现或修改对应模块时，才按下方 Stage Lifecycle 进入历史文档。
 
 ## 2. Stage Lifecycle
 
@@ -32,8 +49,10 @@
 | Stage06 | `accepted` backend baseline | 修改 generic platform resource、permission、import 或 digital employee core |
 | Stage07 | `historical` Mini App/workspace delivery | 修改 Mini App table surface、view、governance、draft UI |
 | Stage08 | `implemented`, product evidence bounded | 修改 context、memory、retrieval、collaboration runtime |
-| Stage09 r39 native release | `deployed` | 调查当前 native deployment 和线上只读状态 |
-| Stage09 AI conversation slice | `in_progress` | SSE/client 已完成，Ledgerline 初版待修；LLM skill launcher 已批准并进入 TDD |
+| Stage09 | `historical deployed foundation` | 调查 native deployment、SSE、Ledgerline、skill launcher 和中文响应修复 |
+| Stage10 | `accepted control plane` | 修改 durable run/command/event/checkpoint、outbox 或 SSE runtime |
+| Stage11 | `deployed; runtime/safety pass, quality fail` | 修改协调中间层、真实 48 Case 或当前生产 r76 |
+| Stage12 | `local quality improved; release FAIL` | bounded correction 已消除回答坍缩，但真实 Provider schema 可用性与延迟未达门；生产激活仍需单独确认 |
 
 ## 3. Historical Primary Entrypoints
 
@@ -71,11 +90,13 @@
 
 ## 6. Development Gate
 
-当前 SSE/skill launcher 开发必须满足：
+当前 Stage12 gate：
 
-1. 不改变数据库 schema 和 Telegram/外部写入权限；skill launcher 的 API/runtime/permission intersection 已于 2026-07-26 获用户确认。
-2. 同步与 SSE assistant 共享授权、scope、幂等、审计和运行服务。
-3. 先写失败测试并观察正确 RED，再写最小实现。
-4. 前端只渲染白名单事件和最终 `SafeView`。
-5. 真实草稿、导入、记录或 Telegram 写入在动作发生前再次确认。
-6. 完成声明必须引用测试/浏览器观察、evidence 和 commit。
+1. 已完成 `stage12-quality-v2/README.md` 及八个主题文档审计并获得用户确认。
+2. Stage12 architecture-correction Tasks 1–9/Task9B 与 bounded deterministic-section correction 均已 `implemented-local`；确定性和 post-correction real-campaign Case/final-answer gates 均为 `48/48`。
+3. Human Gold `48/48` 与 post-correction exactly-three real Provider rounds 已完成，但总体 release 因 Provider schema availability 与 total latency 为 `FAIL`。下一步先批准 focused Provider compatibility 或 acceptance-contract 方向；不得直接再跑全量 campaign。不得通过 Case 特判或把 Specialist fact 冒充 Query fact 来迎合 Gold；Action 必须继续复用 F durable authority。
+4. 行为变化必须先写失败测试并观察正确 RED，再写最小实现。
+5. Action end-to-end 测试不得注入 Gold candidate；真实 LLM 至少三轮的 48 Case 大评测在核心技术架构完成后的总验收执行。
+6. 权限和 external-send safety 必须始终为 1.00，不能被综合分抵消。
+7. 真实草稿、记录、任务或 Telegram 写入必须经过 Tool Gateway 和确认。
+8. 按用户要求，完整开发、验收、审计和清理结束后再统一提交。

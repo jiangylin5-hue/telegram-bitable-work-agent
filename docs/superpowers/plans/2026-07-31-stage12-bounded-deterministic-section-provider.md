@@ -1,6 +1,6 @@
 # Stage12 Bounded Deterministic-Section Provider Implementation Plan
 
-- Status: `local-acceptance-passed-real-campaign-pending`
+- Status: `real-campaign-failed-provider-compatibility-decision-required`
 - Scope: Stage12 internal Composer Provider contract correction and independent acceptance campaign only
 - Approval: user confirmed the written design and inline continuation on 2026-07-31
 
@@ -513,7 +513,7 @@ git commit -m "docs: record bounded composer local audit"
 - Consumes: green Task 5 evidence, ignored local env file, frozen Human Gold `48/48`.
 - Produces: one immutable post-correction `48 × 3` real bundle and an honest release decision.
 
-- [ ] **Step 1: Run non-network preflight**
+- [x] **Step 1: Run non-network preflight**
 
 Verify without printing values:
 
@@ -528,7 +528,7 @@ output directory absent or empty
 
 Validate the runner with fake Provider once more. Do not start network if any preflight fails.
 
-- [ ] **Step 2: Execute exactly one new auditable campaign**
+- [x] **Step 2: Execute exactly one new auditable campaign**
 
 ```powershell
 cd backend
@@ -539,7 +539,7 @@ python -m scripts.stage12_final_provider_campaign `
 
 The CLI must still hard-code three rounds and `materialize_actions=True`. Do not add a rounds override or selective Case retry.
 
-- [ ] **Step 3: Validate the immutable bundle offline**
+- [x] **Step 3: Validate the immutable bundle offline**
 
 Load it through `FinalProviderCampaignBundleV1.model_validate_json` and require:
 
@@ -556,7 +556,7 @@ content hash valid
 
 Scan evidence for secrets, raw prompt/response, query, Gold, and temporary files.
 
-- [ ] **Step 4: Evaluate every unchanged hard gate**
+- [x] **Step 4: Evaluate every unchanged hard gate**
 
 Report mean, worst, population variance, observed/expected counts, and gate status for every metric. Pay special attention to:
 
@@ -570,11 +570,11 @@ all final-answer gates
 
 If any gate fails, retain the bundle, mark Stage12 `FAIL`, list exact dimensions/Cases/failure taxonomy, and do not rerun or average it away.
 
-- [ ] **Step 5: Update all active truth and handoff documents**
+- [x] **Step 5: Update all active truth and handoff documents**
 
 Replace stale pre-correction status in active top-level documents. Preserve old bundles and historical evidence as explicitly superseded snapshots. Include changed files, verification, skipped tests, remaining risks, temporary cleanup, deployment status, and the exact bundle/manifest hashes.
 
-- [ ] **Step 6: Run final documentation and repository checks**
+- [x] **Step 6: Run final documentation and repository checks**
 
 ```powershell
 git diff --check
@@ -584,7 +584,7 @@ git status --short
 
 Active top-level truth must not contradict the new evidence. Historical documents may retain old counts only when clearly labelled as historical/superseded.
 
-- [ ] **Step 7: Commit final evidence without deploying**
+- [x] **Step 7: Commit final evidence without deploying**
 
 Stage only reviewed Stage12 correction/evidence files and verify the staged list before committing:
 
@@ -595,6 +595,18 @@ git commit -m "feat: bound Stage12 composer provider"
 ```
 
 Do not push, deploy, migrate production, activate Stage12, confirm an Action, write business data, or send Telegram without a separate user instruction.
+
+#### Task 6 execution evidence
+
+- Non-network preflight: all three OpenRouter settings present without values being printed; Human Gold `48/48` and unique; manifest hash matched; output directory absent; fake `48 × 3` campaign passed.
+- Exactly one real command ran for the new output directory. It completed all work, wrote the bundle atomically and returned exit code `1` solely because `release_gate_pass=false`; no extra or selective round was run.
+- Current immutable bundle: `6b15446524a5a084d744dfc82564a73354d1477260c8e2e705375e9c392f1aa8`, `48` Cases, `3` rounds, `144` results, Human Gold `48/48`, effects `0/0/0`.
+- Returned-answer result: every Case and all seven final-answer dimensions passed `48/48` in each round. `mixed_02` and `mixed_08` are complete; unsupported claim rate is zero.
+- Retrieval result: Recall@20 `1.0`, MRR@20 `0.958333`, forbidden candidates `0` in all rounds.
+- Release blockers: Composer unavailable `36/48`, `47/48`, `37/48`; `240` schema-invalid and `3` semantic-invalid attempts; Provider-unavailable mean/worst `0.833333/0.979167`; total-latency P95 mean/worst `11636.716667/13775.8 ms`.
+- Hygiene: model/hash validation passed; output has no `.tmp`, secret value, raw query/prompt/response, Gold payload or nonzero effect.
+- Final same-revision verification after all code/type changes: full backend `2411 passed, 40 skipped in 399.67s`; disposable PostgreSQL/pgvector `7 passed in 7.24s`; Black, compileall, bundle model/hash and global diff checks passed.
+- Decision: Stage12 remains inactive and release `FAIL`. The audit documents list three possible next directions, each requiring separate user approval before implementation or another full campaign.
 
 ---
 
