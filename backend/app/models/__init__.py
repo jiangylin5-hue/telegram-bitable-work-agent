@@ -8,10 +8,12 @@ from app.models.accounts import (
 )
 from app.models.agent import AgentRun
 from app.models.agent_event_runtime import (
+    AgentActionSlot,
     AgentArtifact,
     AgentCommand,
     AgentEvent,
     AgentOutboxEvent,
+    AgentObjectiveRun,
     AgentPrivateInput,
     AgentRunCheckpoint,
     AgentWorkflowRun,
@@ -67,6 +69,13 @@ from app.models.stage08_knowledge import (
     Stage08KnowledgeChunk,
     Stage08KnowledgeSource,
 )
+from app.models.stage12_retrieval import (
+    Stage12RelationEdge,
+    Stage12RetrievalChunk,
+    Stage12RetrievalProfile,
+    Stage12RetrievalScopeRegistration,
+    Stage12RetrievalSource,
+)
 from app.models.stage06_templates import (
     ImportJob,
     PlatformTemplate,
@@ -96,9 +105,11 @@ __all__ = [
     "AccountCardBinding",
     "AgentRun",
     "AgentArtifact",
+    "AgentActionSlot",
     "AgentCommand",
     "AgentEvent",
     "AgentOutboxEvent",
+    "AgentObjectiveRun",
     "AgentPrivateInput",
     "AgentRunCheckpoint",
     "AgentWorkflowRun",
@@ -141,6 +152,11 @@ __all__ = [
     "Stage08KnowledgeChunk",
     "Stage08KnowledgeSource",
     "Stage08ExecutionTicket",
+    "Stage12RelationEdge",
+    "Stage12RetrievalChunk",
+    "Stage12RetrievalProfile",
+    "Stage12RetrievalScopeRegistration",
+    "Stage12RetrievalSource",
     "Stage07TelegramDeepLink",
     "Stage07TelegramDeepLinkDelivery",
     "TableView",

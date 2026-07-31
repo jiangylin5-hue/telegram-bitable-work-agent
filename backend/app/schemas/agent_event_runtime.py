@@ -33,6 +33,18 @@ CommandType = Literal[
     "propose_controlled_action",
 ]
 EventType = Literal[
+    "plan.accepted",
+    "objective.queued",
+    "objective.started",
+    "objective.completed",
+    "objective.degraded",
+    "objective.denied",
+    "action.proposed",
+    "action.pending_confirmation",
+    "action.confirmed",
+    "action.executed",
+    "action.conflicted",
+    "action.denied",
     "run.accepted",
     "command.dispatched",
     "agent.started",
@@ -143,6 +155,7 @@ class AgentRunCreateRequest(_StrictRuntimeModel):
     ]
     query: str = Field(min_length=1, max_length=600)
     requested_action: Literal[
+        "auto",
         "read_only",
         "draft_create",
         "draft_update",
@@ -158,7 +171,12 @@ class AgentRunCreateRequest(_StrictRuntimeModel):
         bounded = (self.idempotency_key, self.skill_id)
         if any(
             value is not None
-            and (value != value.strip() or "\x00" in value or "\r" in value or "\n" in value)
+            and (
+                value != value.strip()
+                or "\x00" in value
+                or "\r" in value
+                or "\n" in value
+            )
             for value in bounded
         ):
             raise ValueError("agent_run_request_invalid")
@@ -190,7 +208,10 @@ class AgentPrivateInputPayload(_StrictRuntimeModel):
             self.actor_user_id != self.actor_user_id.strip()
             or self.query != self.query.strip()
             or self.idempotency_key != self.idempotency_key.strip()
-            or any("\x00" in value for value in (self.actor_user_id, self.query, self.idempotency_key))
+            or any(
+                "\x00" in value
+                for value in (self.actor_user_id, self.query, self.idempotency_key)
+            )
             or (
                 self.skill_id is not None
                 and (
@@ -223,6 +244,48 @@ class SafeRunArtifactReadyEvent(_SafeRunStreamBase):
     label: str = Field(min_length=1, max_length=120)
 
 
+class SafeRunObjectiveEvent(_SafeRunStreamBase):
+    event: Literal["objective"]
+    event_type: Literal[
+        "objective.queued",
+        "objective.started",
+        "objective.completed",
+        "objective.degraded",
+        "objective.denied",
+    ]
+    objective_id: UUID
+    objective_key: str = Field(min_length=1, max_length=80)
+    kind: str = Field(min_length=1, max_length=40)
+    status: Literal["queued", "running", "completed", "degraded", "denied"]
+    message: str = Field(min_length=1, max_length=240)
+
+
+class SafeRunActionEvent(_SafeRunStreamBase):
+    event: Literal["action"]
+    event_type: Literal[
+        "action.proposed",
+        "action.pending_confirmation",
+        "action.confirmed",
+        "action.executed",
+        "action.conflicted",
+        "action.denied",
+    ]
+    slot_id: UUID
+    objective_id: UUID
+    action_kind: Literal[
+        "record.create", "record.update", "task.create", "reminder.request"
+    ]
+    status: Literal[
+        "proposed",
+        "pending_confirmation",
+        "confirmed",
+        "executed",
+        "conflicted",
+        "denied",
+    ]
+    message: str = Field(min_length=1, max_length=240)
+
+
 class SafeRunResultEvent(_SafeRunStreamBase):
     event: Literal["result"]
     artifact_ref: UUID
@@ -250,6 +313,8 @@ SafeRunStreamEvent = Annotated[
     SafeRunStatusEvent
     | SafeRunArtifactReadyEvent
     | SafeRunResultEvent
+    | SafeRunObjectiveEvent
+    | SafeRunActionEvent
     | SafeRunErrorEvent
     | SafeRunDoneEvent,
     Field(discriminator="event"),
@@ -264,8 +329,10 @@ __all__ = [
     "AgentRunCreateResponse",
     "RunCheckpointControl",
     "SafeRunArtifactReadyEvent",
+    "SafeRunActionEvent",
     "SafeRunDoneEvent",
     "SafeRunErrorEvent",
+    "SafeRunObjectiveEvent",
     "SafeRunResultEvent",
     "SafeRunStatusEvent",
     "SafeRunStreamEvent",

@@ -47,9 +47,7 @@ def _fixture() -> SimpleNamespace:
         field_type="text",
         actor=actor,
     )
-    record = create_record(
-        uow, table.id, values={"name": "安全客户"}, actor=actor
-    )
+    record = create_record(uow, table.id, values={"name": "安全客户"}, actor=actor)
     view = create_form_view(
         uow,
         base.id,
@@ -329,7 +327,251 @@ def test_multi_semantic_query_dispatches_three_specialists_and_returns_one_chat_
     assert streamed.text.count("event: done") == 1
 
 
-def test_safe_projection_corruption_is_not_misreported_as_scope_denial(monkeypatch) -> None:
+def test_stage12_shadow_difference_keeps_v1_as_the_only_dispatch_authority(
+    monkeypatch,
+) -> None:
+    fixture = _fixture()
+    runtime = InMemoryAgentEventRuntimeUnitOfWork()
+    monkeypatch.setattr(
+        agent_run_routes,
+        "get_settings",
+        lambda: replace(
+            Settings(),
+            agent_event_runtime_enabled=True,
+            agent_task_planner_v2_mode="shadow",
+            agent_task_planner_v2_shadow_workspace_ids=(str(fixture.workspace.id),),
+        ),
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "complete_assistant_query",
+        lambda prepared, uow: _complete(prepared, "V1 authority retained"),
+    )
+    payload = _payload(fixture)
+    payload["query"] = "列出 high 优先级项目"
+
+    with _client(fixture, runtime) as client:
+        created = client.post("/api/stage10/agent-runs", json=payload)
+
+    assert created.status_code == 202, created.text
+    assert {item.target_capability for item in runtime.commands} == {
+        "platform.tabular.analyse",
+        "platform.risk.analyse",
+    }
+    shadow_events = [
+        item
+        for item in fixture.uow.audit_events
+        if item.event_type == "stage12.planner_shadow_observed"
+    ]
+    assert len(shadow_events) == 1
+    assert shadow_events[0].after_state["v1_dispatch_unchanged"] is True
+    assert "risk_analysis:-1" in shadow_events[0].after_state["objective_kind_deltas"]
+
+
+def test_stage12_query_shadow_is_absent_from_http_sse_and_v1_dispatch(
+    monkeypatch,
+) -> None:
+    fixture = _fixture()
+    runtime = InMemoryAgentEventRuntimeUnitOfWork()
+    sentinel_plan_hash = "c" * 64
+    sentinel_result_hash = "d" * 64
+    monkeypatch.setattr(
+        agent_run_routes,
+        "get_settings",
+        lambda: replace(
+            Settings(),
+            agent_event_runtime_enabled=True,
+            agent_task_planner_v2_mode="shadow",
+            agent_task_planner_v2_shadow_workspace_ids=(str(fixture.workspace.id),),
+            authorized_query_engine_v1_mode="shadow",
+            authorized_query_engine_v1_workspace_allowlist=(str(fixture.workspace.id),),
+        ),
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "complete_assistant_query",
+        lambda prepared, uow: _complete(prepared, "V1 public result"),
+    )
+    sanitized = {
+        "version": "authorized-query-shadow-observation.v1",
+        "status": "observed",
+        "plan_hashes": [sentinel_plan_hash],
+        "result_hashes": [sentinel_result_hash],
+        "result_record_count": 1,
+        "scope_hash": "b" * 64,
+    }
+    monkeypatch.setattr(
+        agent_run_routes,
+        "run_authorized_query_shadow",
+        lambda *_args, **_kwargs: SimpleNamespace(model_dump=lambda mode: sanitized),
+    )
+    payload = _payload(fixture)
+    payload["query"] = "列出 high 优先级项目"
+
+    with _client(fixture, runtime) as client:
+        created = client.post("/api/stage10/agent-runs", json=payload)
+        assert created.status_code == 202, created.text
+        streamed = client.get(
+            f"/api/stage10/agent-runs/{created.json()['run_id']}/events"
+        )
+
+    assert set(created.json()) == {"run_id", "status", "replayed"}
+    assert streamed.status_code == 200
+    assert {item.target_capability for item in runtime.commands} == {
+        "platform.tabular.analyse",
+        "platform.risk.analyse",
+    }
+    public_bytes = created.content + streamed.content
+    assert sentinel_plan_hash.encode() not in public_bytes
+    assert sentinel_result_hash.encode() not in public_bytes
+    query_events = [
+        item
+        for item in fixture.uow.audit_events
+        if item.event_type == "stage12.authorized_query_shadow_observed"
+    ]
+    assert len(query_events) == 1
+    assert query_events[0].after_state == sanitized
+
+
+def test_stage12_retrieval_shadow_is_audit_only_and_cannot_change_http_sse_or_dispatch(
+    monkeypatch,
+) -> None:
+    fixture = _fixture()
+    runtime = InMemoryAgentEventRuntimeUnitOfWork()
+    comparison_hash = "e" * 64
+    monkeypatch.setattr(
+        agent_run_routes,
+        "get_settings",
+        lambda: replace(
+            Settings(),
+            agent_event_runtime_enabled=True,
+            openrouter_api_key="test-only-key",
+            retrieval_v2_mode="shadow",
+            retrieval_v2_workspace_allowlist=(str(fixture.workspace.id),),
+            retrieval_v2_active_profile="stage12.openrouter-bge-m3-v1",
+        ),
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "complete_assistant_query",
+        lambda prepared, uow: _complete(prepared, "V1 remains public"),
+    )
+    sanitized = {
+        "version": "retrieval-shadow-observation.v1",
+        "status": "observed",
+        "v1_candidate_count": 2,
+        "v2_candidate_count": 2,
+        "overlap_count": 1,
+        "recall_at_20": 0.5,
+        "mrr_at_20": 1.0,
+        "mean_absolute_rank_delta": 0.0,
+        "truncated": False,
+        "duration_ms": 1,
+        "comparison_hash": comparison_hash,
+        "failure_code": None,
+    }
+    monkeypatch.setattr(
+        agent_run_routes,
+        "run_retrieval_v2_shadow",
+        lambda **_kwargs: SimpleNamespace(
+            model_dump=lambda mode: sanitized,
+        ),
+    )
+
+    with _client(fixture, runtime) as client:
+        created = client.post("/api/stage10/agent-runs", json=_payload(fixture))
+        assert created.status_code == 202, created.text
+        streamed = client.get(
+            f"/api/stage10/agent-runs/{created.json()['run_id']}/events"
+        )
+
+    assert set(created.json()) == {"run_id", "status", "replayed"}
+    assert streamed.status_code == 200
+    assert {item.target_capability for item in runtime.commands} == {
+        "platform.tabular.analyse"
+    }
+    assert comparison_hash.encode() not in created.content + streamed.content
+    events = [
+        item
+        for item in fixture.uow.audit_events
+        if item.event_type == "stage12.retrieval_v2_shadow_observed"
+    ]
+    assert len(events) == 1
+    assert events[0].after_state == sanitized
+
+
+def test_stage12_typed_specialists_shadow_is_audit_only_and_keeps_v1_bytes(
+    monkeypatch,
+) -> None:
+    fixture = _fixture()
+    runtime = InMemoryAgentEventRuntimeUnitOfWork()
+    comparison_hash = "f" * 64
+    monkeypatch.setattr(
+        agent_run_routes,
+        "get_settings",
+        lambda: replace(
+            Settings(),
+            agent_event_runtime_enabled=True,
+            openrouter_api_key="test-only-key",
+            stage12_provider_v2_profile=("stage12.openrouter-gemini-2.5-flash-v1"),
+            typed_specialists_v2_mode="shadow",
+            typed_specialists_v2_workspace_allowlist=(str(fixture.workspace.id),),
+        ),
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "complete_assistant_query",
+        lambda prepared, uow: _complete(prepared, "V1 remains public"),
+    )
+    sanitized = {
+        "version": "typed-specialists-shadow-observation.v1",
+        "status": "observed",
+        "handler_count": 4,
+        "typed_artifact_count": 6,
+        "claim_count": 2,
+        "valid_evidence_count": 2,
+        "provider_attempt_count": 0,
+        "provider_failure_count": 0,
+        "action_proposal_count": 1,
+        "write_count": 0,
+        "send_count": 0,
+        "duration_ms": 1,
+        "comparison_hash": comparison_hash,
+        "failure_code": None,
+    }
+    monkeypatch.setattr(
+        agent_run_routes,
+        "run_typed_specialists_shadow",
+        lambda **_kwargs: SimpleNamespace(
+            model_dump=lambda mode: sanitized,
+        ),
+    )
+
+    with _client(fixture, runtime) as client:
+        created = client.post("/api/stage10/agent-runs", json=_payload(fixture))
+        assert created.status_code == 202, created.text
+        streamed = client.get(
+            f"/api/stage10/agent-runs/{created.json()['run_id']}/events"
+        )
+
+    assert set(created.json()) == {"run_id", "status", "replayed"}
+    assert streamed.status_code == 200
+    assert {item.target_capability for item in runtime.commands} == {
+        "platform.tabular.analyse"
+    }
+    assert comparison_hash.encode() not in created.content + streamed.content
+    events = [
+        item
+        for item in fixture.uow.audit_events
+        if item.event_type == "stage12.typed_specialists_v2_shadow_observed"
+    ]
+    assert len(events) == 1
+    assert events[0].after_state == sanitized
+
+
+def test_safe_projection_corruption_is_not_misreported_as_scope_denial(
+    monkeypatch,
+) -> None:
     fixture = _fixture()
     runtime = InMemoryAgentEventRuntimeUnitOfWork()
     monkeypatch.setattr(

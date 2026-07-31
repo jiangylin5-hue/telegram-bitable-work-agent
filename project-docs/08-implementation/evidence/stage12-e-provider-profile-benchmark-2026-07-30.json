@@ -1,0 +1,25 @@
+{
+  "version": "provider-profile-benchmark.v1",
+  "provider": "openrouter-compatible",
+  "model_id": "google/gemini-2.5-flash",
+  "profile_ids": [
+    "risk.zh.baseline.v1",
+    "daily.zh.baseline.v1",
+    "composer.zh.baseline.v1"
+  ],
+  "roles": [
+    "risk",
+    "daily",
+    "composer"
+  ],
+  "case_count": 3,
+  "pass_count": 3,
+  "failure_count": 0,
+  "failure_counts": {},
+  "attempt_count": 3,
+  "mean_latency_ms": 3465.0,
+  "p95_latency_ms": 4957.0,
+  "input_tokens": 207,
+  "output_tokens": 125,
+  "report_hash": "16dd2dc6437c667f2985c771cb94271ab8d79b9bc9b49df461d555d15b2a4d9b"
+}

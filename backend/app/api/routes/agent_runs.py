@@ -20,10 +20,12 @@ from app.api.routes.stage08_collaboration import (
     prepare_assistant_query,
 )
 from app.agents.agent_capability_registry import get_capability
-from app.core.config import Settings, get_settings
+from app.core.config import Settings, durable_action_v1_enabled, get_settings
 from app.core.database import get_session
 from app.core.errors import error_detail
-from app.runtime.stage08_collaboration_contracts import validate_assistant_query_safe_view
+from app.runtime.stage08_collaboration_contracts import (
+    validate_assistant_query_safe_view,
+)
 from app.models.agent_event_runtime import AgentPrivateInput
 from app.models.stage06_hardening import Stage06IdempotencyRecord
 from app.schemas.agent_event_runtime import (
@@ -31,6 +33,7 @@ from app.schemas.agent_event_runtime import (
     AgentRunCreateRequest,
     AgentRunCreateResponse,
 )
+from app.schemas.agent_task_spec_v2 import PlannerRequestV2
 from app.schemas.stage08_collaboration import AssistantQueryRequest
 from app.services.agent_event_runtime import (
     AgentEventRuntimeUnitOfWork,
@@ -39,6 +42,7 @@ from app.services.agent_event_runtime import (
     SqlAlchemyAgentEventRuntimeUnitOfWork,
     create_agent_run,
 )
+from app.services.agent_field_policy_v2 import build_stage12_action_scope_hash
 from app.services.agent_orchestrator import (
     SpecialistCommandDispatch,
     SpecialistSafeResult,
@@ -48,17 +52,67 @@ from app.services.agent_orchestrator import (
     execute_read_only_specialist,
     fail_specialist_command,
 )
-from app.services.agent_task_gateway import TaskGatewayRequest, TaskPlanNode, build_task_plan
+from app.services.agent_schema_binding import build_authorized_schema_snapshot
+from app.services.agent_authorized_entity_linker import (
+    build_authorized_entity_candidates,
+)
+from app.services.agent_task_gateway import (
+    TaskGatewayRequest,
+    TaskPlan,
+    TaskPlanNode,
+    build_task_plan,
+)
+from app.services.agent_task_planner_shadow import (
+    PlannerShadowObservation,
+    planner_shadow_enabled,
+    run_task_planner_shadow_with_artifact,
+)
+from app.services.agent_specialist_shadow_v2 import (
+    SpecialistShadowMetricsV1,
+    run_typed_specialists_shadow,
+    typed_specialists_shadow_enabled,
+)
+from app.services.authorized_query_shadow import (
+    authorized_query_shadow_enabled,
+    run_authorized_query_shadow,
+)
+from app.services.retrieval_v2_shadow import (
+    RetrievalShadowCandidateSetV1,
+    retrieval_v2_shadow_enabled,
+    run_retrieval_v2_shadow,
+)
+from app.services.retrieval_v2_runtime import (
+    build_stage12_query_embedding_provider,
+    load_authorized_retrieval_v2,
+)
 from app.services.agent_private_inputs import seal_agent_private_input
+from app.services.audit import record_audit_event
 from app.services.stage06_idempotency import fail_idempotent_operation
 from app.services.agent_sse_projection import project_safe_run_events
-from app.services.stage06_authorization import Stage06AuthorizationError, authorize_workspace_action
+from app.services.stage06_authorization import (
+    Stage06AuthorizationError,
+    authorize_workspace_action,
+)
 from app.services.stage06_identity import Stage06RequestIdentity
-from app.services.stage06_platform import PlatformValidationError, Stage06PlatformUnitOfWork
+from app.services.stage06_platform import (
+    PlatformValidationError,
+    Stage06PlatformUnitOfWork,
+)
+from app.services.stage12_action_runtime import (
+    SqlAlchemyStage12ActionRuntimeRepository,
+    Stage12ActionRuntimeRepository,
+)
+from app.services.stage12_action_admission import admit_stage12_action_run
 
 
 router = APIRouter(prefix="/api/stage10/agent-runs", tags=["stage10-agent-runs"])
 _STAGE08_OPERATION = "stage08.assistant.query"
+_PLANNER_V2_EMPLOYEE_ACTIONS = {
+    "draft_create": "record.create",
+    "draft_update": "record.update",
+    "task_create": "task.create",
+    "reminder_request": "reminder.request",
+}
 
 
 class AgentRunProjectionError(RuntimeError):
@@ -71,14 +125,298 @@ def get_agent_event_runtime_uow(
     return SqlAlchemyAgentEventRuntimeUnitOfWork(session)
 
 
-@router.post("", response_model=AgentRunCreateResponse, status_code=status.HTTP_202_ACCEPTED)
+def get_stage12_action_repository(
+    session: Session = Depends(get_session),
+) -> Stage12ActionRuntimeRepository:
+    return SqlAlchemyStage12ActionRuntimeRepository(session)
+
+
+def _observe_task_planner_v2_shadow(
+    *,
+    settings: Settings,
+    request: AgentRunCreateRequest,
+    actor: object,
+    platform_uow: Stage06PlatformUnitOfWork,
+    v1_plan: TaskPlan,
+) -> PlannerShadowObservation | None:
+    if not planner_shadow_enabled(settings, request.workspace_id):
+        return None
+    try:
+        snapshot = build_authorized_schema_snapshot(
+            platform_uow,
+            workspace_id=request.workspace_id,
+            employee_id=request.employee_id,
+            actor=actor,
+        )
+        employee = platform_uow.get_digital_employee(request.employee_id)
+        if employee is None:
+            return None
+        allowed = set(employee.allowed_actions)
+        action_kinds = tuple(
+            action_kind
+            for employee_action, action_kind in _PLANNER_V2_EMPLOYEE_ACTIONS.items()
+            if employee_action in allowed
+        )
+        view_ids = tuple(
+            sorted((UUID(value) for value in employee.accessible_views), key=str)
+        )
+        authorized_entities = build_authorized_entity_candidates(
+            platform_uow,
+            query=request.query,
+            actor=actor,
+            workspace_id=request.workspace_id,
+            base_id=employee.base_id,
+            employee_id=request.employee_id,
+            snapshot=snapshot,
+            chat_authorized_view_ids=view_ids or None,
+            allow_whole_table=not view_ids,
+        )
+        planner_request = PlannerRequestV2(
+            query=request.query,
+            authorized_schema=snapshot,
+            authorized_entities=authorized_entities,
+            clock=datetime.now(UTC),
+            timezone_name="Asia/Shanghai",
+            allowed_action_kinds=action_kinds,
+        )
+        trace_suffix = hashlib.sha256(
+            (
+                f"{request.workspace_id}:{request.employee_id}:"
+                f"{request.idempotency_key}"
+            ).encode("utf-8")
+        ).hexdigest()[:32]
+
+        def observe(observation: PlannerShadowObservation) -> None:
+            record_audit_event(
+                platform_uow,
+                trace_id=f"stage12-shadow:{trace_suffix}",
+                actor_type=actor.actor_type,
+                actor_id=actor.actor_id,
+                event_type="stage12.planner_shadow_observed",
+                entity_type="digital_employee",
+                entity_id=request.employee_id,
+                after_state=observation.model_dump(mode="json"),
+            )
+
+        planner_run = run_task_planner_shadow_with_artifact(
+            v1_plan,
+            planner_request,
+            snapshot,
+            observer=observe,
+        )
+        if (
+            planner_run.observation.status == "observed"
+            and planner_run.task_artifact is not None
+            and authorized_query_shadow_enabled(settings, request.workspace_id)
+        ):
+            query_observation = run_authorized_query_shadow(
+                platform_uow,
+                actor=actor,
+                workspace_id=request.workspace_id,
+                employee_id=request.employee_id,
+                snapshot=snapshot,
+                task_artifact=planner_run.task_artifact,
+                authorized_view_ids=view_ids,
+            )
+            record_audit_event(
+                platform_uow,
+                trace_id=f"stage12-query-shadow:{trace_suffix}",
+                actor_type=actor.actor_type,
+                actor_id=actor.actor_id,
+                event_type="stage12.authorized_query_shadow_observed",
+                entity_type="digital_employee",
+                entity_id=request.employee_id,
+                after_state=query_observation.model_dump(mode="json"),
+            )
+        return planner_run.observation
+    except Exception:
+        # Shadow is observational. Authorization and V1 dispatch remain authoritative.
+        return None
+
+
+def _load_retrieval_v2_shadow_candidates(
+    *,
+    settings: Settings,
+    request: AgentRunCreateRequest,
+    actor: object,
+    platform_uow: Stage06PlatformUnitOfWork,
+) -> RetrievalShadowCandidateSetV1:
+    provider = build_stage12_query_embedding_provider(settings)
+    try:
+        query_embedding = provider.embed_queries((request.query,))[0]
+    finally:
+        provider.close()
+    result = load_authorized_retrieval_v2(
+        platform_uow,
+        workspace_id=request.workspace_id,
+        employee_id=request.employee_id,
+        query=request.query,
+        actor=actor,
+        active_embedding_profile=settings.retrieval_v2_active_profile or "",
+        query_embedding=query_embedding,
+    )
+    return RetrievalShadowCandidateSetV1(
+        v1_candidate_ids=(),
+        v2_result=result,
+    )
+
+
+def _observe_retrieval_v2_shadow(
+    *,
+    settings: Settings,
+    request: AgentRunCreateRequest,
+    actor: object,
+    platform_uow: Stage06PlatformUnitOfWork,
+) -> None:
+    if not retrieval_v2_shadow_enabled(settings, request.workspace_id):
+        return
+    try:
+        observation = run_retrieval_v2_shadow(
+            settings=settings,
+            workspace_id=request.workspace_id,
+            candidate_loader=lambda: _load_retrieval_v2_shadow_candidates(
+                settings=settings,
+                request=request,
+                actor=actor,
+                platform_uow=platform_uow,
+            ),
+        )
+        if observation is None:
+            return
+        trace_suffix = hashlib.sha256(
+            (
+                f"{request.workspace_id}:{request.employee_id}:"
+                f"{request.idempotency_key}"
+            ).encode("utf-8")
+        ).hexdigest()[:32]
+        record_audit_event(
+            platform_uow,
+            trace_id=f"stage12-retrieval-shadow:{trace_suffix}",
+            actor_type=actor.actor_type,
+            actor_id=actor.actor_id,
+            event_type="stage12.retrieval_v2_shadow_observed",
+            entity_type="digital_employee",
+            entity_id=request.employee_id,
+            after_state=observation.model_dump(mode="json"),
+        )
+    except Exception:
+        # D shadow is audit-only and cannot affect V1 dispatch or response.
+        return
+
+
+def _load_typed_specialists_v2_shadow_metrics(
+    *,
+    request: AgentRunCreateRequest,
+    actor: object,
+    platform_uow: Stage06PlatformUnitOfWork,
+) -> SpecialistShadowMetricsV1:
+    """Injection seam; business runtime materialization remains closed."""
+
+    del request, actor, platform_uow
+    raise RuntimeError("typed_specialists_v2_shadow_source_unavailable")
+
+
+def _observe_typed_specialists_v2_shadow(
+    *,
+    settings: Settings,
+    request: AgentRunCreateRequest,
+    actor: object,
+    platform_uow: Stage06PlatformUnitOfWork,
+) -> None:
+    if not typed_specialists_shadow_enabled(settings, request.workspace_id):
+        return
+    try:
+        observation = run_typed_specialists_shadow(
+            settings=settings,
+            workspace_id=request.workspace_id,
+            execute_pipeline=lambda: _load_typed_specialists_v2_shadow_metrics(
+                request=request,
+                actor=actor,
+                platform_uow=platform_uow,
+            ),
+        )
+        if observation is None:
+            return
+        trace_suffix = hashlib.sha256(
+            (
+                f"{request.workspace_id}:{request.employee_id}:"
+                f"{request.idempotency_key}"
+            ).encode("utf-8")
+        ).hexdigest()[:32]
+        record_audit_event(
+            platform_uow,
+            trace_id=f"stage12-specialists-shadow:{trace_suffix}",
+            actor_type=actor.actor_type,
+            actor_id=actor.actor_id,
+            event_type="stage12.typed_specialists_v2_shadow_observed",
+            entity_type="digital_employee",
+            entity_id=request.employee_id,
+            after_state=observation.model_dump(mode="json"),
+        )
+    except Exception:
+        # E shadow is audit-only and cannot affect V1 dispatch or response.
+        return
+
+
+@router.post(
+    "", response_model=AgentRunCreateResponse, status_code=status.HTTP_202_ACCEPTED
+)
 def create_agent_run_endpoint(
     request: AgentRunCreateRequest,
     identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
     platform_uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
     runtime_uow: AgentEventRuntimeUnitOfWork = Depends(get_agent_event_runtime_uow),
+    action_repository: Stage12ActionRuntimeRepository = Depends(
+        get_stage12_action_repository
+    ),
 ) -> AgentRunCreateResponse:
     settings = _require_enabled(request.workspace_id)
+    if request.requested_action != "read_only" and durable_action_v1_enabled(
+        settings,
+        request.workspace_id,
+    ):
+        try:
+            if settings.agent_runtime_input_key is None:
+                raise PlatformValidationError(
+                    "agent_private_input_key_unavailable",
+                    "agent_private_input_key_unavailable",
+                )
+            actor = authorize_workspace_action(
+                platform_uow,
+                identity,
+                request.workspace_id,
+                "digital_employee.invoke",
+            )
+            result = admit_stage12_action_run(
+                platform_uow,
+                runtime_uow,
+                action_repository,
+                request=request,
+                actor=actor,
+                private_key_b64=settings.agent_runtime_input_key,
+                private_key_version=settings.agent_runtime_input_key_version,
+                embedded=settings.agent_event_runtime_mode == "embedded",
+            )
+            _commit(runtime_uow)
+            return AgentRunCreateResponse(
+                run_id=result.run_id,
+                status=result.status,
+                replayed=result.replayed,
+            )
+        except (Stage06AuthorizationError, PlatformValidationError, ValueError) as exc:
+            _rollback(runtime_uow)
+            raise _http_error(exc) from exc
+        except HTTPException:
+            _rollback(runtime_uow)
+            raise
+        except Exception as exc:
+            _rollback(runtime_uow)
+            raise HTTPException(
+                status_code=500,
+                detail=error_detail(
+                    "agent_run_internal_failure", "agent_run_internal_failure"
+                ),
+            ) from exc
     task_plan = build_task_plan(
         TaskGatewayRequest(
             workspace_id=request.workspace_id,
@@ -105,6 +443,7 @@ def create_agent_run_endpoint(
                 platform_uow=platform_uow,
                 runtime_uow=runtime_uow,
                 settings=settings,
+                task_plan=task_plan,
                 nodes=read_nodes,
             )
         except (Stage06AuthorizationError, PlatformValidationError, ValueError) as exc:
@@ -133,7 +472,9 @@ def create_agent_run_endpoint(
             "query": request.query,
             "requested_action": "read_only",
             "target_record_id": (
-                None if request.target_record_id is None else str(request.target_record_id)
+                None
+                if request.target_record_id is None
+                else str(request.target_record_id)
             ),
             "idempotency_key": request.idempotency_key,
             "skill_id": request.skill_id
@@ -142,6 +483,25 @@ def create_agent_run_endpoint(
     )
     try:
         prepared = prepare_assistant_query(assistant_request, identity, platform_uow)
+        _observe_task_planner_v2_shadow(
+            settings=settings,
+            request=request,
+            actor=prepared.actor,
+            platform_uow=platform_uow,
+            v1_plan=task_plan,
+        )
+        _observe_retrieval_v2_shadow(
+            settings=settings,
+            request=request,
+            actor=prepared.actor,
+            platform_uow=platform_uow,
+        )
+        _observe_typed_specialists_v2_shadow(
+            settings=settings,
+            request=request,
+            actor=prepared.actor,
+            platform_uow=platform_uow,
+        )
         authorization_hash = build_authorization_hash(
             workspace_id=request.workspace_id,
             employee_id=request.employee_id,
@@ -166,14 +526,24 @@ def create_agent_run_endpoint(
             now=now,
         )
         run = creation.run
-        if creation.replayed and run.status in {"completed", "degraded", "failed", "cancelled"}:
+        if creation.replayed and run.status in {
+            "completed",
+            "degraded",
+            "failed",
+            "cancelled",
+        }:
             _commit(runtime_uow)
-            return AgentRunCreateResponse(run_id=run.id, status=run.status, replayed=True)
+            return AgentRunCreateResponse(
+                run_id=run.id, status=run.status, replayed=True
+            )
 
-        idempotency_record = prepared.reservation or platform_uow.get_idempotency_record(
-            request.workspace_id,
-            _STAGE08_OPERATION,
-            request.idempotency_key,
+        idempotency_record = (
+            prepared.reservation
+            or platform_uow.get_idempotency_record(
+                request.workspace_id,
+                _STAGE08_OPERATION,
+                request.idempotency_key,
+            )
         )
         if idempotency_record is None:
             raise RuntimeError("agent_run_safe_storage_ref_unavailable")
@@ -305,7 +675,9 @@ def create_agent_run_endpoint(
                 _rollback(runtime_uow)
         raise HTTPException(
             status_code=500,
-            detail=error_detail("agent_run_internal_failure", "agent_run_internal_failure"),
+            detail=error_detail(
+                "agent_run_internal_failure", "agent_run_internal_failure"
+            ),
         ) from exc
 
 
@@ -316,6 +688,7 @@ def _create_multi_specialist_run(
     platform_uow: Stage06PlatformUnitOfWork,
     runtime_uow: AgentEventRuntimeUnitOfWork,
     settings: Settings,
+    task_plan: TaskPlan,
     nodes: tuple[TaskPlanNode, ...],
 ) -> AgentRunCreateResponse:
     prepared_items: list[tuple[TaskPlanNode, object, AssistantQueryRequest]] = []
@@ -355,6 +728,25 @@ def _create_multi_specialist_run(
         for node, prepared, _assistant_request in prepared_items
         if node.capability_id == "platform.tabular.analyse"
     )
+    _observe_task_planner_v2_shadow(
+        settings=settings,
+        request=request,
+        actor=primary_prepared.actor,
+        platform_uow=platform_uow,
+        v1_plan=task_plan,
+    )
+    _observe_retrieval_v2_shadow(
+        settings=settings,
+        request=request,
+        actor=primary_prepared.actor,
+        platform_uow=platform_uow,
+    )
+    _observe_typed_specialists_v2_shadow(
+        settings=settings,
+        request=request,
+        actor=primary_prepared.actor,
+        platform_uow=platform_uow,
+    )
     authorization_hash = build_authorization_hash(
         workspace_id=request.workspace_id,
         employee_id=request.employee_id,
@@ -384,7 +776,9 @@ def _create_multi_specialist_run(
         _commit(runtime_uow)
         return AgentRunCreateResponse(run_id=run.id, status=run.status, replayed=True)
 
-    command_specs: list[tuple[TaskPlanNode, object, AssistantQueryRequest, UUID, UUID, str]] = []
+    command_specs: list[
+        tuple[TaskPlanNode, object, AssistantQueryRequest, UUID, UUID, str]
+    ] = []
     dispatches: list[SpecialistCommandDispatch] = []
     for node, prepared, assistant_request in prepared_items:
         reservation = prepared.reservation or platform_uow.get_idempotency_record(
@@ -432,7 +826,14 @@ def _create_multi_specialist_run(
         if settings.agent_runtime_input_key is None:
             raise RuntimeError("agent_private_input_key_unavailable")
         for command, spec in zip(commands, command_specs, strict=True):
-            _node, _prepared, assistant_request, _command_id, private_input_id, _storage_ref = spec
+            (
+                _node,
+                _prepared,
+                assistant_request,
+                _command_id,
+                private_input_id,
+                _storage_ref,
+            ) = spec
             sealed = seal_agent_private_input(
                 AgentPrivateInputPayload(
                     actor_user_id=primary_prepared.actor.actor_id,
@@ -484,7 +885,14 @@ def _create_multi_specialist_run(
     )
     result = None
     for command, spec in ordered:
-        _node, prepared, _assistant_request, _command_id, _private_input_id, storage_ref = spec
+        (
+            _node,
+            prepared,
+            _assistant_request,
+            _command_id,
+            _private_input_id,
+            storage_ref,
+        ) = spec
 
         def execute(
             prepared_query=prepared,
@@ -531,6 +939,9 @@ def get_agent_run_events(
     identity: Stage06RequestIdentity = Depends(get_stage06_request_identity),
     platform_uow: Stage06PlatformUnitOfWork = Depends(get_stage06_platform_uow),
     runtime_uow: AgentEventRuntimeUnitOfWork = Depends(get_agent_event_runtime_uow),
+    action_repository: Stage12ActionRuntimeRepository = Depends(
+        get_stage12_action_repository
+    ),
 ) -> StreamingResponse:
     _require_enabled()
     try:
@@ -545,19 +956,11 @@ def get_agent_run_events(
             run.workspace_id,
             "digital_employee.invoke",
         )
-        _require_current_query_scope(
+        _require_agent_event_scope(platform_uow, run=run, actor=actor)
+        authorization_hash = _current_run_authorization_hash(
             platform_uow,
-            workspace_id=run.workspace_id,
-            employee_id=run.root_employee_id,
-            target_record_id=run.target_record_id,
-            requested_action="read_only",
+            run=run,
             actor=actor,
-        )
-        authorization_hash = build_authorization_hash(
-            workspace_id=run.workspace_id,
-            employee_id=run.root_employee_id,
-            target_record_id=run.target_record_id,
-            actor_user_id=actor.actor_id,
         )
         events = project_safe_run_events(
             runtime_uow,
@@ -569,6 +972,13 @@ def get_agent_run_events(
                 platform_uow,
                 artifact_ref,
             ),
+            resolve_objective=lambda reference_id: (
+                action_repository.get_objective_by_command(run.id, reference_id)
+                or action_repository.get_objective(reference_id)
+            ),
+            resolve_action=lambda command_id: action_repository.get_action_by_command(
+                run.id, command_id
+            ),
         )
         return StreamingResponse(
             _encode_live_events(
@@ -578,11 +988,16 @@ def get_agent_run_events(
                 identity=identity,
                 platform_uow=platform_uow,
                 runtime_uow=runtime_uow,
+                action_repository=action_repository,
             ),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
         )
-    except (Stage06AuthorizationError, PlatformValidationError, RuntimeScopeDrift) as exc:
+    except (
+        Stage06AuthorizationError,
+        PlatformValidationError,
+        RuntimeScopeDrift,
+    ) as exc:
         raise HTTPException(
             status_code=403,
             detail=error_detail("agent_run_scope_denied", "agent_run_scope_denied"),
@@ -603,7 +1018,9 @@ def get_agent_run_events(
     except ValueError as exc:
         raise HTTPException(
             status_code=422,
-            detail=error_detail("agent_event_cursor_invalid", "agent_event_cursor_invalid"),
+            detail=error_detail(
+                "agent_event_cursor_invalid", "agent_event_cursor_invalid"
+            ),
         ) from exc
 
 
@@ -625,6 +1042,7 @@ def _encode_live_events(
     identity: Stage06RequestIdentity,
     platform_uow: Stage06PlatformUnitOfWork,
     runtime_uow: AgentEventRuntimeUnitOfWork,
+    action_repository: Stage12ActionRuntimeRepository,
 ) -> Iterator[str]:
     events = initial_events
     cursor = after_sequence
@@ -636,7 +1054,11 @@ def _encode_live_events(
         if any(getattr(event, "event", None) == "done" for event in events):
             return
         run = runtime_uow.get_run(run_id)
-        if run is None or datetime.now(UTC) >= run.deadline_at + timedelta(seconds=5):
+        if (
+            run is None
+            or run.status == "waiting_approval"
+            or datetime.now(UTC) >= run.deadline_at + timedelta(seconds=5)
+        ):
             return
         sleep(0.25)
         _refresh_read_session(runtime_uow)
@@ -650,19 +1072,11 @@ def _encode_live_events(
                 run.workspace_id,
                 "digital_employee.invoke",
             )
-            _require_current_query_scope(
+            _require_agent_event_scope(platform_uow, run=run, actor=actor)
+            authorization_hash = _current_run_authorization_hash(
                 platform_uow,
-                workspace_id=run.workspace_id,
-                employee_id=run.root_employee_id,
-                target_record_id=run.target_record_id,
-                requested_action="read_only",
+                run=run,
                 actor=actor,
-            )
-            authorization_hash = build_authorization_hash(
-                workspace_id=run.workspace_id,
-                employee_id=run.root_employee_id,
-                target_record_id=run.target_record_id,
-                actor_user_id=actor.actor_id,
             )
             events = project_safe_run_events(
                 runtime_uow,
@@ -674,6 +1088,13 @@ def _encode_live_events(
                     platform_uow,
                     artifact_ref,
                 ),
+                resolve_objective=lambda reference_id: (
+                    action_repository.get_objective_by_command(run.id, reference_id)
+                    or action_repository.get_objective(reference_id)
+                ),
+                resolve_action=lambda command_id: action_repository.get_action_by_command(
+                    run.id, command_id
+                ),
             )
         except (Stage06AuthorizationError, PlatformValidationError, RuntimeScopeDrift):
             return
@@ -684,6 +1105,47 @@ def _refresh_read_session(uow: AgentEventRuntimeUnitOfWork) -> None:
     if session is not None:
         session.rollback()
         session.expire_all()
+
+
+def _require_agent_event_scope(platform_uow, *, run, actor) -> None:
+    if run.workflow_version == "stage12.quality-v2.action.v1":
+        build_authorized_schema_snapshot(
+            platform_uow,
+            workspace_id=run.workspace_id,
+            employee_id=run.root_employee_id,
+            actor=actor,
+            require_field_policy_v2=True,
+        )
+        return
+    _require_current_query_scope(
+        platform_uow,
+        workspace_id=run.workspace_id,
+        employee_id=run.root_employee_id,
+        target_record_id=run.target_record_id,
+        requested_action="read_only",
+        actor=actor,
+    )
+
+
+def _current_run_authorization_hash(platform_uow, *, run, actor) -> str:
+    if run.workflow_version == "stage12.quality-v2.action.v1":
+        snapshot = build_authorized_schema_snapshot(
+            platform_uow,
+            workspace_id=run.workspace_id,
+            employee_id=run.root_employee_id,
+            actor=actor,
+            require_field_policy_v2=True,
+        )
+        return build_stage12_action_scope_hash(
+            schema_scope_hash=snapshot.scope_hash,
+            target_record_id=run.target_record_id,
+        )
+    return build_authorization_hash(
+        workspace_id=run.workspace_id,
+        employee_id=run.root_employee_id,
+        target_record_id=run.target_record_id,
+        actor_user_id=actor.actor_id,
+    )
 
 
 def _parse_cursor(value: str | None) -> int:
@@ -750,7 +1212,9 @@ def _require_enabled(workspace_id: UUID | None = None) -> Settings:
     ):
         raise HTTPException(
             status_code=404,
-            detail=error_detail("agent_event_runtime_disabled", "agent_event_runtime_disabled"),
+            detail=error_detail(
+                "agent_event_runtime_disabled", "agent_event_runtime_disabled"
+            ),
         )
     return settings
 
@@ -790,4 +1254,8 @@ def _http_error(exc: Exception) -> HTTPException:
     )
 
 
-__all__ = ["get_agent_event_runtime_uow", "router"]
+__all__ = [
+    "get_agent_event_runtime_uow",
+    "get_stage12_action_repository",
+    "router",
+]

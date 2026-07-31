@@ -74,14 +74,23 @@ test('creates a durable run, consumes safe SSE, and adapts it to the existing co
   }))
 })
 
-test('does not route draft writes through the read-only durable runtime', async () => {
+test('creates a blind auto action run and loads only safe confirmation data', async () => {
+  const slotId = '44444444-4444-4444-8444-444444444444'
+  const objectiveId = '55555555-5555-4555-8555-555555555555'
   const fetchMock = vi.fn()
+    .mockResolvedValueOnce(json({ run_id: runId, status: 'waiting_approval', replayed: false }, 202))
+    .mockResolvedValueOnce(json({ run_id: runId, objectives: [{ objective_id: objectiveId, objective_key: 'obj-01', kind: 'action', required: true, status: 'proposed', safe_summary: '等待确认', error_code: null }] }))
+    .mockResolvedValueOnce(json({ run_id: runId, actions: [{ slot_id: slotId, objective_id: objectiveId, slot_key: 'act-01', action_kind: 'task.create', status: 'pending_confirmation', proposal_version: 4, record_version: null, safe_summary: '创建任务草稿', editable_fields: [{ field_id: '66666666-6666-4666-8666-666666666666', field_key: 'title', label: '标题', field_type: 'text', required: true }], proposed_values: { title: '回滚评审' }, confirmation_required: true, execution_ticket_id: '77777777-7777-4777-8777-777777777777', resource_id: '88888888-8888-4888-8888-888888888888' }] }))
   vi.stubGlobal('fetch', fetchMock)
 
-  await expect(api.queryStage10AssistantRunStream({
-    workspaceId: 'workspace-1', employeeId: 'employee-1', intent: 'mixed', query: '更新记录', requestedAction: 'draft_update', targetRecordId: 'record-1',
-  }, 'idem-1', () => undefined)).rejects.toThrow('Agent event runtime is read-only')
-  expect(fetchMock).not.toHaveBeenCalled()
+  await expect(api.queryStage12ActionRun({
+    workspaceId: 'workspace-1', employeeId: 'employee-1', intent: 'controlled_action', query: '创建回滚评审任务', requestedAction: 'auto', targetRecordId: null,
+  }, 'idem-1')).resolves.toMatchObject({
+    runId,
+    status: 'waiting_approval',
+    actions: [{ slotId, status: 'pending_confirmation', proposedValues: { title: '回滚评审' } }],
+  })
+  expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/stage10/agent-runs', expect.objectContaining({ body: expect.stringContaining('"requested_action":"auto"') }))
 })
 
 test('falls back to Stage08 only when the workspace is outside the Stage10 allowlist', async () => {

@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -8,6 +9,7 @@ from app.runtime.stage08_collaboration_contracts import AssistantQuerySafeView
 from app.services.agent_event_runtime import (
     InMemoryAgentEventRuntimeUnitOfWork,
     RuntimeScopeDrift,
+    append_agent_runtime_event,
     append_checkpoint_and_event,
     claim_run_lease,
     create_agent_run,
@@ -145,3 +147,68 @@ def test_projection_exposes_only_a_stable_timeout_error() -> None:
     assert projected[0].event == "error"
     assert projected[0].code == "run_timed_out"
     assert projected[0].message == "任务已超时"
+
+
+def test_projection_exposes_safe_action_identity_without_private_payload() -> None:
+    uow = InMemoryAgentEventRuntimeUnitOfWork()
+    run = create_agent_run(
+        uow,
+        workspace_id=uuid4(),
+        root_employee_id=uuid4(),
+        scope_hash="a" * 64,
+        idempotency_key_hash="b" * 64,
+        deadline_at=NOW + timedelta(minutes=1),
+        now=NOW,
+    ).run
+    command_id = uuid4()
+    slot_id = uuid4()
+    objective_id = uuid4()
+    append_agent_runtime_event(
+        uow,
+        AgentEventEnvelope(
+            event_id=uuid4(),
+            run_id=run.id,
+            command_id=command_id,
+            causation_id=command_id,
+            correlation_id=run.id,
+            sequence=2,
+            event_type="action.pending_confirmation",
+            status="waiting_approval",
+            source_role="specialist",
+            source_capability="platform.action.propose",
+            safe_summary="action pending confirmation",
+            metrics={"external_send_count": 0},
+            occurred_at=NOW,
+        ),
+        authorization_hash=run.scope_hash,
+        update_run_status="waiting_approval",
+    )
+
+    projected = project_safe_run_events(
+        uow,
+        run_id=run.id,
+        authorization_hash=run.scope_hash,
+        after_sequence=1,
+        resolve_action=lambda value: (
+            SimpleNamespace(
+                id=slot_id,
+                objective_run_id=objective_id,
+                action_kind="task.create",
+            )
+            if value == command_id
+            else None
+        ),
+    )
+
+    assert projected[0].model_dump(mode="json") == {
+        "run_id": str(run.id),
+        "event_id": str(uow.events[1].id),
+        "sequence": 2,
+        "event": "action",
+        "event_type": "action.pending_confirmation",
+        "slot_id": str(slot_id),
+        "objective_id": str(objective_id),
+        "action_kind": "task.create",
+        "status": "pending_confirmation",
+        "message": "action pending confirmation",
+    }

@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -55,7 +56,9 @@ class AgentWorkflowRun(UuidPrimaryKeyMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     scope_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     data_version_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    deadline_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    deadline_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     lease_owner: Mapped[str | None] = mapped_column(String(120), nullable=True)
     lease_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -63,7 +66,9 @@ class AgentWorkflowRun(UuidPrimaryKeyMixin, TimestampMixin, Base):
     idempotency_key_hash: Mapped[str] = mapped_column(
         String(64), nullable=False, unique=True
     )
-    safe_result_ref: Mapped[UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    safe_result_ref: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True), nullable=True
+    )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
 
@@ -109,7 +114,9 @@ class AgentCommand(UuidPrimaryKeyMixin, TimestampMixin, Base):
     command_type: Mapped[str] = mapped_column(String(80), nullable=False)
     sequence: Mapped[int] = mapped_column(Integer, nullable=False)
     payload_ref: Mapped[str | None] = mapped_column(String(160), nullable=True)
-    deadline_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    deadline_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     idempotency_key_hash: Mapped[str] = mapped_column(
         String(64), nullable=False, unique=True
     )
@@ -210,15 +217,118 @@ class AgentPrivateInput(UuidPrimaryKeyMixin, TimestampMixin, Base):
     key_version: Mapped[str] = mapped_column(String(80), nullable=False)
     aad_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     scope_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AgentObjectiveRun(UuidPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "agent_objective_runs"
+    __table_args__ = (
+        UniqueConstraint("run_id", "objective_key", name="uq_agent_objective_run_key"),
+        CheckConstraint(
+            "status IN ('queued','running','completed','proposed','denied',"
+            "'degraded','failed','cancelled')",
+            name="agent_objective_run_status",
+        ),
+        CheckConstraint(
+            "jsonb_typeof(dependency_keys) = 'array'",
+            name="agent_objective_dependency_array",
+        ),
+        Index("ix_agent_objective_run_status", "run_id", "status"),
+    )
+
+    run_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("agent_workflow_runs.id"), nullable=False
+    )
+    objective_key: Mapped[str] = mapped_column(String(80), nullable=False)
+    kind: Mapped[str] = mapped_column(String(40), nullable=False)
+    required: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    dependency_keys: Mapped[list] = mapped_column(JSONB, nullable=False)
+    command_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("agent_commands.id"), nullable=True
+    )
+    result_artifact_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("agent_artifacts.id"), nullable=True
+    )
+    error_code: Mapped[str | None] = mapped_column(String(120), nullable=True)
+
+
+class AgentActionSlot(UuidPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "agent_action_slots"
+    __table_args__ = (
+        UniqueConstraint("idempotency_key_hash", name="uq_agent_action_slot_key"),
+        UniqueConstraint("run_id", "slot_key", name="uq_agent_action_slot_run_key"),
+        CheckConstraint(
+            "action_kind IN ('record.create','record.update','task.create',"
+            "'reminder.request')",
+            name="agent_action_slot_kind",
+        ),
+        CheckConstraint(
+            "status IN ('queued','running','proposed','pending_confirmation',"
+            "'confirmed','executed','denied','degraded','failed','rejected',"
+            "'conflicted','cancelled','expired')",
+            name="agent_action_slot_status",
+        ),
+        CheckConstraint(
+            "jsonb_typeof(control_json) = 'object'",
+            name="agent_action_slot_control_object",
+        ),
+        CheckConstraint(
+            "proposal_version > 0",
+            name="agent_action_slot_version_positive",
+        ),
+        CheckConstraint(
+            f"target_scope_hash {_HASH_CONSTRAINT}",
+            name="agent_action_slot_scope_hash",
+        ),
+        CheckConstraint(
+            f"data_version_hash IS NULL OR data_version_hash {_HASH_CONSTRAINT}",
+            name="agent_action_slot_data_hash",
+        ),
+        CheckConstraint(
+            f"idempotency_key_hash {_HASH_CONSTRAINT}",
+            name="agent_action_slot_idempotency_hash",
+        ),
+        Index("ix_agent_action_slot_run_status", "run_id", "status"),
+        Index("ix_agent_action_slot_objective_status", "objective_run_id", "status"),
+        Index("ix_agent_action_slot_recovery", "updated_at", "status"),
+    )
+
+    run_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("agent_workflow_runs.id"), nullable=False
+    )
+    objective_run_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("agent_objective_runs.id"), nullable=False
+    )
+    slot_key: Mapped[str] = mapped_column(String(80), nullable=False)
+    action_kind: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    proposal_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    control_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    private_payload_ref: Mapped[str] = mapped_column(String(200), nullable=False)
+    target_scope_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    data_version_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    materialized_resource_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True), nullable=True
+    )
+    execution_ticket_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("stage08_execution_tickets.id"), nullable=True
+    )
+    idempotency_key_hash: Mapped[str] = mapped_column(
+        String(64), nullable=False, unique=True
+    )
 
 
 __all__ = [
     "AgentArtifact",
+    "AgentActionSlot",
     "AgentCommand",
     "AgentEvent",
     "AgentOutboxEvent",
+    "AgentObjectiveRun",
     "AgentPrivateInput",
     "AgentRunCheckpoint",
     "AgentWorkflowRun",

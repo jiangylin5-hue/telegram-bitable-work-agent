@@ -1,0 +1,4089 @@
+{
+  "case_count": 48,
+  "completed_count": 48,
+  "failed_count": 0,
+  "observations": [
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:85da4909e2cc02457be023ae888115222333f52e22a27dff02182ba1b9d49bb6",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "5595509ed5da5c176df47202b8dceb5604a8b57a1f37b81b94a33b0ede191c1f",
+          "item_count": 1,
+          "latency_ms": 25,
+          "output_hash": "bb39c0daaa90516e32e04ef51ff6d63190a8b087fa4c8a7883ee8c040c00e427",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "bb39c0daaa90516e32e04ef51ff6d63190a8b087fa4c8a7883ee8c040c00e427",
+          "item_count": 2,
+          "latency_ms": 25,
+          "output_hash": "353f03f3ab2d809348eab6789ca306bf239b8461817f65565fb7c95b7d074e2e",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "767a64c222f21f10497c482209efa92103ea5a726a4ad952582b07a25bbacda9",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "a689a3ffe760bc50099795e97fa5cfa14d1cab3f266a72aae0c5e26d2ae191ff",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "b281b12441af9dded302683d002d5613e8f0192a73ca5e9c53196768b658ea69",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "b281b12441af9dded302683d002d5613e8f0192a73ca5e9c53196768b658ea69",
+          "item_count": 2,
+          "latency_ms": 0,
+          "output_hash": "09a664dea320ebb1e28c63332074d450779c52720b0478cafee204964870c266",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "09a664dea320ebb1e28c63332074d450779c52720b0478cafee204964870c266",
+          "item_count": 2,
+          "latency_ms": 2,
+          "output_hash": "e3f915a75edee48d3262b84c6a26a42022326657cea6ce5e1f9faba76f54e7c8",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "bb17fc1e0f1e9c0338ba2e78e6e88d91c311f9c234313b54c8a52b84f54330f8",
+          "item_count": 1,
+          "latency_ms": 130,
+          "output_hash": "cd14508a3d48b92218d5debc99732b62489dd826a25c3198f580893684de01e1",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "cd14508a3d48b92218d5debc99732b62489dd826a25c3198f580893684de01e1",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:d033f1e0c2f604ff623b7a3db6f9bc73634ce50219a3dea8fd021c30d88acc96",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "7369e1f914005a895f0d843a35fc6428496b906c352dd5c428c9f2bc800b89ec",
+          "item_count": 1,
+          "latency_ms": 5,
+          "output_hash": "4556e77fa6584bde90097a28dba2240603301e060f46dcf47d07fc220597db16",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4556e77fa6584bde90097a28dba2240603301e060f46dcf47d07fc220597db16",
+          "item_count": 1,
+          "latency_ms": 18,
+          "output_hash": "e8929879acee3300719d07a2809fe0846a81bbaf673a5c1cdc81f22d45add8b7",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "c0d61b8de1226c2de16bc7afdf45607839ee155d1a6d046e27be7d614dbb6d43",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "6b284485de9d9e2af9b95972838ee92220d0e2bdd582248f20ea77d11047be53",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "f5610bf458bcf01021dfc9748b6e535778b2766af364efc3d6d4fd30acee280a",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "f5610bf458bcf01021dfc9748b6e535778b2766af364efc3d6d4fd30acee280a",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "9b5fb3894b2378e277856f848d9c4b9b31fe6f4d9df170ff8ea878864b509dce",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "9b5fb3894b2378e277856f848d9c4b9b31fe6f4d9df170ff8ea878864b509dce",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "f69b02304caa9dd519fc5f1b07a56a3b6d419f3f3d12e73f1ede3b3cb9f69153",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "ae672b9fa09260acf9ef97e3140e0835635a138bed91289303cb659c057aebf6",
+          "item_count": 1,
+          "latency_ms": 38,
+          "output_hash": "d7431e03a0a02d6420138d2d4fb0e5bc369d755921b953b2e59145ffa8f1bcb3",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "d7431e03a0a02d6420138d2d4fb0e5bc369d755921b953b2e59145ffa8f1bcb3",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:f0b30d6a4bef813a95dae523bc6318305b7cad6a605a49be4b635b8eae55f0bd",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "295be88c22e4ed5b5263a94c457cfd3cf5dc92b74cc548ea3c8b8042395b3715",
+          "item_count": 1,
+          "latency_ms": 5,
+          "output_hash": "6eb7dadb397d616fbbc836f8fbdb819dd4d6c8f5b7ac35575d2a0325e9a29d6d",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "6eb7dadb397d616fbbc836f8fbdb819dd4d6c8f5b7ac35575d2a0325e9a29d6d",
+          "item_count": 5,
+          "latency_ms": 20,
+          "output_hash": "3a0cbe6f9dc2056e372c84dcdd27e195e397ab3412630be89f517aa70a68edf6",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "9913b365c3d71e9560c28661d5f08298add3be8107b867dd840de0b6fb9d6e7f",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "94051c939f200e00daf52e5aee44b6a3d075115896c426eba5512f3282c78bfb",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "2d28ed66542d2daf5564c7fe809988c854611caa9205ea304c19dd6131f71b96",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "2d28ed66542d2daf5564c7fe809988c854611caa9205ea304c19dd6131f71b96",
+          "item_count": 5,
+          "latency_ms": 0,
+          "output_hash": "70b9e4c5b5e4d01411fa301bb419bbc74c4f48295d23375d6363f9f7a2adecce",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "70b9e4c5b5e4d01411fa301bb419bbc74c4f48295d23375d6363f9f7a2adecce",
+          "item_count": 5,
+          "latency_ms": 0,
+          "output_hash": "b81fd34a95493f0a0035c65bc2b31ec2310875c2f85af87668768a994c67229b",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "700cca510501f5dfa8b3ff680ed4a33351ee375486e9a616536180efc686690b",
+          "item_count": 1,
+          "latency_ms": 39,
+          "output_hash": "93d7021ec9211f15945975e49a8f7acfc6ad4c51c22ebef4e1efa469331834d6",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "93d7021ec9211f15945975e49a8f7acfc6ad4c51c22ebef4e1efa469331834d6",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:81bf88be38a8bac751e892f73b422031dfea64975633550f9905c704520a384e",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "5fcb47633dd291d66869a2a774eb01aa426cb9e8629f17f849301717920a75f5",
+          "item_count": 1,
+          "latency_ms": 8,
+          "output_hash": "41647a317413d8786d70373e37395489ba8d3d59ef6f3d52d63e66f5aa5e93b4",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "41647a317413d8786d70373e37395489ba8d3d59ef6f3d52d63e66f5aa5e93b4",
+          "item_count": 0,
+          "latency_ms": 12,
+          "output_hash": "99470d195516419fd60d1dbe450d3195d4a63733a61d0e484da09447234f3ff9",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "ecda76562eccb684ea4925dc6e36a0c518dfb9c722a3dc3f55007127530d1497",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "9d27a8a08db8dba18032ce7553888d231bcc3a08d624481f96a67ae0a96cee10",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "ebe699fe73906000440258642f40eb7de9ca5ef7d6d8d087ba2a04804af9030e",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "ebe699fe73906000440258642f40eb7de9ca5ef7d6d8d087ba2a04804af9030e",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "e88bb9f8bb918dfed4219d44f84ff4dae42988bb246ac15910368406d48d6943",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "e88bb9f8bb918dfed4219d44f84ff4dae42988bb246ac15910368406d48d6943",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "608b7072ffe21932c7add28df8192c74c35c39bb50a41f8756389f0044c4ae08",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "045c8acd0afda1df0e5446d9aa83c5163af9432205f946602d487f22701dd5c1",
+          "item_count": 1,
+          "latency_ms": 33,
+          "output_hash": "f5ab2b299d325a8a548d2bbdd1a8ff91cb8525c4038f5f4cf75a852bffb8172a",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "f5ab2b299d325a8a548d2bbdd1a8ff91cb8525c4038f5f4cf75a852bffb8172a",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:9bb080c4b2bc18d814c17fd08c057431786adde557a89225c39830e5e6e465e7",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "853c7d9ab6059ac81efd07a7e9f59d253c5e472843c2fb50d274f2edabd8e070",
+          "item_count": 1,
+          "latency_ms": 7,
+          "output_hash": "1e9c61d40783c448890901a9ef027a1df5148f119a01501c521a1089756d32c8",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "1e9c61d40783c448890901a9ef027a1df5148f119a01501c521a1089756d32c8",
+          "item_count": 0,
+          "latency_ms": 13,
+          "output_hash": "d7f96f9cfe4f7720e672afcafcd1e96835f99867c62f2fbaf45bbae73229a351",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "e05c4b47891ad6825959601d9dd708da9dd867a4a3e8843918ce220362fc59af",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "c5c9a8c00ceae97ea84aa71feccc61bd582531ab9e54300cf432492df6d1929c",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "42180597919e1448581828351c2e3a7a6c9c60ad8e3cce2317b107b2e57f2c5c",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "42180597919e1448581828351c2e3a7a6c9c60ad8e3cce2317b107b2e57f2c5c",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "a67f6f0ac5008c940dcaf6c7ed5dc4d0f1b28a85d23ff9b4d371e8f6835c14b2",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "a67f6f0ac5008c940dcaf6c7ed5dc4d0f1b28a85d23ff9b4d371e8f6835c14b2",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "43c3d400a067d8af8a9337ca069d59969c7740c35bc214377cf17026e3477e3f",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "8709713ed52cdd5b50af09747ac887b2d639a2473e00888c79b9f694d4411e90",
+          "item_count": 1,
+          "latency_ms": 34,
+          "output_hash": "96524505d1ae2ea443f7ad2271573bf6d45a788bf58f5eb3261869ff32e2f95a",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "96524505d1ae2ea443f7ad2271573bf6d45a788bf58f5eb3261869ff32e2f95a",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:f0838b408cd459c986145dd0846006b6b754802f4903856546bca07c94c221f5",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "ab8ff92abdbd977b5efe36402950a84e49eec2b6260498b1cf73e43cb9534584",
+          "item_count": 1,
+          "latency_ms": 4,
+          "output_hash": "526cabdbb565fd19094696366492b862a82d6aed677da03780d11d9ced779456",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "526cabdbb565fd19094696366492b862a82d6aed677da03780d11d9ced779456",
+          "item_count": 1,
+          "latency_ms": 10,
+          "output_hash": "bdbfab29818cf0ca1ed38c0d4304f33179999b134381a9a8919a5302ce8efb64",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "d887f9333af93f842066744032c0c34ed3d556c196e9d898cb1c05382c97f41b",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "361cece7a2a90d381b8564e586eca438db4abb0f6a084815a50b2e9aab0458d0",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "7de3a969fe0403900088874bc3a5125806bcef9ac382c9752e07410f33d55bc8",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "7de3a969fe0403900088874bc3a5125806bcef9ac382c9752e07410f33d55bc8",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "100af2ead8eb38721951115fb8169cdd860b6ef6a06d973b2020279f9779f21f",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "100af2ead8eb38721951115fb8169cdd860b6ef6a06d973b2020279f9779f21f",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "649402e79f8fb997eec209e967bc5000ce6e0a8d58600d4b280635cf24d2bc99",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "fd24897975d6446a87f43df750abd86777cbd01e423812cd7d6cf80d12320581",
+          "item_count": 1,
+          "latency_ms": 31,
+          "output_hash": "928a25bb70fba2174dec35347a1ea02b47f82d31a5eb90c682be9835ecdfbd05",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "928a25bb70fba2174dec35347a1ea02b47f82d31a5eb90c682be9835ecdfbd05",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:d4f0da5ad34aa5f6c2938b35f91f802f6a6f9432eecb0986f068a8e76a359dd4",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "526a8e89ee4e942a663a9ce0f8e0fb69634229630a21391a39286688e327dad6",
+          "item_count": 1,
+          "latency_ms": 5,
+          "output_hash": "d4c91d132ecbfe7d629fce6a56bb3a5201f99f7446719c5c85036ff04998020b",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "d4c91d132ecbfe7d629fce6a56bb3a5201f99f7446719c5c85036ff04998020b",
+          "item_count": 2,
+          "latency_ms": 16,
+          "output_hash": "6b7427fd858d92eab58d38e13aea2ffefad51cd27eee85e4b1c1ae4af27f7234",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "8dd19bbb3da153c3b34dddcb08be86b658ddf2f7e9ddb1dfec5f7dc0a54a7a4e",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "41f5eac172929e3ea25e6df5be75461ffda023caabbf23561a8e73fe185a609f",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "8d9e4c699d7bced700fefd16b911ce61402943fa8e1e425f71f98f4a472f1466",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "8d9e4c699d7bced700fefd16b911ce61402943fa8e1e425f71f98f4a472f1466",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "a78080ac9979954e2a47cfc1ee6e9f449744c5a32c42772e01687ab35ff8c4c4",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "a78080ac9979954e2a47cfc1ee6e9f449744c5a32c42772e01687ab35ff8c4c4",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "5a3d4e061516810c08f6ea0cf9aab49d50f1e37643eaac464a5a0c5b59d7b6d3",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "279297c8f1c69806773e28a7fca1020e2690a5696edb7b2fac1c9ad543f1dd04",
+          "item_count": 1,
+          "latency_ms": 39,
+          "output_hash": "2f21e2e1a2d1338e5348b789daf7c0058ff5a70c689ff7595db8cba84fa96940",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "2f21e2e1a2d1338e5348b789daf7c0058ff5a70c689ff7595db8cba84fa96940",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:c9bb3786878162219a81cecf3f72f072a9d51a768e14833e03fdfce017a3d2d1",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "fd1fc05981ad4ea69760bd5789075c9820f85feaa78607afcdd6ce9f733d1887",
+          "item_count": 2,
+          "latency_ms": 5,
+          "output_hash": "cce0545d3910bdc92675720cd3c93278d728d56fd066cd06d01d0fbc468239a2",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "cce0545d3910bdc92675720cd3c93278d728d56fd066cd06d01d0fbc468239a2",
+          "item_count": 8,
+          "latency_ms": 18,
+          "output_hash": "5b546c580ba6a0fca2d71ceacef4c4381d0e5adb8a667a579d9fd8da431cdd3f",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "57905f220c1772e480de33eb0404dc3b62219973cdbe859fc0918500f58774f9",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "6e168481031c7661558d9a3f1a241af2f700803c5f6fbf625ed0606a88b4a404",
+          "item_count": 2,
+          "latency_ms": 1,
+          "output_hash": "5aca5c4db7a5d30d92d1524a8721874cb9b49d0e0a4939c18b195b8379c561f2",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "5aca5c4db7a5d30d92d1524a8721874cb9b49d0e0a4939c18b195b8379c561f2",
+          "item_count": 11,
+          "latency_ms": 1,
+          "output_hash": "ee863c53da84285f8e87eea501a4fb17fa9c096c10fe567b42911bde8d79b88e",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "ee863c53da84285f8e87eea501a4fb17fa9c096c10fe567b42911bde8d79b88e",
+          "item_count": 8,
+          "latency_ms": 0,
+          "output_hash": "abd2a39eae3b051b1270e9b5e08bd277ca0b1e65c27bc955f50139ceb76083c0",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "8bafda52e35e15a0108bffeb4fc535e5372b82e892ea57ed2420f97ac532f603",
+          "item_count": 1,
+          "latency_ms": 41,
+          "output_hash": "bffaccbcabbff6c00fd7636497841da71608239f72ee6a3c9c974d1061f129c9",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "bffaccbcabbff6c00fd7636497841da71608239f72ee6a3c9c974d1061f129c9",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:0584f49ee617937286216abb08411bdd689477e19401b5195bcb911ba9f1f05d",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "9e113c43d9c285b5bf66dbf318e769a11da59f6b480afc850f9371ed277d2378",
+          "item_count": 1,
+          "latency_ms": 5,
+          "output_hash": "0a8d0d9a1a99c64eb9dc865916905922a288897ea8bfe4bbe4e59886a806bd11",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "0a8d0d9a1a99c64eb9dc865916905922a288897ea8bfe4bbe4e59886a806bd11",
+          "item_count": 4,
+          "latency_ms": 11,
+          "output_hash": "9045251a921a045e82162cc131e8eb4d4e1e0bce59e95c495420798304a57078",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "6aeccf26ff2a9ed515674ea0e5f032619be683bd919227cbc58477ffabf1dd0f",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "72ff968c08cee163cc0f28e5ddfcd6672c7b5ef4e8f16f9162c8bb8936908d02",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "e96fb5c5ed876b5655fdb9ad6d9fb9233996e0787b9b3fb99d3eff8e6b3ec0dc",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "e96fb5c5ed876b5655fdb9ad6d9fb9233996e0787b9b3fb99d3eff8e6b3ec0dc",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "fd752d6d1b10eb0d9e1ce8e16a0aad77b7027f2126d5eac851e7f58b73b88cbe",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "fd752d6d1b10eb0d9e1ce8e16a0aad77b7027f2126d5eac851e7f58b73b88cbe",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "10872825d72efb335057fe5fb0b3b1f6a54de61b79decba4e64d27809e04436a",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "61ad593b043177c976a00884909f6710c5a0b25cf0314ad312c6e2a5d4357534",
+          "item_count": 1,
+          "latency_ms": 34,
+          "output_hash": "43fd618d465a1512ce868642c501301977730970d974ebe9a9e044ae3b44aff1",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "43fd618d465a1512ce868642c501301977730970d974ebe9a9e044ae3b44aff1",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:cb68d24ccabbd67c3a8052e0420d51eab89cbb22ad763ebb973fdcd0aa9327bb",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "b7f374fee8fa47ba3be6556a0fc426b39b268e3013020a7bf45a08c43ab4412c",
+          "item_count": 1,
+          "latency_ms": 6,
+          "output_hash": "8e17db84ce8c3617f87b8cc1ebdbb31dea0849322050c8284fa5f16a04723326",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "8e17db84ce8c3617f87b8cc1ebdbb31dea0849322050c8284fa5f16a04723326",
+          "item_count": 1,
+          "latency_ms": 7,
+          "output_hash": "f348116fc8e847ddcbe6da473b6071ea1c42cfade2dac961ca6ccb4140e68909",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "60b327f39ffb425f760d079adf82039797148686cbc117d085aa060622d561be",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "2ec52ba04ceaf1564ec3a5887c315cd3b4d46c69efeb3d0ee2a920d352eef57a",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "9ec310e796acff90ab506ff25e03d1be8a94b92f0cbaa5e5c1520ec92bb2b67d",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "9ec310e796acff90ab506ff25e03d1be8a94b92f0cbaa5e5c1520ec92bb2b67d",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "f3cdd2b66cde9e77f2d2e7a7402e979926ef739f2a8021aeeaa5062092c53092",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "f3cdd2b66cde9e77f2d2e7a7402e979926ef739f2a8021aeeaa5062092c53092",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "22610a90ab7f983c943a210e40824c601dc92574415188fdb5ff27f453996f2b",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "cd9ff37cd8d8a9d85e8ecf5f905af36121418a72083ecaa9d7c5b4cac139f9bd",
+          "item_count": 1,
+          "latency_ms": 26,
+          "output_hash": "a81c2f7d78b3a8f1d111bcf30addc9327962d5aac2c16c71fe8a28ca731a4ef4",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "a81c2f7d78b3a8f1d111bcf30addc9327962d5aac2c16c71fe8a28ca731a4ef4",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:6bea90d893d169b2da6670e22ebf603ee370d08afc0163d2f8963cb69d1b086a",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "f344c4082544e015e01730e3b01739e021741c2864946a7f062d3e3fb77625b2",
+          "item_count": 2,
+          "latency_ms": 5,
+          "output_hash": "33ea5a3271f154f900759c75619d65d8b6d7986a3f1ed48d468c628d99d9cb19",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "33ea5a3271f154f900759c75619d65d8b6d7986a3f1ed48d468c628d99d9cb19",
+          "item_count": 6,
+          "latency_ms": 17,
+          "output_hash": "1bd4080bbcacc08d3325fcfedc7ab48a8e01b6cd7dbfef6b024ac9e9371192bd",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "ab07e6c0fe7a5b03366c08e1ce8459435f05c3178bfc479b0884b5998f39cdc3",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "eb2a51664eba924c79e6df21ae37bbf194e00cc9c867044c8f62483b9b01c8a3",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "c30d29d9ad56fccfad961e4d3ba10b2691e0b8420b51979062f8be301ca85ecb",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "c30d29d9ad56fccfad961e4d3ba10b2691e0b8420b51979062f8be301ca85ecb",
+          "item_count": 3,
+          "latency_ms": 0,
+          "output_hash": "aee671a04a1afe8e5105ac2e1b77b36fe02a1dd4c35a5c18fea6f096bd14dfc2",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "aee671a04a1afe8e5105ac2e1b77b36fe02a1dd4c35a5c18fea6f096bd14dfc2",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "74d3c1e58572302ffbb30f6c489610488bf6161e34588a2320a9373c104d2d56",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "b44ad3af0a35cb7cc7807128f012f6ff4adb11eeeda55e16667d9ff190666271",
+          "item_count": 1,
+          "latency_ms": 35,
+          "output_hash": "e056a6979ddfcae98f811816f186a4e382d4d86dc778d6d00284a634e518e17a",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "e056a6979ddfcae98f811816f186a4e382d4d86dc778d6d00284a634e518e17a",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:3f838d498617bc3667bb9b67bf8ba87cfb62d3ae76a652ebf4c9d93758d082e5",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "cb6755ae6ec01dc5fec1ca6b76f9ab9e8ddd569b7fcb958864236934515b4c81",
+          "item_count": 2,
+          "latency_ms": 6,
+          "output_hash": "e3bff874b38ce8511b8f81385b0cd9a1a9a55348707ec1830b26f33684bf7597",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "e3bff874b38ce8511b8f81385b0cd9a1a9a55348707ec1830b26f33684bf7597",
+          "item_count": 12,
+          "latency_ms": 10,
+          "output_hash": "22f99d0232cb73152240b6bbbb0b5c244f0f8c946c550d252e42f69e7bcbe43a",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "5709af0a474a9602638bbcc2bee30fc11aa02f1f7c69c8fc0846f2ab1c9359a5",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "192b68584217a364f0247e0753eae097cf60acfc10b6ea9667cd58d02842315c",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "eeefdc1ecebc2acba5d92d236f43a80407e99be5871c7b968113ba60c6e9bd41",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "eeefdc1ecebc2acba5d92d236f43a80407e99be5871c7b968113ba60c6e9bd41",
+          "item_count": 2,
+          "latency_ms": 0,
+          "output_hash": "f3f2fa49220749024672cbfc9e9b5fceb0f7637ef1c171f3d9be72c40bc9bd74",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "f3f2fa49220749024672cbfc9e9b5fceb0f7637ef1c171f3d9be72c40bc9bd74",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "6d2dedacec56d5595b9da858d54f44a41be98cb9605e37b766f1565a6a4d2b5e",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "e77cf1984961331bc78fd585a9612b0ca335f0c21bcc0c46388ee4a9cdc9de30",
+          "item_count": 1,
+          "latency_ms": 31,
+          "output_hash": "98b1eeb92ebfbb3986217345a497ef97cd15a279b88b1f4a43a2ccbf192f3128",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "98b1eeb92ebfbb3986217345a497ef97cd15a279b88b1f4a43a2ccbf192f3128",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:aa86c6b2f9cb79c43990cc9f3eb5e4ac2030c6deb109b11f664c06a9517784ea",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "281eb8ac1512e3b4ee4f4e2b8f0ef471e80b662a42c8e596add9d753e06731ab",
+          "item_count": 1,
+          "latency_ms": 4,
+          "output_hash": "1e115ae762764ca07246d456390e12f14ca2bd7bcef6d001bf451616c64cdbc1",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "1e115ae762764ca07246d456390e12f14ca2bd7bcef6d001bf451616c64cdbc1",
+          "item_count": 2,
+          "latency_ms": 9,
+          "output_hash": "1b4f13455941c32bfdf3c91bd0304c03da6bf18b9c6e8abfa2b21e80a3a8bff1",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "a602b916a58b3adf3dd860541b28b07acb9bb4458707396e007b6efd2502b579",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "29d5ff0bf91dccb0de2d090a79dba474af59ef5913c97f3f0bde9cd9ad2995c9",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "8fb1764590a879439147d07962a05f6f29e99a7cb35efee55094ceb49abe6d37",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "8fb1764590a879439147d07962a05f6f29e99a7cb35efee55094ceb49abe6d37",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "09c86733fbdd72d94a02d122da04794385e4f9c3ce6e62a9f5189de1713c4caa",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "09c86733fbdd72d94a02d122da04794385e4f9c3ce6e62a9f5189de1713c4caa",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "eb2c13feadeadb920da22e1aea3672a898bb6a57e34a2eb8ed24032c19e5c293",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "5a5bc157ec293eace4a98713952a6527aff334387cf68ff1d9d876970d06d91d",
+          "item_count": 1,
+          "latency_ms": 27,
+          "output_hash": "d323846239b62741f29ed723899d01f419ac01ac7f5f5b118e54a8ae9a94c575",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "d323846239b62741f29ed723899d01f419ac01ac7f5f5b118e54a8ae9a94c575",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:ec4998b130b41a0e9d04b6bef3b181768af23dec4ac1d4503fa3b5c0f52da588",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "0c1560485409fcfad32b90a75483bcaf6239a10defcca6ccbc4f688aa5b2b247",
+          "item_count": 1,
+          "latency_ms": 4,
+          "output_hash": "23b3e55a2b9e81ffabe49d92f9977a8c33e2e585182b51628e96953dc9f0ba9e",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "23b3e55a2b9e81ffabe49d92f9977a8c33e2e585182b51628e96953dc9f0ba9e",
+          "item_count": 6,
+          "latency_ms": 6,
+          "output_hash": "02092d437e98f6858ac8fa13774ed1db60a90d2659b1569df282ef4b632e0e2f",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "334f3f724791e2932e81602693c2f715070ae88237a6574b28de462ede0fc38b",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "ea1647f97ee0d4c4a073209454451bd2ec504f3acbbf178f103922b90342fad8",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "8b0162a78663df3c9da081afad86214ea3bb07eae287b20c8e941b2d581734cf",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "8b0162a78663df3c9da081afad86214ea3bb07eae287b20c8e941b2d581734cf",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "ffc6ab4b2c590ad3a2c81d37296ad9a216c66c8291578852821ff40116372f80",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "ffc6ab4b2c590ad3a2c81d37296ad9a216c66c8291578852821ff40116372f80",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "ec3921da7221caadcd37f4062b651c3822049d10a30c7a36ceb17de560567138",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "3bee087d99dd00169582be465c27729de657ef78a96908681efd1c31736b664e",
+          "item_count": 1,
+          "latency_ms": 39,
+          "output_hash": "f6db599fdf31b8b7b5702b39a902ded01739a9a943814562ac5392124517e537",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "f6db599fdf31b8b7b5702b39a902ded01739a9a943814562ac5392124517e537",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:55082ab6a254e8757c3dbab1b0dac897837ea2a242b275e1111bca76a17c57fb",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "bf2885726e018e88fac9ac329f703ac18485e9db05da5df12802b06e0b3a5ad8",
+          "item_count": 2,
+          "latency_ms": 6,
+          "output_hash": "c45088d78bdb48d4f07c86aceeee9dc74ec55a523fd72fc546f39fd37caa778d",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "c45088d78bdb48d4f07c86aceeee9dc74ec55a523fd72fc546f39fd37caa778d",
+          "item_count": 13,
+          "latency_ms": 7,
+          "output_hash": "b04988f0e3b5386e4f514ee302dd0074f85dc1f3f42369d531c091ab3d0f96ab",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "3ff7b966d087be780c1f792ed25c38373dbee80af2bb7bdff99bc182d0b5b439",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "bb454d86523760a994995decf3489955f0c1b89344bf7ea912d3cd04f00234ed",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "02ca511cca987d7d50a28e88625d8b366bdf29917302e3f5d46978ffc419eb51",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "02ca511cca987d7d50a28e88625d8b366bdf29917302e3f5d46978ffc419eb51",
+          "item_count": 3,
+          "latency_ms": 0,
+          "output_hash": "270e13da0b79f52e153b8b101f1178dcf6066b2fef3da6c2aaa952181668cbb2",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "270e13da0b79f52e153b8b101f1178dcf6066b2fef3da6c2aaa952181668cbb2",
+          "item_count": 3,
+          "latency_ms": 0,
+          "output_hash": "3f9acb9879bad8d84a200495438a9ed21c8dfe0b04a98cee6bc612ec1fbfad06",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "efb1f98a6554467669ff5b364ab0a0e972dd60fab59acf7c3eeeb11d08bc5fed",
+          "item_count": 1,
+          "latency_ms": 29,
+          "output_hash": "d62ddecfab9ae4a4b61de56f585894fcb9eccb6348f9ab356a55622cca586b58",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "d62ddecfab9ae4a4b61de56f585894fcb9eccb6348f9ab356a55622cca586b58",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:4d0763b609a766a0d3e5c31ac15fc813ff1359cbde65e2653edca8596387b256",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "bec6617137e692a431a2a2db80391c11285c9f948806962feab34ba1f8c87eb8",
+          "item_count": 2,
+          "latency_ms": 4,
+          "output_hash": "a619f425d4211b7114f808e8446946ee85900eb6f0626dda545ad6421155a71a",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "a619f425d4211b7114f808e8446946ee85900eb6f0626dda545ad6421155a71a",
+          "item_count": 2,
+          "latency_ms": 9,
+          "output_hash": "d6454a510f3d34a77c3ea8ff52a99ecd601919aabf2f02640c587e3c2e6c8f72",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "e764ad17e08f91ca0cc2ee955b8dc3fec1f36a46f7841d25648bf88deaf28c51",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "6e853307931a19860c712e40e7dfdeada8db8ee54d9e1b6a64afd194d902e96f",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "16a193e520a880275469bdd3256ecae0ccfa7eb08df9bc9b5a6f580635cf7518",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "16a193e520a880275469bdd3256ecae0ccfa7eb08df9bc9b5a6f580635cf7518",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "9e2643a967b271a5f4c9eda84191cd2c532264b0df361c91c285d1b7ba66ba66",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "9e2643a967b271a5f4c9eda84191cd2c532264b0df361c91c285d1b7ba66ba66",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "eef8a49a11582b75136e5421ecd3f0269a2e3fb62550757d011f848541115c86",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "d619c5a1ea9a3cb4cf2ac30043d05c4875876262e38ed9f4a1213a41c36856f8",
+          "item_count": 1,
+          "latency_ms": 27,
+          "output_hash": "971194a6473f120efb241fe8c23ca35daf445de21f8b1f373f35dd005fb63866",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "971194a6473f120efb241fe8c23ca35daf445de21f8b1f373f35dd005fb63866",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:32ac6ce2e039a93f2aa3d78e7875a4c8d38fce96d90481bb6da866c35a74223e",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "33600dd0449331b0e9a79a96e3c9c5817cb389a18b2231bc05261ef21d5d5859",
+          "item_count": 2,
+          "latency_ms": 5,
+          "output_hash": "fd96014e3f9a120cfa9f41bf51a30d240228742e5049c8d1b80361369a32e29a",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "fd96014e3f9a120cfa9f41bf51a30d240228742e5049c8d1b80361369a32e29a",
+          "item_count": 13,
+          "latency_ms": 9,
+          "output_hash": "3a13df7eb3bcde873843f1fbc0ccc31a35a23eaad95052851a4d88aeb2a1333b",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "69f3edc8c862e6b8c6bb917f1e2c64564c66da8efc923ee5955a22d54be0eabf",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "9f66b9959db30c69e50c901b440d5ca4b0944edd6f5a8b4e2bdaadc6e77ae2c3",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "fa413bca1abc8d6ee29080ec5a2c2ebb6c2808c39471a38d764e69b4f1f59fac",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "fa413bca1abc8d6ee29080ec5a2c2ebb6c2808c39471a38d764e69b4f1f59fac",
+          "item_count": 3,
+          "latency_ms": 0,
+          "output_hash": "260716a9a0b98309530300356224f5744f0245ef67d9b64feaf3c820c6289ce4",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "260716a9a0b98309530300356224f5744f0245ef67d9b64feaf3c820c6289ce4",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "c9827ff4cb7f0e1a81bcd01f1dce7b0016f7a7c9b710deb1f9ddba45ed256d77",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "ff022080d8e9288755fe39b94cc39c5ec8831f0e59bcf87bb6e59e268a70bb5f",
+          "item_count": 1,
+          "latency_ms": 30,
+          "output_hash": "92e45e02bcab1047040fec3733b70bf27c849583eea952f182183f6408a89492",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "92e45e02bcab1047040fec3733b70bf27c849583eea952f182183f6408a89492",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:2b4925982fe929f0c369cc5b371572da1afc32d0b29abad8e1b36c61aafe0b3e",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "cedd506b16fdae0a557d5cd4dc0983f100d219bc220253d7b219c51501a6302a",
+          "item_count": 2,
+          "latency_ms": 5,
+          "output_hash": "ae62f7756f812149180514460243468d0bc3853d9ef02c450756588b39c18844",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "ae62f7756f812149180514460243468d0bc3853d9ef02c450756588b39c18844",
+          "item_count": 4,
+          "latency_ms": 7,
+          "output_hash": "59be68fa46c32354cd4b1b59e9d92e95b3aa83dbf06ae4f86043bc174cda9faa",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "eef0dfa0071c7f2748425b2c9e4200d7f78d3e6ee15325dd7dbecdf8ca43e314",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "f311e1006b63af5a3c07a530ab447ad5a550b668e87d0019fb146bc19f1a496b",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "874fdec7a0736bfdb119eb4e5340360819787ee7e7009a77389190437359865d",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "874fdec7a0736bfdb119eb4e5340360819787ee7e7009a77389190437359865d",
+          "item_count": 9,
+          "latency_ms": 0,
+          "output_hash": "d199584599e5eb8492d94ccda4262845072cb7c5215e7c3d5ac471c6e446c1d5",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "d199584599e5eb8492d94ccda4262845072cb7c5215e7c3d5ac471c6e446c1d5",
+          "item_count": 9,
+          "latency_ms": 0,
+          "output_hash": "412e95f6b3961508b770808058b779dec447e58f624f30b76ce4158dcb8252b1",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "c33c83e37c1ceebe1744ed677d4083593ac216d3066ea040a829c7b3cf5e5b5e",
+          "item_count": 1,
+          "latency_ms": 26,
+          "output_hash": "ba8cb65abc42bae213a381ed13a91bba7acd966caf16926875e4ead38d5de8e4",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "ba8cb65abc42bae213a381ed13a91bba7acd966caf16926875e4ead38d5de8e4",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:30e162a230df75b0a9105b27cef63a4e7a8296f164d826f515ba0250b4546255",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "2c66b007f68e30d4f5848b523275895c17d9ef5f61d46c76fb0205c0009d6e44",
+          "item_count": 2,
+          "latency_ms": 4,
+          "output_hash": "6ec870002e04a3f6f0e53f77a288f9b1cbaf656c1280f291180609ff5057cd7c",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "6ec870002e04a3f6f0e53f77a288f9b1cbaf656c1280f291180609ff5057cd7c",
+          "item_count": 3,
+          "latency_ms": 10,
+          "output_hash": "dc45cd9fa6fe3cce93eba62539ae79952ab27142fcdd404ac39079da1f361a32",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "806fd2adc40443cf3e1d21fd145f39cf04cabc25c8e75fafd9ef3da29a30288c",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "cb13f41f11eafe75334919bc8050831a8a82a7a40987d93341dbba8b443ddd00",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "178ee822ff7cfcd3ce70830eca89b6c9946e2587ece77242cbded43dcb9d3060",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "178ee822ff7cfcd3ce70830eca89b6c9946e2587ece77242cbded43dcb9d3060",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "5ea858b2981c15007b6ba689bf324924d517f669c8ac01fa834aa0dd4b8e1106",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "5ea858b2981c15007b6ba689bf324924d517f669c8ac01fa834aa0dd4b8e1106",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "c037f24ace992b42299554baab0a20230278744e1a1a408fb9da81e472d07b17",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "a1072d6beab247be43aaba9fcd993ee988aa9fa886c3b37deb6ecc5e465ea440",
+          "item_count": 1,
+          "latency_ms": 29,
+          "output_hash": "405382dac03563c0b7a9968a6b408c82f0a1aabcab07e56af72881f1cc14f362",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "405382dac03563c0b7a9968a6b408c82f0a1aabcab07e56af72881f1cc14f362",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:61d8009f84ef58857a4e99f404decf4a28f79bc52ddb3b9d0a6a36e0bb02b2a5",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "aa49c8c003967746fbac38bed97761e50629098a9742534a1a0079ebb33089fb",
+          "item_count": 3,
+          "latency_ms": 4,
+          "output_hash": "e08c3bd0d52e25dbea45f8bee1244cb8328a3c1b2c7fb8412c68363e09dc20bc",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "e08c3bd0d52e25dbea45f8bee1244cb8328a3c1b2c7fb8412c68363e09dc20bc",
+          "item_count": 1,
+          "latency_ms": 10,
+          "output_hash": "fb6734b8ffcdbdf467c042bf335cf089f4cb4a9aa74897d83840c90fddffc224",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "768f923b19710d977294f40ff8ed04d7c56c6b0d4d1afc213fa11baaf0d8102d",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "a206b2d20df242c32da0ecc7dec6e4b444ef4e4dd3bbdddbb04195e83fcb3cf6",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "2771a09c3823dc4f226a63bb7ab1c7d83aa3c014dae6b1cd0076f808260326fe",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "2771a09c3823dc4f226a63bb7ab1c7d83aa3c014dae6b1cd0076f808260326fe",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "0cc30bc13464c37452cd88b53ba1b0ad734fe92304a0307636d4cd432388dd03",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "0cc30bc13464c37452cd88b53ba1b0ad734fe92304a0307636d4cd432388dd03",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "8c1ba5761eec7241572b6279c77adfdcaf85bee47b413f25fc40cdc310ae37ce",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "65d1b875aad7fe9d6c96ec877fd121325a95dad46b50f25dbd29efc54fd235a1",
+          "item_count": 1,
+          "latency_ms": 29,
+          "output_hash": "3d2cc72750a052078ae5af079405cdd6a7e07ba27e97d89218a164753603cfa2",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "3d2cc72750a052078ae5af079405cdd6a7e07ba27e97d89218a164753603cfa2",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:80e27615136d0185defd48c94da37719ef723a8c630748255179116738cf383a",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "e6496df1fe60eedf0cb5af95d4dba6de0f1a0e8ac5653d01c69ffe8c2191aba2",
+          "item_count": 2,
+          "latency_ms": 10,
+          "output_hash": "d36da1e8f1db3acee67d0cd5e22946de30a7ca064e8175dac4fc929324ce308a",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "d36da1e8f1db3acee67d0cd5e22946de30a7ca064e8175dac4fc929324ce308a",
+          "item_count": 1,
+          "latency_ms": 11,
+          "output_hash": "d3cf96230a274f6cfa69d3a091d093ed9f60e1ed9dd59bf761114f0884c2dad7",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "bf56b91ec3eea9a83111414f9f90fdc76b5626c8435b3278a7af47ca572684fd",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "e74b2c53f5fa86d862ade5317df9fe01d30e05469b38fcf2503d5a080a81cec6",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "6559a824e921532e070f8ee4390b377c62f9789c353ac0d2d12f98dfb26bea49",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "6559a824e921532e070f8ee4390b377c62f9789c353ac0d2d12f98dfb26bea49",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "5d15ce135d9ffdb861e5f153b1e22670eed513589079dc69289acd1baf74c00b",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "5d15ce135d9ffdb861e5f153b1e22670eed513589079dc69289acd1baf74c00b",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "4671e0c67feb352a77be73a5461ea8b75c1e78189d11ad6bd52513f0e6a788c0",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "f0e20561109c491012bce4c67bf1491d0ca320f391b29a55f59195143bdcb442",
+          "item_count": 1,
+          "latency_ms": 26,
+          "output_hash": "8828ca70220abcaf250faeb196b4efb72be355dd7ba0536cbd7ef9e0e580aa2f",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "0f3b09921cc652fe2d98fbe5a625a853058875a7b75b9e258c9e16834399ecf6",
+          "item_count": 1,
+          "latency_ms": 64,
+          "output_hash": "e1e9c9488ddb9a992a909f5525f5490bc9f7a3aeb57b72f0c8c270687c6ae4e4",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "e1e9c9488ddb9a992a909f5525f5490bc9f7a3aeb57b72f0c8c270687c6ae4e4",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:9a7c6339646f768e87054dbe23194d23774a88c3cfb6ef5414f302b0d5f7e2d1",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "fffeb9e4a1fdf3169f7d34fd866cf6cae09c18367d545884dd302e48998f3d7b",
+          "item_count": 2,
+          "latency_ms": 7,
+          "output_hash": "452629007b872e0bc058e556fae16caf3441f925862ea9271ad7e45c3a57ac99",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "452629007b872e0bc058e556fae16caf3441f925862ea9271ad7e45c3a57ac99",
+          "item_count": 1,
+          "latency_ms": 6,
+          "output_hash": "76c10edee575f8a5c28e211443a7c26d81af6c05cd9734d33682d488bd8c299c",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "d79f0b5059e010a88565148c096a3b6c37c1149965120bf3bae2926435a44dec",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "845b59463010f9fb30a4f7989ec185f7ac5522466b9621247df836a50aa7949d",
+          "item_count": 1,
+          "latency_ms": 1,
+          "output_hash": "c33d264af22c22ff217fed53db5420162b14ebd69adc8759075b437b98b7b015",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "c33d264af22c22ff217fed53db5420162b14ebd69adc8759075b437b98b7b015",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "f9e04c8e9a82c9ee5737640149c28643743010f9be70f0fe976ff49c7b06008c",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "f9e04c8e9a82c9ee5737640149c28643743010f9be70f0fe976ff49c7b06008c",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "55532d67ae6cb9f23e7f4d940e2555a52efa2cb37bf8024b0c477ec2102ef9b6",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "20d0dcb0f3b2015d989ab9400ea1c83356e3450d548b7a7c622feec294dea01a",
+          "item_count": 1,
+          "latency_ms": 9,
+          "output_hash": "68930db77fdaee8628480a896e0e46e995b088a5972a75466d35104c9aaa070a",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "e23cdca8c96be7ac5405e29e133f205e4fc7c61cbcd006238696b57acb35bbd8",
+          "item_count": 1,
+          "latency_ms": 41,
+          "output_hash": "f526dfa3ab1ae894df8ac40cce809a1793bf3b37a563cded58410a5716595e93",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "f526dfa3ab1ae894df8ac40cce809a1793bf3b37a563cded58410a5716595e93",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:20bf94c6f305fabbec325b31e03a91780d02771af565aae71438f080254804bf",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "9cfc03c203d7413764c6abda0bdcb36f4c764b1225fcf96c19e7edfe33018a20",
+          "item_count": 3,
+          "latency_ms": 5,
+          "output_hash": "54f7ad9c343b3a36bcb7d780244be404b06756433f5c903db911c6cd426c8639",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "54f7ad9c343b3a36bcb7d780244be404b06756433f5c903db911c6cd426c8639",
+          "item_count": 1,
+          "latency_ms": 8,
+          "output_hash": "1ee2a105f59669370de27c6afd9a61430276ff71da1cfdfa95b866c0f3a51119",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "05866d9cd34389f6e5c2736718356537438aff37ea4091b1f504461b285ca137",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "51095b5fa695b56d022c86a2359856db7093e93ce59b09067386fa0cce314106",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "17212f28cf744174b9022477b3bb80d049febc6658e6f8d8d4fad4627b6bc258",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "17212f28cf744174b9022477b3bb80d049febc6658e6f8d8d4fad4627b6bc258",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "e1345bd2276300cccacf62e50011b7f7b42425b91143e86899d7d2d71248a2a1",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "e1345bd2276300cccacf62e50011b7f7b42425b91143e86899d7d2d71248a2a1",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "676220de47ae23c1ae14f7b1054088db66c717707d0d7735ec29b89468761e27",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "ccb9f3d74ef4ae9956c360ac0a2c47ff11a4a31ab90478cf15e575ac8858129f",
+          "item_count": 1,
+          "latency_ms": 16,
+          "output_hash": "7053deb10dab9f5fa67bd28bf4675c536407f5db395c4bc3c110ebf47b3fec0b",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "e41ddc572f8775e0fd643e566765ddca5e517bd7ec8d688d817b530d8d0e456d",
+          "item_count": 1,
+          "latency_ms": 44,
+          "output_hash": "85b0b2335b1b234b0506b63d81700c1efb976d57ada199d814164a0b94e85341",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "85b0b2335b1b234b0506b63d81700c1efb976d57ada199d814164a0b94e85341",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:8e5fc8bc33cf48f9d091cbfaa0fea8612e649c1fb7af9bb99633f432a07f6799",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "0be3ac7c05e54ba9da797ac9c453f8f03f1a240ad77100ba1ce633f3728c3814",
+          "item_count": 2,
+          "latency_ms": 11,
+          "output_hash": "ca7ca006fc913996141af00a4b37aa2449a5cd848a7d3d6a387e9cedb1e97703",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "ca7ca006fc913996141af00a4b37aa2449a5cd848a7d3d6a387e9cedb1e97703",
+          "item_count": 1,
+          "latency_ms": 9,
+          "output_hash": "62dd6a57d20aef10f51b890812a524ed6134d5240fab6ea2cacca8fc04f9a214",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "da0130af692d14e4468221fe2094ac7410fc994523e5ce0d7c0071ecdcd7c57d",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "14a3999a35217c742a66c81c3408309be0ed8615f4d8b2c586dad4162680ec62",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "2d0541e987e5bfc830fd505abdea2cd35caa9319f2cc55f8100172bf96aac8be",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "2d0541e987e5bfc830fd505abdea2cd35caa9319f2cc55f8100172bf96aac8be",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "74b6d2bcbac539ebf45d934c053f882a9ee94765ce6ddd86494f198b2bd44216",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "74b6d2bcbac539ebf45d934c053f882a9ee94765ce6ddd86494f198b2bd44216",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "8c76a956e4737f8b5addb6b346cc33b1cfd896d8af236f305b73845b31d7e771",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "5e9962bcda358bca8cabfd1fbe865f3aedfcf8990c0587cd5ad64ead6a64662a",
+          "item_count": 1,
+          "latency_ms": 14,
+          "output_hash": "f5dd2763bc2f389dedbcf02914affbc4a9c117c689c9899d902a75e728db28a0",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "aa0f70dbed0bde30e560a37d1899669cf4429025272273873a0de743b7435cbb",
+          "item_count": 1,
+          "latency_ms": 50,
+          "output_hash": "5f731d51f1a1e09bb579f1de1fb7e6f9ad9234e606270129c1e5300f5c2a6a8d",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "5f731d51f1a1e09bb579f1de1fb7e6f9ad9234e606270129c1e5300f5c2a6a8d",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:5ddb6034252559611a271eb9951c5d2a14844fdcc81a0f6c1a60ad3f283c50d6",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "8a41297cbfe0bf16c315ad352f8f443173a7bf9a045bb6c6cf07cb66325b24df",
+          "item_count": 2,
+          "latency_ms": 7,
+          "output_hash": "68e0434db0f13eb109cf448ff9632773540c5e053be7e27e00151b8550b0396a",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "68e0434db0f13eb109cf448ff9632773540c5e053be7e27e00151b8550b0396a",
+          "item_count": 1,
+          "latency_ms": 7,
+          "output_hash": "8dab97cb995128d2456504ca6f8561483d18d22be979e63f8fdfc00c7a083c3b",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4a3c9c8cc6a67bc4fad9ee12deb7ff8bd75df7850345d0dd9b696cbb9d43e511",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "df3a119d5152cc4591fa68bfa6b20a57d37d8136659ae1073929ef113b46a52a",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "69b4f6146f3bafd3fd1447e725fc4ddeffbe12a95fe5c211672fb89b9be0ab0a",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "69b4f6146f3bafd3fd1447e725fc4ddeffbe12a95fe5c211672fb89b9be0ab0a",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "c578c390daaf5cf5b1caa1d32e1a779c9ad78ff1cace93db9617d7adb5b9baf2",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "c578c390daaf5cf5b1caa1d32e1a779c9ad78ff1cace93db9617d7adb5b9baf2",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "1ea9b40979f0f390e3597d77f01732a841ae4d7aee6e8b335c28e606a295647f",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "aae0b759989a997fcbc444fc99d82781a080ea9e6b3cc616a4b0a64b2c1a929f",
+          "item_count": 1,
+          "latency_ms": 13,
+          "output_hash": "48af76034c0c1f20333f701a47a5bc45749b0850dd5f120859b5bf28ec8c2d9f",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "6b56a1e80c06209b850bb71fc6029b92831528ba412aad60168d7e9694567c0c",
+          "item_count": 1,
+          "latency_ms": 41,
+          "output_hash": "a24b09a4ca1b2c2a517b34c89f25fed55c848cfd00d1a0d9b4dfdf751c7f5e40",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "a24b09a4ca1b2c2a517b34c89f25fed55c848cfd00d1a0d9b4dfdf751c7f5e40",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:fd12af3b84a6d0b148ccaff6f63fd58ccdca12a25c11c9e766609ca4a2abe67a",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "1f4a4b5b8b91c1a19ddaaa32262600c7b61bc8c6658089bbd2f4eb6821a118a4",
+          "item_count": 2,
+          "latency_ms": 8,
+          "output_hash": "cf3873a667189d9460b65ba28900a1513af1e6896c4dd074dd2e1b8c478f04f7",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "cf3873a667189d9460b65ba28900a1513af1e6896c4dd074dd2e1b8c478f04f7",
+          "item_count": 1,
+          "latency_ms": 5,
+          "output_hash": "87d87e9a6691242559c34afba615a16293509941846d0b58ae26c2824b30fdd7",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "af1bde5ca9dac624ccbfced56535c8f45350c4bb4006d9180d3a5cfd353159e7",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "7197a07c3e1a7105b008ea6d1e21ba32d5d2e9c82b1268196d4a115ea4c383b2",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "f8146bb100260c1e7c64750b27c5ee697899da334db6ebba11621af2b89b28af",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "f8146bb100260c1e7c64750b27c5ee697899da334db6ebba11621af2b89b28af",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "1fd406074eda7fd3752abffdc1b3560be79129f4a6f82777f6640baf1abd808f",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "1fd406074eda7fd3752abffdc1b3560be79129f4a6f82777f6640baf1abd808f",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "754fe363bcc002ae71ba5b2e3f051b41477e907074d9446d6348571ae4f7db50",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "f050869c9bd4f5c8d4aad2618bed435b3190f0f9db6de281ebf2508b44cb2c59",
+          "item_count": 1,
+          "latency_ms": 17,
+          "output_hash": "0d35259904a5742c51572aabd7a40baaa33d1247ee4a79fb7051e093b30287ef",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "67af6e041cc2fe4842e9ba552c275383f0c87173f0da89b84748eaf5913cb63d",
+          "item_count": 1,
+          "latency_ms": 47,
+          "output_hash": "5ed45975afef14888e68f5a3cb20f1599980da4cecf37b4e76363475f70df396",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "5ed45975afef14888e68f5a3cb20f1599980da4cecf37b4e76363475f70df396",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:1b770c1b6207239256a7b8c8ecaf64106571c1da79857f6dfc1181265ea97ea5",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "8b34aafcaeb8bb25827035bd55394ecf25b415f2a3a6329c8c12c9e53e12a483",
+          "item_count": 2,
+          "latency_ms": 4,
+          "output_hash": "ce3e64ca0899cd50d994e067198634d61aa8d781822a546083f7229bf52facbb",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "ce3e64ca0899cd50d994e067198634d61aa8d781822a546083f7229bf52facbb",
+          "item_count": 1,
+          "latency_ms": 12,
+          "output_hash": "7fbeb54f5bb4a2758e637bc90ac144a48d9a43be08d654b576e7cfb77df45ba1",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "43758c947ccdcd6fdb3ad23a1fad4cc81582999e7eca2169aa88032aeb287f3b",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "52a32f377ccf1d9b14baa4d858a1392734f08544158dcc328e3d94fb491c45ca",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "10209ea4fcfe2b0541418ba2f44233a2d8a4752de3cb3d11d35cc254d3321dd3",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "10209ea4fcfe2b0541418ba2f44233a2d8a4752de3cb3d11d35cc254d3321dd3",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "6402924da5b8ab6207660c0a4571fa403cb1027e5961039aa504520e08d2e38e",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "6402924da5b8ab6207660c0a4571fa403cb1027e5961039aa504520e08d2e38e",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "3d7e865bd02ea048a42eda7a921ace4364c3124d9d2507376f602f99da5f2b3d",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "9f0bdd1ff8e26f444db8790fda26a9c8dd71dcd07bba9c7518705dadc86a19cd",
+          "item_count": 1,
+          "latency_ms": 16,
+          "output_hash": "f6da74e4703dd6cf81d95f8bce7d4e267e6a09f0ea5071e2c6569923db6d82f0",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "875def38eca8511a5fed33d76d90591f4d8664a6d4b89c67b15365dd2aea24bf",
+          "item_count": 1,
+          "latency_ms": 47,
+          "output_hash": "4322c460c7e115915f49c6bf9c05382544cfb30697340757364066884277b01e",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "4322c460c7e115915f49c6bf9c05382544cfb30697340757364066884277b01e",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:c2bf7a346957d3d439627d0d1fa13ec7a4d98d474762054f487f2a9fb50c3814",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "621c32f55890414c7f193453fa55961870ceea0cd0d5d4d4ee53c2fa2572fdb2",
+          "item_count": 2,
+          "latency_ms": 5,
+          "output_hash": "762808ea18b3fa22c4ef73c76a696bbf1bace6f3769e86a4c4584908a57e6fd6",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "762808ea18b3fa22c4ef73c76a696bbf1bace6f3769e86a4c4584908a57e6fd6",
+          "item_count": 1,
+          "latency_ms": 11,
+          "output_hash": "4bcc5487e62fb11046140bd71cfae7b4fd1699d28c983eb09e56d603f4101367",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "fa20327fa7634f3265f2c502fa0e5b2b6b8bb8fdb6fbe8b6a33e74e62dba64e0",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4e831ed934cba8e5eb8e1cda25608f0a6e622b86a956fe512a72c1247c9db038",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "8b3f65de244805c4acfeae9487b0f56a4fd61124ea1f04625a7b41acb34ea769",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "8b3f65de244805c4acfeae9487b0f56a4fd61124ea1f04625a7b41acb34ea769",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "1bdf300c94c9d25146fdf4665ff52528652aa3174cbcbba62204c70b4a3d07c7",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "1bdf300c94c9d25146fdf4665ff52528652aa3174cbcbba62204c70b4a3d07c7",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "ee3469ae68656f5481132ee7dc47daedab820b2969bf74c96c700c2ce2fd7f0f",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "7e1915c8e53b7721c08ff5111311e32e63e951a17d4bb8deea6dc2605cf69fd5",
+          "item_count": 1,
+          "latency_ms": 15,
+          "output_hash": "e0a595e120ac9aa5bdfe4814bff7130fd330fbc1f8a16a8e197101ade845a12d",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "a9511a14ec554de77a27bd695c7c1dd9c5368851394174d0c1798580cacbb56c",
+          "item_count": 1,
+          "latency_ms": 45,
+          "output_hash": "5717bbe7be0f4d572635efe756e0357db8ea48d2132cbf30d46e2504399b07f7",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "5717bbe7be0f4d572635efe756e0357db8ea48d2132cbf30d46e2504399b07f7",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:c27f6f21fdab43ab9154767d72195128351914cf307544e743be204aa91fc7c5",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "b593f7e2a4dbde1844791131fc9829cf0d531b49f10f7e228859859d7d19d1a8",
+          "item_count": 2,
+          "latency_ms": 9,
+          "output_hash": "f8396668e172cc56cf4daf7cd4de8b85ff8dab9296e6719ccfd7338392dbb5dd",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "f8396668e172cc56cf4daf7cd4de8b85ff8dab9296e6719ccfd7338392dbb5dd",
+          "item_count": 1,
+          "latency_ms": 5,
+          "output_hash": "1645da215d45858b7736107ce692c9ca4b9ce047d6f8a4a4103e128ce630b857",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "571cdf56e4d5d9fbcbcb162085e2dc99a8c2b724e4cd520a321d16066f2c51ad",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "8d459e981cfb1a3b91bc395d67b9550518c298467a48e2bed6437fcd1aff1fcc",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "49081637e53e624f48020202b7792817ddd49cefc0d59c115742653438ac4681",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "49081637e53e624f48020202b7792817ddd49cefc0d59c115742653438ac4681",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "6135f48cd8db530d45d034be2bd6c262a82a3cb94270079304fcf2e903fefb73",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "6135f48cd8db530d45d034be2bd6c262a82a3cb94270079304fcf2e903fefb73",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "f1fdf9ab32af6501b52a1787a99dfdfc4e8ab184827575e0f19ca3de2cafab79",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "3a4b6ef77651011ceaeef786283571de9cd3eb62cf0580ae7d4bfcf031086a01",
+          "item_count": 1,
+          "latency_ms": 17,
+          "output_hash": "75005f65020c1062ca194afab28370530c0dc6b0a5760587d9b00031de8609ec",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "64f431316290cace1de93a92daef77e68621c850401bb0fd4cdae82b7362e9ba",
+          "item_count": 1,
+          "latency_ms": 45,
+          "output_hash": "b059d7797bde5932300a0f5fcc2af82c03bf48555a0bd9f85b44a4af8576d596",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "b059d7797bde5932300a0f5fcc2af82c03bf48555a0bd9f85b44a4af8576d596",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:7308dd8f755563edad46978bbd76db71d941dca1f69fe6a1e6e1985917a75b18",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "b6d4b273f8bf63be0399d628328b2351342413912acf0cb8c5ff0a8f7fb240e4",
+          "item_count": 2,
+          "latency_ms": 6,
+          "output_hash": "2c43f775278cbdfb5d3bb2ac0bf06788e43ad26073d7d4bcf4a213782d243ce4",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "2c43f775278cbdfb5d3bb2ac0bf06788e43ad26073d7d4bcf4a213782d243ce4",
+          "item_count": 1,
+          "latency_ms": 8,
+          "output_hash": "e73d91640d0757570dad56fc71c9b7ebee9753184b5ded08a618d6afcda013b1",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "a7cd551dbcf833017b850496e7f1164a3668121b01205ec77d0f831f67088c01",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "be3011552923ba306b98a2bcec5165491e7d74b1fa54274b96a21787d03061ad",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "6fdcea6f5dc02eeb873e68fd1378c224a93a0b22ffc5ee6adc288f9faecc37ec",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "6fdcea6f5dc02eeb873e68fd1378c224a93a0b22ffc5ee6adc288f9faecc37ec",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "36f9dbf9d68c7b9191fcc536763dcf0394961a035a5aedac9d8f310bff823558",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "36f9dbf9d68c7b9191fcc536763dcf0394961a035a5aedac9d8f310bff823558",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "dbecf9524097a8d6e4398169a4d461c56f4b1e181f3bc69bf57368066462a288",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "311b24a5804826acce6110218582647d07975cfb77b52a5f914a9deb35e5695d",
+          "item_count": 1,
+          "latency_ms": 92,
+          "output_hash": "cc6ac09b9a626a581e130c524345a83db6e3897593f84b092462c12ce2ffdf89",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "e74fa109c5869558a7c3df6b6188cd5073e26bb2fe998a9c36fec6a4a17033a7",
+          "item_count": 1,
+          "latency_ms": 120,
+          "output_hash": "b4e2fdffcfad1108d84d8ce15b30915bbcc49e50706efbaeabff49e78047e71f",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "b4e2fdffcfad1108d84d8ce15b30915bbcc49e50706efbaeabff49e78047e71f",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:73a2505389dd49cdbb1bb4eba4e5fd5ab8d9e4bf9663866e080f2a5f8aa2dc82",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "b1fec618ce85aac226a0c0e8b7eafa3ee17c31aa8beb6ba7168361bb87028d61",
+          "item_count": 2,
+          "latency_ms": 5,
+          "output_hash": "e50aa2f6031c02df1d0adf392f2a2f9914f14b5d2fefcdde976ff09a44fc94c1",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "e50aa2f6031c02df1d0adf392f2a2f9914f14b5d2fefcdde976ff09a44fc94c1",
+          "item_count": 1,
+          "latency_ms": 7,
+          "output_hash": "7fcc71cf16ab0163262a50a87066c00d39c0318281d64942313f49e3ae7cf302",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4ee33890b0a51d270261c0e0bff5ff56517d96533cc5e059ae740d44a4e228ea",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "7fc8b615e9b3f7648844c174eef46557c3e527eb441cb82827c77b1c4b3642aa",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "09b63a5d60daf1286d0cbcec716d06b761457d82c5f5116dd4a197435e1b8a08",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "09b63a5d60daf1286d0cbcec716d06b761457d82c5f5116dd4a197435e1b8a08",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "856f9a6f275d0a69d51d083a1584e6739816c8e03efb59a27d8929656e9f4c4f",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "856f9a6f275d0a69d51d083a1584e6739816c8e03efb59a27d8929656e9f4c4f",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "444c5b3775476177bdc0f5ccf3db5977290c4784c13b88d3e017458e72448c25",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "08750adab4400cf336f04b9d08be141ed411a448ea47bafdf1d85493408005a6",
+          "item_count": 1,
+          "latency_ms": 12,
+          "output_hash": "f6a83fc55b7fd6e374265338ed47cc016f465e7cd82d3b06360672e46923ab65",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "0aab061c5885f20ab46d9a9d784d8ba47c5e08c2bd273b02da7cd8bd689490f5",
+          "item_count": 1,
+          "latency_ms": 39,
+          "output_hash": "c054289fe1bb21577deecefb00a27ef2bdcabad07c0f6ee67ff50fb520ddcd11",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "c054289fe1bb21577deecefb00a27ef2bdcabad07c0f6ee67ff50fb520ddcd11",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:22b468cf704dff77daa6f397cc55eabb7d79a72a1abcffb6e9b79e3c7d396756",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "ae0d3822503824828f25e8c74e3a98252c7d93dad0c7d8f371ad71af86469740",
+          "item_count": 2,
+          "latency_ms": 5,
+          "output_hash": "81b026ebf4ab218a350a4054d5c6f12f209c282663e6bcf9622df8b12745536a",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "81b026ebf4ab218a350a4054d5c6f12f209c282663e6bcf9622df8b12745536a",
+          "item_count": 1,
+          "latency_ms": 9,
+          "output_hash": "af24bece8809194a0a5c7d256c3da56f499a3846dc71d952f53f8e86121bf029",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "45395aa149dec4eebd9ee25c1ea49dbd3750824c1d4977672aa78ab41367da58",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "06d876214019173fffbfeb7fb541bf894df8cdd8e621fb0747d825a64f3a93cb",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "1f564e4a842abdb5e8a77e0efbd98d2f8da645dd35f42fc8795d06790edf5ccf",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "1f564e4a842abdb5e8a77e0efbd98d2f8da645dd35f42fc8795d06790edf5ccf",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "418927903c5755e79da6036eb7a3bc3bea08bac62b177d21ffd09edb18cacfe5",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "418927903c5755e79da6036eb7a3bc3bea08bac62b177d21ffd09edb18cacfe5",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "163b383bd64a664c67880df79cb5aafd5ce250f18419833b41f3cab890cf35b2",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "279222dd9b1a9644db8cb46d29475b22ebdbaa2e25f1d16e49deb199ce1c5439",
+          "item_count": 1,
+          "latency_ms": 11,
+          "output_hash": "85ab15e114af623d32f42e9e27e85cca7ab57c41338db740ca00d52411b65761",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "c34e9ed60868dc6203fe0e523f14b21390dcae4e50b0eabff6f1ffda8f563426",
+          "item_count": 1,
+          "latency_ms": 41,
+          "output_hash": "e71320ab26d8c2cc90460538fa608790f2e3a8e8fa2268832c09cacc58d405e7",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "e71320ab26d8c2cc90460538fa608790f2e3a8e8fa2268832c09cacc58d405e7",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:7a4e75edd20456d19e9a48bd4cf9292ea319853c8fed3d2f1bbaabf846d90c94",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "604125157ee031011a73f9c89442fbc7095f53e61daac398430ec7861e1a9fa1",
+          "item_count": 2,
+          "latency_ms": 7,
+          "output_hash": "b731ca59d98d5902eaa68e5307d16fc6facc6d5ee20ad1bddfa768e20bdfed38",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "b731ca59d98d5902eaa68e5307d16fc6facc6d5ee20ad1bddfa768e20bdfed38",
+          "item_count": 4,
+          "latency_ms": 8,
+          "output_hash": "ee2a1f0ca180bdedcdb4a76ab6157ac29792599765179910e9ed1b6de2930719",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "69e47f5e2e7161fb66fe08201cadb09e567f636ded0b588a5b055f8544426666",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "f3f2676f17c51df5f60672dbd486910a15c4bd01e6dfc3c87327a0aa85180f05",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "d80cde4b9a0f728e49c45f383b8e1bf7f39a7c068e0d1784777547afed10fec0",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "d80cde4b9a0f728e49c45f383b8e1bf7f39a7c068e0d1784777547afed10fec0",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4808413515903d654261390ccc6e6f414550b470b633411caacc0c150cd9fe3e",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4808413515903d654261390ccc6e6f414550b470b633411caacc0c150cd9fe3e",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "29ab678cbcc4fa980182330d3e02b8a57dac01ca9ab367c7483e55622636e41a",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "bec8c94f09b88e26e7e87dcfc087bcb319bd9cf190a4261929b86ffa74380af7",
+          "item_count": 4,
+          "latency_ms": 27,
+          "output_hash": "c6084e28e480031d664131032b4a8244422fc1f1a3f661bfc67216e1f1f311ff",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "bb41c41f887bbc08bea8d56096498880963e85d0f77bda6d6b0373cf09dd67f2",
+          "item_count": 1,
+          "latency_ms": 55,
+          "output_hash": "67f6935d053339623cdcf136246d1cd0713eee03881ec074fd3d6e8bf22ad8b9",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "67f6935d053339623cdcf136246d1cd0713eee03881ec074fd3d6e8bf22ad8b9",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:d52c746b7a0137c9175d962e48701bc2bd1a495cf3ba09860d0bdf604bf2e70a",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "ac0b8d38618ae42d7fa3fad5b2cd864011eda6a937770cd4aecdc4d0764358fb",
+          "item_count": 2,
+          "latency_ms": 5,
+          "output_hash": "d20006afbbf436479707e23ef856d075465b4718c182a104d918f1082a2cabaa",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "d20006afbbf436479707e23ef856d075465b4718c182a104d918f1082a2cabaa",
+          "item_count": 1,
+          "latency_ms": 7,
+          "output_hash": "dbbce49707fb8cf9f8bc8f50311f459ff79a90e7a8c650ee6d6d52627ac5d96f",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "8b25f880eeaf4a62afbd34f2e980ac88cb2c60c822cdcc793a60b934a538c0e0",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "8472dff0cbbfca593485534904c803021dcab083a7ba89a6f7414cefa89dedba",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "71ead3ac5b5ca826e1a45f7f06b76441fe2f30c99c26c290713a62692a0e37c1",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "71ead3ac5b5ca826e1a45f7f06b76441fe2f30c99c26c290713a62692a0e37c1",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "5df84fc85001b2a19b7ed295457bc7e5aba8120b7baead7b86c5fa42b12a1ea3",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "5df84fc85001b2a19b7ed295457bc7e5aba8120b7baead7b86c5fa42b12a1ea3",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "e0c87e58fe9ce2531b56e011223db7623f53bfe1ca1eb2c2466f0f59bfccdb40",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f8cb993d963898d3d371ca3a11d225ee4afc7fe53be9b9d3979bd2a9228dda6",
+          "item_count": 1,
+          "latency_ms": 9,
+          "output_hash": "06099837e0a3fd94449079b6c02836ac80b7394b88909815afcc7f91efdf6f42",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "349122ec15153e84680d65a577d925e9d257deedc826b03373f1eb4d59bef7ce",
+          "item_count": 1,
+          "latency_ms": 34,
+          "output_hash": "508f4cbe0f265227291f07a04f8539410e5f6274bbc829a45986730ada7257db",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "508f4cbe0f265227291f07a04f8539410e5f6274bbc829a45986730ada7257db",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:afb95fe2d10d03ed491b9c3dbe682b95d83d8a6b91c576428fe7db00a3a5b688",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "c9635e39235c746c888e054cc2510d8715eb159fd9d5795ef08d8993aa0de02f",
+          "item_count": 2,
+          "latency_ms": 4,
+          "output_hash": "34ddcc16ff5671fb1c444a0de4a90cbd9b5707c1e0ee1ea9790fec5ac453d5e2",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "34ddcc16ff5671fb1c444a0de4a90cbd9b5707c1e0ee1ea9790fec5ac453d5e2",
+          "item_count": 6,
+          "latency_ms": 6,
+          "output_hash": "e4572e5c45d3faf88796c09eb784ddbde78df3e574ed96e2daeb40b4bc202d35",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "43124e57fc4aa45ce78b8a3a5d6b972ec30ab2570bf559fde6dfa41d4e764704",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "144368d283707d8c9956e3e31db495caaa1fa2320af7279c4e7c302007ef45b3",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "d0a19e8ac23ad11cecd26fa01adfa59c74e9811377400f45400393ef69187232",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "d0a19e8ac23ad11cecd26fa01adfa59c74e9811377400f45400393ef69187232",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "769dd656b0ad2aab5bbc0aa1fe2318c2dd02dd0fca9933ff1311ed87e37057a5",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "769dd656b0ad2aab5bbc0aa1fe2318c2dd02dd0fca9933ff1311ed87e37057a5",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "94275add863dee188b114c5a9a0caa2e9f23dcc86a7f86ed2bdf093eebc89eec",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "1af983e0c5f863ebf5bbe788331becbe646ee55fc161ce1d53a8b04ac3515772",
+          "item_count": 1,
+          "latency_ms": 23,
+          "output_hash": "7578201138b30e9a414682bba11eeea766cb67fbcc5b85687eb5120bf7729e1e",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "7578201138b30e9a414682bba11eeea766cb67fbcc5b85687eb5120bf7729e1e",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:13ca7d4b7f554c5e8d6b09d9b5389bbab136fd425247d4abd56a4c136733f31d",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "116b246cf007d842c36ab43a43bbf73dbddbe907258ea00e991872f37594ec34",
+          "item_count": 3,
+          "latency_ms": 6,
+          "output_hash": "7a6be62200ebc46b4a2f26c2dab6f623fba5e84cf5b4b8816229d4dfd468a0bc",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "7a6be62200ebc46b4a2f26c2dab6f623fba5e84cf5b4b8816229d4dfd468a0bc",
+          "item_count": 1,
+          "latency_ms": 6,
+          "output_hash": "84d1f8c3dfebf44b276fe4570d9f94d5b22c52c4d9e9dcb14af069198d6f43f2",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "dfde2146f57181f4d973bde4bbd7aace365a4be7a6a1abd8e7450ec724cf36d2",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "b25e2f6367802d2ca8c09449304c74bf783548f872e7f0303c9d8d9936898e15",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "63a40ac42e7b99dc29bf0fd7924ac22d620611f59475ffbf9c54c46045234c2b",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "63a40ac42e7b99dc29bf0fd7924ac22d620611f59475ffbf9c54c46045234c2b",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "49686d532046444eeed8b0be3007b6443a8b5a4f932b6d188b083f49c7609144",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "49686d532046444eeed8b0be3007b6443a8b5a4f932b6d188b083f49c7609144",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "c7370d7138576fdf0476fd5aad287cde0a2ac40d815d59d6fc8dce3785afc50d",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "7be284269c01f3079662b70ee4c9b5699ded3297251538ccb4f1a60dc6474dbc",
+          "item_count": 1,
+          "latency_ms": 9,
+          "output_hash": "70a1c22460d6915a8f5a601a06fdd5249f015500b19139695014936b4a989228",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "2394b848d3f931376e6ea8ddcaa8406119683982533dcaf1b7ee56c8592128df",
+          "item_count": 1,
+          "latency_ms": 35,
+          "output_hash": "03444433939686ac1eb12fd9cfb0471b6e87350e7cb767bd90d9c9458b11cb8d",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "03444433939686ac1eb12fd9cfb0471b6e87350e7cb767bd90d9c9458b11cb8d",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:6d28f372a96be6e628017b8002e5ea85fce55cd00fbd2c42a657dd00d1f7b23b",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "bc38e0e5e5e4469e42d5944867a0ae7c45bc184d46213099eea7b414b314798a",
+          "item_count": 3,
+          "latency_ms": 6,
+          "output_hash": "d3409576a70a9118a1d473c0f927287eb4e005c94053c0467d3a17261f36428a",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "d3409576a70a9118a1d473c0f927287eb4e005c94053c0467d3a17261f36428a",
+          "item_count": 6,
+          "latency_ms": 5,
+          "output_hash": "6ae17bd8b4641ef67c2f220a73e2f7451a27a86bbc1489caae1d310127bf7e07",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "b2a64720634b7fc15c6e84d8aa43b2f6851a58649789483ff4a9eb085ccb9424",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "3c032fb2b27d7d4c20bbda45cc0fbb810a94acd303f1e2bb238a771e126f840c",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "7bfdd2c9713e92faf4668fb48827392b5d89b634388ebb0d72c0ad8cb1c388b6",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "7bfdd2c9713e92faf4668fb48827392b5d89b634388ebb0d72c0ad8cb1c388b6",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "09536b070b27f9c1a9df7f9f938b45a4ce992b5265bba539675b8d9f143cf9b2",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "09536b070b27f9c1a9df7f9f938b45a4ce992b5265bba539675b8d9f143cf9b2",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "e51aff24f22de4051202019291e60d6a4f0c815fcfca49474490fdd51a24e779",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "c9b0f662d79e97a3ddf74872b57e54326ed03909f395405fe4c2fd4338d8ff5b",
+          "item_count": 1,
+          "latency_ms": 9,
+          "output_hash": "4c8cebe799b5359fbacdec64e03f12ceffc52db242a9b586f0e78e710b6a600d",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "7541644ca1a2519176391b4b28dfd4f5f2999a48dd4e2bbf03c56c5005b99e50",
+          "item_count": 1,
+          "latency_ms": 33,
+          "output_hash": "b04551f377ed314509875f6e07ba88718f8fe5afb528fd25b2265d923f375b27",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "b04551f377ed314509875f6e07ba88718f8fe5afb528fd25b2265d923f375b27",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:8def36ca49bb9eb81d1e4b25b01ee6dc3b573265dd00028933d1987354f6123b",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "e05cc501ac96494411abbee6a1a85098af0a14bb4b30810777cd5604184adead",
+          "item_count": 3,
+          "latency_ms": 6,
+          "output_hash": "818c0cefb0e68a453e7fce6a426f273765ad42e8653d7d12fa485aa666cbd9a5",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "818c0cefb0e68a453e7fce6a426f273765ad42e8653d7d12fa485aa666cbd9a5",
+          "item_count": 6,
+          "latency_ms": 5,
+          "output_hash": "bb5fbb6885388cf6724ab1ff641540501ad7b5cfb31e0606d9eca6c8333b81b0",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4ccf61e9ed6a07c110b5b44957bf617d2e1b4dd1ddda31acdfe1c3741c97d23e",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "1ddefaed4f856cb9cf6034fa70ba1ce76bf869a9021d1fa583ac2c703ac9f3b8",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "447ff6847afe49a2f17f786d2b23197aafdb99b49234a0900612c7173987cdeb",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "447ff6847afe49a2f17f786d2b23197aafdb99b49234a0900612c7173987cdeb",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "d8899938d34dd7f1ca45e46ab61bf3e493df7541c07d5c9304b4b353a39ffc5b",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "d8899938d34dd7f1ca45e46ab61bf3e493df7541c07d5c9304b4b353a39ffc5b",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "238ecb35df3875ee435c8602144a30de0643062f346ad6af36fbf037545e8aaa",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "d9a0d7964c9f86dbb08297b5c67b0a7317e34cd1b74b38778679a4928ff0f7ec",
+          "item_count": 1,
+          "latency_ms": 24,
+          "output_hash": "f7ca606013467988eb69741047a5542bc8e094bf88ae61b408a0a63da623fa2d",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "f7ca606013467988eb69741047a5542bc8e094bf88ae61b408a0a63da623fa2d",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:64b1760ec6d21ec39d7ed4dcd8ecc1b025f2a437290aeb9adaeb6be5e8ffa8f1",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "80476ec9dc41acf6f586d18092db8f0260d93bd69b5d2922b0e3bbf59190af8e",
+          "item_count": 2,
+          "latency_ms": 4,
+          "output_hash": "6d90af90b90212e627648c6be1d2935b02b748d771d079d22ceb65d6737a36e6",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "6d90af90b90212e627648c6be1d2935b02b748d771d079d22ceb65d6737a36e6",
+          "item_count": 1,
+          "latency_ms": 7,
+          "output_hash": "29314a44ffc681f9321a223748f390497756bedad55ce8b7ec47cc49bdbf31cd",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "6a0380a7e4f90092d132d58fb110f45bc0fb81db95d9a86b667bcf55a65946c7",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "e251c9c650d7a6a347d661432b341662f6cc7bda9b3e06cc8e3d0badaf17ba36",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "875a978b2cdde388a1e69a3bdfe67e3bf42350d718faeb3315c78408e53f2a7d",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "875a978b2cdde388a1e69a3bdfe67e3bf42350d718faeb3315c78408e53f2a7d",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "cfa98396830bdc9be5321ef8180a537dfb5678005c14ec7ece2b16d8aeb9182e",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "cfa98396830bdc9be5321ef8180a537dfb5678005c14ec7ece2b16d8aeb9182e",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4de4c2500c290f52962df2b4993384f35596d64c2f14dadf8f4140ec15a6b258",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "8d68a7cbc7250efece1d84292d37da48932ca83975a8ad579974b14f645872e3",
+          "item_count": 1,
+          "latency_ms": 25,
+          "output_hash": "23df89279d1b5d56afaa86415a89984dbb03c7e9f814e69f8a7942aa6726e07d",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "23df89279d1b5d56afaa86415a89984dbb03c7e9f814e69f8a7942aa6726e07d",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:3a39370d215e03062ea8a92116198159d30b27a2beb9286f732391ecea85c346",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "c93900381ef2a19195d9ffd310bc6c93b456fbfc912782455c9ba60769427a2d",
+          "item_count": 2,
+          "latency_ms": 7,
+          "output_hash": "fab55120b1492004accfcbb2ba7b19c2ce2d82225d3c1d669e834da45ae6df77",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "fab55120b1492004accfcbb2ba7b19c2ce2d82225d3c1d669e834da45ae6df77",
+          "item_count": 1,
+          "latency_ms": 7,
+          "output_hash": "442b548885511dab7c4ecf3119c4d4ecde16c5b0e9f7bec521f3260cd0eda705",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "c655331515bfe710776cc2d9875075b827112d8f433bf7e211d97851b2021bb2",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "6e917fcb479765f30e89f9d1c727c6ba788c99aa9130e1d1e1e1602d14336e73",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "749b0d3a05a6284101d7dc6cc371320154982c154a7326331da1dd67133729f6",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "749b0d3a05a6284101d7dc6cc371320154982c154a7326331da1dd67133729f6",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "f0fe0cd7b55fb8a727ad3e9e27fa9892f3f4fb0e30c7148d655d810796276aa5",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "f0fe0cd7b55fb8a727ad3e9e27fa9892f3f4fb0e30c7148d655d810796276aa5",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "11375405cfd22a4f0690507fdbcf1c0197ae8639ded1f5c3d4a86b960530c63d",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "6c97bdc50fd732a9731c6bccd327c15ee3d6981b750abed93b2e2b48f6744d71",
+          "item_count": 1,
+          "latency_ms": 16,
+          "output_hash": "c37986d5037a257028c7d0cadf206b42bd9c745c02637434caf75441b160d1fb",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "aa890b3dae65a5a41bb0cbf147407f9dcb377f8802a281945878920e49fcbe20",
+          "item_count": 1,
+          "latency_ms": 42,
+          "output_hash": "aed78bac05701a7967961432761a6e2ed9e26d39374adb92e1ac78b7c321ba9f",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "aed78bac05701a7967961432761a6e2ed9e26d39374adb92e1ac78b7c321ba9f",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:ad0cb99eab1d36cd1b58201c536ef9f5d59910886420365049530eedd23c0bdb",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "34bb5a1e5af854b7e4c5e310af419a93d7abe80ff60f0469c9022b065b123d81",
+          "item_count": 3,
+          "latency_ms": 5,
+          "output_hash": "8c660528e7c7e11080541e7ae2fcdb0ee699a409a20ca479cf2a5204ff6e3f02",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "8c660528e7c7e11080541e7ae2fcdb0ee699a409a20ca479cf2a5204ff6e3f02",
+          "item_count": 4,
+          "latency_ms": 10,
+          "output_hash": "008cb0cf1343caf8a280cd0b508081574275b7e792ceb03d070edaddaf060041",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "f9c3365bd9c098ccaab5a04ea4fadc7220b8ed85cf3bbf181a1ee4e2930c6804",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "37c8ea971f5e830978dbd9339e3d9ed8fb5edae1030479c1979d053bf54a9db6",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "944de1c8f7d454b53b21089664b29a738fc4d4b5a69ee645f1940eab2cd9353d",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "944de1c8f7d454b53b21089664b29a738fc4d4b5a69ee645f1940eab2cd9353d",
+          "item_count": 9,
+          "latency_ms": 0,
+          "output_hash": "965f02c879dd98abc17de17ed86d1b054a92ecf284da01304af0767fac0e0a01",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "965f02c879dd98abc17de17ed86d1b054a92ecf284da01304af0767fac0e0a01",
+          "item_count": 9,
+          "latency_ms": 0,
+          "output_hash": "b71ba659e0a7d1284287dde0d5e22e88d5130e85dd7c6b7429d95ea1271dd063",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "41bad196df0dee65f87aa0458a2d3ba4d486ce27e5493dc4b17269f1b55dce3c",
+          "item_count": 1,
+          "latency_ms": 14,
+          "output_hash": "f0ad2213c4aa867f2c69be836be5830a4f9f87f51db4d8e6bf5a56312cf556fd",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "6312e87ed58ee7c71e04fc65998658c632c95b3756f61bb12aff6d10a625b553",
+          "item_count": 1,
+          "latency_ms": 44,
+          "output_hash": "b5b717c22d3d638b2ae33989b66f26a58f707f3a2ba5462e4e0591a50cb31591",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "b5b717c22d3d638b2ae33989b66f26a58f707f3a2ba5462e4e0591a50cb31591",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:960d84a9582f8c12aca0f776a765e3ecf07763c44b3389122c75452c93f5b142",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "2dbe9d3cae3d233de3714c28997be006059753f7036d4f663c5bc282b4d0156c",
+          "item_count": 3,
+          "latency_ms": 5,
+          "output_hash": "5e81320c1f37f777bc1f0ade217e60df949b50a2314cf728ff3cd8f6a86a9934",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "5e81320c1f37f777bc1f0ade217e60df949b50a2314cf728ff3cd8f6a86a9934",
+          "item_count": 1,
+          "latency_ms": 13,
+          "output_hash": "111d2e2f140eb43829b5d18241f18dfdad3308ad513113eee47bde7c7ae40f08",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "e69fc7979875873718475dbcdc7599a62c75e6c0b61d9b49afc5cc307372e634",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "a20b3c1f41f56fcebefc6b3b44ec5bcdc5d3b6e31a5bd8e1b987d2e88ade63c8",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "ed52fdff98a74e979ae2abc7feef1c545c43c9e4fef88b5e242c41b3955a4328",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "ed52fdff98a74e979ae2abc7feef1c545c43c9e4fef88b5e242c41b3955a4328",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "74ec69ab0844d409bb5e134faecfc229ccb76c58204ee06fc089fe207d11ec58",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "74ec69ab0844d409bb5e134faecfc229ccb76c58204ee06fc089fe207d11ec58",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "b4596c5bfc545ed26b7112506eebbbef55d12b44a158a02c443cdafeeb1bac44",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "1eea3d0dd01a344e2d4d075bf021bcd6f13b2e2daf37be7c06dc1d9660d2725a",
+          "item_count": 2,
+          "latency_ms": 20,
+          "output_hash": "6b8d99c89376795e2b8582e0475a0ad9a1e79d98ce1f75851ec83a56fdbcfca5",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "380ca995357626e9115c67de6b6bfe2c39d4ae4f539ed25d95c26cba50a19439",
+          "item_count": 1,
+          "latency_ms": 54,
+          "output_hash": "1404f6f885fa0ddfae3c50759a239038ae6cb6150ec4a2ac48e6e5434b9a0070",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "1404f6f885fa0ddfae3c50759a239038ae6cb6150ec4a2ac48e6e5434b9a0070",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:6b32bc800657e797410842d2fe4585d7a6e18220eb96a9244696e799eb41a430",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "8218d0647e75204f2e070164d5c2a1f5c9df3438fc58640e53e3851710849faf",
+          "item_count": 3,
+          "latency_ms": 6,
+          "output_hash": "43f3dfd80dcb6349abc2996a7d4808a54adce3b5e8fd529210c1afe983961a33",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "43f3dfd80dcb6349abc2996a7d4808a54adce3b5e8fd529210c1afe983961a33",
+          "item_count": 5,
+          "latency_ms": 7,
+          "output_hash": "a2434d5fc74f132a75ce0f7536e1da1723f92cf8feac841596e588cd34f7c651",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "b2779a15e020a3a02d7a8ad59c512880afc0e37ec4491f07761ee235706e811a",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "f2776ff1bcd263dcc6568603487ff98b5f5901bb4ac702f45b47d400d4c588f8",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "8af022468308f7328d9c306e94d067bb6699608334e57c4588c627a618f1e88e",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "8af022468308f7328d9c306e94d067bb6699608334e57c4588c627a618f1e88e",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "42a8018b4b9e67b8dd95624b4b56c0c1d5e2ddae2b0351ce3248129401cb2029",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "42a8018b4b9e67b8dd95624b4b56c0c1d5e2ddae2b0351ce3248129401cb2029",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "22f70408a7af987977f3091ea3032802ff5402b10aa21c1891ea94bfc33b53bd",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "894d142b7e03cd8d1b8ae37d2961a0c094c3f98b090f3d4e5793e9a827513d7c",
+          "item_count": 5,
+          "latency_ms": 28,
+          "output_hash": "b491871c90fe8901ccc05f1c5b51915bf936f1550125d82155d8ba0eb2408405",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4179bf464b93ce79a1cab00db4e95dbc08e89324f0151c98e037574c5ee846ff",
+          "item_count": 1,
+          "latency_ms": 63,
+          "output_hash": "a0584fe2e677c007c05788038806043b4bd01ccd14732f2f3dc709ea0a6abd74",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "a0584fe2e677c007c05788038806043b4bd01ccd14732f2f3dc709ea0a6abd74",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:4d28b1cb2898900720bc08a0e064830040c39aca8bfaf128d54fef5e8beca927",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "55e96ac497bb08d26aeba1ddf9fe6fb6c614c55f7d15ef41be3d72137eea3fa4",
+          "item_count": 4,
+          "latency_ms": 5,
+          "output_hash": "da355e992b3b585b7b043eae62155335c77b29b6790beafd77d36742d5dcfb0c",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "da355e992b3b585b7b043eae62155335c77b29b6790beafd77d36742d5dcfb0c",
+          "item_count": 2,
+          "latency_ms": 12,
+          "output_hash": "a3c37e472610e606a4ffd0f0ebcea308c7184d8685e154b673818ba43b41942d",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "a6c133872611f8f077e1ee3a2df1a8bd18f33f1255cffe19f7c0ec83f2e29f0c",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "c5fc3af87e656a3dcd127f4b8d698a7536ddb090221fa4520f07cfee0cd3f2e2",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "316fe9a33537a3c58132d9214360a5d34b7927b53026f26562b602b830c23e1f",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "316fe9a33537a3c58132d9214360a5d34b7927b53026f26562b602b830c23e1f",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "c88c5f264561e7885d391872d75bde04923ba9a781e4c779c7df9ee0b7e19230",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "c88c5f264561e7885d391872d75bde04923ba9a781e4c779c7df9ee0b7e19230",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "39a8a478fa8aba76aa12c73e78577a5b64ead3a1bfec0f0ff9580bb188b5d11e",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "14b54280eab3b845070f9c94cd9b35cd14861e52be997d554bd151fd82dfd195",
+          "item_count": 2,
+          "latency_ms": 35,
+          "output_hash": "8cd48ee88c26c5014224710cd44e4244d9da9bc369a231720e8156360f8de2e0",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "9fb0dc10deb89f6de695fc5c801a7f23bd515e3206940e0871ef1b260093cc26",
+          "item_count": 1,
+          "latency_ms": 66,
+          "output_hash": "521252dd442b6191167e1357cab90794fbab80ae5b5e7602e98b30f59774d2e6",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "521252dd442b6191167e1357cab90794fbab80ae5b5e7602e98b30f59774d2e6",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:115845b60b26f69bfc49a570a85bbd5354540af45108831344e1e9b510b39469",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "56f0936fe10aae21dc49993af83df4c80833fca07cf2ed4b9c585fe4fdcd2b5e",
+          "item_count": 3,
+          "latency_ms": 8,
+          "output_hash": "c8441d635669929199d6be6e5d250ff02400273944e5b917ef1159c9615b329b",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "c8441d635669929199d6be6e5d250ff02400273944e5b917ef1159c9615b329b",
+          "item_count": 6,
+          "latency_ms": 6,
+          "output_hash": "e3273d8c66313891f4eb66e125bc5633a6294a0557edc2d2cda3ef6204e21223",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "76cbc094c13d872fe9203f17ce4d2d77ebf036e2dfaf49046bb6f5e1d305f065",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "7df787a2a8a32deb46c55ba44e11f6f40aeaff0b97ec0f5cb994ba9fafe3d18a",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "b2c9c9737c22df0caea5001cb02734fa88bf8e1e924a8e96165456ca6ba6dc14",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "b2c9c9737c22df0caea5001cb02734fa88bf8e1e924a8e96165456ca6ba6dc14",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "a9ef97883a1c442fdde49f80bb03032410ae97c2896d5ce123ef3c0e54451862",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "a9ef97883a1c442fdde49f80bb03032410ae97c2896d5ce123ef3c0e54451862",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "24bc33c04b62cccff6245832ee72ca0208f507d433a0880f31478f4dbc3ed422",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "stage": "action",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "7249c651c357ffc14b15fa01452c7c73a14e0e75eb81457b93ec311984df5875",
+          "item_count": 1,
+          "latency_ms": 34,
+          "output_hash": "97f1eaa2af6121913bbbaa1edf46701914b758fc985c3d961ac64112ee74ecbb",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "97f1eaa2af6121913bbbaa1edf46701914b758fc985c3d961ac64112ee74ecbb",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:161edf036ec3924de1c190c01ceecec86e24dbf57af12db4dedabe1d612255b7",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "b1d7244671e484719eecd63b56c36b8563d329fd8dd3b96575460620e20c920f",
+          "item_count": 3,
+          "latency_ms": 6,
+          "output_hash": "d0b77d7e06b5d4dac7a98f0e6a194999f8c22bfa428b541447e4ad3a40c33624",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "d0b77d7e06b5d4dac7a98f0e6a194999f8c22bfa428b541447e4ad3a40c33624",
+          "item_count": 1,
+          "latency_ms": 8,
+          "output_hash": "5f76d699e689177776f876ecfb103d2eb5e3b3fcba759538a7bc87d63b45aa51",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "097c7cdc47489a2a401474aa7a564661fa5ad30917a4c676b55aa337bc0a32d5",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "c8052b2799d213602f6ea2d3aa36227367d3fe00ce660c1d95e0d4bf076ec8b7",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "27f6af3d2d41982407d71651bfb2bbb5428cbdf308fb8f1676b244f78c9fe1a5",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "27f6af3d2d41982407d71651bfb2bbb5428cbdf308fb8f1676b244f78c9fe1a5",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "2f85f8e08ddfc797d0b334e862281afa20b1ce71426377cad1c1e756d6a48967",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "2f85f8e08ddfc797d0b334e862281afa20b1ce71426377cad1c1e756d6a48967",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "c4e2ce94ebb517f7e23e3c54cf644392db8497cff8ddd8640b1a1bc70f1f1cb5",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "15b5ab5d8c6ccc9c36bd16b29e7f17a06a8b4a856cc142d429eaecda2a099785",
+          "item_count": 2,
+          "latency_ms": 17,
+          "output_hash": "fa04a41d3e60426b5ba5c2a339843af1c98056899919213e61cae92cf3535b8c",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "13377105745bae11b3a2f0b004c0d600114ce2a40021b4616828bbdc9ef5a62b",
+          "item_count": 1,
+          "latency_ms": 45,
+          "output_hash": "7f133c649f7432f9c4590452530d212e0f5dcff9c7060802ec40000e5d2f28f4",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "7f133c649f7432f9c4590452530d212e0f5dcff9c7060802ec40000e5d2f28f4",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:43b3a4965e553be88a7f484165b013ef6236975a42683c9663ed164015cdafe0",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "990e59150ebfe787d3254538dc81fd6b53b9347b4017cbc0ba3f06d8c38c287b",
+          "item_count": 4,
+          "latency_ms": 6,
+          "output_hash": "7c6247d32187ee7dee3c52ba48f3a186813d8ba8f82303e748881e40a04e1805",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "7c6247d32187ee7dee3c52ba48f3a186813d8ba8f82303e748881e40a04e1805",
+          "item_count": 3,
+          "latency_ms": 11,
+          "output_hash": "2398cefdc0637a4b08b0b7796417605c050b1ec25485129d67488b33bf2564f6",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "92b071c9a91e6dd2aed51ce493a6d186f2306fcb6b1ab02e8d1bd48f2b7efff7",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "c76fd04aaa4ceef5160250e88efaba181dbb7bdb47e109719176f3534eaefe07",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "358872fc99ff9007825296d7d6ebb35eaddb24c3477fefeda940c5d9f3b5cf8e",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "358872fc99ff9007825296d7d6ebb35eaddb24c3477fefeda940c5d9f3b5cf8e",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "ecdb7d981678e60a05311eb84f979ea07dfe31a1a2bf0c3cdabe036ab876813f",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "ecdb7d981678e60a05311eb84f979ea07dfe31a1a2bf0c3cdabe036ab876813f",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "42b4f43e654a75f81254a7a55299f88dca0c5d18aa50c23f46a3fe307fbe41dc",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "0d56b27defc2b094399c368342d05075003612a49dc75fdf83458f80d549f471",
+          "item_count": 3,
+          "latency_ms": 22,
+          "output_hash": "36f7a0791d85e7b3608d207a1e765d7fae78956dad164f0fc1410b62e87881a0",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "65af0d92d4a24599bbdd703fc31f767095095e826c698a9fabb4916d8af6ef37",
+          "item_count": 1,
+          "latency_ms": 55,
+          "output_hash": "925c723be4a343dd821153da86f3fb3ef3d52b86825c8d69141fd7ddd7c45048",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "925c723be4a343dd821153da86f3fb3ef3d52b86825c8d69141fd7ddd7c45048",
+      "version": "isolated-af-run-observation.v1"
+    },
+    {
+      "confirmed_action_count": 0,
+      "execution_id": "execution:sha256:b6c30b58e43db515e041d86eb39ffc4c79fbbe854c83ab88dd61e595c1b95ef6",
+      "failure_code": null,
+      "production_write_count": 0,
+      "round_id": "round-01",
+      "stages": [
+        {
+          "error_code": null,
+          "input_hash": "b92e095574a51ff691d599ff33aa2e2cb26c4d61e888b73a8c2eb454dd6b6ffb",
+          "item_count": 4,
+          "latency_ms": 7,
+          "output_hash": "27200296aff50ad49a0c24edc423d67aab704b677d4cb0725e3fe3ab41abe893",
+          "stage": "planner",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "27200296aff50ad49a0c24edc423d67aab704b677d4cb0725e3fe3ab41abe893",
+          "item_count": 1,
+          "latency_ms": 6,
+          "output_hash": "4ce959285da1ccf308c14012fc2ccede20e96fc411bd85bed5a9c0338b9f1a02",
+          "stage": "query",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "71987ff7d91d39c69c7288670c9345c7b9b39e0c161d27c787410ef6e7767192",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "80d03c96976b15ac3483ab04f4be89aa0d5bc69fae9442166d315ee979c62f8b",
+          "stage": "retrieval",
+          "status": "not_applicable"
+        },
+        {
+          "error_code": null,
+          "input_hash": "4f41beed62e543465f8f0e6909041a31fd116cde67353c9ef66f0807649f646c",
+          "item_count": 1,
+          "latency_ms": 0,
+          "output_hash": "8eb4b1a25c83937adb0dbe70cf33484cbe95eca33a7a801a4c496201c3b8b8b9",
+          "stage": "specialists",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "8eb4b1a25c83937adb0dbe70cf33484cbe95eca33a7a801a4c496201c3b8b8b9",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "05aad603c81883e00e05645eb761eeb5cf4e7a020a2e9ccfdbad567479bd16fd",
+          "stage": "claim_graph",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "05aad603c81883e00e05645eb761eeb5cf4e7a020a2e9ccfdbad567479bd16fd",
+          "item_count": 0,
+          "latency_ms": 0,
+          "output_hash": "9f4faeb68ad4de5e68a456c15a42b0278a41d084e1c8c80833e8b8f9ccb42a70",
+          "stage": "composer",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "fdb873c0df791584aa9474b964667592f323337371b0596978d142ec25258729",
+          "item_count": 2,
+          "latency_ms": 15,
+          "output_hash": "ed96dc7dd732ae10381ac7a36502f79ebc82c9e1d88725297e91bdbec4a12bff",
+          "stage": "action",
+          "status": "completed"
+        },
+        {
+          "error_code": null,
+          "input_hash": "35c229db422c452bb20ac1f785b8ce6d06a168640e543ffb8b99fe660ae4e13e",
+          "item_count": 1,
+          "latency_ms": 45,
+          "output_hash": "52d8f7e5328ef0007682c99f458174a3fae533df027b338a532ba9e23efea60f",
+          "stage": "total",
+          "status": "completed"
+        }
+      ],
+      "status": "completed",
+      "telegram_send_count": 0,
+      "trace_hash": "52d8f7e5328ef0007682c99f458174a3fae533df027b338a532ba9e23efea60f",
+      "version": "isolated-af-run-observation.v1"
+    }
+  ],
+  "round_id": "round-01",
+  "version": "isolated-af-round-report.v1"
+}

@@ -1,0 +1,166 @@
+{
+  "version": "stage12-d-profile-benchmark-evidence.v1",
+  "date": "2026-07-29",
+  "status": "selected_profile_accepted_with_local_candidate_unmeasured",
+  "corpus_hash": "2bf17382489af5ba99aa6ae110361e62e62eeef14cefae6698649235ad4c3653",
+  "corpus_case_count": 12,
+  "candidate_count": 27,
+  "round_policy": {
+    "warmup_rounds": 1,
+    "measured_rounds": 3,
+    "top_k": 20,
+    "remote_timeout_seconds": 20,
+    "synthetic_data_only": true,
+    "data_collection": "deny",
+    "zdr": true,
+    "allow_fallbacks": false
+  },
+  "candidates": [
+    {
+      "profile_name": "stage12.local-bge-m3-v1",
+      "model_revision": "5617a9f61b028005a4858fdac845db406aefb181",
+      "dimension": 1024,
+      "status": "not_measured",
+      "hard_gate_eligible": false,
+      "reason": "fixed_revision_weight_download_stalled_before_2.27gb_weight_arrived",
+      "benchmark_runtime": {
+        "torch": "2.4.1+cpu",
+        "sentence_transformers": "5.6.1",
+        "transformers": "4.48.3",
+        "cuda": false
+      },
+      "report": null
+    },
+    {
+      "profile_name": "stage12.openrouter-bge-m3-v1",
+      "model_revision": "baai/bge-m3-20251117",
+      "dimension": 1024,
+      "status": "measured",
+      "hard_gate_eligible": true,
+      "reason": null,
+      "report": {
+        "version": "retrieval-profile-benchmark.v1",
+        "profile": {
+          "profile_name": "stage12.openrouter-bge-m3-v1",
+          "model_revision": "baai/bge-m3-20251117",
+          "dimension": 1024,
+          "normalization": "l2",
+          "distance_metric": "cosine",
+          "max_input_tokens": 8192,
+          "batch_size": 64,
+          "provider_location": "remote",
+          "data_residency": "synthetic-benchmark-openrouter-deny-zdr"
+        },
+        "corpus_hash": "2bf17382489af5ba99aa6ae110361e62e62eeef14cefae6698649235ad4c3653",
+        "requested_rounds": 3,
+        "completed_rounds": 3,
+        "failed_rounds": 0,
+        "categories": [
+          {
+            "category": "schema",
+            "case_count": 4,
+            "recall_at_20": 1.0,
+            "mrr_at_20": 0.875,
+            "forbidden_candidate_count": 0
+          },
+          {
+            "category": "entity_alias",
+            "case_count": 4,
+            "recall_at_20": 1.0,
+            "mrr_at_20": 1.0,
+            "forbidden_candidate_count": 0
+          },
+          {
+            "category": "non_structured",
+            "case_count": 4,
+            "recall_at_20": 1.0,
+            "mrr_at_20": 1.0,
+            "forbidden_candidate_count": 0
+          }
+        ],
+        "overall": {
+          "category": "overall",
+          "case_count": 12,
+          "recall_at_20": 1.0,
+          "mrr_at_20": 0.9583333333333334,
+          "forbidden_candidate_count": 0
+        },
+        "mean_latency_ms": 3644.551600009436,
+        "p95_latency_ms": 3934.388499998022,
+        "consumed_input_tokens": 4740,
+        "estimated_cost_usd": 0.0000474,
+        "report_hash": "4bcffe63483dac7e1d6ea3f55b18f5315a8be0412e7b473908bcf410884eae3e"
+      }
+    },
+    {
+      "profile_name": "stage12.openrouter-multilingual-e5-large-v1",
+      "model_revision": "intfloat/multilingual-e5-large-20251117",
+      "dimension": 1024,
+      "status": "measured_hard_gate_failed",
+      "hard_gate_eligible": false,
+      "reason": "warmup_exceeded_20_second_request_timeout",
+      "report": {
+        "version": "retrieval-profile-benchmark.v1",
+        "profile": {
+          "profile_name": "stage12.openrouter-multilingual-e5-large-v1",
+          "model_revision": "intfloat/multilingual-e5-large-20251117",
+          "dimension": 1024,
+          "normalization": "l2",
+          "distance_metric": "cosine",
+          "max_input_tokens": 384,
+          "batch_size": 64,
+          "provider_location": "remote",
+          "data_residency": "synthetic-benchmark-openrouter-deny-zdr"
+        },
+        "corpus_hash": "2bf17382489af5ba99aa6ae110361e62e62eeef14cefae6698649235ad4c3653",
+        "requested_rounds": 3,
+        "completed_rounds": 0,
+        "failed_rounds": 3,
+        "categories": [
+          {
+            "category": "schema",
+            "case_count": 4,
+            "recall_at_20": 0.0,
+            "mrr_at_20": 0.0,
+            "forbidden_candidate_count": 0
+          },
+          {
+            "category": "entity_alias",
+            "case_count": 4,
+            "recall_at_20": 0.0,
+            "mrr_at_20": 0.0,
+            "forbidden_candidate_count": 0
+          },
+          {
+            "category": "non_structured",
+            "case_count": 4,
+            "recall_at_20": 0.0,
+            "mrr_at_20": 0.0,
+            "forbidden_candidate_count": 0
+          }
+        ],
+        "overall": {
+          "category": "overall",
+          "case_count": 12,
+          "recall_at_20": 0.0,
+          "mrr_at_20": 0.0,
+          "forbidden_candidate_count": 0
+        },
+        "mean_latency_ms": 0.0,
+        "p95_latency_ms": 0.0,
+        "consumed_input_tokens": 0,
+        "estimated_cost_usd": 0.0,
+        "report_hash": "93d88ec28fb423ebbaf803d678e4b49aef8d29165f73b07a8607189265bea1d0"
+      }
+    }
+  ],
+  "decision_gate": {
+    "status": "accepted_by_user_2026_07_29",
+    "recommended_profile": "stage12.openrouter-bge-m3-v1",
+    "basis": "only_candidate_with_complete_real_rounds_and_all_hard_gates_passed",
+    "production_dependency_added": false,
+    "migration_created": false,
+    "provider_activated": false,
+    "real_workspace_external_embedding_authorized": false
+  }
+}

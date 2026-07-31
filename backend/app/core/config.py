@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import base64
 import os
 import re
+from typing import Literal
 from uuid import UUID
 
 
@@ -11,6 +12,8 @@ REQUIRED_PRODUCTION_LIKE_ENV_VARS = (
     "REDIS_URL",
     "TELEGRAM_WEBHOOK_SECRET",
 )
+STAGE12_RETRIEVAL_ACTIVE_PROFILE = "stage12.openrouter-bge-m3-v1"
+STAGE12_PROVIDER_V2_BASELINE_PROFILE = "stage12.openrouter-gemini-2.5-flash-v1"
 
 
 @dataclass(frozen=True)
@@ -48,6 +51,19 @@ class Settings:
     agent_runtime_input_key: str | None = None
     agent_runtime_input_key_version: str = "stage10-v1"
     agent_runtime_input_ttl_seconds: int = 300
+    agent_task_planner_v2_mode: str = "disabled"
+    agent_task_planner_v2_shadow_workspace_ids: tuple[str, ...] = ()
+    authorized_query_engine_v1_mode: Literal["off", "shadow"] = "off"
+    authorized_query_engine_v1_workspace_allowlist: tuple[str, ...] = ()
+    retrieval_v2_mode: Literal["off", "shadow"] = "off"
+    retrieval_v2_workspace_allowlist: tuple[str, ...] = ()
+    retrieval_v2_active_profile: str | None = None
+    stage12_provider_v2_mode: Literal["off", "benchmark"] = "off"
+    stage12_provider_v2_profile: str | None = None
+    typed_specialists_v2_mode: Literal["off", "shadow"] = "off"
+    typed_specialists_v2_workspace_allowlist: tuple[str, ...] = ()
+    durable_action_v1_mode: Literal["off", "isolated", "active"] = "off"
+    durable_action_v1_workspace_allowlist: tuple[str, ...] = ()
 
 
 def get_settings() -> Settings:
@@ -120,11 +136,150 @@ def get_settings() -> Settings:
         agent_runtime_input_ttl_seconds=_env_int(
             "AGENT_RUNTIME_INPUT_TTL_SECONDS", Settings.agent_runtime_input_ttl_seconds
         ),
+        agent_task_planner_v2_mode=os.getenv(
+            "AGENT_TASK_PLANNER_V2_MODE",
+            Settings.agent_task_planner_v2_mode,
+        ),
+        agent_task_planner_v2_shadow_workspace_ids=_env_csv_tuple(
+            "AGENT_TASK_PLANNER_V2_SHADOW_WORKSPACE_IDS"
+        ),
+        authorized_query_engine_v1_mode=os.getenv(
+            "AUTHORIZED_QUERY_ENGINE_V1_MODE",
+            Settings.authorized_query_engine_v1_mode,
+        ),
+        authorized_query_engine_v1_workspace_allowlist=_env_csv_tuple(
+            "AUTHORIZED_QUERY_ENGINE_V1_WORKSPACE_ALLOWLIST"
+        ),
+        retrieval_v2_mode=os.getenv(
+            "RETRIEVAL_V2_MODE",
+            Settings.retrieval_v2_mode,
+        ),
+        retrieval_v2_workspace_allowlist=_env_csv_tuple(
+            "RETRIEVAL_V2_WORKSPACE_ALLOWLIST"
+        ),
+        retrieval_v2_active_profile=os.getenv("RETRIEVAL_V2_ACTIVE_PROFILE"),
+        stage12_provider_v2_mode=os.getenv(
+            "STAGE12_PROVIDER_V2_MODE",
+            Settings.stage12_provider_v2_mode,
+        ),
+        stage12_provider_v2_profile=os.getenv("STAGE12_PROVIDER_V2_PROFILE"),
+        typed_specialists_v2_mode=os.getenv(
+            "TYPED_SPECIALISTS_V2_MODE",
+            Settings.typed_specialists_v2_mode,
+        ),
+        typed_specialists_v2_workspace_allowlist=_env_csv_tuple(
+            "TYPED_SPECIALISTS_V2_WORKSPACE_ALLOWLIST"
+        ),
+        durable_action_v1_mode=os.getenv(
+            "DURABLE_ACTION_V1_MODE",
+            Settings.durable_action_v1_mode,
+        ),
+        durable_action_v1_workspace_allowlist=_env_csv_tuple(
+            "DURABLE_ACTION_V1_WORKSPACE_ALLOWLIST"
+        ),
     )
 
 
 def validate_runtime_settings(settings: Settings | None = None) -> Settings:
     settings = settings or get_settings()
+    if settings.durable_action_v1_mode not in {"off", "isolated", "active"}:
+        raise RuntimeError(
+            "Invalid DURABLE_ACTION_V1_MODE: expected off, isolated or active"
+        )
+    if (
+        settings.durable_action_v1_mode == "isolated"
+        and not settings.durable_action_v1_workspace_allowlist
+    ):
+        raise RuntimeError("Missing DURABLE_ACTION_V1_WORKSPACE_ALLOWLIST")
+    for value in settings.durable_action_v1_workspace_allowlist:
+        try:
+            UUID(value)
+        except ValueError as exc:
+            raise RuntimeError("Invalid DURABLE_ACTION_V1_WORKSPACE_ALLOWLIST") from exc
+    if settings.typed_specialists_v2_mode not in {"off", "shadow"}:
+        raise RuntimeError("Invalid TYPED_SPECIALISTS_V2_MODE: expected off or shadow")
+    if settings.typed_specialists_v2_mode == "shadow":
+        if not settings.typed_specialists_v2_workspace_allowlist:
+            raise RuntimeError("Missing TYPED_SPECIALISTS_V2_WORKSPACE_ALLOWLIST")
+        for value in settings.typed_specialists_v2_workspace_allowlist:
+            try:
+                UUID(value)
+            except ValueError as exc:
+                raise RuntimeError(
+                    "Invalid TYPED_SPECIALISTS_V2_WORKSPACE_ALLOWLIST"
+                ) from exc
+        if settings.stage12_provider_v2_profile != STAGE12_PROVIDER_V2_BASELINE_PROFILE:
+            raise RuntimeError(
+                "Invalid STAGE12_PROVIDER_V2_PROFILE: expected confirmed baseline"
+            )
+        if not settings.openrouter_api_key:
+            raise RuntimeError(
+                "Missing required Stage12 Provider environment variable: "
+                "OPENROUTER_API_KEY"
+            )
+    if settings.stage12_provider_v2_mode not in {"off", "benchmark"}:
+        raise RuntimeError(
+            "Invalid STAGE12_PROVIDER_V2_MODE: expected off or benchmark"
+        )
+    if settings.stage12_provider_v2_mode == "benchmark":
+        if settings.stage12_provider_v2_profile != STAGE12_PROVIDER_V2_BASELINE_PROFILE:
+            raise RuntimeError(
+                "Invalid STAGE12_PROVIDER_V2_PROFILE: expected confirmed baseline"
+            )
+        if not settings.openrouter_api_key:
+            raise RuntimeError(
+                "Missing required Stage12 Provider environment variable: "
+                "OPENROUTER_API_KEY"
+            )
+    if settings.retrieval_v2_mode not in {"off", "shadow"}:
+        raise RuntimeError("Invalid RETRIEVAL_V2_MODE: expected off or shadow")
+    if settings.retrieval_v2_mode == "shadow":
+        if not settings.retrieval_v2_workspace_allowlist:
+            raise RuntimeError("Missing RETRIEVAL_V2_WORKSPACE_ALLOWLIST")
+        for value in settings.retrieval_v2_workspace_allowlist:
+            try:
+                UUID(value)
+            except ValueError as exc:
+                raise RuntimeError("Invalid RETRIEVAL_V2_WORKSPACE_ALLOWLIST") from exc
+        if settings.retrieval_v2_active_profile != STAGE12_RETRIEVAL_ACTIVE_PROFILE:
+            raise RuntimeError(
+                "Invalid RETRIEVAL_V2_ACTIVE_PROFILE: expected confirmed Stage12 profile"
+            )
+        if not settings.openrouter_api_key:
+            raise RuntimeError(
+                "Missing required Stage12 retrieval environment variable: "
+                "OPENROUTER_API_KEY"
+            )
+    if settings.authorized_query_engine_v1_mode not in {"off", "shadow"}:
+        raise RuntimeError(
+            "Invalid AUTHORIZED_QUERY_ENGINE_V1_MODE: expected off or shadow"
+        )
+    if (
+        settings.authorized_query_engine_v1_mode == "shadow"
+        and not settings.authorized_query_engine_v1_workspace_allowlist
+    ):
+        raise RuntimeError("Missing AUTHORIZED_QUERY_ENGINE_V1_WORKSPACE_ALLOWLIST")
+    for value in settings.authorized_query_engine_v1_workspace_allowlist:
+        try:
+            UUID(value)
+        except ValueError as exc:
+            raise RuntimeError(
+                "Invalid AUTHORIZED_QUERY_ENGINE_V1_WORKSPACE_ALLOWLIST"
+            ) from exc
+    if settings.agent_task_planner_v2_mode not in {"disabled", "shadow"}:
+        raise RuntimeError(
+            "Invalid AGENT_TASK_PLANNER_V2_MODE: expected disabled or shadow"
+        )
+    if settings.agent_task_planner_v2_mode == "shadow":
+        if not settings.agent_task_planner_v2_shadow_workspace_ids:
+            raise RuntimeError("Missing AGENT_TASK_PLANNER_V2_SHADOW_WORKSPACE_IDS")
+        for value in settings.agent_task_planner_v2_shadow_workspace_ids:
+            try:
+                UUID(value)
+            except ValueError as exc:
+                raise RuntimeError(
+                    "Invalid AGENT_TASK_PLANNER_V2_SHADOW_WORKSPACE_IDS"
+                ) from exc
     if not 1 <= settings.telegram_mini_app_init_max_age_seconds <= 900:
         raise RuntimeError(
             "Invalid TELEGRAM_MINI_APP_INIT_MAX_AGE_SECONDS: expected 1..900"
@@ -161,36 +316,27 @@ def validate_runtime_settings(settings: Settings | None = None) -> Settings:
                     "Invalid AGENT_EVENT_RUNTIME_MODE: production-like Stage10 requires redis_worker"
                 )
             if not settings.agent_event_runtime_allowed_workspace_ids:
-                raise RuntimeError(
-                    "Missing AGENT_EVENT_RUNTIME_ALLOWED_WORKSPACE_IDS"
-                )
+                raise RuntimeError("Missing AGENT_EVENT_RUNTIME_ALLOWED_WORKSPACE_IDS")
     if settings.environment in PRODUCTION_LIKE_ENVIRONMENTS:
         missing = [
-            name
-            for name in REQUIRED_PRODUCTION_LIKE_ENV_VARS
-            if not os.getenv(name)
+            name for name in REQUIRED_PRODUCTION_LIKE_ENV_VARS if not os.getenv(name)
         ]
         if missing:
             joined_names = ", ".join(missing)
             raise RuntimeError(
-                "Missing required runtime environment variables: "
-                f"{joined_names}"
+                "Missing required runtime environment variables: " f"{joined_names}"
             )
         unsafe = []
         if settings.telegram_send_mode not in {"dry_run", "restricted_test"}:
             unsafe.append("TELEGRAM_SEND_MODE")
-        if (
-            settings.llm_enabled
-            and settings.agent_workflow_mode != "real_openrouter"
-        ):
+        if settings.llm_enabled and settings.agent_workflow_mode != "real_openrouter":
             unsafe.append("LLM_ENABLED")
         if settings.provider_mode != "disabled":
             unsafe.append("PROVIDER_MODE")
         if unsafe:
             joined_names = ", ".join(unsafe)
             raise RuntimeError(
-                "Unsafe Stage 03 runtime settings are enabled: "
-                f"{joined_names}"
+                "Unsafe Stage 03 runtime settings are enabled: " f"{joined_names}"
             )
         if settings.telegram_send_mode == "restricted_test":
             missing_restricted_send = []
@@ -205,6 +351,15 @@ def validate_runtime_settings(settings: Settings | None = None) -> Settings:
                     f"{joined_names}"
                 )
     return settings
+
+
+def durable_action_v1_enabled(settings: Settings, workspace_id: UUID) -> bool:
+    if settings.durable_action_v1_mode == "active":
+        return True
+    return (
+        settings.durable_action_v1_mode == "isolated"
+        and str(workspace_id) in settings.durable_action_v1_workspace_allowlist
+    )
 
 
 def validate_stage07_telegram_controlled_delivery_settings(

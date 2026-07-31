@@ -1,7 +1,9 @@
 from datetime import UTC, datetime, timedelta
 import hashlib
+import pytest
 from uuid import uuid4
 
+from app.models.agent_event_runtime import AgentArtifact
 from app.services.agent_event_runtime import (
     InMemoryAgentEventRuntimeUnitOfWork,
     create_agent_run,
@@ -44,6 +46,21 @@ def _runtime():
     return uow, run, scope_hash
 
 
+def _input_artifact(uow, run, scope_hash, artifact_id):
+    uow.add_artifact(
+        AgentArtifact(
+            id=artifact_id,
+            run_id=run.id,
+            kind="objective_specialist_input",
+            storage_ref=f"stage08-idempotency:{uuid4()}",
+            content_hash="c" * 64,
+            visibility_scope_hash=scope_hash,
+            validation_status="validated",
+            expires_at=None,
+        )
+    )
+
+
 def test_fan_out_dispatches_all_commands_in_one_durable_plan() -> None:
     uow, run, scope_hash = _runtime()
     commands = dispatch_specialist_commands(
@@ -68,13 +85,102 @@ def test_fan_out_dispatches_all_commands_in_one_durable_plan() -> None:
         "analyse_visible_records",
         "analyse_visible_risks",
     }
-    assert {item.topic for item in uow.outbox_events if item.aggregate_type == "agent_command"} == {
+    assert {
+        item.topic
+        for item in uow.outbox_events
+        if item.aggregate_type == "agent_command"
+    } == {
         "agent.commands.platform.tabular.analyse",
         "agent.commands.platform.risk.analyse",
     }
     latest = uow.checkpoints[-1].control_json
     assert set(latest["pending_command_ids"]) == {str(item.id) for item in commands}
     assert run.status == "queued"
+
+
+def test_dispatch_preserves_input_artifacts_and_allows_objective_local_capability() -> (
+    None
+):
+    uow, run, scope_hash = _runtime()
+    first_ref, second_ref = uuid4(), uuid4()
+    _input_artifact(uow, run, scope_hash, first_ref)
+    _input_artifact(uow, run, scope_hash, second_ref)
+    commands = dispatch_specialist_commands(
+        uow,
+        run_id=run.id,
+        dispatches=(
+            SpecialistCommandDispatch(
+                target_capability="platform.tabular.analyse",
+                payload_ref=f"agent-private-input:{uuid4()}",
+                input_artifact_refs=(first_ref,),
+            ),
+            SpecialistCommandDispatch(
+                target_capability="platform.tabular.analyse",
+                payload_ref=f"agent-private-input:{uuid4()}",
+                input_artifact_refs=(second_ref,),
+            ),
+        ),
+        authorization_hash=scope_hash,
+        now=NOW,
+    )
+
+    assert len(commands) == 2
+    envelopes = [
+        item.payload_json
+        for item in uow.outbox_events
+        if item.aggregate_type == "agent_command"
+    ]
+    assert [item["input_artifact_refs"] for item in envelopes] == [
+        [str(first_ref)],
+        [str(second_ref)],
+    ]
+
+    replay = dispatch_specialist_commands(
+        uow,
+        run_id=run.id,
+        dispatches=(
+            SpecialistCommandDispatch(
+                target_capability="platform.tabular.analyse",
+                payload_ref=commands[0].payload_ref,
+                input_artifact_refs=(first_ref,),
+            ),
+            SpecialistCommandDispatch(
+                target_capability="platform.tabular.analyse",
+                payload_ref=commands[1].payload_ref,
+                input_artifact_refs=(second_ref,),
+            ),
+        ),
+        authorization_hash=scope_hash,
+        now=NOW,
+    )
+    assert tuple(item.id for item in replay) == tuple(item.id for item in commands)
+
+
+def test_dispatch_rejects_duplicate_capability_and_objective_artifact_identity() -> (
+    None
+):
+    uow, run, scope_hash = _runtime()
+    objective_ref = uuid4()
+    _input_artifact(uow, run, scope_hash, objective_ref)
+    with pytest.raises(ValueError, match="specialist_dispatch_duplicate_objective"):
+        dispatch_specialist_commands(
+            uow,
+            run_id=run.id,
+            dispatches=(
+                SpecialistCommandDispatch(
+                    target_capability="platform.tabular.analyse",
+                    payload_ref=f"agent-private-input:{uuid4()}",
+                    input_artifact_refs=(objective_ref,),
+                ),
+                SpecialistCommandDispatch(
+                    target_capability="platform.tabular.analyse",
+                    payload_ref=f"agent-private-input:{uuid4()}",
+                    input_artifact_refs=(objective_ref,),
+                ),
+            ),
+            authorization_hash=scope_hash,
+            now=NOW,
+        )
 
 
 def test_first_child_completion_does_not_finish_run_and_last_child_fans_in() -> None:
@@ -120,6 +226,52 @@ def test_first_child_completion_does_not_finish_run_and_last_child_fans_in() -> 
     )
     assert second_result.run.status == "completed"
     assert run.safe_result_ref == second_result.artifact.id
+    assert [item.event_type for item in uow.events].count("run.completed") == 1
+
+
+def test_stage12_fan_in_persists_supervisor_artifact_once_and_replay_is_idempotent() -> (
+    None
+):
+    uow, run, scope_hash = _runtime()
+    command = dispatch_specialist_commands(
+        uow,
+        run_id=run.id,
+        dispatches=(
+            SpecialistCommandDispatch(
+                target_capability="platform.tabular.analyse",
+                payload_ref=f"agent-private-input:{uuid4()}",
+            ),
+        ),
+        authorization_hash=scope_hash,
+        now=NOW,
+    )[0]
+    child = _result("事实完成")
+    composed = _result("Supervisor 已生成安全答复")
+
+    result = execute_read_only_specialist(
+        uow,
+        command_id=command.id,
+        authorization_hash=scope_hash,
+        worker_id="tabular-1",
+        now=NOW + timedelta(seconds=1),
+        execute=lambda: child,
+        fan_in=lambda: composed,
+    )
+    replay = execute_read_only_specialist(
+        uow,
+        command_id=command.id,
+        authorization_hash=scope_hash,
+        worker_id="tabular-1",
+        now=NOW + timedelta(seconds=2),
+        execute=lambda: (_ for _ in ()).throw(RuntimeError("must not execute")),
+        fan_in=lambda: (_ for _ in ()).throw(RuntimeError("must not fan in")),
+    )
+
+    final_artifact = uow.get_artifact(run.safe_result_ref)
+    assert result.artifact.content_hash == child.content_hash
+    assert replay.replayed is True
+    assert final_artifact.kind == "composer_result"
+    assert final_artifact.content_hash == composed.content_hash
     assert [item.event_type for item in uow.events].count("run.completed") == 1
 
 
@@ -237,3 +389,50 @@ def test_required_child_failure_terminalizes_unfinished_siblings() -> None:
     latest = uow.checkpoints[-1].control_json
     assert latest["pending_command_ids"] == []
     assert set(latest["failed_command_ids"]) == {str(required.id), str(sibling.id)}
+
+
+def test_last_optional_failure_fans_in_and_emits_one_degraded_terminal_result() -> None:
+    uow, run, scope_hash = _runtime()
+    required, optional = dispatch_specialist_commands(
+        uow,
+        run_id=run.id,
+        dispatches=(
+            SpecialistCommandDispatch(
+                target_capability="platform.tabular.analyse",
+                payload_ref=f"agent-private-input:{uuid4()}",
+                required=True,
+            ),
+            SpecialistCommandDispatch(
+                target_capability="platform.risk.analyse",
+                payload_ref=f"agent-private-input:{uuid4()}",
+                required=False,
+            ),
+        ),
+        authorization_hash=scope_hash,
+        now=NOW,
+    )
+    execute_read_only_specialist(
+        uow,
+        command_id=required.id,
+        authorization_hash=scope_hash,
+        worker_id="tabular-1",
+        now=NOW + timedelta(seconds=1),
+        execute=lambda: _result("事实完成"),
+    )
+    composed = _result("已保留可验证事实")
+
+    failed = fail_specialist_command(
+        uow,
+        command_id=optional.id,
+        authorization_hash=scope_hash,
+        worker_id="risk-1",
+        now=NOW + timedelta(seconds=2),
+        fan_in=lambda: composed,
+    )
+
+    assert failed.status == "degraded"
+    final_artifact = uow.get_artifact(failed.safe_result_ref)
+    assert final_artifact is not None
+    assert final_artifact.kind == "composer_result"
+    assert final_artifact.content_hash == composed.content_hash
+    assert [item.event_type for item in uow.events].count("run.degraded") == 1

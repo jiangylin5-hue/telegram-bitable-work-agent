@@ -1,0 +1,83 @@
+{
+  "version": "stage12-a-focused-baseline.v1",
+  "generated_at": "2026-07-29T00:00:00+08:00",
+  "status": "pass_with_deferred_real_llm_and_postgres_constraints",
+  "scope": "Evaluation V2 foundation and focused deterministic verification only",
+  "source_control": {
+    "head": "09b9d5f70895d18efe307ba952c46775cd716dd2",
+    "worktree_dirty": true,
+    "commit_created": false
+  },
+  "truth": {
+    "case_count": 48,
+    "audit_entry_count": 48,
+    "schema_version": "stage12-evaluation-fixture.v2",
+    "truth_file_sha256": "c1c2ccc0b1e2a73d40ed130d9b1ad80787426b14363a2720f54e3b7de71e2624",
+    "audit_file_sha256": "2679c802a6103482564b69b2d8e993ebe0b282d982a305f3d7265bb6df59a1d5",
+    "fixture_sha256": "b98dfd2d0e3713c8aacd89de33100373e849a0bc7aaeeca4663bb8542aa0098c",
+    "audit_status": "agent_audited_pending_human_signoff",
+    "human_approved_count": 0
+  },
+  "fixture_materialization": {
+    "mode": "in_memory_service_layer",
+    "external_write_count": 0,
+    "table_count": 7,
+    "checks": [
+      "field_types",
+      "linked_record_targets",
+      "field_defaults",
+      "record_values",
+      "record_versions",
+      "relation_edges",
+      "hidden_field_permissions",
+      "denied_write_permissions"
+    ],
+    "postgres_materialization": "not_run"
+  },
+  "verification": {
+    "focused_stage12": {
+      "command": "python -m pytest tests/unit/test_stage12_quality_evaluation_contracts.py tests/unit/test_stage12_quality_truth_cases.py tests/unit/test_stage12_quality_planner_query_retrieval_scores.py tests/unit/test_stage12_quality_answer_action_safety_scores.py tests/unit/test_stage12_stage11_trace_adapter.py tests/unit/test_stage12_real_quality_report.py tests/unit/test_stage12_evaluation_fixture.py tests/unit/test_stage11_complex_coordination_eval.py -q",
+      "result": "58 passed in 2.66s"
+    },
+    "backend_without_unavailable_postgres_files": {
+      "command": "$env:STAGE06_LOCAL_DATABASE_URL=$null; $env:STAGE02_ONLINE_DATABASE_URL=$null; python -m pytest -q --ignore=tests/integration/test_stage07_draft_employee_hub_postgres.py --ignore=tests/integration/test_stage07_governance_write_postgres.py --ignore=tests/integration/test_stage07_telegram_deep_link_delivery_postgres.py --ignore=tests/integration/test_stage07_telegram_deep_link_postgres.py",
+      "result": "1714 passed, 132 skipped in 142.57s"
+    },
+    "backend_with_postgres_env_cleared": {
+      "result": "1714 passed, 132 skipped, 15 setup errors in 140.03s",
+      "error_class": "historical_postgres_tests_missing_skipif"
+    },
+    "backend_with_configured_local_postgres": {
+      "result": "blocked_at_migration_setup",
+      "error_class": "psycopg.errors.InsufficientPrivilege",
+      "reason": "configured database role cannot CREATE EXTENSION vector"
+    },
+    "compileall": "pass",
+    "git_diff_check": "pass",
+    "alembic_heads": "20260728_0034 (head)",
+    "ruff": "not_installed"
+  },
+  "historical_r75": {
+    "file_sha256": "726651914241906634b665ff484e88cf9074a61c325be0344ffea1b0661a6ded",
+    "legacy_score": 83.8144,
+    "status": "immutable_coarse_baseline_only",
+    "planner_trace": "legacy_partial_only",
+    "query_trace": "not_observed",
+    "retrieval_trace": "not_observed",
+    "typed_claim_trace": "not_observed",
+    "action_slot_trace": "not_observed"
+  },
+  "safety": {
+    "real_provider_calls": 0,
+    "telegram_send_count": 0,
+    "real_business_write_count": 0,
+    "draft_confirmation_count": 0,
+    "gold_injected_into_execution_request": false
+  },
+  "deferred": {
+    "real_llm_48_case_rounds": 3,
+    "status": "deferred_by_user_priority_until_stage12_final_acceptance",
+    "deterministic_query_engine_gold_recompute": "deferred_until_stage12_c_engine_exists",
+    "postgres_fixture_replay": "deferred_until_authorized_database_with_pgvector_extension_is_available"
+  }
+}

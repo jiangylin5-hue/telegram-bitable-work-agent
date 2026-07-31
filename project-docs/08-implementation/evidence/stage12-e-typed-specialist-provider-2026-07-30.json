@@ -1,0 +1,18 @@
+{
+  "version": "specialist-provider-evaluation.v1",
+  "handler_count": 4,
+  "contract_exact_count": 4,
+  "typed_artifact_count": 6,
+  "claim_count": 2,
+  "valid_evidence_count": 1,
+  "partial_failure_safe": true,
+  "stable_failure_class_count": 13,
+  "chinese_answer_grounded": true,
+  "provider_attempt_count": 0,
+  "provider_failure_count": 0,
+  "action_proposal_count": 1,
+  "write_count": 0,
+  "send_count": 0,
+  "duration_ms": 5,
+  "report_hash": "cb177a9db7836695215191c90fb8480bb5a6659b1fe2353e7511bedb2996c229"
+}

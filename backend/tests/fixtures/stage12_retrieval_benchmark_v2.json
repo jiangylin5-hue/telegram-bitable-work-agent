@@ -1,0 +1,321 @@
+{
+  "version": "stage12-retrieval-benchmark.v2",
+  "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+  "candidates": [
+    {
+      "candidate_id": "schema-projects",
+      "source_type": "schema_table",
+      "table_key": "projects",
+      "record_code": null,
+      "canonical_text": "[table] 项目\n[description] 项目主数据、交付阶段、状态与负责人",
+      "content_hash": "e3492c757e9efcc4126d15f88a8a4144a2c83bb9d1d79f56ddae5e8f77def34e"
+    },
+    {
+      "candidate_id": "schema-work-items",
+      "source_type": "schema_table",
+      "table_key": "work_items",
+      "record_code": null,
+      "canonical_text": "[table] 工作项\n[aliases] 事项 工单 待办\n[description] 项目执行事项、状态、优先级、风险和进展",
+      "content_hash": "c06903e43077635c6881876d6e7ddea0fe06033a6cc195a9094a75336060692f"
+    },
+    {
+      "candidate_id": "schema-risks",
+      "source_type": "schema_table",
+      "table_key": "risks",
+      "record_code": null,
+      "canonical_text": "[table] 风险\n[aliases] 风险记录 隐患\n[description] 风险等级、开放状态与受影响工作项",
+      "content_hash": "10f05a0ed3c22d28a872408fc7baa415ef4f724f653d36d764bd12c5bfc77bc6"
+    },
+    {
+      "candidate_id": "schema-tasks",
+      "source_type": "schema_table",
+      "table_key": "tasks",
+      "record_code": null,
+      "canonical_text": "[table] 任务\n[aliases] 评审任务 跟进任务\n[description] 可创建并分派的任务、截止日期和状态",
+      "content_hash": "20efb547ebc3a9b8ab1cc70c5d6339757bf9744ea5645b41240c9e195664ae83"
+    },
+    {
+      "candidate_id": "field-blocked-reason",
+      "source_type": "schema_field",
+      "table_key": "work_items",
+      "record_code": null,
+      "canonical_text": "[table] 工作项\n[field] 阻塞原因\n[aliases] 卡点原因 依赖原因",
+      "content_hash": "b1322f509f82930fe453522773e85de06bea73c3c89f544a2ee0a35507957d0e"
+    },
+    {
+      "candidate_id": "field-summary",
+      "source_type": "schema_field",
+      "table_key": "work_items",
+      "record_code": null,
+      "canonical_text": "[table] 工作项\n[field] 摘要\n[aliases] 进展说明 备注 当前情况",
+      "content_hash": "ab7fc298463b693135cc627e2fe8c0dcc0eed524ea92a8e3d78669fa0a721df7"
+    },
+    {
+      "candidate_id": "record-prj-atlas",
+      "source_type": "record",
+      "table_key": "projects",
+      "record_code": "PRJ-ATLAS",
+      "canonical_text": "[table] 项目\n[record] PRJ-ATLAS\n[项目名称] Atlas\n[阶段] delivery\n[状态] active",
+      "content_hash": "fa5ab02484de2605271cf2dd81647f092ccc9750c8d6ee8b77cb21e798b0087d"
+    },
+    {
+      "candidate_id": "record-mt-001",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-001",
+      "canonical_text": "[table] 工作项\n[record] MT-001\n[标题] Atlas launch checklist\n[状态] blocked\n[优先级] high\n[风险] high\n[摘要] 等待范围确认",
+      "content_hash": "0fea983ebfa508190d30d667ca5daee9a3c3f39cf9200fbb593433fbc1162af9"
+    },
+    {
+      "candidate_id": "record-mt-002",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-002",
+      "canonical_text": "[table] 工作项\n[record] MT-002\n[标题] Atlas data mapping\n[状态] in_progress\n[优先级] high\n[风险] medium\n[摘要] 字段映射进行中",
+      "content_hash": "16445376f60f2cdf2252f8e4b6cd2f10088f411aedcbf2ec2b0a4987f89f7616"
+    },
+    {
+      "candidate_id": "record-mt-004",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-004",
+      "canonical_text": "[table] 工作项\n[record] MT-004\n[标题] Beacon connector\n[状态] blocked\n[优先级] high\n[风险] high\n[摘要] 依赖接口未就绪",
+      "content_hash": "1d157e7c887380ae54f943b32e4944f90d90bf098523b60ea2d94de378e78c84"
+    },
+    {
+      "candidate_id": "record-mt-009",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-009",
+      "canonical_text": "[table] 工作项\n[record] MT-009\n[标题] Cedar review\n[状态] in_progress\n[优先级] medium\n[风险] medium\n[摘要] 复核中",
+      "content_hash": "f5f08585d7fce35d02bd1fbb3687a9ee2d56b9799f194de5dfaf31f11adc10f7"
+    },
+    {
+      "candidate_id": "record-mt-014",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-014",
+      "canonical_text": "[table] 工作项\n[record] MT-014\n[标题] Ember decision\n[状态] blocked\n[优先级] high\n[风险] high\n[摘要] 等待决策",
+      "content_hash": "142ad5f26efd0a32cc825a383c89d594da03172cf54c9f9eb7df20b955bbffc0"
+    },
+    {
+      "candidate_id": "record-mt-017",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-017",
+      "canonical_text": "[table] 工作项\n[record] MT-017\n[标题] Fjord rollback\n[状态] planned\n[优先级] medium\n[风险] high\n[摘要] 回退方案待审",
+      "content_hash": "844279481373d99fee5ac6b71eb9464a4b83158fe8aa60ba06cb6935f5eccd52"
+    },
+    {
+      "candidate_id": "record-risk-004",
+      "source_type": "record",
+      "table_key": "risks",
+      "record_code": "RISK-004",
+      "canonical_text": "[table] 风险\n[record] RISK-004\n[标题] Beacon connector risk\n[等级] high\n[状态] open\n[工作项] MT-004",
+      "content_hash": "1942c820facbe98771cfb9a74fae2500acf93b9e963cd92e3b284b29b0ddd1ad"
+    },
+    {
+      "candidate_id": "record-risk-007",
+      "source_type": "record",
+      "table_key": "risks",
+      "record_code": "RISK-007",
+      "canonical_text": "[table] 风险\n[record] RISK-007\n[标题] Cedar archive monitoring\n[等级] medium\n[状态] monitoring\n[工作项] MT-007",
+      "content_hash": "c852a92f59a4e22de381b3ff7b6e604da4d7666acbbb46a6b63f05e58eb98e54"
+    },
+    {
+      "candidate_id": "record-mt-003",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-003",
+      "canonical_text": "[table] 工作项\n[record] MT-003\n[标题] Atlas rehearsal\n[状态] planned\n[优先级] medium\n[风险] low\n[摘要] 等待排期",
+      "content_hash": "7fc501ded912c94598ab3ad3d4b9b6eac438d19ebdab14f7b37db34254cd65a6"
+    },
+    {
+      "candidate_id": "record-mt-005",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-005",
+      "canonical_text": "[table] 工作项\n[record] MT-005\n[标题] Beacon quality check\n[状态] in_progress\n[优先级] medium\n[风险] medium\n[摘要] 验证中",
+      "content_hash": "0990b185cbc0910297d9530a09de3a34fdf4b08ea769306d027632b58b16aef9"
+    },
+    {
+      "candidate_id": "record-mt-006",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-006",
+      "canonical_text": "[table] 工作项\n[record] MT-006\n[标题] Beacon dashboard\n[状态] done\n[优先级] low\n[风险] low\n[摘要] 已发布",
+      "content_hash": "8040b6416d183408ed8dd4914962da0324dfbf4d4568577baa6d759f262ada33"
+    },
+    {
+      "candidate_id": "record-mt-007",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-007",
+      "canonical_text": "[table] 工作项\n[record] MT-007\n[标题] Cedar archive\n[状态] done\n[优先级] medium\n[风险] low\n[摘要] 归档完成",
+      "content_hash": "073c70739d2ccef3395a0410ef2cfe229aff364a0aeda2bf3612d3891fd1f7a8"
+    },
+    {
+      "candidate_id": "record-mt-008",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-008",
+      "canonical_text": "[table] 工作项\n[record] MT-008\n[标题] Cedar handoff\n[状态] done\n[优先级] high\n[风险] low\n[摘要] 交接完成",
+      "content_hash": "89c0eeb6f1376b79cbec465f6a0543d68c2a4e894816552a19cf1c50008c83ac"
+    },
+    {
+      "candidate_id": "record-mt-010",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-010",
+      "canonical_text": "[table] 工作项\n[record] MT-010\n[标题] Delta discovery\n[状态] planned\n[优先级] low\n[风险] low\n[摘要] 需求收集中",
+      "content_hash": "f6789fb4916d9205b3f9eeed82a93f24971c1039583d4b55ef4cdc96444982f3"
+    },
+    {
+      "candidate_id": "record-mt-011",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-011",
+      "canonical_text": "[table] 工作项\n[record] MT-011\n[标题] Delta scope\n[状态] planned\n[优先级] high\n[风险] medium\n[摘要] 范围待定",
+      "content_hash": "bf946fa6bf8fba09524fd63c7425878196b16067926fd833ce3a69c7848ba0a9"
+    },
+    {
+      "candidate_id": "record-mt-012",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-012",
+      "canonical_text": "[table] 工作项\n[record] MT-012\n[标题] Delta prototype\n[状态] blocked\n[优先级] medium\n[风险] high\n[摘要] 等待依赖",
+      "content_hash": "18208e87843e76438f4d36b00f62ecebe591e05dcb638e3366f164134e8f3780"
+    },
+    {
+      "candidate_id": "record-mt-013",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-013",
+      "canonical_text": "[table] 工作项\n[record] MT-013\n[标题] Ember intake\n[状态] planned\n[优先级] low\n[风险] low\n[摘要] 暂停前准备",
+      "content_hash": "eb06ab998abf57da4517c45fc4e85e336bb34716d66ff1bf89ed04125de5383d"
+    },
+    {
+      "candidate_id": "record-mt-015",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-015",
+      "canonical_text": "[table] 工作项\n[record] MT-015\n[标题] Ember notes\n[状态] done\n[优先级] low\n[风险] low\n[摘要] 记录已整理",
+      "content_hash": "51d4aaf7b279677058ce06fa3e8741054cf714b43e3c3fca971edb35f57377b9"
+    },
+    {
+      "candidate_id": "record-mt-016",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-016",
+      "canonical_text": "[table] 工作项\n[record] MT-016\n[标题] Fjord migration\n[状态] in_progress\n[优先级] high\n[风险] medium\n[摘要] 迁移进行中",
+      "content_hash": "2dc6669161efadad3946af24ce247a0d07c8e3bff3395d73dbc7430d16e9d4ce"
+    },
+    {
+      "candidate_id": "record-mt-018",
+      "source_type": "record",
+      "table_key": "work_items",
+      "record_code": "MT-018",
+      "canonical_text": "[table] 工作项\n[record] MT-018\n[标题] Fjord closeout\n[状态] done\n[优先级] medium\n[风险] low\n[摘要] 收尾完成",
+      "content_hash": "c2188542b6f8bdaebfc431a8a7224372de3678adc571f56d787660e3b961122e"
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "schema_01",
+      "category": "schema",
+      "query": "我要看所有事项的卡点原因",
+      "relevant_candidate_ids": ["schema-work-items", "field-blocked-reason"],
+      "negative_candidate_ids": ["schema-tasks"],
+      "forbidden_candidate_ids": ["forbidden-schema-sensitive"]
+    },
+    {
+      "case_id": "schema_02",
+      "category": "schema",
+      "query": "按项目查看交付阶段和当前状态",
+      "relevant_candidate_ids": ["schema-projects"],
+      "negative_candidate_ids": ["schema-work-items"],
+      "forbidden_candidate_ids": ["forbidden-schema-sensitive"]
+    },
+    {
+      "case_id": "schema_03",
+      "category": "schema",
+      "query": "开放隐患以及受影响事项在哪张表",
+      "relevant_candidate_ids": ["schema-risks"],
+      "negative_candidate_ids": ["schema-projects"],
+      "forbidden_candidate_ids": ["forbidden-schema-sensitive"]
+    },
+    {
+      "case_id": "schema_04",
+      "category": "schema",
+      "query": "新建评审待办需要填写哪些列",
+      "relevant_candidate_ids": ["schema-tasks"],
+      "negative_candidate_ids": ["schema-risks"],
+      "forbidden_candidate_ids": ["forbidden-schema-sensitive"]
+    },
+    {
+      "case_id": "entity_01",
+      "category": "entity_alias",
+      "query": "Atlas 上线清单现在是什么情况",
+      "relevant_candidate_ids": ["record-mt-001", "record-prj-atlas"],
+      "negative_candidate_ids": ["record-mt-009"],
+      "forbidden_candidate_ids": ["forbidden-record-hidden-01"]
+    },
+    {
+      "case_id": "entity_02",
+      "category": "entity_alias",
+      "query": "Beacon 接口依赖对应哪条事项",
+      "relevant_candidate_ids": ["record-mt-004"],
+      "negative_candidate_ids": ["record-mt-002"],
+      "forbidden_candidate_ids": ["forbidden-record-hidden-01"]
+    },
+    {
+      "case_id": "entity_03",
+      "category": "entity_alias",
+      "query": "Ember 等决策的那项工作",
+      "relevant_candidate_ids": ["record-mt-014"],
+      "negative_candidate_ids": ["record-mt-001"],
+      "forbidden_candidate_ids": ["forbidden-record-hidden-01"]
+    },
+    {
+      "case_id": "entity_04",
+      "category": "entity_alias",
+      "query": "Fjord 回退预案是哪条事项",
+      "relevant_candidate_ids": ["record-mt-017"],
+      "negative_candidate_ids": ["record-risk-007"],
+      "forbidden_candidate_ids": ["forbidden-record-hidden-01"]
+    },
+    {
+      "case_id": "text_01",
+      "category": "non_structured",
+      "query": "哪条记录正在等范围确认",
+      "relevant_candidate_ids": ["record-mt-001"],
+      "negative_candidate_ids": ["record-mt-014"],
+      "forbidden_candidate_ids": ["forbidden-record-hidden-01"]
+    },
+    {
+      "case_id": "text_02",
+      "category": "non_structured",
+      "query": "字段映射还在推进的是哪一项",
+      "relevant_candidate_ids": ["record-mt-002"],
+      "negative_candidate_ids": ["record-mt-009"],
+      "forbidden_candidate_ids": ["forbidden-record-hidden-01"]
+    },
+    {
+      "case_id": "text_03",
+      "category": "non_structured",
+      "query": "接口还没准备好导致阻塞",
+      "relevant_candidate_ids": ["record-mt-004", "record-risk-004"],
+      "negative_candidate_ids": ["record-risk-007"],
+      "forbidden_candidate_ids": ["forbidden-record-hidden-01"]
+    },
+    {
+      "case_id": "text_04",
+      "category": "non_structured",
+      "query": "需要审查回退方案的事项",
+      "relevant_candidate_ids": ["record-mt-017"],
+      "negative_candidate_ids": ["record-mt-014"],
+      "forbidden_candidate_ids": ["forbidden-record-hidden-01"]
+    }
+  ],
+  "corpus_hash": "2bf17382489af5ba99aa6ae110361e62e62eeef14cefae6698649235ad4c3653"
+}

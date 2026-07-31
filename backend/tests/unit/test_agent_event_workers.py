@@ -12,7 +12,11 @@ from app.workers.agent_tabular_runtime import (
     AgentTabularStreamWorker,
     _fail_terminal_command,
 )
-from app.workers.agent_specialist_runtime import AgentSpecialistWorkerPool
+from app.core.config import Settings
+from app.workers.agent_specialist_runtime import (
+    AgentSpecialistWorkerPool,
+    build_typed_specialist_process_registry,
+)
 
 
 NOW = datetime(2026, 7, 28, 10, 0, tzinfo=UTC)
@@ -185,7 +189,7 @@ def test_terminal_scope_or_input_failure_consumes_private_input_and_fails_run(
     assert captured["command_id"] == "command"
 
 
-def test_specialist_pool_consumes_tabular_risk_and_daily_streams() -> None:
+def test_specialist_pool_consumes_each_stream_with_its_own_handler() -> None:
     streams = InMemoryRedisStreams()
     envelopes = []
     for index, (capability, command_type) in enumerate(
@@ -193,6 +197,7 @@ def test_specialist_pool_consumes_tabular_risk_and_daily_streams() -> None:
             ("platform.tabular.analyse", "analyse_visible_records"),
             ("platform.risk.analyse", "analyse_visible_risks"),
             ("platform.daily.summarise", "summarise_visible_operations"),
+            ("platform.action.propose", "propose_controlled_action"),
         ),
         start=1,
     ):
@@ -218,17 +223,134 @@ def test_specialist_pool_consumes_tabular_risk_and_daily_streams() -> None:
             },
         )
         envelopes.append(envelope)
-    processed = []
+    processed: list[tuple[str, str]] = []
+    handlers = {
+        capability: (
+            lambda envelope, capability=capability: processed.append(
+                (capability, envelope.target_capability)
+            )
+        )
+        for capability, _command_type in (
+            ("platform.tabular.analyse", "analyse_visible_records"),
+            ("platform.risk.analyse", "analyse_visible_risks"),
+            ("platform.daily.summarise", "summarise_visible_operations"),
+            ("platform.action.propose", "propose_controlled_action"),
+        )
+    }
     pool = AgentSpecialistWorkerPool(
         streams=streams,
         consumer_name="worker-a",
-        process=processed.append,
+        process_by_capability=handlers,
         pending_min_idle_ms=0,
     )
 
     result = pool.run_once()
 
-    assert result.processed == 3
-    assert {item.target_capability for item in processed} == {
+    assert result.processed == 4
+    assert processed == [
+        ("platform.tabular.analyse", "platform.tabular.analyse"),
+        ("platform.risk.analyse", "platform.risk.analyse"),
+        ("platform.daily.summarise", "platform.daily.summarise"),
+        ("platform.action.propose", "platform.action.propose"),
+    ]
+    assert {item.target_capability for item in envelopes} == {
         item.target_capability for item in envelopes
     }
+
+
+def test_real_worker_registry_owns_four_distinct_typed_handlers() -> None:
+    registry = build_typed_specialist_process_registry(
+        session_factory=lambda: None,
+        settings=Settings(),
+        consumer_name="typed-worker",
+    )
+
+    assert set(registry) == {
+        "platform.tabular.analyse",
+        "platform.risk.analyse",
+        "platform.daily.summarise",
+        "platform.action.propose",
+    }
+    assert [type(item.typed_handler).__name__ for item in registry.values()] == [
+        "TabularSpecialistV2",
+        "RiskSpecialistV2",
+        "DailySpecialistV2",
+        "ActionSpecialistV2",
+    ]
+    assert len({id(item.typed_handler) for item in registry.values()}) == 4
+
+
+def test_action_stream_crash_is_recovered_and_acked_once() -> None:
+    streams = InMemoryRedisStreams()
+    envelope = AgentCommandEnvelope(
+        command_id=uuid4(),
+        run_id=uuid4(),
+        causation_id=uuid4(),
+        correlation_id=uuid4(),
+        sequence=1,
+        target_capability="platform.action.propose",
+        command_type="propose_controlled_action",
+        scope_proof_ref="scope:sha256:" + "a" * 64,
+        input_artifact_refs=(),
+        deadline_at=NOW + timedelta(minutes=2),
+        idempotency_key_hash="d" * 64,
+    )
+    stream = "agent.commands.platform.action.propose"
+    streams.xadd_once(
+        stream,
+        idempotency_key=str(envelope.command_id),
+        fields={
+            "schema_version": envelope.schema_version,
+            "payload": envelope.model_dump_json(),
+        },
+    )
+    calls: list[str] = []
+
+    def crash(_envelope: AgentCommandEnvelope) -> None:
+        calls.append("crash")
+        raise RuntimeError("action worker crashed")
+
+    registry = {
+        capability: (
+            crash if capability == "platform.action.propose" else lambda _item: None
+        )
+        for capability in (
+            "platform.tabular.analyse",
+            "platform.risk.analyse",
+            "platform.daily.summarise",
+            "platform.action.propose",
+        )
+    }
+    first = AgentSpecialistWorkerPool(
+        streams=streams,
+        consumer_name="worker-a",
+        process_by_capability=registry,
+        pending_min_idle_ms=0,
+    )
+
+    with pytest.raises(RuntimeError, match="action worker crashed"):
+        first.run_once()
+
+    recovered_registry = {
+        capability: (
+            (lambda item: calls.append(str(item.command_id)))
+            if capability == "platform.action.propose"
+            else (lambda _item: None)
+        )
+        for capability in registry
+    }
+    recovery = AgentSpecialistWorkerPool(
+        streams=streams,
+        consumer_name="worker-b",
+        process_by_capability=recovered_registry,
+        pending_min_idle_ms=0,
+    )
+    result = recovery.run_once()
+
+    assert result.recovered == 1
+    assert result.processed == 1
+    assert calls == ["crash", str(envelope.command_id)]
+    action_worker = next(
+        item for item in recovery.workers if item.stream_name == stream
+    )
+    assert streams.pending_count(stream, action_worker.group_name) == 0

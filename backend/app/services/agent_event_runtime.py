@@ -42,7 +42,9 @@ class RuntimeNotFound(RuntimeError):
 class AgentEventRuntimeUnitOfWork(Protocol):
     def flush(self) -> None: ...
 
-    def get_run(self, run_id: UUID, *, for_update: bool = False) -> AgentWorkflowRun | None: ...
+    def get_run(
+        self, run_id: UUID, *, for_update: bool = False
+    ) -> AgentWorkflowRun | None: ...
 
     def get_run_by_idempotency(self, key_hash: str) -> AgentWorkflowRun | None: ...
 
@@ -60,13 +62,23 @@ class AgentEventRuntimeUnitOfWork(Protocol):
 
     def add_outbox_event(self, event: AgentOutboxEvent) -> None: ...
 
+    def get_outbox_event_by_event_id(
+        self, event_id: UUID
+    ) -> AgentOutboxEvent | None: ...
+
     def add_private_input(self, value: AgentPrivateInput) -> None: ...
 
-    def get_private_input(self, input_id: UUID, *, for_update: bool = False) -> AgentPrivateInput | None: ...
+    def get_private_input(
+        self, input_id: UUID, *, for_update: bool = False
+    ) -> AgentPrivateInput | None: ...
 
-    def get_command(self, command_id: UUID, *, for_update: bool = False) -> AgentCommand | None: ...
+    def get_command(
+        self, command_id: UUID, *, for_update: bool = False
+    ) -> AgentCommand | None: ...
 
-    def list_commands(self, run_id: UUID, *, for_update: bool = False) -> list[AgentCommand]: ...
+    def list_commands(
+        self, run_id: UUID, *, for_update: bool = False
+    ) -> list[AgentCommand]: ...
 
     def next_command_sequence(self, run_id: UUID) -> int: ...
 
@@ -76,7 +88,9 @@ class AgentEventRuntimeUnitOfWork(Protocol):
 
     def get_artifact(self, artifact_id: UUID) -> AgentArtifact | None: ...
 
-    def list_events(self, run_id: UUID, *, after_sequence: int = 0) -> list[AgentEvent]: ...
+    def list_events(
+        self, run_id: UUID, *, after_sequence: int = 0
+    ) -> list[AgentEvent]: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,7 +112,9 @@ class InMemoryAgentEventRuntimeUnitOfWork:
     def flush(self) -> None:
         return None
 
-    def get_run(self, run_id: UUID, *, for_update: bool = False) -> AgentWorkflowRun | None:
+    def get_run(
+        self, run_id: UUID, *, for_update: bool = False
+    ) -> AgentWorkflowRun | None:
         del for_update
         return next((run for run in self.runs if run.id == run_id), None)
 
@@ -113,11 +129,7 @@ class InMemoryAgentEventRuntimeUnitOfWork:
 
     def next_checkpoint_no(self, run_id: UUID) -> int:
         return 1 + max(
-            (
-                item.checkpoint_no
-                for item in self.checkpoints
-                if item.run_id == run_id
-            ),
+            (item.checkpoint_no for item in self.checkpoints if item.run_id == run_id),
             default=0,
         )
 
@@ -142,18 +154,34 @@ class InMemoryAgentEventRuntimeUnitOfWork:
     def add_outbox_event(self, event: AgentOutboxEvent) -> None:
         self.outbox_events.append(event)
 
+    def get_outbox_event_by_event_id(self, event_id: UUID) -> AgentOutboxEvent | None:
+        return next(
+            (
+                item
+                for item in self.outbox_events
+                if item.event_id == event_id and item.aggregate_type == "agent_command"
+            ),
+            None,
+        )
+
     def add_private_input(self, value: AgentPrivateInput) -> None:
         self.private_inputs.append(value)
 
-    def get_private_input(self, input_id: UUID, *, for_update: bool = False) -> AgentPrivateInput | None:
+    def get_private_input(
+        self, input_id: UUID, *, for_update: bool = False
+    ) -> AgentPrivateInput | None:
         del for_update
         return next((item for item in self.private_inputs if item.id == input_id), None)
 
-    def get_command(self, command_id: UUID, *, for_update: bool = False) -> AgentCommand | None:
+    def get_command(
+        self, command_id: UUID, *, for_update: bool = False
+    ) -> AgentCommand | None:
         del for_update
         return next((item for item in self.commands if item.id == command_id), None)
 
-    def list_commands(self, run_id: UUID, *, for_update: bool = False) -> list[AgentCommand]:
+    def list_commands(
+        self, run_id: UUID, *, for_update: bool = False
+    ) -> list[AgentCommand]:
         del for_update
         return sorted(
             (item for item in self.commands if item.run_id == run_id),
@@ -193,7 +221,9 @@ class SqlAlchemyAgentEventRuntimeUnitOfWork:
     def flush(self) -> None:
         self.session.flush()
 
-    def get_run(self, run_id: UUID, *, for_update: bool = False) -> AgentWorkflowRun | None:
+    def get_run(
+        self, run_id: UUID, *, for_update: bool = False
+    ) -> AgentWorkflowRun | None:
         pending = next(
             (
                 item
@@ -287,16 +317,40 @@ class SqlAlchemyAgentEventRuntimeUnitOfWork:
     def add_outbox_event(self, event: AgentOutboxEvent) -> None:
         self.session.add(event)
 
+    def get_outbox_event_by_event_id(self, event_id: UUID) -> AgentOutboxEvent | None:
+        pending = next(
+            (
+                item
+                for item in self.session.new
+                if isinstance(item, AgentOutboxEvent)
+                and item.event_id == event_id
+                and item.aggregate_type == "agent_command"
+            ),
+            None,
+        )
+        if pending is not None:
+            return pending
+        return self.session.scalar(
+            select(AgentOutboxEvent).where(
+                AgentOutboxEvent.event_id == event_id,
+                AgentOutboxEvent.aggregate_type == "agent_command",
+            )
+        )
+
     def add_private_input(self, value: AgentPrivateInput) -> None:
         self.session.add(value)
 
-    def get_private_input(self, input_id: UUID, *, for_update: bool = False) -> AgentPrivateInput | None:
+    def get_private_input(
+        self, input_id: UUID, *, for_update: bool = False
+    ) -> AgentPrivateInput | None:
         statement = select(AgentPrivateInput).where(AgentPrivateInput.id == input_id)
         if for_update:
             statement = statement.with_for_update()
         return self.session.scalar(statement)
 
-    def get_command(self, command_id: UUID, *, for_update: bool = False) -> AgentCommand | None:
+    def get_command(
+        self, command_id: UUID, *, for_update: bool = False
+    ) -> AgentCommand | None:
         pending = next(
             (
                 item
@@ -312,7 +366,9 @@ class SqlAlchemyAgentEventRuntimeUnitOfWork:
             statement = statement.with_for_update()
         return self.session.scalar(statement)
 
-    def list_commands(self, run_id: UUID, *, for_update: bool = False) -> list[AgentCommand]:
+    def list_commands(
+        self, run_id: UUID, *, for_update: bool = False
+    ) -> list[AgentCommand]:
         statement = (
             select(AgentCommand)
             .where(AgentCommand.run_id == run_id)
@@ -540,6 +596,39 @@ def replay_safe_events(
     return uow.list_events(run_id, after_sequence=after_sequence)
 
 
+def append_agent_runtime_event(
+    uow: AgentEventRuntimeUnitOfWork,
+    envelope: AgentEventEnvelope,
+    *,
+    authorization_hash: str,
+    update_run_status: str | None = None,
+) -> AgentEvent:
+    _require_hash(authorization_hash)
+    run = _require_run(uow, envelope.run_id, for_update=True)
+    if run.scope_hash != authorization_hash:
+        raise RuntimeScopeDrift("agent_run_scope_drift")
+    if envelope.sequence != uow.next_event_sequence(run.id):
+        raise RuntimeConflict("agent_event_sequence_conflict")
+    _persist_event_and_outbox(uow, envelope)
+    if update_run_status is not None:
+        if update_run_status not in {
+            "accepted",
+            "queued",
+            "running",
+            "waiting_approval",
+            "completed",
+            "degraded",
+            "failed",
+            "cancelled",
+            "timed_out",
+        }:
+            raise ValueError("agent_run_status_invalid")
+        run.status = update_run_status
+        run.version += 1
+    event = uow.list_events(run.id, after_sequence=envelope.sequence - 1)[0]
+    return event
+
+
 def _persist_event_and_outbox(
     uow: AgentEventRuntimeUnitOfWork,
     envelope: AgentEventEnvelope,
@@ -601,6 +690,7 @@ __all__ = [
     "RuntimeScopeDrift",
     "SqlAlchemyAgentEventRuntimeUnitOfWork",
     "append_checkpoint_and_event",
+    "append_agent_runtime_event",
     "claim_run_lease",
     "create_agent_run",
     "replay_safe_events",

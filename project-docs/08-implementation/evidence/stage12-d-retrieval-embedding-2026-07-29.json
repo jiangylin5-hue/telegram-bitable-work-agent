@@ -1,0 +1,21 @@
+{
+  "version": "stage12-retrieval-v2-evaluation.v1",
+  "profile_name": "stage12.openrouter-bge-m3-v1",
+  "model_revision": "baai/bge-m3-20251117",
+  "corpus_hash": "2bf17382489af5ba99aa6ae110361e62e62eeef14cefae6698649235ad4c3653",
+  "requested_rounds": 1,
+  "completed_rounds": 1,
+  "failed_rounds": 0,
+  "case_count": 12,
+  "recall_at_20": 1.0,
+  "mrr_at_20": 0.9583333333333334,
+  "forbidden_candidate_count": 0,
+  "truncated_case_count": 12,
+  "p95_latency_ms": 2498.3266000053845,
+  "provider_call_count": 4,
+  "action_expansion_count": 0,
+  "record_write_count": 0,
+  "external_send_count": 0,
+  "passed": true,
+  "report_hash": "ca31249995b42a4354ddb4544a846298ffdb9dd11cc404d61e27518aeca89de5"
+}

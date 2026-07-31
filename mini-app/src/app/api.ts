@@ -845,6 +845,43 @@ export async function queryStage08AssistantStream(
 
 const agentRunStatuses = new Set(['accepted', 'queued', 'running', 'completed', 'degraded', 'failed', 'waiting_approval', 'cancelled'])
 
+export type Stage12ActionKind = 'record.create' | 'record.update' | 'task.create' | 'reminder.request'
+export type Stage12ActionStatus = 'queued' | 'running' | 'proposed' | 'pending_confirmation' | 'confirmed' | 'executed' | 'denied' | 'degraded' | 'failed' | 'rejected' | 'conflicted' | 'cancelled' | 'expired'
+export type Stage12Objective = { objectiveId: string; objectiveKey: string; kind: string; required: boolean; status: string; safeSummary: string | null; errorCode: string | null }
+export type Stage12EditableActionField = { fieldId: string; fieldKey: string; label: string; fieldType: string; required: boolean }
+export type Stage12Action = { slotId: string; objectiveId: string; slotKey: string; actionKind: Stage12ActionKind; status: Stage12ActionStatus; proposalVersion: number; recordVersion: number | null; safeSummary: string; editableFields: Stage12EditableActionField[]; proposedValues: Record<string, unknown>; executionTicketId: string | null; resourceId: string | null }
+export type Stage12ActionRun = { runId: string; status: string; replayed: boolean; objectives: Stage12Objective[]; actions: Stage12Action[] }
+
+const stage12ActionKinds = new Set<Stage12ActionKind>(['record.create', 'record.update', 'task.create', 'reminder.request'])
+const stage12ActionStatuses = new Set<Stage12ActionStatus>(['queued', 'running', 'proposed', 'pending_confirmation', 'confirmed', 'executed', 'denied', 'degraded', 'failed', 'rejected', 'conflicted', 'cancelled', 'expired'])
+
+function safeStage12Objectives(value: unknown): Stage12Objective[] {
+  const root = jsonRecord(value)
+  if (!hasExactKeys(root, ['run_id', 'objectives']) || typeof root.run_id !== 'string' || !Array.isArray(root.objectives) || root.objectives.length > 16) throw new Error('Invalid Stage12 objectives response')
+  return root.objectives.map((value) => {
+    const item = jsonRecord(value)
+    if (!hasExactKeys(item, ['objective_id', 'objective_key', 'kind', 'required', 'status', 'safe_summary', 'error_code']) || typeof item.required !== 'boolean' || typeof item.status !== 'string') throw new Error('Invalid Stage12 objectives response')
+    return { objectiveId: stringValue(item.objective_id), objectiveKey: boundedStage08SkillString(item.objective_key, 80), kind: boundedStage08SkillString(item.kind, 40), required: item.required, status: item.status, safeSummary: nullableStringValue(item.safe_summary), errorCode: nullableStringValue(item.error_code) }
+  })
+}
+
+function safeStage12Actions(value: unknown): Stage12Action[] {
+  const root = jsonRecord(value)
+  if (!hasExactKeys(root, ['run_id', 'actions']) || typeof root.run_id !== 'string' || !Array.isArray(root.actions) || root.actions.length > 200) throw new Error('Invalid Stage12 actions response')
+  return root.actions.map((value) => {
+    const item = jsonRecord(value)
+    if (!hasExactKeys(item, ['slot_id', 'objective_id', 'slot_key', 'action_kind', 'status', 'proposal_version', 'record_version', 'safe_summary', 'editable_fields', 'proposed_values', 'confirmation_required', 'execution_ticket_id', 'resource_id']) || typeof item.action_kind !== 'string' || !stage12ActionKinds.has(item.action_kind as Stage12ActionKind) || typeof item.status !== 'string' || !stage12ActionStatuses.has(item.status as Stage12ActionStatus) || item.confirmation_required !== true || typeof item.proposal_version !== 'number' || !Number.isInteger(item.proposal_version) || item.proposal_version < 1 || item.record_version !== null && (typeof item.record_version !== 'number' || !Number.isInteger(item.record_version) || item.record_version < 1) || !Array.isArray(item.editable_fields)) throw new Error('Invalid Stage12 actions response')
+    const proposedValues = jsonRecord(item.proposed_values)
+    if (Object.keys(proposedValues).length > 64 || JSON.stringify(proposedValues).length > 64 * 1024) throw new Error('Invalid Stage12 actions response')
+    const editableFields = item.editable_fields.map((value) => {
+      const field = jsonRecord(value)
+      if (!hasExactKeys(field, ['field_id', 'field_key', 'label', 'field_type', 'required']) || typeof field.required !== 'boolean') throw new Error('Invalid Stage12 actions response')
+      return { fieldId: stringValue(field.field_id), fieldKey: boundedStage08SkillString(field.field_key, 120), label: boundedStage08SkillString(field.label, 120), fieldType: boundedStage08SkillString(field.field_type, 40), required: field.required }
+    })
+    return { slotId: stringValue(item.slot_id), objectiveId: stringValue(item.objective_id), slotKey: boundedStage08SkillString(item.slot_key, 80), actionKind: item.action_kind as Stage12ActionKind, status: item.status as Stage12ActionStatus, proposalVersion: item.proposal_version, recordVersion: item.record_version as number | null, safeSummary: boundedStage08SkillString(item.safe_summary, 240), editableFields, proposedValues, executionTicketId: nullableStringValue(item.execution_ticket_id), resourceId: nullableStringValue(item.resource_id) }
+  })
+}
+
 function safeAgentRunCreation(value: unknown): { runId: string; status: string; replayed: boolean } {
   const record = jsonRecord(value)
   if (!hasExactKeys(record, ['run_id', 'status', 'replayed']) || typeof record.run_id !== 'string' || typeof record.status !== 'string' || !agentRunStatuses.has(record.status) || typeof record.replayed !== 'boolean') throw new Error('Invalid agent run response')
@@ -852,23 +889,64 @@ function safeAgentRunCreation(value: unknown): { runId: string; status: string; 
 }
 
 function normalizedAgentRunRequest(request: Stage08AssistantQuery, idempotencyKey: string): Record<string, unknown> {
-  if (request.requestedAction !== 'read_only') throw new Error('Agent event runtime is read-only')
   const query = request.query.trim()
   const workspaceId = request.workspaceId.trim()
   const employeeId = request.employeeId.trim()
   const targetRecordId = request.targetRecordId?.trim() || null
   const skillId = request.skillId?.trim() || null
-  if (!query || query.length > 600 || !workspaceId || !employeeId || !idempotencyKey || !stage08Intents.has(request.intent)) throw new Error('Invalid agent run request')
+  if (!query || query.length > 600 || !workspaceId || !employeeId || !idempotencyKey || !['business_fact', 'memory_lookup', 'mixed', 'general_advice', 'risk_review', 'daily_summary', 'controlled_action'].includes(request.intent)) throw new Error('Invalid agent run request')
   return {
     workspace_id: workspaceId,
     employee_id: employeeId,
     intent: request.intent,
     query,
-    requested_action: 'read_only',
+    requested_action: request.requestedAction,
     target_record_id: targetRecordId,
     idempotency_key: idempotencyKey,
     skill_id: skillId,
   }
+}
+
+export async function queryStage12ActionRun(
+  request: Stage08AssistantQuery,
+  idempotencyKey: string,
+  init: RequestInit = {},
+): Promise<Stage12ActionRun> {
+  if (request.requestedAction === 'read_only') throw new Error('Stage12 action request required')
+  const creation = safeAgentRunCreation(await postJson<unknown>('/api/stage10/agent-runs', normalizedAgentRunRequest(request, idempotencyKey), idempotencyKey, init))
+  let state = initialAgentRunState(creation.runId)
+  if (creation.status !== 'waiting_approval') {
+    const headers = protectedHeaders(init.headers)
+    headers.set('Accept', 'text/event-stream')
+    const response = await fetch(`/api/stage10/agent-runs/${encodeURIComponent(creation.runId)}/events`, { credentials: 'same-origin', ...init, method: 'GET', headers: Object.fromEntries(headers.entries()), body: undefined })
+    if (!response.ok) throw new ApiError(response.status, await safeErrorCode(response))
+    if (response.headers.get('Content-Type')?.split(';', 1)[0].trim().toLowerCase() !== 'text/event-stream' || !response.body) throw new Error('Invalid agent run stream response')
+    await parseAgentRunEventStream(response.body, { runId: creation.runId, afterSequence: 0, onEvent: (event) => { state = reduceAgentRunEvent(state, event) } })
+  }
+  const [objectivesValue, actionsValue] = await Promise.all([
+    getJson<unknown>(`/api/stage10/agent-runs/${encodeURIComponent(creation.runId)}/objectives`, init),
+    getJson<unknown>(`/api/stage10/agent-runs/${encodeURIComponent(creation.runId)}/actions`, init),
+  ])
+  const objectives = safeStage12Objectives(objectivesValue)
+  const actions = safeStage12Actions(actionsValue)
+  if (!actions.length || actions.every((item) => item.status !== 'pending_confirmation' && item.status !== 'denied')) throw new Error('Stage12 action run incomplete')
+  return { ...creation, objectives, actions }
+}
+
+export async function confirmStage12Action(runId: string, action: Stage12Action, proposedValues: Record<string, unknown>, idempotencyKey: string, init: RequestInit = {}): Promise<Stage12Action> {
+  await postJson<unknown>(`/api/stage10/agent-runs/${encodeURIComponent(runId)}/actions/${encodeURIComponent(action.slotId)}/confirm`, { proposal_version: action.proposalVersion, record_version: action.recordVersion, proposed_values: proposedValues }, idempotencyKey, init)
+  const actions = safeStage12Actions(await getJson<unknown>(`/api/stage10/agent-runs/${encodeURIComponent(runId)}/actions`, init))
+  const current = actions.find((item) => item.slotId === action.slotId)
+  if (!current) throw new Error('Stage12 action receipt missing')
+  return current
+}
+
+export async function rejectStage12Action(runId: string, action: Stage12Action, reason: string | null, idempotencyKey: string, init: RequestInit = {}): Promise<Stage12Action> {
+  await postJson<unknown>(`/api/stage10/agent-runs/${encodeURIComponent(runId)}/actions/${encodeURIComponent(action.slotId)}/reject`, { proposal_version: action.proposalVersion, reason }, idempotencyKey, init)
+  const actions = safeStage12Actions(await getJson<unknown>(`/api/stage10/agent-runs/${encodeURIComponent(runId)}/actions`, init))
+  const current = actions.find((item) => item.slotId === action.slotId)
+  if (!current) throw new Error('Stage12 action receipt missing')
+  return current
 }
 
 function agentRunPhase(phase: Extract<AgentRunEvent, { event: 'status' }>['phase']): Stage08AssistantStreamPhase {
@@ -1756,6 +1834,9 @@ export const api = {
   queryStage08AssistantStream,
   queryStage10AssistantRunStream,
   queryStage10AssistantWithFallback,
+  queryStage12ActionRun,
+  confirmStage12Action,
+  rejectStage12Action,
   listStage08AssistantSkills: async (workspaceId: string, employeeId: string, targetRecordId: string | null, init?: RequestInit): Promise<Stage08AssistantSkillCatalog> => {
     const workspace = workspaceId.trim()
     const employee = employeeId.trim()

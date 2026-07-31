@@ -7,12 +7,16 @@ import type {
 
 
 export type AgentRunPhase = 'accepted' | 'queued' | 'running' | 'waiting_approval'
+export type AgentObjectiveEvent = { event: 'objective'; runId: string; eventId: string; sequence: number; eventType: string; objectiveId: string; objectiveKey: string; kind: string; status: 'queued' | 'running' | 'completed' | 'degraded' | 'denied'; message: string }
+export type AgentActionEvent = { event: 'action'; runId: string; eventId: string; sequence: number; eventType: string; slotId: string; objectiveId: string; actionKind: 'record.create' | 'record.update' | 'task.create' | 'reminder.request'; status: 'proposed' | 'pending_confirmation' | 'confirmed' | 'executed' | 'conflicted' | 'denied'; message: string }
 export type AgentRunEvent =
   | { event: 'status'; runId: string; eventId: string; sequence: number; phase: AgentRunPhase; message: string }
   | { event: 'artifact_ready'; runId: string; eventId: string; sequence: number; artifactRef: string; label: string }
   | { event: 'result'; runId: string; eventId: string; sequence: number; artifactRef: string; safeView: Stage08AssistantSafeView }
   | { event: 'error'; runId: string; eventId: string; sequence: number; code: string; message: string }
   | { event: 'done'; runId: string; eventId: string; sequence: number; status: 'completed' | 'degraded' | 'failed' | 'cancelled' | 'timed_out' }
+  | AgentObjectiveEvent
+  | AgentActionEvent
 
 export type AgentRunState = {
   runId: string
@@ -23,6 +27,8 @@ export type AgentRunState = {
   result: Stage08AssistantSafeView | null
   terminalStatus: 'completed' | 'degraded' | 'failed' | 'cancelled' | 'timed_out' | null
   errorCode: string | null
+  objectives: readonly AgentObjectiveEvent[]
+  actions: readonly AgentActionEvent[]
 }
 
 const MAX_EVENT_BYTES = 64 * 1024
@@ -34,6 +40,9 @@ const terminalStatuses = new Set(['completed', 'degraded', 'failed', 'cancelled'
 const assistantStatuses = new Set<Stage08AssistantStatus>(['completed', 'draft_pending', 'degraded', 'denied', 'failed', 'cancelled', 'timed_out'])
 const citationLabels = new Set<Stage08CitationLabel>(['business_data', 'confirmed_memory', 'group_context', 'retrieved_material', 'analysis_from_current_material', 'general_advice'])
 const degradationCodes = new Set<Stage08DegradationCode>(['context_unavailable', 'retrieval_unavailable', 'compression_unavailable', 'analysis_unavailable', 'no_evidence', 'policy_denied', 'cancelled', 'timed_out', 'internal_failure'])
+const objectiveStatuses = new Set(['queued', 'running', 'completed', 'degraded', 'denied'])
+const actionStatuses = new Set(['proposed', 'pending_confirmation', 'confirmed', 'executed', 'conflicted', 'denied'])
+const actionKinds = new Set(['record.create', 'record.update', 'task.create', 'reminder.request'])
 
 function invalidStream(): Error {
   return new Error('Invalid agent run stream')
@@ -145,6 +154,18 @@ function parseBlock(block: string, expectedRunId: string): AgentRunEvent {
     if (!hasExactKeys(item, ['run_id', 'event_id', 'sequence', 'event', 'status']) || typeof item.status !== 'string' || !terminalStatuses.has(item.status)) throw invalidStream()
     return { ...common, event: 'done', status: item.status as 'completed' | 'degraded' | 'failed' | 'cancelled' | 'timed_out' }
   }
+  if (item.event === 'objective') {
+    if (!hasExactKeys(item, ['run_id', 'event_id', 'sequence', 'event', 'event_type', 'objective_id', 'objective_key', 'kind', 'status', 'message']) || typeof item.status !== 'string' || !objectiveStatuses.has(item.status)) throw invalidStream()
+    const status = item.status as AgentObjectiveEvent['status']
+    if (item.event_type !== `objective.${status === 'running' ? 'started' : status}`) throw invalidStream()
+    return { ...common, event: 'objective', eventType: boundedString(item.event_type, 80), objectiveId: uuid(item.objective_id), objectiveKey: boundedString(item.objective_key, 80), kind: boundedString(item.kind, 40), status, message: boundedString(item.message, 240) }
+  }
+  if (item.event === 'action') {
+    if (!hasExactKeys(item, ['run_id', 'event_id', 'sequence', 'event', 'event_type', 'slot_id', 'objective_id', 'action_kind', 'status', 'message']) || typeof item.status !== 'string' || !actionStatuses.has(item.status) || typeof item.action_kind !== 'string' || !actionKinds.has(item.action_kind)) throw invalidStream()
+    const status = item.status as AgentActionEvent['status']
+    if (item.event_type !== `action.${status}`) throw invalidStream()
+    return { ...common, event: 'action', eventType: boundedString(item.event_type, 80), slotId: uuid(item.slot_id), objectiveId: uuid(item.objective_id), actionKind: item.action_kind as AgentActionEvent['actionKind'], status, message: boundedString(item.message, 240) }
+  }
   throw invalidStream()
 }
 
@@ -195,7 +216,7 @@ export async function parseAgentRunEventStream(
 
 export function initialAgentRunState(runId: string): AgentRunState {
   if (!uuidPattern.test(runId)) throw new Error('Invalid agent run transition')
-  return { runId, lastSequence: 0, appliedEventIds: [], artifacts: [], phase: null, result: null, terminalStatus: null, errorCode: null }
+  return { runId, lastSequence: 0, appliedEventIds: [], artifacts: [], phase: null, result: null, terminalStatus: null, errorCode: null, objectives: [], actions: [] }
 }
 
 export function reduceAgentRunEvent(state: AgentRunState, event: AgentRunEvent): AgentRunState {
@@ -213,6 +234,8 @@ export function reduceAgentRunEvent(state: AgentRunState, event: AgentRunEvent):
   }
   if (event.event === 'result') return { ...base, result: event.safeView }
   if (event.event === 'error') return { ...base, errorCode: event.code, terminalStatus: event.code === 'run_timed_out' ? 'timed_out' : 'failed' }
+  if (event.event === 'objective') return { ...base, objectives: [...state.objectives.filter((item) => item.objectiveId !== event.objectiveId), event] }
+  if (event.event === 'action') return { ...base, actions: [...state.actions.filter((item) => item.slotId !== event.slotId), event] }
   if (event.status === 'completed' && state.result === null) throw new Error('Invalid agent run transition')
   return { ...base, terminalStatus: event.status }
 }

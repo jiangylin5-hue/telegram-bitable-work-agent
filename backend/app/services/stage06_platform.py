@@ -1,6 +1,8 @@
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from functools import cmp_to_key
+import hashlib
 from typing import Any, Iterable, Iterator, Protocol
 from uuid import UUID, uuid4
 
@@ -111,9 +113,7 @@ RELATION_LABEL_FIELD_TYPES = frozenset(
 STAGE06_DEFAULT_WRITE_ROLES = frozenset(
     {"admin", "owner", "manager", "operator", "builder"}
 )
-GOVERNANCE_FIXED_ROLES = frozenset(
-    {"owner", "admin", "builder", "operator", "viewer"}
-)
+GOVERNANCE_FIXED_ROLES = frozenset({"owner", "admin", "builder", "operator", "viewer"})
 GOVERNANCE_FIELD_PERMISSION_MODES = frozenset({"hidden", "read", "write"})
 CREATE_FORM_SCALAR_FIELD_TYPES = frozenset(
     {
@@ -138,8 +138,19 @@ _V1_FILTER_OPERATORS_BY_TYPE = {
     "url": frozenset({"equals", "not_equals", "contains", *_V1_EMPTY_OPERATORS}),
     "email": frozenset({"equals", "not_equals", "contains", *_V1_EMPTY_OPERATORS}),
     "phone": frozenset({"equals", "not_equals", "contains", *_V1_EMPTY_OPERATORS}),
-    "number": frozenset({"equals", "not_equals", "gt", "gte", "lt", "lte", *_V1_EMPTY_OPERATORS}),
-    "date": frozenset({"equals", "before", "on_or_before", "after", "on_or_after", *_V1_EMPTY_OPERATORS}),
+    "number": frozenset(
+        {"equals", "not_equals", "gt", "gte", "lt", "lte", *_V1_EMPTY_OPERATORS}
+    ),
+    "date": frozenset(
+        {
+            "equals",
+            "before",
+            "on_or_before",
+            "after",
+            "on_or_after",
+            *_V1_EMPTY_OPERATORS,
+        }
+    ),
     "status": frozenset({"is", "is_not", *_V1_EMPTY_OPERATORS}),
     "single_select": frozenset({"is", "is_not", *_V1_EMPTY_OPERATORS}),
     "multi_select": frozenset({"contains_any", "contains_all", *_V1_EMPTY_OPERATORS}),
@@ -731,6 +742,12 @@ class Stage06PlatformUnitOfWork(Protocol):
     ) -> Stage06IdempotencyRecord | None:
         pass
 
+    def get_idempotency_record_by_id(
+        self,
+        record_id: UUID,
+    ) -> Stage06IdempotencyRecord | None:
+        pass
+
     def add_idempotency_record(self, record: Stage06IdempotencyRecord) -> None:
         pass
 
@@ -760,9 +777,9 @@ class InMemoryStage06PlatformUnitOfWork:
     memory_extraction_candidates: list[Stage08MemoryExtractionCandidate] = field(
         default_factory=list
     )
-    group_business_context_bindings: list[
-        Stage08GroupBusinessContextBinding
-    ] = field(default_factory=list)
+    group_business_context_bindings: list[Stage08GroupBusinessContextBinding] = field(
+        default_factory=list
+    )
     group_message_projections: list[Stage08GroupMessageProjection] = field(
         default_factory=list
     )
@@ -780,6 +797,15 @@ class InMemoryStage06PlatformUnitOfWork:
     )
     audit_events: list[OpsAuditEvent] = field(default_factory=list)
     idempotency_records: list[Stage06IdempotencyRecord] = field(default_factory=list)
+    stage12_retrieval_uow: Any = field(
+        default_factory=lambda: _new_stage12_memory_retrieval_uow(),
+    )
+    stage12_retrieval_workspace_ids: frozenset[UUID] = field(
+        default_factory=frozenset,
+    )
+
+    def __post_init__(self) -> None:
+        self.stage12_retrieval_uow.outbox_events = self.outbox_events
 
     def add(self, value: object) -> None:
         if isinstance(value, OpsAuditEvent):
@@ -802,7 +828,9 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def list_workspace_members(self, workspace_id: UUID) -> list[WorkspaceMember]:
         return [
-            member for member in self.workspace_members if member.workspace_id == workspace_id
+            member
+            for member in self.workspace_members
+            if member.workspace_id == workspace_id
         ]
 
     def list_workspace_members_for_user(self, user_id: str) -> list[WorkspaceMember]:
@@ -886,9 +914,7 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def list_record_links_to(self, record_id: UUID) -> list[RecordLink]:
         return [
-            link
-            for link in self.record_links
-            if link.target_record_id == record_id
+            link for link in self.record_links if link.target_record_id == record_id
         ]
 
     def add_view(self, view: PlatformView) -> None:
@@ -1008,11 +1034,7 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def list_memory_items(self, workspace_id: UUID) -> list[Stage08MemoryItem]:
         return sorted(
-            (
-                item
-                for item in self.memory_items
-                if item.workspace_id == workspace_id
-            ),
+            (item for item in self.memory_items if item.workspace_id == workspace_id),
             key=lambda item: (item.created_at, item.id),
             reverse=True,
         )
@@ -1184,8 +1206,7 @@ class InMemoryStage06PlatformUnitOfWork:
             (
                 projection
                 for projection in self.group_message_projections
-                if projection.business_context_binding_id
-                == business_context_binding_id
+                if projection.business_context_binding_id == business_context_binding_id
                 and projection.lifecycle_status == "active"
                 and projection.source_chat_type in {"group", "supergroup"}
                 and projection.retention_expires_at > now
@@ -1207,8 +1228,7 @@ class InMemoryStage06PlatformUnitOfWork:
             (
                 projection
                 for projection in self.group_message_projections
-                if projection.business_context_binding_id
-                == business_context_binding_id
+                if projection.business_context_binding_id == business_context_binding_id
                 and projection.lifecycle_status == "active"
                 and bool(projection.content_fragment)
                 and projection.source_chat_type in {"group", "supergroup"}
@@ -1230,8 +1250,7 @@ class InMemoryStage06PlatformUnitOfWork:
         candidates = [
             projection
             for projection in self.group_message_projections
-            if projection.business_context_binding_id
-            == business_context_binding_id
+            if projection.business_context_binding_id == business_context_binding_id
             and projection.lifecycle_status == "active"
             and bool(projection.content_fragment)
             and projection.source_chat_type in {"group", "supergroup"}
@@ -1242,8 +1261,7 @@ class InMemoryStage06PlatformUnitOfWork:
             for projection in candidates
         )
         eligible = sum(
-            projection.retention_expires_at > now
-            and projection.event_at > event_cutoff
+            projection.retention_expires_at > now and projection.event_at > event_cutoff
             for projection in candidates
         )
         return expired, max(eligible - eligible_limit, 0)
@@ -1284,7 +1302,11 @@ class InMemoryStage06PlatformUnitOfWork:
         return self.get_digital_employee(employee_id)
 
     def list_digital_employees(self, base_id: UUID) -> list[DigitalEmployee]:
-        return [employee for employee in self.digital_employees if employee.base_id == base_id]
+        return [
+            employee
+            for employee in self.digital_employees
+            if employee.base_id == base_id
+        ]
 
     def add_digital_employee_member_grant(
         self,
@@ -1362,7 +1384,9 @@ class InMemoryStage06PlatformUnitOfWork:
         return self.get_record_change_draft(draft_id)
 
     def list_record_change_drafts(self, base_id: UUID) -> list[RecordChangeDraft]:
-        return [draft for draft in self.record_change_drafts if draft.base_id == base_id]
+        return [
+            draft for draft in self.record_change_drafts if draft.base_id == base_id
+        ]
 
     def list_pending_record_change_drafts(
         self,
@@ -1404,7 +1428,9 @@ class InMemoryStage06PlatformUnitOfWork:
 
     def list_notification_requests(self, base_id: UUID) -> list[NotificationRequest]:
         return [
-            request for request in self.notification_requests if request.base_id == base_id
+            request
+            for request in self.notification_requests
+            if request.base_id == base_id
         ]
 
     def add_agent_run(self, run: AgentRun) -> None:
@@ -1503,13 +1529,28 @@ class InMemoryStage06PlatformUnitOfWork:
             None,
         )
 
+    def get_idempotency_record_by_id(
+        self,
+        record_id: UUID,
+    ) -> Stage06IdempotencyRecord | None:
+        return next(
+            (record for record in self.idempotency_records if record.id == record_id),
+            None,
+        )
+
     def add_idempotency_record(self, record: Stage06IdempotencyRecord) -> None:
         self.idempotency_records.append(record)
 
 
 class SqlAlchemyStage06PlatformUnitOfWork:
-    def __init__(self, session: Session) -> None:
+    def __init__(
+        self,
+        session: Session,
+        *,
+        stage12_retrieval_workspace_ids: frozenset[UUID] = frozenset(),
+    ) -> None:
         self.session = session
+        self.stage12_retrieval_workspace_ids = stage12_retrieval_workspace_ids
 
     def flush(self) -> None:
         self.session.flush()
@@ -1528,9 +1569,7 @@ class SqlAlchemyStage06PlatformUnitOfWork:
         workspace_id: UUID,
     ) -> Workspace | None:
         return self.session.scalar(
-            select(Workspace)
-            .where(Workspace.id == workspace_id)
-            .with_for_update()
+            select(Workspace).where(Workspace.id == workspace_id).with_for_update()
         )
 
     def list_workspace_members(self, workspace_id: UUID) -> list[WorkspaceMember]:
@@ -1588,16 +1627,12 @@ class SqlAlchemyStage06PlatformUnitOfWork:
         table_id: UUID,
     ) -> PlatformTable | None:
         return self.session.scalar(
-            select(PlatformTable)
-            .where(PlatformTable.id == table_id)
-            .with_for_update()
+            select(PlatformTable).where(PlatformTable.id == table_id).with_for_update()
         )
 
     def lock_table_for_schema_mutation(self, table_id: UUID) -> PlatformTable | None:
         return self.session.scalar(
-            select(PlatformTable)
-            .where(PlatformTable.id == table_id)
-            .with_for_update()
+            select(PlatformTable).where(PlatformTable.id == table_id).with_for_update()
         )
 
     def list_tables(self, base_id: UUID) -> list[PlatformTable]:
@@ -1616,9 +1651,7 @@ class SqlAlchemyStage06PlatformUnitOfWork:
 
     def lock_field_for_mutation(self, field_id: UUID) -> PlatformField | None:
         return self.session.scalar(
-            select(PlatformField)
-            .where(PlatformField.id == field_id)
-            .with_for_update()
+            select(PlatformField).where(PlatformField.id == field_id).with_for_update()
         )
 
     def list_fields(self, table_id: UUID) -> list[PlatformField]:
@@ -1676,9 +1709,7 @@ class SqlAlchemyStage06PlatformUnitOfWork:
 
     def lock_view_for_mutation(self, view_id: UUID) -> PlatformView | None:
         return self.session.scalar(
-            select(PlatformView)
-            .where(PlatformView.id == view_id)
-            .with_for_update()
+            select(PlatformView).where(PlatformView.id == view_id).with_for_update()
         )
 
     def list_views(self, table_id: UUID) -> list[PlatformView]:
@@ -2075,9 +2106,7 @@ class SqlAlchemyStage06PlatformUnitOfWork:
             == business_context_binding_id,
             Stage08GroupMessageProjection.lifecycle_status == "active",
             Stage08GroupMessageProjection.content_fragment != "",
-            Stage08GroupMessageProjection.source_chat_type.in_(
-                ("group", "supergroup")
-            ),
+            Stage08GroupMessageProjection.source_chat_type.in_(("group", "supergroup")),
         )
         expired = self.session.scalar(
             select(func.count())
@@ -2240,6 +2269,12 @@ class SqlAlchemyStage06PlatformUnitOfWork:
             .execution_options(populate_existing=True)
         )
 
+    def get_idempotency_record_by_id(
+        self,
+        record_id: UUID,
+    ) -> Stage06IdempotencyRecord | None:
+        return self.session.get(Stage06IdempotencyRecord, record_id)
+
     def list_record_change_drafts(self, base_id: UUID) -> list[RecordChangeDraft]:
         return list(
             self.session.scalars(
@@ -2286,7 +2321,9 @@ class SqlAlchemyStage06PlatformUnitOfWork:
     def list_notification_requests(self, base_id: UUID) -> list[NotificationRequest]:
         return list(
             self.session.scalars(
-                select(NotificationRequest).where(NotificationRequest.base_id == base_id)
+                select(NotificationRequest).where(
+                    NotificationRequest.base_id == base_id
+                )
             )
         )
 
@@ -2333,9 +2370,7 @@ class SqlAlchemyStage06PlatformUnitOfWork:
         )
         if for_update:
             query = query.with_for_update()
-        return self.session.scalar(
-            query
-        )
+        return self.session.scalar(query)
 
     def add_stage07_telegram_deep_link_delivery(
         self,
@@ -2359,9 +2394,7 @@ class SqlAlchemyStage06PlatformUnitOfWork:
     ) -> Stage07TelegramDeepLinkDelivery | None:
         return self.session.scalar(
             select(Stage07TelegramDeepLinkDelivery)
-            .where(
-                Stage07TelegramDeepLinkDelivery.send_request_id == send_request_id
-            )
+            .where(Stage07TelegramDeepLinkDelivery.send_request_id == send_request_id)
             .with_for_update()
         )
 
@@ -2469,7 +2502,7 @@ def create_table(
     key: str,
     actor: Actor | None = None,
 ) -> PlatformTable:
-    _require_exists(uow.get_base(base_id), "base_not_found")
+    base = _require_exists(uow.get_base(base_id), "base_not_found")
     table = PlatformTable(
         id=uuid4(),
         base_id=base_id,
@@ -2487,6 +2520,18 @@ def create_table(
         entity_id=table.id,
         after_state={"base_id": str(base_id), "name": table.name, "key": table.key},
     )
+    if _stage12_retrieval_enabled(uow, base.workspace_id):
+        table.settings = {"stage12_schema_version": 1}
+        _emit_stage12_retrieval_change(
+            uow,
+            table_id=table.id,
+            record_id=None,
+            source_type="schema_table",
+            source_identity=f"schema_table:{table.id}",
+            source_version=1,
+            mutation_kind="schema_changed",
+        )
+
     return table
 
 
@@ -2502,7 +2547,7 @@ def create_field(
     permission_policy: dict[str, Any] | None = None,
     actor: Actor | None = None,
 ) -> PlatformField:
-    _require_exists(uow.get_table(table_id), "table_not_found")
+    table = _require_exists(uow.get_table(table_id), "table_not_found")
     if field_type not in STAGE06_FIELD_TYPES:
         raise PlatformValidationError(
             "unsupported_field_type",
@@ -2530,6 +2575,7 @@ def create_field(
         entity_id=field.id,
         after_state=_field_to_schema(field),
     )
+    _emit_stage12_schema_field_change(uow, table=table, field=field)
     return field
 
 
@@ -2551,17 +2597,19 @@ def initialize_field(
     )
     existing_fields = uow.list_fields(table.id)
     normalized_existing_names = {
-        field.name.strip().casefold()
-        for field in existing_fields
+        field.name.strip().casefold() for field in existing_fields
     }
     if normalized_name.casefold() in normalized_existing_names:
         raise PlatformValidationError("duplicate_field_name", "field_name")
 
     field_key = _generated_f1_field_key({field.key for field in existing_fields})
-    next_order_index = max(
-        (field.order_index for field in existing_fields),
-        default=-1,
-    ) + 1
+    next_order_index = (
+        max(
+            (field.order_index for field in existing_fields),
+            default=-1,
+        )
+        + 1
+    )
     field = PlatformField(
         id=uuid4(),
         table_id=table.id,
@@ -2571,9 +2619,7 @@ def initialize_field(
         required=required,
         unique=False,
         options=(
-            {"choices": normalized_choices}
-            if normalized_choices is not None
-            else {}
+            {"choices": normalized_choices} if normalized_choices is not None else {}
         ),
         permission_policy={},
         order_index=next_order_index,
@@ -2608,6 +2654,7 @@ def initialize_field(
             "affected_view_ids": [str(view_id) for view_id in affected_view_ids],
         },
     )
+    _emit_stage12_schema_field_change(uow, table=table, field=field)
     return FieldInitializationResult(field=field, affected_view_ids=affected_view_ids)
 
 
@@ -2631,8 +2678,7 @@ def initialize_relation_field(
 
     existing_fields = uow.list_fields(table.id)
     normalized_existing_names = {
-        field.name.strip().casefold()
-        for field in existing_fields
+        field.name.strip().casefold() for field in existing_fields
     }
     if normalized_name.casefold() in normalized_existing_names:
         raise PlatformValidationError("duplicate_field_name", "field_name")
@@ -2650,7 +2696,8 @@ def initialize_relation_field(
         order_index=max(
             (field.order_index for field in existing_fields),
             default=-1,
-        ) + 1,
+        )
+        + 1,
         status="active",
     )
     uow.add_field(field)
@@ -2682,6 +2729,7 @@ def initialize_relation_field(
             "affected_view_ids": [str(view_id) for view_id in affected_view_ids],
         },
     )
+    _emit_stage12_schema_field_change(uow, table=table, field=field)
     return FieldInitializationResult(field=field, affected_view_ids=affected_view_ids)
 
 
@@ -2716,7 +2764,10 @@ def initialize_lookup_field(
         )
     target_table = _relation_target_table(uow, table, source_relation)
     target_field = _field_for_table(uow, target_table.id, target_field_id)
-    if target_field is None or target_field.field_type in LOOKUP_INELIGIBLE_TARGET_FIELD_TYPES:
+    if (
+        target_field is None
+        or target_field.field_type in LOOKUP_INELIGIBLE_TARGET_FIELD_TYPES
+    ):
         raise PlatformValidationError("lookup_target_incompatible", "target_field")
     if not _can_actor_read_field(actor, target_field):
         _deny_permission(
@@ -2741,8 +2792,7 @@ def initialize_lookup_field(
 
     existing_fields = uow.list_fields(table.id)
     normalized_existing_names = {
-        field.name.strip().casefold()
-        for field in existing_fields
+        field.name.strip().casefold() for field in existing_fields
     }
     if normalized_name.casefold() in normalized_existing_names:
         raise PlatformValidationError("duplicate_field_name", "field_name")
@@ -2764,7 +2814,8 @@ def initialize_lookup_field(
         order_index=max(
             (field.order_index for field in existing_fields),
             default=-1,
-        ) + 1,
+        )
+        + 1,
         status="active",
     )
     uow.add_field(field)
@@ -2795,6 +2846,7 @@ def initialize_lookup_field(
             "affected_view_ids": [str(view_id) for view_id in affected_view_ids],
         },
     )
+    _emit_stage12_schema_field_change(uow, table=table, field=field)
     return FieldInitializationResult(field=field, affected_view_ids=affected_view_ids)
 
 
@@ -2877,7 +2929,11 @@ def _stored_lookup_target_field(
         return _field_for_table(uow, target_table.id, target_field_id)
     target_field_key = lookup_field.options.get("target_field_key")
     return next(
-        (field for field in uow.list_fields(target_table.id) if field.key == target_field_key),
+        (
+            field
+            for field in uow.list_fields(target_table.id)
+            if field.key == target_field_key
+        ),
         None,
     )
 
@@ -2910,24 +2966,48 @@ def create_record(
         event_type="stage06.record_created",
         entity_type="record",
         entity_id=record.id,
-        after_state={"table_id": str(table_id), "values": normalized_values, "version": 1},
+        after_state={
+            "table_id": str(table_id),
+            "values": normalized_values,
+            "version": 1,
+        },
     )
+    _emit_stage12_retrieval_change(
+        uow,
+        table_id=table_id,
+        record_id=record.id,
+        source_type="record",
+        source_identity=f"record:{record.id}",
+        source_version=record.version,
+        mutation_kind="record_changed",
+    )
+    if _has_linked_record_mutation(fields, values):
+        _emit_stage12_retrieval_change(
+            uow,
+            table_id=table_id,
+            record_id=record.id,
+            source_type="record",
+            source_identity=f"record:{record.id}",
+            source_version=record.version,
+            mutation_kind="link_changed",
+        )
     return record
 
 
-def get_create_form(uow: Stage06PlatformUnitOfWork, table_id: UUID, *, actor: Actor) -> dict[str, Any]:
+def get_create_form(
+    uow: Stage06PlatformUnitOfWork, table_id: UUID, *, actor: Actor
+) -> dict[str, Any]:
     _require_exists(uow.get_table(table_id), "table_not_found")
     all_fields = uow.list_fields(table_id)
-    writable_fields = [field for field in all_fields if _can_actor_write_field(actor, field)]
+    writable_fields = [
+        field for field in all_fields if _can_actor_write_field(actor, field)
+    ]
     fields = [
         field
         for field in writable_fields
         if _is_create_form_editable_field(uow, table_id, field, actor)
     ]
-    can_create = not any(
-        field.required and field not in fields
-        for field in all_fields
-    )
+    can_create = not any(field.required and field not in fields for field in all_fields)
     return {
         "table_id": str(table_id),
         "can_create": can_create,
@@ -3029,6 +3109,25 @@ def update_record(
             "version": record.version,
         },
     )
+    _emit_stage12_retrieval_change(
+        uow,
+        table_id=record.table_id,
+        record_id=record.id,
+        source_type="record",
+        source_identity=f"record:{record.id}",
+        source_version=record.version,
+        mutation_kind="record_changed",
+    )
+    if _has_linked_record_mutation(fields, values):
+        _emit_stage12_retrieval_change(
+            uow,
+            table_id=record.table_id,
+            record_id=record.id,
+            source_type="record",
+            source_identity=f"record:{record.id}",
+            source_version=record.version,
+            mutation_kind="link_changed",
+        )
     return record
 
 
@@ -3087,7 +3186,11 @@ def create_form_view(
         event_type="stage06.view_created",
         entity_type="view",
         entity_id=view.id,
-        after_state={"table_id": str(table_id), "name": view.name, "view_type": view_type},
+        after_state={
+            "table_id": str(table_id),
+            "name": view.name,
+            "view_type": view_type,
+        },
     )
     return view
 
@@ -3237,7 +3340,9 @@ def change_workspace_member_role(
         raise PlatformValidationError("governance_role_change_forbidden", "role")
     current_version = _workspace_member_version(member)
     if expected_version != current_version:
-        raise PlatformValidationError("governance_revision_conflict", "workspace_member")
+        raise PlatformValidationError(
+            "governance_revision_conflict", "workspace_member"
+        )
     before_role = member.role
     member.role = role
     member.version = current_version + 1
@@ -3311,6 +3416,13 @@ def replace_field_permission_policy(
             "policy": normalized,
             "permission_version": field.permission_version,
         },
+    )
+    _handle_stage12_field_permission_change(
+        uow,
+        table_id=table_id,
+        field=field,
+        before_policy=before_policy,
+        after_policy=normalized,
     )
     return field
 
@@ -3418,7 +3530,9 @@ def get_view_presentation(
     fields = uow.list_fields(view.table_id)
     field_by_key = {field.key: field for field in fields}
     configured_fields = view.config.get("fields")
-    candidate_keys = configured_fields if isinstance(configured_fields, list) else list(field_by_key)
+    candidate_keys = (
+        configured_fields if isinstance(configured_fields, list) else list(field_by_key)
+    )
     visible_field_keys = [
         key
         for key in candidate_keys
@@ -3641,11 +3755,7 @@ def get_v1_view_builder(
     access = resolve_v1_view_access(uow, view, actor=actor)
     if not access.can_edit_presentation:
         raise PlatformValidationError("view_access_denied", "builder")
-    members = (
-        _v1_safe_view_members(uow, view)
-        if access.can_replace_members
-        else []
-    )
+    members = _v1_safe_view_members(uow, view) if access.can_replace_members else []
     return {
         "view": build_v1_safe_view_summary(uow, view, actor=actor),
         "presentation": build_v1_safe_view_projection(uow, view, actor=actor),
@@ -3804,7 +3914,9 @@ def update_v1_view_presentation(
     if view.table_id is None:
         raise PlatformValidationError("view_not_found", str(view_id))
     if view.view_type != request.presentation.view_type:
-        raise PlatformValidationError("view_type_unsupported", request.presentation.view_type)
+        raise PlatformValidationError(
+            "view_type_unsupported", request.presentation.view_type
+        )
     canonical = canonicalize_v1_presentation(
         uow,
         view.table_id,
@@ -3902,10 +4014,14 @@ def _require_v1_table_manage_authority(
     table_id: UUID,
     actor: Actor,
 ) -> tuple[PlatformTable, Workspace]:
-    table = _require_exists(uow.lock_table_for_schema_mutation(table_id), "table_not_found")
+    table = _require_exists(
+        uow.lock_table_for_schema_mutation(table_id), "table_not_found"
+    )
     workspace = _v1_workspace_for_table(uow, table)
     member = _require_v1_active_member(uow, workspace, actor)
-    if not _v1_role_allows(member, "table.read") or not _v1_role_allows(member, "view.manage"):
+    if not _v1_role_allows(member, "table.read") or not _v1_role_allows(
+        member, "view.manage"
+    ):
         raise PlatformValidationError("view_access_denied", "view.manage")
     return table, workspace
 
@@ -3918,7 +4034,9 @@ def _require_v1_table_context_authority(
     table = _require_exists(uow.get_table(table_id), "table_not_found")
     workspace = _v1_workspace_for_table(uow, table)
     member = _require_v1_active_member(uow, workspace, actor)
-    if not _v1_role_allows(member, "table.read") or not _v1_role_allows(member, "view.manage"):
+    if not _v1_role_allows(member, "table.read") or not _v1_role_allows(
+        member, "view.manage"
+    ):
         raise PlatformValidationError("view_access_denied", "view_context")
     return table, workspace
 
@@ -4178,7 +4296,9 @@ def _canonical_v1_form_keys(
     )
     if required and not normalized:
         raise PlatformValidationError("view_form_field_invalid", "form_field_keys")
-    if any(not _can_actor_write_field(actor, readable_fields[key]) for key in normalized):
+    if any(
+        not _can_actor_write_field(actor, readable_fields[key]) for key in normalized
+    ):
         raise PlatformValidationError("view_form_field_invalid", "form_field_key")
     return normalized
 
@@ -4223,8 +4343,10 @@ def _v1_filter_value_is_valid(
         return isinstance(value, (int, float)) and not isinstance(value, bool)
     if field_type == "multi_select":
         choices = _safe_field_options(field).get("choices", [])
-        return isinstance(value, list) and bool(value) and all(
-            isinstance(item, str) and item in choices for item in value
+        return (
+            isinstance(value, list)
+            and bool(value)
+            and all(isinstance(item, str) and item in choices for item in value)
         )
     return False
 
@@ -4246,13 +4368,19 @@ def _validate_v1_relation_filter_candidate(
     try:
         target_table = _relation_target_table(uow, source_table, relation_field)
     except PlatformValidationError as exc:
-        raise PlatformValidationError("view_filter_invalid", relation_field.key) from exc
-    if candidate.table_id != target_table.id or _safe_relation_label(
-        uow,
-        target_table,
-        candidate,
-        actor,
-    ) is None:
+        raise PlatformValidationError(
+            "view_filter_invalid", relation_field.key
+        ) from exc
+    if (
+        candidate.table_id != target_table.id
+        or _safe_relation_label(
+            uow,
+            target_table,
+            candidate,
+            actor,
+        )
+        is None
+    ):
         raise PlatformValidationError("view_filter_invalid", relation_field.key)
 
 
@@ -4363,7 +4491,9 @@ def list_relation_candidates(
             entity_id=relation_field.id,
             field_key=relation_field.key,
         )
-    source_table = _require_exists(uow.get_table(relation_field.table_id), "table_not_found")
+    source_table = _require_exists(
+        uow.get_table(relation_field.table_id), "table_not_found"
+    )
     target_table = _relation_target_table(uow, source_table, relation_field)
     matched: list[tuple[PlatformRecord, str]] = []
     normalized_query = query.strip().casefold() if isinstance(query, str) else ""
@@ -4383,8 +4513,7 @@ def list_relation_candidates(
     return {
         "field_id": str(relation_field.id),
         "records": [
-            {"id": str(record.id), "label": labels[record.id]}
-            for record in page.items
+            {"id": str(record.id), "label": labels[record.id]} for record in page.items
         ],
         "next_cursor": page.next_cursor,
         "has_more": page.has_more,
@@ -4416,9 +4545,7 @@ def list_view_records(
     fields = uow.list_fields(view.table_id)
     field_by_key = {field.key: field for field in fields}
     projection = (
-        build_v1_safe_view_projection(uow, view, actor=actor)
-        if is_v1_view
-        else None
+        build_v1_safe_view_projection(uow, view, actor=actor) if is_v1_view else None
     )
     view_fields = (
         projection["visible_field_keys"]
@@ -4540,18 +4667,29 @@ def _v1_filter_matches(value: object, operator: str, expected: object) -> bool:
     if value is _MISSING or value is None:
         return False
     if operator == "contains_record":
-        return any(
-            isinstance(cell, dict) and cell.get("id") == expected
-            for cell in value
-        ) if isinstance(value, list) else False
+        return (
+            any(isinstance(cell, dict) and cell.get("id") == expected for cell in value)
+            if isinstance(value, list)
+            else False
+        )
     if operator == "contains":
-        return isinstance(value, str) and isinstance(expected, str) and expected.casefold() in value.casefold()
+        return (
+            isinstance(value, str)
+            and isinstance(expected, str)
+            and expected.casefold() in value.casefold()
+        )
     if operator == "contains_any":
-        return isinstance(value, list) and isinstance(expected, list) and bool(
-            set(value) & set(expected)
+        return (
+            isinstance(value, list)
+            and isinstance(expected, list)
+            and bool(set(value) & set(expected))
         )
     if operator == "contains_all":
-        return isinstance(value, list) and isinstance(expected, list) and set(expected) <= set(value)
+        return (
+            isinstance(value, list)
+            and isinstance(expected, list)
+            and set(expected) <= set(value)
+        )
     if operator in {"equals", "is"}:
         return value == expected
     if operator in {"not_equals", "is_not"}:
@@ -4698,7 +4836,15 @@ def _validate_record_values(
 def _value_matches_field_type(value: Any, field_type: str) -> bool:
     if value is None:
         return True
-    if field_type in {"text", "status", "single_select", "user", "url", "email", "phone"}:
+    if field_type in {
+        "text",
+        "status",
+        "single_select",
+        "user",
+        "url",
+        "email",
+        "phone",
+    }:
         return isinstance(value, str)
     if field_type == "number":
         return isinstance(value, (int, float)) and not isinstance(value, bool)
@@ -4766,12 +4912,16 @@ def _validate_linked_record_value(
             raise PlatformValidationError("resource_scope_mismatch", field.key)
         if target_record.table_id != target_table_id:
             raise PlatformValidationError("invalid_link_target", field.key)
-        if actor is not None and _safe_relation_label(
-            uow,
-            target_table,
-            target_record,
-            actor,
-        ) is None:
+        if (
+            actor is not None
+            and _safe_relation_label(
+                uow,
+                target_table,
+                target_record,
+                actor,
+            )
+            is None
+        ):
             raise PlatformValidationError("invalid_link_target", field.key)
 
 
@@ -4911,7 +5061,9 @@ def _lookup_field_value(
     target_field = _stored_lookup_target_field(uow, field)
     if source_table is None or source_relation is None or target_field is None:
         return _MISSING
-    if not _can_actor_read_field(actor, source_relation) or not _can_actor_read_field(actor, target_field):
+    if not _can_actor_read_field(actor, source_relation) or not _can_actor_read_field(
+        actor, target_field
+    ):
         return _MISSING
     try:
         target_table = _relation_target_table(uow, source_table, source_relation)
@@ -4925,7 +5077,9 @@ def _lookup_field_value(
     readable_count = 0
     for linked_id in linked_ids:
         target_record_id = _optional_uuid(linked_id)
-        target_record = None if target_record_id is None else uow.get_record(target_record_id)
+        target_record = (
+            None if target_record_id is None else uow.get_record(target_record_id)
+        )
         if target_record is None or target_record.table_id != target_table.id:
             return _MISSING
         if _safe_relation_label(uow, target_table, target_record, actor) is None:
@@ -4972,7 +5126,9 @@ def _stored_lookup_source_relation(
     if source_relation_id is not None:
         return _field_for_table(uow, lookup_field.table_id, source_relation_id)
     source_relation_key = lookup_field.options.get("source_field_key")
-    return next((field for field in source_fields if field.key == source_relation_key), None)
+    return next(
+        (field for field in source_fields if field.key == source_relation_key), None
+    )
 
 
 def assert_record_has_no_incoming_relation_links(
@@ -4995,9 +5151,8 @@ def assert_field_has_no_relation_lookup_dependents(
                 continue
             source_relation = _stored_lookup_source_relation(uow, candidate)
             target_field = _stored_lookup_target_field(uow, candidate)
-            if (
-                (source_relation is not None and source_relation.id == field.id)
-                or (target_field is not None and target_field.id == field.id)
+            if (source_relation is not None and source_relation.id == field.id) or (
+                target_field is not None and target_field.id == field.id
             ):
                 raise PlatformValidationError("field_has_dependencies", "field")
 
@@ -5019,7 +5174,9 @@ def _safe_field_options(field: PlatformField) -> dict[str, Any]:
     if field.field_type not in {"status", "single_select", "multi_select"}:
         return {}
     choices = field.options.get("choices")
-    if not isinstance(choices, list) or not all(isinstance(choice, str) for choice in choices):
+    if not isinstance(choices, list) or not all(
+        isinstance(choice, str) for choice in choices
+    ):
         return {}
     return {"choices": list(choices)}
 
@@ -5102,7 +5259,9 @@ def _assignable_member_roles(
 
 
 def _workspace_member_version(member: WorkspaceMember) -> int:
-    return member.version if isinstance(member.version, int) and member.version >= 1 else 1
+    return (
+        member.version if isinstance(member.version, int) and member.version >= 1 else 1
+    )
 
 
 def _field_permission_version(field: PlatformField) -> int:
@@ -5183,6 +5342,220 @@ def _deny_permission(
     raise PlatformValidationError("permission_denied", action)
 
 
+def _stage12_retrieval_uow(
+    uow: Stage06PlatformUnitOfWork,
+) -> Any:
+    from app.services.retrieval_v2_indexing import (
+        SqlAlchemyRetrievalIndexUnitOfWork,
+    )
+
+    if isinstance(uow, InMemoryStage06PlatformUnitOfWork):
+        return uow.stage12_retrieval_uow
+    if isinstance(uow, SqlAlchemyStage06PlatformUnitOfWork):
+        return SqlAlchemyRetrievalIndexUnitOfWork(uow.session)
+    raise TypeError("stage12_retrieval_mutation_uow_unsupported")
+
+
+def _stage12_retrieval_enabled(
+    uow: Stage06PlatformUnitOfWork,
+    workspace_id: UUID,
+) -> bool:
+    allowed = getattr(uow, "stage12_retrieval_workspace_ids", frozenset())
+    return workspace_id in allowed
+
+
+def _emit_stage12_retrieval_change(
+    uow: Stage06PlatformUnitOfWork,
+    *,
+    table_id: UUID,
+    record_id: UUID | None,
+    source_type: str,
+    source_identity: str,
+    source_version: int,
+    mutation_kind: str,
+) -> OutboxEvent | None:
+    from app.services.retrieval_v2_indexing import (
+        request_retrieval_source_change,
+    )
+
+    table = _require_exists(uow.get_table(table_id), "table_not_found")
+    base = _require_exists(uow.get_base(table.base_id), "base_not_found")
+    if not _stage12_retrieval_enabled(uow, base.workspace_id):
+        return None
+    trace_id = hashlib.sha256(
+        ":".join(
+            (
+                "stage12-retrieval-mutation-v1",
+                str(base.workspace_id),
+                source_type,
+                source_identity,
+                str(source_version),
+                mutation_kind,
+            )
+        ).encode("utf-8")
+    ).hexdigest()
+    return request_retrieval_source_change(
+        _stage12_retrieval_uow(uow),
+        workspace_id=base.workspace_id,
+        base_id=base.id,
+        table_id=table.id,
+        record_id=record_id,
+        source_type=source_type,
+        source_identity=source_identity,
+        source_version=source_version,
+        mutation_kind=mutation_kind,
+        trace_id=trace_id,
+        now=datetime.now(UTC),
+    )
+
+
+def _has_linked_record_mutation(
+    fields: Iterable[PlatformField],
+    values: dict[str, Any],
+) -> bool:
+    return any(
+        field.field_type == "linked_record" and field.key in values for field in fields
+    )
+
+
+def _emit_stage12_schema_field_change(
+    uow: Stage06PlatformUnitOfWork,
+    *,
+    table: PlatformTable,
+    field: PlatformField,
+) -> None:
+    base = _require_exists(uow.get_base(table.base_id), "base_not_found")
+    if not _stage12_retrieval_enabled(uow, base.workspace_id):
+        return
+    schema_version = _advance_stage12_schema_version(table)
+    _emit_stage12_retrieval_change(
+        uow,
+        table_id=table.id,
+        record_id=None,
+        source_type="schema_table",
+        source_identity=f"schema_table:{table.id}",
+        source_version=schema_version,
+        mutation_kind="schema_changed",
+    )
+    _emit_stage12_retrieval_change(
+        uow,
+        table_id=table.id,
+        record_id=None,
+        source_type="schema_field",
+        source_identity=f"schema_field:{field.id}",
+        source_version=schema_version,
+        mutation_kind="schema_changed",
+    )
+
+
+def _handle_stage12_field_permission_change(
+    uow: Stage06PlatformUnitOfWork,
+    *,
+    table_id: UUID,
+    field: PlatformField,
+    before_policy: dict[str, str],
+    after_policy: dict[str, str],
+) -> None:
+    table = _require_exists(uow.get_table(table_id), "table_not_found")
+    base = _require_exists(uow.get_base(table.base_id), "base_not_found")
+    if not _stage12_retrieval_enabled(uow, base.workspace_id):
+        return
+
+    from app.services.retrieval_v2_indexing import revoke_retrieval_source
+
+    retrieval_uow = _stage12_retrieval_uow(uow)
+    materialized = [
+        source
+        for source in retrieval_uow.list_sources(workspace_id=base.workspace_id)
+        if source.table_id == table_id and source.is_active
+    ]
+    mode_rank = {"hidden": 0, "read": 1, "write": 2}
+    contracted = any(
+        mode_rank[after_policy[role]] < mode_rank[before_policy[role]]
+        for role in GOVERNANCE_FIXED_ROLES
+    )
+    if contracted:
+        revoke_keys = {
+            (
+                source.source_type,
+                source.source_identity,
+                source.visibility_profile_hash,
+            )
+            for source in materialized
+            if field.id in set(source.field_ids)
+        }
+        for source_type, source_identity, visibility_hash in sorted(revoke_keys):
+            revoke_retrieval_source(
+                retrieval_uow,
+                workspace_id=base.workspace_id,
+                source_type=source_type,
+                source_identity=source_identity,
+                visibility_profile_hash=visibility_hash,
+                reason_code="permission_contracted",
+                now=datetime.now(UTC),
+            )
+
+    schema_version = _advance_stage12_schema_version(table)
+    _emit_stage12_retrieval_change(
+        uow,
+        table_id=table_id,
+        record_id=None,
+        source_type="schema_table",
+        source_identity=f"schema_table:{table_id}",
+        source_version=schema_version,
+        mutation_kind="permission_changed",
+    )
+    _emit_stage12_retrieval_change(
+        uow,
+        table_id=table_id,
+        record_id=None,
+        source_type="schema_field",
+        source_identity=f"schema_field:{field.id}",
+        source_version=schema_version,
+        mutation_kind="permission_changed",
+    )
+    materialized_by_identity = {
+        (source.source_type, source.source_identity): source for source in materialized
+    }
+    for source_type, source_identity in sorted(materialized_by_identity):
+        source = materialized_by_identity[(source_type, source_identity)]
+        source_version = source.source_version
+        if source.record_id is not None:
+            record = uow.get_record(source.record_id)
+            if record is not None:
+                source_version = record.version
+        elif source_type in {"schema_table", "schema_field"}:
+            source_version = schema_version
+        _emit_stage12_retrieval_change(
+            uow,
+            table_id=table_id,
+            record_id=source.record_id,
+            source_type=source_type,
+            source_identity=source_identity,
+            source_version=source_version,
+            mutation_kind="permission_changed",
+        )
+
+
+def _advance_stage12_schema_version(table: PlatformTable) -> int:
+    settings = dict(table.settings or {})
+    current = settings.get("stage12_schema_version", 1)
+    if not isinstance(current, int) or isinstance(current, bool) or current < 1:
+        current = 1
+    version = current + 1
+    settings["stage12_schema_version"] = version
+    table.settings = settings
+    return version
+
+
+def _new_stage12_memory_retrieval_uow() -> Any:
+    from app.services.retrieval_v2_indexing import (
+        MemoryRetrievalIndexUnitOfWork,
+    )
+
+    return MemoryRetrievalIndexUnitOfWork()
+
+
 def _record_stage06_audit(
     uow: Stage06PlatformUnitOfWork,
     *,
@@ -5207,8 +5580,7 @@ def _record_stage06_audit(
         before_state=sanitize_stage06_audit_state(before_state),
         after_state=sanitize_stage06_audit_state(after_state),
         permission_snapshot=sanitize_stage06_audit_state(
-            permission_snapshot
-            or {"role": actor.role, "actor_type": actor.actor_type}
+            permission_snapshot or {"role": actor.role, "actor_type": actor.actor_type}
         ),
     )
 

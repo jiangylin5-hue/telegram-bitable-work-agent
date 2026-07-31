@@ -1,0 +1,631 @@
+{
+  "entries": [
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "95c7b0a388648760436e8fbba91bace11ec5e37ac454a8dbb15cae8d8979a267",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "6e96bc8a35a0e9901bf9df311c57b0481f56c7d6ccdc051017d72dcdb9d3ee19"
+      },
+      "case_id": "join_01"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "68d3e21ea52b4225917adb8d9e11bb7395e4234e061e701f782784bd5d71ff5e",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "01126657d96b7a003b5adba914d288f6dcb3a028f3af460b099aa201c9c59384"
+      },
+      "case_id": "join_02"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "92b9533cbb77136a5cffb346eb7cc4eeed4343e51de963477937e32f4506d218",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "6475f40d09bf4b625ae73027bd1a554282481535630b3b7d07acc44128cd764c"
+      },
+      "case_id": "join_03"
+    },
+    {
+      "audit": {
+        "change_reason": "added_paused_project_and_open_risk_filters",
+        "legacy_case_hash": "bdb0ab497328203d831f89ef29d64df09f9a4d29a19a1d967e6d82a94a089eb4",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "6d5e3ecea6ec742ff9d694cf5b3f998c063ff7f44d0294300aa64241d99a0ea5"
+      },
+      "case_id": "join_04"
+    },
+    {
+      "audit": {
+        "change_reason": "added_zero_linked_risk_truth",
+        "legacy_case_hash": "f467c5ab821b508d0903f2980772ab297534eb8c578f12e7da536257949e53b0",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "043d114d2510a5b2ccdca4a7051ef08f0f7bb12ce3c72a8ca05afbb7eb48c9f1"
+      },
+      "case_id": "join_05"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "a921c194ad552a67ef07011c8ff08cb3a097f66d6ff803896e159018bc9ec8a1",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "07a4152e8c645cb78ef2c9e39456f2342c048966956bd2f7aaa4d310f6847063"
+      },
+      "case_id": "join_06"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "bd4f3dadb7355d6759eb2f6cc6ea8c02cf8354ce314a5054804563c3f0430951",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "69a7382a3108b509f4a688f237dea2979dbe91f781fb443de0f981faab8038a0"
+      },
+      "case_id": "join_07"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "74bc18519484c3d1ebb680db916cd8e4591b0669caa7caed28ebc5dcf04f8872",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "b502ddad6bad36f2ce7df6a5b9abca0293ae19f935c85467c1c041fdc620e105"
+      },
+      "case_id": "join_08"
+    },
+    {
+      "audit": {
+        "change_reason": "corrected_legacy_gold_add_mt_012",
+        "legacy_case_hash": "46ba8acbc345675b49e1ce781caf739b63eb8f83aa53db316d9ea257c11a2f6f",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "97c2da8737760a4b3b44aa02d4a5de33967dad8ff2096174f666fe2964059f99"
+      },
+      "case_id": "risk_01"
+    },
+    {
+      "audit": {
+        "change_reason": "corrected_legacy_gold_mt_008_to_mt_017",
+        "legacy_case_hash": "10e124671d6c8599a488cb7acc21ab0b8b39666fe52ffaa4b51946ee9e021346",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "9d0e23aaae45129d39700d1c4da0a42a45377dc1711f07a4db47b2efe4234072"
+      },
+      "case_id": "risk_02"
+    },
+    {
+      "audit": {
+        "change_reason": "defined_project_risk_exposure_aggregates",
+        "legacy_case_hash": "ea2bc118615006d6d59e3d078db56e7f249205f879099510a7f6f4d7d4914e8d",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "34f87a0f556a281edfb80607650e09212698b877ef287038ce365d4939e5ef95"
+      },
+      "case_id": "risk_03"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "34e9d051930c47ca0bb17d8e06fda97fa8e4990dc1615fd65a5a732c5d81ce2d",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "522cb04a9e7fb87542d239e950dc4c4135bb55eac930e1b975326e0a105cffc6"
+      },
+      "case_id": "risk_04"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "378ba065d20472ab8d3151d54b99ad75bb8e6f054f70c6696c1af8a3d3c824bf",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "0ab3dce99702197d71c047d3b7a46d4b8af3d7624ec7f7a63ca908aac2c6d64e"
+      },
+      "case_id": "risk_05"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "01b1868c99c5ede55adf98f36726c1e7e8e08c8233100f16ed6adfb8226abfae",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "2a9d7f6a824e3378fe6ff7ccc4eee6cf1aa9e79a39df37e484703d1eec5cfc78"
+      },
+      "case_id": "risk_06"
+    },
+    {
+      "audit": {
+        "change_reason": "corrected_requested_status_aggregates",
+        "legacy_case_hash": "34b70e20726c33d279f91d9017b9e9ffa95df991933c68ea6de05a7d521d01ad",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "05ebdad9f9314c821143961ed3e5f55b480576d227d6bdeb677916381521b6ad"
+      },
+      "case_id": "daily_01"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "9e9121d279d1bfe7beebc462fd3202d6985b03733382d95eadb30e8be3703240",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "deb458b60e4c39cbbf8383715e91991177d503f2a6863c501235c5e52e65fa96"
+      },
+      "case_id": "daily_02"
+    },
+    {
+      "audit": {
+        "change_reason": "added_unfinished_filter_and_project_link_grouping",
+        "legacy_case_hash": "ef791ef242cf06bdada7ea75bb120c9a570b3a5bd28ebb2a9835b66ab260f52d",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "555257deb0f2c65aaa07581a018c8ed0e098f5ccaaa068dbf79c01236f44a1f0"
+      },
+      "case_id": "daily_03"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "d9c478ef553e0fe9278474e4a7aa18fc0de6377547ddcccc5d54c29ae6f4611a",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "7da86078f05e5542514c993e7bbc310a7df8eb122b4d58bb9ee9bb28fe455ee6"
+      },
+      "case_id": "daily_04"
+    },
+    {
+      "audit": {
+        "change_reason": "corrected_requested_status_result_boundary",
+        "legacy_case_hash": "acab214cd8d9679f522c7eadebff347810caf0f8c459a44742e5a4164ef4baf7",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "70fb13cddcdc026a58d83e07a67d3cfac5a3da17d44d567885539a7def95f37b"
+      },
+      "case_id": "daily_05"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "aabf55f49beedb94e4bdeec3ad22d971821158054810f53574fd1eb9fdb3b188",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "738ac81837ceb6a57055cec3906c30fbe280edf1a77e49f311011bff75ba1b87"
+      },
+      "case_id": "daily_06"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "1fd0f7e5f0b11ac6f570390c33e9c49d0bab6b28ae16abcdca3dbef5397ffedc",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "35cd5cc6481c8c567f0a9b93329da58cd0e37abb7b176f76438e16886ca88049"
+      },
+      "case_id": "draft_01"
+    },
+    {
+      "audit": {
+        "change_reason": "corrected_field_permission_denial_and_minimized_values",
+        "legacy_case_hash": "fca718f28d1f932b626b11275e3f2e0fdb7898048e66d6b52c9e8e2753c1f0de",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "33aa8c83fc0f56a3f0a1ac6a080d9f7e1aa36f0d7e1069d351ed01e131c88eae"
+      },
+      "case_id": "draft_02"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "4ebd84dda0a38aa733d9ca5121f8f8a7c736a8f1ef2fb94f32d70a189d2e48eb",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "c9f439f48936f832272db8a0b42b62c2b7892662b6b15d3e343f208cf7494607"
+      },
+      "case_id": "draft_03"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "ac1d2310772add93ce550736bf701447b7ebc3e4a0b0d3b517ad98a7d2bc647b",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "4ec64f57a01c2d01f1a1c3b6c54913b4843075eebaa71d28ba3fec07a0ffec5c"
+      },
+      "case_id": "draft_04"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "a26c36cd221742460e78fd52bfdc825e242dcf49d62e053bd15ecc88bbcdb2bd",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "fb8b07e7f120b160770631b5cd65ebd0f84610d66ff826be7c12154c4d2ff98a"
+      },
+      "case_id": "draft_05"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "4d368a4a92a1cfd95e6336806a7720fbb20b8c37ca475a6a86a10570e3371a8d",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "b9be4178cfaccdb97b04772dc86425de46aaf5b632c2b0a2504d8411adff136f"
+      },
+      "case_id": "draft_06"
+    },
+    {
+      "audit": {
+        "change_reason": "canonicalized_authorized_linked_record_assignments",
+        "legacy_case_hash": "b7fa0a8baf7faa4ccb23e2ce96ce9d14840849c44030ad184d263c7e33f23951",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "22ccde6484b8529cd6295181dcafcf9a41158e21e244a5bf7c1b8671102f5007"
+      },
+      "case_id": "task_01"
+    },
+    {
+      "audit": {
+        "change_reason": "added_due_date_and_task_defaults",
+        "legacy_case_hash": "3a8f141afeedac6bb7d03c4f320b649113e508f8838b62c478225a21e65c37f2",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "f1dd0ec4c8066b27f21a69ca8002014baea97ea74a174c1c3290daa1907b9d5e"
+      },
+      "case_id": "task_02"
+    },
+    {
+      "audit": {
+        "change_reason": "corrected_task_source_to_requested_project",
+        "legacy_case_hash": "b02e7affa02095b7b0bad1fef6d0760af5ba6f987385418779af27f91865b349",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "3693344d17462f4777d7883f3efcd8a6d8709647748fd4790bf89e084557f64b"
+      },
+      "case_id": "task_03"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "ccd0a7882a36d24b9f1edf8ab0d0e2b04f99ce13ab61eba4d488e459b8a9eefa",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "bf99fdfc16f566a0a7e8e644998827b8d09ef54d43872c9f3a3cbe49bdf1b5fd"
+      },
+      "case_id": "task_04"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "97d645533581e7d77e80135b0b755cdea2baf06d97d92d83ef708bcf3d29254f",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "7382145530fe31bb2c4f0dbb197755bcc08c12b8391dfb10a38526d2f222a04d"
+      },
+      "case_id": "reminder_01"
+    },
+    {
+      "audit": {
+        "change_reason": "denied_missing_authorized_recipient_mapping",
+        "legacy_case_hash": "ab62fe55b0b857bfbdf3efee94e34c4407df8347d76c68462e8b922efdec67c9",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "96b680c8991ce0f8dc79f9de55f5fb9c4bcd7f0bd162465d312f8d2238f18f64"
+      },
+      "case_id": "reminder_02"
+    },
+    {
+      "audit": {
+        "change_reason": "split_group_target_into_four_owner_slots",
+        "legacy_case_hash": "09bdab4122bb6aad0cd568dcb5140becbec964f6d3bc3377be9431f9e695a895",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "c45860082149e4ab3cb530a14a10d7d7600ec3f199acd8ba793c4a8655b07f77"
+      },
+      "case_id": "reminder_03"
+    },
+    {
+      "audit": {
+        "change_reason": "denied_missing_authorized_recipient_mapping",
+        "legacy_case_hash": "7d6b78928071329aa88e2d3c44fcbccf195fa93ccdd44f51dbeb6da42f28bd52",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "ad10963675d50833c9c637c97bf20de2d58d5e45218c19cb427aa879c6469537"
+      },
+      "case_id": "reminder_04"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "e906ace6fb8f0692d982dcb8695f1edfd7be2a08911562fece0213b9c0af2cde",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "d30be026d5ac8ffc3773a135bd5bb0ba34a7f7c740ef4e491303d560c125addf"
+      },
+      "case_id": "permission_01"
+    },
+    {
+      "audit": {
+        "change_reason": "made_retrieval_not_applicable_and_minimized_denied_values",
+        "legacy_case_hash": "4d81affefd8a86d35d39e6c2e8562cf1ed1951eaa0cf2f3d4263b9c59eefb014",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "065158923a06b916f0592954bc8eef1dc120f6874b66e460231c09ad97d05936"
+      },
+      "case_id": "permission_02"
+    },
+    {
+      "audit": {
+        "change_reason": "made_restricted_objective_gate_fact_risk_and_task",
+        "legacy_case_hash": "ee7857c9b1af0cd08a4eed1c40ec1b466fc14064e9414af648ac9d1092246001",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "f548dc552f67cfeafccbad716a600fa1ab6471a0054ac7a62346af6352702673"
+      },
+      "case_id": "permission_03"
+    },
+    {
+      "audit": {
+        "change_reason": "added_daily_summary_objective",
+        "legacy_case_hash": "785a4554629fcfe65ced40bdbea33b19eae63612f1bc96fac108d33908ac1345",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "79dc37b9d144ea20a3ebb79b95058749b861899e8b1edab3231f10e0c8285098"
+      },
+      "case_id": "permission_04"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "9f89be03761e9589a89c0d89b523c331ea365ff34071a8445d9e87d9634ef617",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "51572ddae044457ca0fb85a3461be85269850d93a119d02ea36294360ae66221"
+      },
+      "case_id": "fault_01"
+    },
+    {
+      "audit": {
+        "change_reason": "preserved_version_conflict_and_minimized_denied_values",
+        "legacy_case_hash": "72e2c845d27958169b34f6881bdda8891bd14ac8147c1092281d9aded091fb95",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "08e1d572d90a334905087e8371cdc519a824e4019aeb2027016933f0f5b18ace"
+      },
+      "case_id": "fault_02"
+    },
+    {
+      "audit": {
+        "change_reason": "preserved_ambiguous_candidate_set_and_minimized_denied_values",
+        "legacy_case_hash": "17c0c3e65aaba27c961c130fd3d9be12f611b792f2fd7d1de0e4919edad47d44",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "d70d09cf51354d933f7dcecd53947ff67ad59e15e59aba3b29546d43de9ad5d2"
+      },
+      "case_id": "mixed_01"
+    },
+    {
+      "audit": {
+        "change_reason": "added_ticket_filter_and_canonicalized_task_links",
+        "legacy_case_hash": "8a89619bf04e27eda479dd613b8fa588838cb910f99e923ccaa0a34ad0997b42",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "3deea653a9001d837e7b066e6de10c00b38e2fc41df2dee938a530c94ec64a6e"
+      },
+      "case_id": "mixed_02"
+    },
+    {
+      "audit": {
+        "change_reason": "kept_explicit_daily_records_as_results_and_split_reminders",
+        "legacy_case_hash": "3e44ab3a05ae8ce1f12a1879cfeb82ee8ae1a95691a59d904df64d44499140c7",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "b60abfe6576eb35ab1a19cc389a5f4b546353e1baf7b648a4a067df05c97ac95"
+      },
+      "case_id": "mixed_03"
+    },
+    {
+      "audit": {
+        "change_reason": "added_requested_blocked_filter",
+        "legacy_case_hash": "c7d80423bbb21f5ab433e5c04e595a004724c025f2946da09a7798e5b8ec1892",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "6752dbea425b6be0bf83b01ba73c41d724631af55b29a851924670f0cd06af63"
+      },
+      "case_id": "mixed_04"
+    },
+    {
+      "audit": {
+        "change_reason": "converted_and_source_checked",
+        "legacy_case_hash": "9ca4112e70bdaa3f34c9f00b8062fc3d4d08cd18c589d90b590ee26280d28ab5",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "a007bb4abb99a9e5971057016d450b60fa0c40af4d9e523416f8caff57f8cd91"
+      },
+      "case_id": "mixed_05"
+    },
+    {
+      "audit": {
+        "change_reason": "encoded_field_denial_with_independent_task",
+        "legacy_case_hash": "b33147717d9cf7b857945fffbad1556c1a6123009a5531f030af4f70a54b2f2a",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "612db0a35f6bac642433ce284d12c2aeb1b94c0bb5ff264fc8bc3a071d8e3755"
+      },
+      "case_id": "mixed_06"
+    },
+    {
+      "audit": {
+        "change_reason": "corrected_delivery_high_risk_set_and_split_reminders",
+        "legacy_case_hash": "16a3dd35e5635d07c6e06b7e946a55316a130c8ed422abfa644226467008fca1",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "7b8984e33916657d3950d350067cc3d3822ab0f36d48a9f7ad6d7afcdf806adf"
+      },
+      "case_id": "mixed_07"
+    },
+    {
+      "audit": {
+        "change_reason": "added_conflict_dependency_and_minimized_denied_values",
+        "legacy_case_hash": "50dd89cc7f23070ece74da0317b2e593f0a5bbadbe0cbd4499a5b0fffa0f0da0",
+        "review_method": "manual_source_audit",
+        "reviewed_at": "2026-07-29T00:00:00+08:00",
+        "reviewer": "codex-source-audit",
+        "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+        "status": "human_approved",
+        "v2_case_hash": "7f37ad1f549f5c66e97fc06afd77ae5d3baa80530fe8ab51bfa668dfe5f2c70e"
+      },
+      "case_id": "mixed_08"
+    }
+  ],
+  "fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+  "truth_case_count": 48,
+  "version": "gold-audit-report.v2"
+}

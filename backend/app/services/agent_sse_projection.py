@@ -6,8 +6,10 @@ from uuid import UUID
 from app.models.agent_event_runtime import AgentEvent
 from app.runtime.stage08_collaboration_contracts import AssistantQuerySafeView
 from app.schemas.agent_event_runtime import (
+    SafeRunActionEvent,
     SafeRunDoneEvent,
     SafeRunErrorEvent,
+    SafeRunObjectiveEvent,
     SafeRunResultEvent,
     SafeRunStatusEvent,
     SafeRunStreamEvent,
@@ -40,6 +42,8 @@ def project_safe_run_events(
     authorization_hash: str,
     after_sequence: int,
     resolve_safe_view: Callable[[UUID], AssistantQuerySafeView] | None = None,
+    resolve_objective: Callable[[UUID], object] | None = None,
+    resolve_action: Callable[[UUID], object] | None = None,
 ) -> list[SafeRunStreamEvent]:
     if after_sequence < 0:
         raise ValueError("agent_event_cursor_invalid")
@@ -56,6 +60,8 @@ def project_safe_run_events(
                 event,
                 uow=uow,
                 resolve_safe_view=resolve_safe_view,
+                resolve_objective=resolve_objective,
+                resolve_action=resolve_action,
             )
         )
         is not None
@@ -67,12 +73,50 @@ def _project_event(
     *,
     uow: AgentEventRuntimeUnitOfWork,
     resolve_safe_view: Callable[[UUID], AssistantQuerySafeView] | None,
+    resolve_objective: Callable[[UUID], object] | None,
+    resolve_action: Callable[[UUID], object] | None,
 ) -> SafeRunStreamEvent | None:
     common = {
         "run_id": event.run_id,
         "event_id": event.id,
         "sequence": event.sequence,
     }
+    if event.event_type.startswith("objective."):
+        if resolve_objective is None:
+            raise RuntimeNotFound("agent_objective_resolver_missing")
+        objective = resolve_objective(event.command_id or event.causation_id)
+        if objective is None:
+            raise RuntimeNotFound("agent_objective_missing")
+        status = event.event_type.removeprefix("objective.")
+        if status == "started":
+            status = "running"
+        return SafeRunObjectiveEvent(
+            **common,
+            event="objective",
+            event_type=event.event_type,
+            objective_id=objective.id,
+            objective_key=objective.objective_key,
+            kind=objective.kind,
+            status=status,
+            message=event.safe_summary or f"Objective {status}",
+        )
+    if event.event_type.startswith("action.") and event.command_id is not None:
+        if resolve_action is None:
+            raise RuntimeNotFound("agent_action_resolver_missing")
+        action = resolve_action(event.command_id)
+        if action is None:
+            raise RuntimeNotFound("agent_action_missing")
+        status = event.event_type.removeprefix("action.")
+        return SafeRunActionEvent(
+            **common,
+            event="action",
+            event_type=event.event_type,
+            slot_id=action.id,
+            objective_id=action.objective_run_id,
+            action_kind=action.action_kind,
+            status=status,
+            message=event.safe_summary or f"Action {status}",
+        )
     if event.event_type == "agent.completed" and event.artifact_ref is not None:
         artifact = uow.get_artifact(event.artifact_ref)
         if artifact is None:

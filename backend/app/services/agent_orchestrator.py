@@ -66,12 +66,14 @@ class SpecialistSafeResult:
     content_hash: str
     safe_summary: str
     metrics: dict[str, int] | None = None
+    artifact_kind: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class SpecialistCommandDispatch:
     target_capability: str
     payload_ref: str
+    input_artifact_refs: tuple[UUID, ...] = ()
     required: bool = True
     command_id: UUID | None = None
 
@@ -119,6 +121,7 @@ def dispatch_specialist_command(
     authorization_hash: str,
     now: datetime,
     command_id: UUID | None = None,
+    input_artifact_refs: tuple[UUID, ...] = (),
 ) -> AgentCommand:
     if target_capability not in _CAPABILITIES:
         raise OrchestratorCapabilityDenied("capability_not_registered")
@@ -131,6 +134,13 @@ def dispatch_specialist_command(
         raise OrchestratorScopeDrift("scope_proof_mismatch")
     if run.deadline_at <= now or run.status not in {"accepted", "queued"}:
         raise OrchestratorError("agent_run_not_dispatchable")
+    _validate_input_artifact_refs(
+        uow,
+        run_id=run.id,
+        input_artifact_refs=input_artifact_refs,
+        authorization_hash=authorization_hash,
+        now=now,
+    )
 
     command_id = command_id or uuid4()
     command_sequence = uow.next_command_sequence(run.id)
@@ -159,7 +169,7 @@ def dispatch_specialist_command(
         target_capability=target_capability,
         command_type=_COMMAND_BY_CAPABILITY[target_capability],
         scope_proof_ref=f"scope:sha256:{authorization_hash}",
-        input_artifact_refs=(),
+        input_artifact_refs=input_artifact_refs,
         deadline_at=run.deadline_at,
         idempotency_key_hash=command.idempotency_key_hash,
     )
@@ -227,8 +237,11 @@ def dispatch_specialist_commands(
 ) -> tuple[AgentCommand, ...]:
     if not dispatches or len(dispatches) > 16:
         raise ValueError("specialist_dispatch_count_invalid")
-    if len({item.target_capability for item in dispatches}) != len(dispatches):
-        raise ValueError("specialist_dispatch_duplicate_capability")
+    identities = tuple(
+        (item.target_capability, item.input_artifact_refs) for item in dispatches
+    )
+    if len(set(identities)) != len(identities):
+        raise ValueError("specialist_dispatch_duplicate_objective")
     existing = uow.list_commands(run_id, for_update=True)
     if existing:
         expected = [
@@ -236,13 +249,21 @@ def dispatch_specialist_commands(
                 item.target_capability,
                 _COMMAND_BY_CAPABILITY.get(item.target_capability),
                 item.payload_ref,
+                item.input_artifact_refs,
             )
             for item in dispatches
         ]
-        actual = [
-            (item.target_capability, item.command_type, item.payload_ref)
-            for item in existing
-        ]
+        actual = []
+        for item in existing:
+            envelope = _durable_command_envelope(uow, item)
+            actual.append(
+                (
+                    item.target_capability,
+                    item.command_type,
+                    item.payload_ref,
+                    envelope.input_artifact_refs,
+                )
+            )
         if actual == expected:
             return tuple(existing)
         raise OrchestratorError("agent_run_dispatch_conflict")
@@ -256,6 +277,7 @@ def dispatch_specialist_commands(
             authorization_hash=authorization_hash,
             now=now,
             command_id=item.command_id,
+            input_artifact_refs=item.input_artifact_refs,
         )
         for item in dispatches
     )
@@ -326,6 +348,7 @@ def execute_read_only_specialist(
     worker_id: str,
     now: datetime,
     execute: Callable[[], SpecialistSafeResult],
+    fan_in: Callable[[], SpecialistSafeResult] | None = None,
 ) -> SpecialistExecutionResult:
     command = uow.get_command(command_id, for_update=True)
     if command is None:
@@ -385,7 +408,7 @@ def execute_read_only_specialist(
     artifact = AgentArtifact(
         id=uuid4(),
         run_id=run.id,
-        kind=_artifact_kind(command.target_capability),
+        kind=result.artifact_kind or _artifact_kind(command.target_capability),
         storage_ref=result.storage_ref,
         content_hash=result.content_hash,
         visibility_scope_hash=authorization_hash,
@@ -433,13 +456,28 @@ def execute_read_only_specialist(
         run.lease_owner = None
         run.lease_expires_at = None
         return SpecialistExecutionResult(run=run, artifact=artifact, replayed=False)
+    final_artifact = artifact
+    if fan_in is not None:
+        composed = _validate_result(fan_in())
+        final_artifact = AgentArtifact(
+            id=uuid4(),
+            run_id=run.id,
+            kind="composer_result",
+            storage_ref=composed.storage_ref,
+            content_hash=composed.content_hash,
+            visibility_scope_hash=authorization_hash,
+            validation_status="validated",
+            expires_at=None,
+        )
+        uow.add_artifact(final_artifact)
+        uow.flush()
     if failed_ids:
         required_ids, optional_ids = _plan_command_sets(uow, run.id, commands)
         required_failed = required_ids.intersection(failed_ids)
         terminal_status = "failed" if required_failed else "degraded"
         terminal_event = "run.failed" if required_failed else "run.degraded"
         if not required_failed:
-            run.safe_result_ref = artifact.id
+            run.safe_result_ref = final_artifact.id
         append_checkpoint_and_event(
             uow,
             run_id=run.id,
@@ -468,13 +506,13 @@ def execute_read_only_specialist(
                     if required_failed
                     else "可选 Specialist 未完成，已返回安全降级结果"
                 ),
-                artifact_ref=None if required_failed else artifact.id,
+                artifact_ref=None if required_failed else final_artifact.id,
                 occurred_at=now,
             ),
         )
         return SpecialistExecutionResult(run=run, artifact=artifact, replayed=False)
 
-    run.safe_result_ref = artifact.id
+    run.safe_result_ref = final_artifact.id
     append_checkpoint_and_event(
         uow,
         run_id=run.id,
@@ -496,7 +534,7 @@ def execute_read_only_specialist(
             status="completed",
             source_role="supervisor",
             safe_summary="只读分析已完成",
-            artifact_ref=artifact.id,
+            artifact_ref=final_artifact.id,
             occurred_at=now,
         ),
     )
@@ -510,6 +548,7 @@ def fail_specialist_command(
     authorization_hash: str,
     worker_id: str,
     now: datetime,
+    fan_in: Callable[[], SpecialistSafeResult] | None = None,
 ) -> AgentWorkflowRun:
     command = uow.get_command(command_id, for_update=True)
     if command is None:
@@ -615,6 +654,62 @@ def fail_specialist_command(
             ),
         )
     else:
+        if not pending_ids:
+            final_artifact = None
+            if fan_in is not None:
+                composed = _validate_result(fan_in())
+                final_artifact = AgentArtifact(
+                    id=uuid4(),
+                    run_id=run.id,
+                    kind="composer_result",
+                    storage_ref=composed.storage_ref,
+                    content_hash=composed.content_hash,
+                    visibility_scope_hash=authorization_hash,
+                    validation_status="validated",
+                    expires_at=None,
+                )
+                uow.add_artifact(final_artifact)
+                uow.flush()
+            else:
+                completed_artifacts = tuple(
+                    artifact
+                    for completed_id in completed_ids
+                    if (artifact := _artifact_for_command(uow, completed_id))
+                    is not None
+                )
+                if completed_artifacts:
+                    final_artifact = completed_artifacts[-1]
+            if final_artifact is not None:
+                run.safe_result_ref = final_artifact.id
+                append_checkpoint_and_event(
+                    uow,
+                    run_id=run.id,
+                    expected_version=run.version,
+                    lease_owner=worker_id,
+                    authorization_hash=authorization_hash,
+                    node_key="run_degraded",
+                    control=RunCheckpointControl(
+                        completed_command_ids=completed_ids,
+                        pending_command_ids=(),
+                        failed_command_ids=failed_ids,
+                        required_command_ids=tuple(required_ids),
+                        optional_command_ids=tuple(optional_ids),
+                        retry_count=0,
+                        next_action="stop",
+                    ),
+                    event=_event(
+                        uow,
+                        run_id=run.id,
+                        command_id=command.id,
+                        event_type="run.degraded",
+                        status="degraded",
+                        source_role="supervisor",
+                        safe_summary="可选 Specialist 未完成，已返回安全降级结果",
+                        artifact_ref=final_artifact.id,
+                        occurred_at=now,
+                    ),
+                )
+                return run
         run.lease_owner = None
         run.lease_expires_at = None
     return run
@@ -759,6 +854,45 @@ def _artifact_kind(capability: str) -> str:
     return _CAPABILITY_DEFINITIONS[capability].output_kind
 
 
+def _validate_input_artifact_refs(
+    uow: AgentEventRuntimeUnitOfWork,
+    *,
+    run_id: UUID,
+    input_artifact_refs: tuple[UUID, ...],
+    authorization_hash: str,
+    now: datetime,
+) -> None:
+    if len(input_artifact_refs) > 16 or len(set(input_artifact_refs)) != len(
+        input_artifact_refs
+    ):
+        raise ValueError("specialist_input_artifact_refs_invalid")
+    for artifact_ref in input_artifact_refs:
+        artifact = uow.get_artifact(artifact_ref)
+        if (
+            artifact is None
+            or artifact.run_id != run_id
+            or artifact.visibility_scope_hash != authorization_hash
+            or artifact.validation_status != "validated"
+            or (artifact.expires_at is not None and artifact.expires_at <= now)
+        ):
+            raise OrchestratorScopeDrift("specialist_input_artifact_invalid")
+
+
+def _durable_command_envelope(
+    uow: AgentEventRuntimeUnitOfWork,
+    command: AgentCommand,
+) -> AgentCommandEnvelope:
+    outbox = uow.get_outbox_event_by_event_id(command.id)
+    if outbox is None or outbox.topic != f"agent.commands.{command.target_capability}":
+        raise OrchestratorError("agent_command_outbox_missing")
+    try:
+        return AgentCommandEnvelope.model_validate_json(
+            json.dumps(outbox.payload_json, ensure_ascii=False, separators=(",", ":"))
+        )
+    except Exception as exc:
+        raise OrchestratorError("agent_command_outbox_invalid") from exc
+
+
 def _validate_result(result: SpecialistSafeResult) -> SpecialistSafeResult:
     if not isinstance(result, SpecialistSafeResult):
         raise TypeError("specialist_safe_result_required")
@@ -769,7 +903,10 @@ def _validate_result(result: SpecialistSafeResult) -> SpecialistSafeResult:
     if not result.safe_summary or len(result.safe_summary) > 240:
         raise ValueError("specialist_safe_summary_invalid")
     if result.metrics is not None and (
-        not all(isinstance(key, str) and isinstance(value, int) and value >= 0 for key, value in result.metrics.items())
+        not all(
+            isinstance(key, str) and isinstance(value, int) and value >= 0
+            for key, value in result.metrics.items()
+        )
     ):
         raise ValueError("specialist_metrics_invalid")
     return result

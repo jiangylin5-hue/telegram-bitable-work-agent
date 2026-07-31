@@ -303,11 +303,9 @@ def test_group_context_migration_has_timezone_and_partial_active_mapping_contrac
         for column in inspector.get_columns("stage08_group_message_projections")
     }
     assert projection_columns["source_chat_type"]["nullable"] is False
-    assert "unknown" in str(
-        projection_columns["source_chat_type"].get("default", "")
-    )
+    assert "unknown" in str(projection_columns["source_chat_type"].get("default", ""))
     assert ScriptDirectory.from_config(Config("alembic.ini")).get_heads() == [
-        "20260728_0034"
+        "20260730_0039"
     ]
     for name, nullable in (
         ("event_at", False),
@@ -322,9 +320,7 @@ def test_group_context_migration_has_timezone_and_partial_active_mapping_contrac
 
     indexes = {
         index["name"]: index
-        for index in inspector.get_indexes(
-            "stage08_group_business_context_bindings"
-        )
+        for index in inspector.get_indexes("stage08_group_business_context_bindings")
     }
     active_index = indexes["uq_stage08_group_context_active_telegram_binding"]
     assert active_index["unique"] is True
@@ -463,7 +459,9 @@ def test_group_context_uow_lists_only_current_active_projection_and_purges_body(
         assert uow.list_active_group_message_projections(mapping.id, now=NOW) == [
             projections[0]
         ]
-        assert uow.lock_group_business_context_binding_for_lifecycle(mapping.id) is mapping
+        assert (
+            uow.lock_group_business_context_binding_for_lifecycle(mapping.id) is mapping
+        )
         assert (
             uow.lock_group_message_projection_for_lifecycle(projections[0].id)
             is projections[0]
@@ -584,7 +582,9 @@ def test_group_context_window_uow_counts_old_rows_without_loading_their_bodies(
         assert limit_omissions == 2
         assert len(eligible) == 120
         assert expired not in eligible
-        assert all(item.content_fragment != "old-body-must-not-be-loaded" for item in eligible)
+        assert all(
+            item.content_fragment != "old-body-must-not-be-loaded" for item in eligible
+        )
     finally:
         session.rollback()
         session.close()
@@ -839,9 +839,7 @@ def test_group_context_concurrent_purge_blocks_fresh_reader_until_current_state(
 
     try:
         writer_pid = int(writer_session.scalar(text("select pg_backend_pid()")))
-        locked = writer_uow.lock_group_message_projection_for_lifecycle(
-            projection_id
-        )
+        locked = writer_uow.lock_group_message_projection_for_lifecycle(projection_id)
         assert locked is not None
         locked.content_fragment = ""
         locked.lifecycle_status = "purged"
@@ -858,9 +856,7 @@ def test_group_context_concurrent_purge_blocks_fresh_reader_until_current_state(
                     break
                 reader_is_blocked = bool(
                     monitor_session.scalar(
-                        text(
-                            "select :writer_pid = any(pg_blocking_pids(:reader_pid))"
-                        ),
+                        text("select :writer_pid = any(pg_blocking_pids(:reader_pid))"),
                         {
                             "writer_pid": writer_pid,
                             "reader_pid": reader_state["pid"],
@@ -992,8 +988,7 @@ def test_verified_ingress_message_and_projection_share_one_transaction(
 
         projection = session.scalar(
             select(Stage08GroupMessageProjection).where(
-                Stage08GroupMessageProjection.source_message_id
-                == source_message_id
+                Stage08GroupMessageProjection.source_message_id == source_message_id
             )
         )
         assert projection is not None

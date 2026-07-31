@@ -6,6 +6,8 @@
 - Scope: 技术选型、替代方案、确认状态和变更规则
 - Current Progress: 2026-07-10 Added Stage06 platform-pivot decision and backend-readiness evidence: the active product is a generic Feishu-like multidimensional table, no-code workspace and table-bound digital employee platform. Core records move toward typed field metadata plus JSONB values; advertising-agency workflows become templates/samples, not platform core. Real OpenRouter summarize/draft smoke, local PostgreSQL migration smoke and real Telegram backend entry smoke have evidence for the current non-UI backend pass.
 - Current Progress Update: 2026-07-22 用户确认 Stage09 不新增 Docker 部署；P1/P2 改用原生 Ubuntu `systemd` 服务与服务器本地 PostgreSQL/Redis，保留既有 Docker Caddy 仅作为未迁移 Stage03 的历史 HTTPS ingress，不能替换或重启它。
+- Current Progress Update: 2026-07-29 Stage12-D focused real embedding benchmark completed for both OpenRouter candidates. Remote BGE-M3 passed 3/3 rounds; remote E5 failed the frozen 20-second warm-up gate; local BGE-M3 remains unmeasured because its pinned 2.27 GB weight did not download. The user explicitly accepted TDR-018 and authorized the fixed `vector(1024)` implementation boundary; production activation and real-workspace external embedding remain separate gates.
+- Current Progress Update: 2026-07-30 Stage12-F local technical gate passed. The non-superuser PostgreSQL test account continues to have no extension-administration authority; `postgres` provisioned pgvector once in the test database's durable `extensions` schema, while application migrations and tests continue as `ads_agent` through `search_path=public,extensions`. This is local test provisioning only and does not grant `ads_agent` superuser rights or authorize production migration.
 - Current Progress Update: 2026-07-04 用户确认方案 A、OpenRouter、Agent 查库统计、人工确认后受控执行模型，以及 Stage 02 开发范围和 mock/sandbox 策略。
 
 ## TDR-001 Backend Language
@@ -249,3 +251,98 @@
   - 无秘密 Nginx fixture 在缺少本地 Nginx binary 时必须报告 `SKIPPED`，不得声称
     `nginx -t` 已通过；目标服务器的真实 `nginx -t` 仍由 P0a/P1-B 环境证据门承担。
 - Reference: `project-docs/08-implementation/STAGE_09_NATIVE_SERVER_DEPLOYMENT_PLAN.md`.
+
+## TDR-018 Stage12-D Fixed Embedding Profile
+
+- Status: accepted — user explicitly confirmed on 2026-07-29.
+- Decision: use `stage12.openrouter-bge-m3-v1` / `baai/bge-m3-20251117`, 1024 dimensions, L2 normalization, cosine distance, batch size 64 and maximum input 8192 for the Stage12-D fixed vector schema.
+- Provider boundary: OpenRouter requests require `data_collection=deny`, `zdr=true`, `allow_fallbacks=false`, exact catalog revision validation and a 20-second request timeout. Synthetic benchmark permission does not authorize real workspace data to leave the machine.
+- Evidence: remote BGE-M3 completed 3/3 measured rounds after warm-up with Recall@20 `1.0`, MRR@20 `0.9583`, P95 `3.93s` and zero forbidden candidates. Remote E5 failed the 20-second warm-up hard gate. Local BGE-M3 runtime was prepared, but the pinned 2.27 GB weight download stalled, so it has no measured result and cannot be ranked.
+- Gate: migration `0035`, models and default-off provider configuration are now authorized for Stage12-D implementation. This decision does not authorize deployment, production activation or sending real workspace data to OpenRouter. If local data residency becomes mandatory, resume and complete the local BGE-M3 benchmark under a new confirmed decision.
+- Reference: `project-docs/08-implementation/evidence/stage12-d-embedding-profile-benchmark-2026-07-29.md`.
+
+## TDR-019 Stage12-D Two-Stage Authorized Projection Outbox
+
+- Status: accepted — user explicitly confirmed on 2026-07-30.
+- Problem: a Stage06 record/schema/link mutation knows which durable resource and version changed, but it does not know the future effective retrieval authority `agent scope ∩ caller scope ∩ chat/view scope`. It therefore cannot safely compute caller-specific canonical text, `content_hash`, `visibility_profile_hash` or `scope_hash` inside the mutation transaction.
+- Proposed decision: split invalidation and authorized projection into two internal outbox stages.
+  1. The Stage06 mutation transaction emits `stage12.retrieval_source.changed` with stable resource references, source version and a hashed trace reference only. It never includes field values, canonical text, field IDs, vectors or caller-specific hashes.
+  2. An authorization-aware indexing coordinator expands the reference over currently materialized or explicitly registered effective visibility profiles, re-reads each current authorized source and emits one existing `stage12.retrieval_projection.requested` event per validated projection.
+  3. A missing visibility profile is built lazily from a current authorized request; it must not fall back to a broader profile. Until the profile is ready, structured Stage12-C facts or current-authority lexical retrieval may serve the request, but a broader vector may not be reused.
+  4. Permission contraction and deletion synchronously revoke affected Stage12 source/chunk rows before asynchronous expansion or vector cleanup. Ordinary content updates retain the previous active version for rollback, while retrieval must revalidate current record/source version and authority before evidence release.
+- Idempotency: mutation identity is `(workspace_id, source_type, source_identity, source_version, mutation_kind)`; projection identity remains `(workspace_id, source_type, source_identity, source_version, visibility_profile_hash, content_hash)`.
+- Rejected alternatives:
+  - Build a maximum-authority projection in the mutation transaction: derived-sensitive-data leak risk.
+  - Build only the mutating actor's projection: incomplete for other legitimate authority profiles and incorrect for system mutations.
+  - Put canonical text or field IDs in the generic outbox event: violates the Stage12-D reference-only and data-minimization boundary.
+- Compatibility: internal-only outbox contract refinement; no public HTTP/SSE API, production activation, deployment, external send or business-write authority change.
+- Implementation gate: the new internal event type and Stage06 mutation integration are authorized for local Stage12-D implementation and verification. This does not authorize deployment, production activation, real-workspace external embedding, public API/SSE changes or broader write/send authority. Task6 may be marked complete only after its documented RED/GREEN, real PostgreSQL and permission-contraction acceptance evidence passes.
+
+## TDR-020 Stage12 Architecture Correction V2.1
+
+- Status: accepted — user explicitly confirmed on 2026-07-30 after the comprehensive architecture audit.
+- Decision: implement the complete nine-package correction defined by `STAGE_12_ARCHITECTURE_CORRECTION_SOURCE_OF_TRUTH.md` before any Stage12 integrated acceptance claim.
+- Contract decisions:
+  - Evaluation separates result identities, supporting evidence and independently produced canonical typed facts; recovery is applicability-scoped.
+  - Runtime and evaluation share one authorized Entity Linker; fixture injection and business-prefix entity typing are prohibited.
+  - Valid same-table relation edges are supported; relation permission, cycle and budget checks remain mandatory.
+  - Stage12 uses a versioned explicit Digital Employee readable/writable field policy and fails closed when absent; V1 is unchanged until explicit migration.
+  - Public Action admission adds backward-compatible `requested_action=auto`; final blind Cases omit action, target, field and value hints.
+  - Retrieval materialization, typed Specialist workers, validated-fact-only ClaimGraph/Composer and the A–F isolated runner become required runtime components rather than test-only adapters.
+- Acceptance decisions:
+  - final answer quality is the primary product acceptance criterion; component metrics are diagnostic only and cannot compensate for a wrong, incomplete, unsupported or instruction-misaligned final answer;
+  - real Redis duplicate/pending/recovery/ack-once evidence is mandatory;
+  - human Gold approval remains distinct from agent audit;
+  - final acceptance is exactly three real Provider rounds over all 48 Cases with mean, worst round, population variance, safety failures and P95.
+- Guardrails: local isolated/synthetic implementation only. No production migration, activation, real-workspace external embedding/Provider data, confirmed Action, business write, notification delivery or Telegram send is authorized.
+- References:
+  - `project-docs/08-implementation/STAGE_12_COMPREHENSIVE_ARCHITECTURE_AUDIT.md`
+  - `project-docs/08-implementation/STAGE_12_ARCHITECTURE_CORRECTION_SOURCE_OF_TRUTH.md`
+  - `docs/superpowers/plans/2026-07-30-stage12-architecture-correction.md`
+
+## TDR-021 Stage12 Retrieval Registration And Relation Edge Identity
+
+- Status: accepted for bounded local implementation; explicitly confirmed by the user on 2026-07-30
+- Date: 2026-07-30
+- Trigger: Task 5 runtime wiring proved that the current component contracts cannot materialize a complete, authorization-reconstructable Relation Index.
+- Confirmed problems:
+  1. `uq_s12_relation_version_visibility` omits `source_record_id` and `target_record_id`. Because `relation_id` identifies the linked-record field, two distinct edges under that field with equal endpoint versions and visibility hash collide. The table therefore cannot persist an ordinary multi-record relation.
+  2. `stage12.retrieval_source.changed` is correctly reference-only, but no durable authorized-projection registration exists. An asynchronous worker cannot reconstruct `employee_id`, actor identity/current role or chat/view scope from the irreversible `scope_hash`.
+  3. `AuthorizedSchemaSnapshot.scope_hash` proves schema/employee/actor/field-policy scope but does not bind `AuthorizedQueryContext.scope_view_ids` or `allow_whole_table`. Runtime reread currently prevents candidate release outside the current view, but persisted projection identity is not a complete proof of effective `agent ∩ caller ∩ chat/view` authority.
+- Recommended bounded decision:
+  1. Add migration `0038` replacing the relation uniqueness columns with `workspace_id, relation_id, source_record_id, target_record_id, direction, source_version, target_version, visibility_profile_hash, scope_hash`.
+  2. Add a durable, expiring, revocable Stage12 retrieval-scope registration containing only resource/identity references and hashes required for an authorized reread: workspace/base/employee, actor identity, current view IDs or whole-table marker, schema/field-policy proof, effective retrieval-scope hash, lifecycle and timestamps. It must not store canonical text, record values, credentials or Provider payloads.
+  3. Derive the effective retrieval-scope hash from the existing schema scope plus sorted current view IDs and the whole-table marker. Bind that proof into projection/index/request/release checks without changing V1 execution.
+  4. A current authorized request creates or refreshes the registration. The coordinator fans out only through active registrations, reconstructs the current actor role from platform membership, rebuilds the current snapshot/context and rejects any scope/hash drift before reading source values.
+  5. Permission, employee, table, view or field-policy contraction revokes affected source/chunk/relation rows and registrations before rebuild. No broader profile fallback is allowed.
+- Rejected alternatives:
+  - Process-local callback registry: unavailable to a separate worker and lost on restart.
+  - Guess actor/employee from `scope_hash`: impossible and unsafe.
+  - Enumerate every user/employee/chat scope on each mutation: unbounded and cannot reconstruct chat/view authority reliably.
+  - Synchronous request-time indexing without the outbox: violates TDR-019 durability and failure isolation.
+  - Encode endpoint IDs into `relation_id`: breaks the stable relation-definition identity and path audit contract.
+- Implementation boundary: use reversible migration `0038` for relation-edge identity and a separate reversible migration `0039` for retrieval-scope registration. Task 5 remains `in_progress` until focused and real disposable PostgreSQL/pgvector evidence passes. This decision does not authorize Stage12 activation, production migration, real-workspace external embedding, business writes or sends.
+
+## TDR-022 Stage12 Retrieval Registration Bootstrap And Worker Runtime
+
+- Status: accepted for local implementation; explicitly confirmed by the user on 2026-07-30
+- Date: 2026-07-30
+- Trigger: TDR-021 RED/GREEN implementation proved that an active durable registration can safely rebuild a source mutation and that queued projection events cannot reactivate a contracted scope. Final end-to-end review then found that a first registration has no durable catch-up path for sources whose mutation events were already consumed before the registration existed. The registered handler factory also has no allowlist-filtered SQL worker loop.
+- Confirmed failure mode:
+  1. Existing records/schema may predate the registration.
+  2. Their reference-only `stage12.retrieval_source.changed` events may already be `processed/discarded` because no authorized registration existed then.
+  3. Creating the registration does not replay those events.
+  4. If the data does not mutate again, Retrieval V2 remains empty indefinitely even though the route, registration and worker callbacks are individually valid.
+- Recommended bounded decision:
+  1. Add internal reference-only event `stage12.retrieval_scope.bootstrap_requested`, emitted only when a new registration generation is created, not on an idempotent refresh.
+  2. The payload may contain only `workspace_id`, `registration_id`, a bounded resource-reference cursor, `page_size` and `trace_id`; it must not contain canonical text, record values, credentials, Provider payloads or Gold/expected answers.
+  3. The worker revalidates the active, unexpired registration and current membership/employee/view/field-policy/schema proof before every page. It enumerates at most `200` current authorized schema/record/long-field source references per page, emits existing `stage12.retrieval_projection.requested` events, synchronizes current relation edges and emits a continuation bootstrap event when more sources remain.
+  4. A revoked, expired or drifted registration discards the current page and all stale continuations. Permission contraction continues to revoke source/chunk/relation rows before any rebuild.
+  5. Add a default-off `retrieval_v2_outbox_runtime` entry that queries only Stage12 Retrieval event types and only `RETRIEVAL_V2_WORKSPACE_ALLOWLIST` workspaces. It must not consume or dead-letter unrelated application Outbox rows. No deployment/process activation is included.
+- Rejected alternatives:
+  - Synchronously enumerate and enqueue every source inside the user request: unbounded request latency and transaction size.
+  - Wait for the next business mutation: leaves stable existing data permanently unindexed.
+  - Reset or replay every historical source-change event: broad, duplicate-prone and not registration-scoped.
+  - Let a generic Outbox worker consume all event types with missing handlers: it can dead-letter unrelated product events.
+- Gate: local RED/GREEN implementation is authorized. Task 5 remains `in_progress` until bootstrap catch-up, filtered worker runtime and requirement-level regression evidence pass; no Stage12 production activation is authorized.
+- Implementation evidence: Task 5 completed locally on 2026-07-30. New-registration-only bootstrap, page/continuation authority revalidation, stale-continuation discard and query-level event/workspace filtering pass unit and real disposable PostgreSQL evidence. The runtime remains default-off and no deployment/activation is authorized. See `project-docs/08-implementation/evidence/stage12-task5-retrieval-runtime-2026-07-30.md`.

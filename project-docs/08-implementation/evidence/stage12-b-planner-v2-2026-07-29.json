@@ -1,0 +1,82 @@
+{
+  "version": "stage12-b-planner-v2-evidence.v1",
+  "date": "2026-07-29",
+  "status": "technical_gate_accepted_with_human_gold_review_deferred",
+  "base_commit": "09b9d5f70895d18efe307ba952c46775cd716dd2",
+  "branch": "codex/stage09-ai-conversation-sse",
+  "case_count": 48,
+  "observed_count": 48,
+  "planning_error_count": 0,
+  "execution_boundary": {
+    "provider_calls": 0,
+    "query_executions": 0,
+    "business_record_writes": 0,
+    "external_sends": 0
+  },
+  "raw_metrics": {
+    "objective_precision_mean": 0.9791666666666666,
+    "objective_recall_mean": 0.9274305555555555,
+    "objective_exact_count": 37,
+    "predicate_exact_count": 46,
+    "planner_gate_pass_count": 35,
+    "action_structure_exact_count": 37
+  },
+  "stage12_b_metrics": {
+    "objective_exact": {
+      "passed": 37,
+      "applicable": 37,
+      "truth_review_required": 11,
+      "accuracy": 1.0
+    },
+    "predicate_exact": {
+      "passed": 46,
+      "applicable": 48,
+      "accuracy": 0.9583333333333334,
+      "raw_failures": ["join_04", "daily_03"]
+    },
+    "action_template_exact": {
+      "passed": 24,
+      "applicable": 24,
+      "accuracy": 1.0
+    },
+    "gates_pass": true
+  },
+  "objective_truth_review": {
+    "risk_01": "gold_risk_objective_conflicts_semantic_trigger_rule",
+    "risk_02": "gold_risk_objective_conflicts_semantic_trigger_rule",
+    "risk_05": "gold_risk_objective_conflicts_semantic_trigger_rule",
+    "risk_06": "gold_risk_objective_conflicts_semantic_trigger_rule",
+    "draft_03": "gold_omits_explicit_risk_explanation_objective",
+    "permission_02": "gold_fact_objective_boundary_requires_human_review",
+    "permission_03": "gold_outside_scope_risk_boundary_requires_human_review",
+    "mixed_01": "confirmed_deferred_target_replaces_gold_conflict_objective",
+    "mixed_02": "gold_fact_vs_risk_analysis_boundary_requires_human_review",
+    "mixed_03": "gold_field_value_vs_risk_analysis_boundary_requires_human_review",
+    "mixed_04": "gold_single_action_objective_conflicts_one_slot_one_objective"
+  },
+  "deferred_fields": [
+    "query_result_dependent_concrete_targets",
+    "resolved_target_count",
+    "data_derived_field_values",
+    "record_versions",
+    "proposal_persistence",
+    "external_effects"
+  ],
+  "verification": {
+    "focused": "169 passed in 7.00s",
+    "backend_without_unavailable_postgres_files": "1814 passed, 132 skipped in 140.97s",
+    "compileall": "passed",
+    "alembic_heads": ["20260728_0034"],
+    "git_diff_check": "passed",
+    "stage12_new_source_secret_scan": "no_matches",
+    "stage12_new_source_absolute_path_scan": "no_matches",
+    "ruff": "not_installed"
+  },
+  "infrastructure": {
+    "postgres_replay": "not_run_role_cannot_create_vector_extension",
+    "historical_postgres_only_files_explicitly_excluded": 4,
+    "environment_gated_skips": 132
+  },
+  "captured_authorized_schema_hash": "c7db4c4a65ce1f415a153e4abb2085ab46ad3b3ffc747cda1f0af6d30e1c71d6",
+  "temporary_cleanup": "no_material_temporary_or_external_artifacts"
+}

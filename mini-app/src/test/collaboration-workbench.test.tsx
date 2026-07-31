@@ -3,6 +3,7 @@ import { expect, test, vi } from 'vitest'
 
 import { CollaborationWorkbench } from '../app/CollaborationWorkbench'
 import type { S5Contact } from '../app/draft-employee-types'
+import type { Stage12Action, Stage12ActionRun } from '../app/api'
 import type {
   Stage08AssistantSafeView,
   Stage08AssistantSkillCatalog,
@@ -74,6 +75,10 @@ function renderWorkbench({
   catalog = skillCatalog,
   catalogLoading = false,
   onEmployeeChange = vi.fn(),
+  durableRuntimeEnabled = false,
+  onInvokeAction,
+  onConfirmAction,
+  onRejectAction,
 }: {
   contacts?: typeof draftCapableContact[]
   currentRecordId?: string | null
@@ -84,6 +89,10 @@ function renderWorkbench({
   catalog?: Stage08AssistantSkillCatalog | null
   catalogLoading?: boolean
   onEmployeeChange?: (employeeId: string) => void
+  durableRuntimeEnabled?: boolean
+  onInvokeAction?: (request: Stage08CollaborationInvocation, signal: AbortSignal) => Promise<Stage12ActionRun>
+  onConfirmAction?: (runId: string, action: Stage12Action, values: Record<string, unknown>) => Promise<Stage12Action>
+  onRejectAction?: (runId: string, action: Stage12Action) => Promise<Stage12Action>
 } = {}) {
   return {
     onInvokeStream,
@@ -97,14 +106,40 @@ function renderWorkbench({
       failed={false}
       skillCatalog={catalog}
       skillCatalogLoading={catalogLoading}
+      durableRuntimeEnabled={durableRuntimeEnabled}
       onEmployeeChange={onEmployeeChange}
       onInvokeStream={onInvokeStream}
+      onInvokeAction={onInvokeAction}
+      onConfirmAction={onConfirmAction}
+      onRejectAction={onRejectAction}
       onOpenDraft={onOpenDraft}
       onRetry={vi.fn()}
       onClose={vi.fn()}
     />),
   }
 }
+
+test('renders durable Action proposal and confirms only after an explicit click', async () => {
+  const action: Stage12Action = {
+    slotId: 'slot-1', objectiveId: 'objective-1', slotKey: 'act-01', actionKind: 'task.create', status: 'pending_confirmation', proposalVersion: 3, recordVersion: null,
+    safeSummary: '创建回滚评审任务', editableFields: [{ fieldId: 'field-1', fieldKey: 'title', label: '标题', fieldType: 'text', required: true }],
+    proposedValues: { title: '回滚评审' }, executionTicketId: 'ticket-1', resourceId: 'draft-1',
+  }
+  const onInvokeAction = vi.fn(async () => ({ runId: 'run-1', status: 'waiting_approval', replayed: false, objectives: [{ objectiveId: 'objective-1', objectiveKey: 'obj-01', kind: 'action', required: true, status: 'proposed', safeSummary: '等待确认', errorCode: null }], actions: [action] }))
+  const onConfirmAction = vi.fn(async (_runId, current, values) => ({ ...current, status: 'executed' as const, proposedValues: values }))
+  renderWorkbench({ durableRuntimeEnabled: true, onInvokeAction, onConfirmAction, onRejectAction: vi.fn() })
+
+  fireEvent.change(screen.getByRole('combobox', { name: '动作模式' }), { target: { value: 'task_create' } })
+  fireEvent.change(screen.getByRole('textbox', { name: '协作问题' }), { target: { value: '创建回滚评审任务' } })
+  fireEvent.click(screen.getByRole('button', { name: '发送问题' }))
+
+  expect(await screen.findByRole('region', { name: '创建任务待确认' })).toHaveTextContent('尚未写入')
+  expect(onConfirmAction).not.toHaveBeenCalled()
+  fireEvent.change(screen.getByDisplayValue('回滚评审'), { target: { value: '回滚方案评审' } })
+  fireEvent.click(screen.getByRole('button', { name: '确认执行' }))
+  await waitFor(() => expect(onConfirmAction).toHaveBeenCalledWith('run-1', action, { title: '回滚方案评审' }))
+  expect(await screen.findByText('状态 · executed')).toBeVisible()
+})
 
 test('uses one Ledgerline context strip, continuous timeline and composer with accessible narrow scope controls', () => {
   renderWorkbench()
@@ -120,6 +155,12 @@ test('uses one Ledgerline context strip, continuous timeline and composer with a
   expect(screen.queryByRole('heading', { name: '向 AI 提问' })).not.toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: '对话记录' })).not.toBeInTheDocument()
   expect(timeline.compareDocumentPosition(composer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})
+
+test('exposes blind auto action mode only on the controlled runtime surface', () => {
+  renderWorkbench({ durableRuntimeEnabled: true })
+
+  expect(screen.getByRole('option', { name: '自动识别动作（需确认）' })).toBeInTheDocument()
 })
 
 test('renders auto plus only server catalog skills and preserves disabled safe reasons', () => {

@@ -1,0 +1,16 @@
+{
+  "version": "action-provider-benchmark.v1",
+  "provider": "openrouter-compatible",
+  "model_id": "google/gemini-2.5-flash",
+  "profile_id": "action.zh.stage12-f.v1",
+  "case_count": 1,
+  "pass_count": 1,
+  "failure_count": 0,
+  "failure_code": null,
+  "provider_call_count": 1,
+  "input_tokens": 99,
+  "output_tokens": 136,
+  "pre_confirmation_record_mutation_count": 0,
+  "telegram_send_count": 0,
+  "report_hash": "b60c0535943a758439056a9c349f2b8509e9c2f45fcad0328dfed5c05ff89cec"
+}

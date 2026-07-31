@@ -1,5 +1,5 @@
-export type Stage08AssistantIntent = 'business_fact' | 'memory_lookup' | 'mixed' | 'general_advice'
-export type Stage08RequestedAction = 'read_only' | 'draft_update'
+export type Stage08AssistantIntent = 'business_fact' | 'memory_lookup' | 'mixed' | 'general_advice' | 'risk_review' | 'daily_summary' | 'controlled_action'
+export type Stage08RequestedAction = 'auto' | 'read_only' | 'draft_create' | 'draft_update' | 'task_create' | 'reminder_request'
 export type Stage08SkillDisabledReason = 'context_required' | 'read_scope_unavailable' | 'write_scope_unavailable' | 'chat_scope_unavailable' | 'runtime_unsupported'
 export type Stage08SkillConfirmationPolicy = 'read_only' | 'draft_required_for_write'
 export type Stage08SkillSummary = {

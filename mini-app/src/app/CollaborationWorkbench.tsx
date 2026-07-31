@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 
 import type { S5Contact } from './draft-employee-types'
+import type { Stage12Action, Stage12ActionRun } from './api'
 import type {
   Stage08AssistantIntent,
   Stage08AssistantSafeView,
@@ -44,6 +45,9 @@ type CollaborationWorkbenchProps = {
     onEvent: (event: Stage08AssistantStreamEvent) => void,
     signal: AbortSignal,
   ) => Promise<Stage08AssistantSafeView>
+  onInvokeAction?: (request: Stage08CollaborationInvocation, signal: AbortSignal) => Promise<Stage12ActionRun>
+  onConfirmAction?: (runId: string, action: Stage12Action, proposedValues: Record<string, unknown>) => Promise<Stage12Action>
+  onRejectAction?: (runId: string, action: Stage12Action) => Promise<Stage12Action>
   onOpenDraft: (draftId: string) => void
   onRetry: () => void
   onClose: () => void
@@ -72,6 +76,7 @@ type ConversationTurn = {
   skill: Stage08AssistantSkill | null
   manifestVersion: string | null
   items: TimelineItem[]
+  actionRun: Stage12ActionRun | null
 }
 
 type TimelineAction =
@@ -96,6 +101,8 @@ type TimelineAction =
     type: 'complete'
     clientId: string
   }
+  | { type: 'action_ready'; clientId: string; actionRun: Stage12ActionRun }
+  | { type: 'action_updated'; clientId: string; action: Stage12Action }
 
 type ComposerInvocationRoute = {
   intent: Stage08AssistantIntent
@@ -171,6 +178,13 @@ function timelineReducer(turns: ConversationTurn[], action: TimelineAction): Con
     if (action.type === 'complete') {
       if (turn.state !== 'finalizing' || !turn.doneSeen) return turn
       return { ...turn, state: 'completed' }
+    }
+    if (action.type === 'action_ready') {
+      return { ...turn, actionRun: action.actionRun, phase: 'creating_draft', state: 'completed', doneSeen: true }
+    }
+    if (action.type === 'action_updated') {
+      if (!turn.actionRun) return turn
+      return { ...turn, actionRun: { ...turn.actionRun, actions: turn.actionRun.actions.map((item) => item.slotId === action.action.slotId ? action.action : item) } }
     }
     const event = action.event
     if (turn.state === 'stopped' || turn.state === 'failed' || turn.state === 'completed' || turn.doneSeen) return turn
@@ -277,6 +291,47 @@ function DraftSheet({ draftId, onOpenDraft }: { draftId: string; onOpenDraft: (d
   </section>
 }
 
+function ActionReviewCard({ runId, action, onConfirm, onReject }: { runId: string; action: Stage12Action; onConfirm?: CollaborationWorkbenchProps['onConfirmAction']; onReject?: CollaborationWorkbenchProps['onRejectAction'] }) {
+  const [currentAction, setCurrentAction] = useState(action)
+  const [values, setValues] = useState<Record<string, unknown>>(action.proposedValues)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const pending = currentAction.status === 'pending_confirmation'
+  const label = { 'record.create': '创建记录', 'record.update': '更新记录', 'task.create': '创建任务', 'reminder.request': '提醒请求' }[currentAction.actionKind]
+  const execute = async (kind: 'confirm' | 'reject') => {
+    if (!pending || busy || !onConfirm || !onReject) return
+    setBusy(true)
+    setError(null)
+    try {
+      const updated = kind === 'confirm'
+        ? await onConfirm(runId, currentAction, values)
+        : await onReject(runId, currentAction)
+      setCurrentAction(updated)
+    } catch {
+      setError('操作未完成，请刷新状态后重试。')
+    } finally {
+      setBusy(false)
+    }
+  }
+  return <section className="collaboration-draft-sheet stage12-action-card" aria-label={`${label}待确认`}>
+    <div>
+      <span>{pending ? '待确认 · 尚未写入' : `状态 · ${currentAction.status}`}</span>
+      <strong>{currentAction.safeSummary}</strong>
+      {currentAction.editableFields.map((field) => <label key={field.fieldId}>
+        <small>{field.label}{field.required ? '（必填）' : ''}</small>
+        {field.fieldType === 'checkbox'
+          ? <input type="checkbox" checked={Boolean(values[field.fieldKey])} disabled={!pending || busy} onChange={(event) => setValues((current) => ({ ...current, [field.fieldKey]: event.target.checked }))} />
+          : <input type={field.fieldType === 'number' ? 'number' : 'text'} value={String(values[field.fieldKey] ?? '')} disabled={!pending || busy} onChange={(event) => setValues((current) => ({ ...current, [field.fieldKey]: field.fieldType === 'number' ? Number(event.target.value) : event.target.value }))} />}
+      </label>)}
+      {error ? <p role="alert">{error}</p> : null}
+    </div>
+    <div className="stage12-action-controls">
+      <button type="button" disabled={!pending || busy || !onReject} onClick={() => { void execute('reject') }}>拒绝</button>
+      <button type="button" disabled={!pending || busy || !onConfirm} onClick={() => { void execute('confirm') }}>确认执行</button>
+    </div>
+  </section>
+}
+
 function ScopeContent({
   selectedEmployee,
   currentRecordId,
@@ -316,11 +371,15 @@ function TimelineTurn({
   index,
   onOpenDraft,
   onRetry,
+  onConfirmAction,
+  onRejectAction,
 }: {
   turn: ConversationTurn
   index: number
   onOpenDraft: (draftId: string) => void
   onRetry: (turn: ConversationTurn) => void
+  onConfirmAction?: (runId: string, action: Stage12Action, values: Record<string, unknown>) => Promise<Stage12Action>
+  onRejectAction?: (runId: string, action: Stage12Action) => Promise<Stage12Action>
 }) {
   const sequence = String(index + 1).padStart(2, '0')
   return <article className={`collaboration-turn ${turn.state}`} data-turn-state={turn.state} aria-label={`协作请求 ${sequence}`}>
@@ -362,6 +421,11 @@ function TimelineTurn({
           {turn.requestedAction === 'read_only' ? <button type="button" onClick={() => onRetry(turn)}>重新发送</button> : <small>请先检查待确认草稿队列或审计记录，不会自动重试。</small>}
         </div>
       })}
+      {turn.actionRun ? <section className="stage12-action-review" aria-label="受控动作确认">
+        <header><strong>执行计划</strong><span>{turn.actionRun.objectives.length} 个 Objective · {turn.actionRun.actions.length} 个 Action</span></header>
+        <ol>{turn.actionRun.objectives.map((objective) => <li key={objective.objectiveId}><span>{objective.kind}</span><strong>{objective.safeSummary ?? objective.status}</strong></li>)}</ol>
+        {turn.actionRun.actions.map((action) => <ActionReviewCard key={action.slotId} runId={turn.actionRun!.runId} action={action} onConfirm={onConfirmAction} onReject={onRejectAction} />)}
+      </section> : null}
     </div>
   </article>
 }
@@ -381,6 +445,9 @@ export function CollaborationWorkbench({
   durableRuntimeEnabled = false,
   onEmployeeChange,
   onInvokeStream,
+  onInvokeAction,
+  onConfirmAction,
+  onRejectAction,
   onOpenDraft,
   onRetry,
   onClose,
@@ -500,7 +567,8 @@ export function CollaborationWorkbench({
     nextSkill: Stage08AssistantSkill | null,
   ) {
     const cleanQuery = question.trim()
-    if (!selectedEmployee || !cleanQuery || inFlight || (nextRequestedAction === 'draft_update' && !canDraft)) return
+    const recordAction = nextRequestedAction === 'draft_update' || nextRequestedAction === 'reminder_request'
+    if (!selectedEmployee || !cleanQuery || inFlight || (recordAction && !currentRecordId) || (nextRequestedAction === 'draft_update' && !canDraft)) return
     const clientId = createClientId()
     const controller = new AbortController()
     controllerRef.current = controller
@@ -509,7 +577,7 @@ export function CollaborationWorkbench({
       intent: nextIntent,
       query: cleanQuery,
       requestedAction: nextRequestedAction,
-      targetRecordId: nextRequestedAction === 'draft_update' ? currentRecordId : null,
+      targetRecordId: recordAction ? currentRecordId : null,
       skillId: nextSkill?.skillId ?? null,
     }
     dispatch({
@@ -530,9 +598,20 @@ export function CollaborationWorkbench({
         skill: nextSkill,
         manifestVersion: nextSkill ? skillCatalog?.manifestVersion ?? null : null,
         items: [],
+        actionRun: null,
       },
     })
     setQuery('')
+    if (nextRequestedAction !== 'read_only' && durableRuntimeEnabled && onInvokeAction) {
+      void onInvokeAction(request, controller.signal).then((actionRun) => {
+        dispatch({ type: 'action_ready', clientId, actionRun })
+      }).catch(() => {
+        dispatch({ type: controller.signal.aborted ? 'stopped' : 'failed', clientId })
+      }).finally(() => {
+        if (controllerRef.current === controller) controllerRef.current = null
+      })
+      return
+    }
     void onInvokeStream(
       request,
       (event) => dispatch({ type: 'event', clientId, event }),
@@ -662,6 +741,8 @@ export function CollaborationWorkbench({
             index={index}
             onOpenDraft={onOpenDraft}
             onRetry={(retryTurn) => startInvocation(retryTurn.question, retryTurn.intent, retryTurn.requestedAction, retryTurn.skill)}
+            onConfirmAction={onConfirmAction}
+            onRejectAction={onRejectAction}
           />)}
         </main>
 
@@ -725,8 +806,28 @@ export function CollaborationWorkbench({
             />
           </label>
           <div className="collaboration-composer-actions">
+            {durableRuntimeEnabled ? <label>
+              <span className="sr-only">动作模式</span>
+              <select aria-label="动作模式" value={requestedAction} onChange={(event) => {
+                const action = event.target.value as Stage08RequestedAction
+                setRequestedAction(action)
+                if (action !== 'read_only') {
+                  setSelectedSkillId(null)
+                  setIntent('controlled_action')
+                }
+              }}>
+                <option value="read_only">只读分析</option>
+                <option value="auto">自动识别动作（需确认）</option>
+                <option value="task_create">创建任务（需确认）</option>
+                <option value="draft_create">创建记录（需确认）</option>
+                <option value="draft_update" disabled={!currentRecordId || !canDraft}>更新当前记录（需确认）</option>
+                <option value="reminder_request" disabled={!currentRecordId}>提醒当前记录（需确认）</option>
+              </select>
+            </label> : null}
             <span>{requestedAction === 'draft_update'
               ? '草稿模式 · 确认后写入'
+              : requestedAction !== 'read_only'
+                ? '受控动作 · 确认前不写入'
               : durableRuntimeEnabled
                 ? '只读模式 · 可恢复事件流'
                 : '只读模式 · 不写入'}</span>

@@ -1,12 +1,11 @@
 from datetime import UTC, datetime, timedelta
 import os
 from pathlib import Path
-from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.orm import Session
 
@@ -28,7 +27,12 @@ from app.services.agent_orchestrator import (
     dispatch_specialist_command,
     execute_read_only_specialist,
 )
-from app.models.stage06_platform import BitableBase, PlatformRecord, PlatformTable, Workspace
+from app.models.stage06_platform import (
+    BitableBase,
+    PlatformRecord,
+    PlatformTable,
+    Workspace,
+)
 from app.models.stage06_runtime import DigitalEmployee
 from scripts.stage06_local_postgres_migration_smoke import classify_local_postgres_url
 
@@ -42,35 +46,50 @@ pytestmark = pytest.mark.postgres
     not os.getenv(DATABASE_URL_ENV),
     reason=f"{DATABASE_URL_ENV} is required for Stage10 PostgreSQL evidence",
 )
-def test_postgres_commits_one_recoverable_run_command_checkpoint_event_and_outbox() -> None:
+def test_postgres_commits_one_recoverable_run_command_checkpoint_event_and_outbox() -> (
+    None
+):
     database_url = os.environ[DATABASE_URL_ENV]
     classify_local_postgres_url(database_url)
-    bootstrap_engine = create_engine(database_url, future=True, pool_pre_ping=True)
-    try:
-        with bootstrap_engine.begin() as connection:
-            connection.execute(text("DROP SCHEMA public CASCADE"))
-            connection.execute(text("CREATE SCHEMA public"))
-    finally:
-        bootstrap_engine.dispose()
     engine = create_engine(database_url, future=True, pool_pre_ping=True)
-    Base.metadata.create_all(
-        engine,
-        tables=[
-            Workspace.__table__,
-            BitableBase.__table__,
-            PlatformTable.__table__,
-            PlatformRecord.__table__,
-            DigitalEmployee.__table__,
-        ],
-    )
     config = Config(str(BACKEND_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(BACKEND_ROOT / "alembic"))
-    with patch.dict(os.environ, {"DATABASE_URL": database_url}):
-        command.stamp(config, "20260723_0033")
-        command.upgrade(config, "head")
+    expected_head = ScriptDirectory.from_config(config).get_current_head()
+    with engine.connect() as connection:
+        head_before = connection.scalar(
+            text("SELECT version_num FROM public.alembic_version")
+        )
+    assert head_before == expected_head
+
+    schema_name = f"stage12_runtime_{uuid4().hex}"
     now = datetime(2026, 7, 28, 10, 0, tzinfo=UTC)
     try:
-        with Session(engine, autoflush=False, expire_on_commit=False) as session:
+        with engine.connect() as connection:
+            transaction = connection.begin()
+            connection.execute(text(f'CREATE SCHEMA "{schema_name}"'))
+            connection.execute(text(f'SET LOCAL search_path TO "{schema_name}"'))
+            Base.metadata.create_all(
+                connection,
+                tables=[
+                    Workspace.__table__,
+                    BitableBase.__table__,
+                    PlatformTable.__table__,
+                    PlatformRecord.__table__,
+                    DigitalEmployee.__table__,
+                    AgentWorkflowRun.__table__,
+                    AgentRunCheckpoint.__table__,
+                    AgentCommand.__table__,
+                    AgentArtifact.__table__,
+                    AgentEvent.__table__,
+                    AgentOutboxEvent.__table__,
+                ],
+            )
+            session = Session(
+                connection,
+                autoflush=False,
+                expire_on_commit=False,
+                join_transaction_mode="create_savepoint",
+            )
             runtime = SqlAlchemyAgentEventRuntimeUnitOfWork(session)
             suffix = uuid4().hex[:10]
             workspace = Workspace(
@@ -156,6 +175,12 @@ def test_postgres_commits_one_recoverable_run_command_checkpoint_event_and_outbo
                     safe_summary="真实 PostgreSQL 只读运行完成",
                     metrics={"records_read": 1},
                 ),
+                fan_in=lambda: SpecialistSafeResult(
+                    storage_ref="stage08-idempotency:" + str(uuid4()),
+                    content_hash="d" * 64,
+                    safe_summary="Stage12-E Supervisor 安全结果",
+                    metrics={"claims": 1},
+                ),
             )
             session.flush()
             replay = execute_read_only_specialist(
@@ -169,12 +194,65 @@ def test_postgres_commits_one_recoverable_run_command_checkpoint_event_and_outbo
 
             assert first.run.status == "completed"
             assert replay.replayed is True
-            assert session.scalar(select(func.count()).select_from(AgentWorkflowRun).where(AgentWorkflowRun.id == run.id)) == 1
-            assert session.scalar(select(func.count()).select_from(AgentCommand).where(AgentCommand.run_id == run.id)) == 1
-            assert session.scalar(select(func.count()).select_from(AgentArtifact).where(AgentArtifact.run_id == run.id)) == 1
-            assert session.scalar(select(func.count()).select_from(AgentRunCheckpoint).where(AgentRunCheckpoint.run_id == run.id)) == 5
-            assert session.scalar(select(func.count()).select_from(AgentEvent).where(AgentEvent.run_id == run.id)) == 5
-            assert session.scalar(select(func.count()).select_from(AgentOutboxEvent).where(AgentOutboxEvent.aggregate_id == run.id)) == 6
+            assert (
+                session.scalar(
+                    select(func.count())
+                    .select_from(AgentWorkflowRun)
+                    .where(AgentWorkflowRun.id == run.id)
+                )
+                == 1
+            )
+            assert (
+                session.scalar(
+                    select(func.count())
+                    .select_from(AgentCommand)
+                    .where(AgentCommand.run_id == run.id)
+                )
+                == 1
+            )
+            assert (
+                session.scalar(
+                    select(func.count())
+                    .select_from(AgentArtifact)
+                    .where(AgentArtifact.run_id == run.id)
+                )
+                == 2
+            )
+            final_artifact = runtime.get_artifact(run.safe_result_ref)
+            assert final_artifact is not None
+            assert final_artifact.kind == "composer_result"
+            assert final_artifact.content_hash == "d" * 64
+            assert (
+                session.scalar(
+                    select(func.count())
+                    .select_from(AgentRunCheckpoint)
+                    .where(AgentRunCheckpoint.run_id == run.id)
+                )
+                == 5
+            )
+            assert (
+                session.scalar(
+                    select(func.count())
+                    .select_from(AgentEvent)
+                    .where(AgentEvent.run_id == run.id)
+                )
+                == 5
+            )
+            assert (
+                session.scalar(
+                    select(func.count())
+                    .select_from(AgentOutboxEvent)
+                    .where(AgentOutboxEvent.aggregate_id == run.id)
+                )
+                == 6
+            )
             session.rollback()
+            session.close()
+            transaction.rollback()
+        with engine.connect() as connection:
+            head_after = connection.scalar(
+                text("SELECT version_num FROM public.alembic_version")
+            )
+        assert head_after == head_before == expected_head
     finally:
         engine.dispose()

@@ -1,0 +1,78 @@
+{
+  "version": "stage12-f-durable-action-ui-evidence.v1",
+  "date": "2026-07-30",
+  "status": "accepted_locally",
+  "deployment_performed": false,
+  "production_write_performed": false,
+  "migration": {
+    "head": "20260730_0036",
+    "single_head": true,
+    "local_postgresql_current": "20260730_0036",
+    "pgvector_schema": "extensions"
+  },
+  "verification": {
+    "stage12_f_focused_passed": 49,
+    "backend_passed": 2209,
+    "backend_skipped": 38,
+    "backend_failed": 0,
+    "mini_app_test_files_passed": 79,
+    "mini_app_tests_passed": 412,
+    "mini_app_build_passed": true,
+    "compileall_passed": true,
+    "black_files_checked": 132,
+    "black_passed": true,
+    "git_diff_check_passed": true,
+    "credential_scan_passed": true
+  },
+  "real_provider": {
+    "provider": "openrouter-compatible",
+    "model_id": "google/gemini-2.5-flash",
+    "case_count": 1,
+    "pass_count": 1,
+    "provider_call_count": 1,
+    "pre_confirmation_record_mutation_count": 0,
+    "telegram_send_count": 0
+  },
+  "browser_acceptance": {
+    "real_fastapi": true,
+    "real_vite": true,
+    "real_postgresql": true,
+    "pending_confirmation_record_count_initial_flow": 0,
+    "record_count_before_final_confirm": 3,
+    "record_count_after_final_confirm": 4,
+    "confirmation_record_delta": 1,
+    "edited_value_persisted": true,
+    "action_status": "executed",
+    "notification_request_count": 0,
+    "telegram_send_request_count": 0,
+    "console_error_count": 0,
+    "error_overlay_present": false,
+    "mobile_viewport": {
+      "width": 390,
+      "height": 844,
+      "document_scroll_width": 375,
+      "dialog_width": 374.6666870117187
+    }
+  },
+  "discovered_and_fixed": [
+    {
+      "code": "confirmed_edit_lost_by_populate_existing",
+      "red": "PostgreSQL persisted the original draft value after the UI showed an edited value",
+      "fix": "flush reviewed draft values inside the transaction before the confirmation service reacquires the row lock",
+      "green": "PostgreSQL regression and repeated browser confirmation both persisted the edited value"
+    }
+  ],
+  "skipped": {
+    "real_redis": "No local Redis listener or STAGE10_REDIS_URL was available; in-memory Redis Streams crash/recovery/ack-once coverage passed",
+    "online_postgresql": 17,
+    "stage08_collaboration_database": 3,
+    "stage08_rag_pgvector": 17,
+    "ruff": "not installed",
+    "stage12_48_case_three_round_campaign": "deferred to final Stage12 acceptance by approved scope"
+  },
+  "temporary_cleanup": {
+    "browser_services_stopped": true,
+    "disposable_database": "dropped",
+    "telegram_send_count": 0
+  }
+}

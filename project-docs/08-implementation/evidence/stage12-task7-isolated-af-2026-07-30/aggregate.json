@@ -1,0 +1,20 @@
+{
+  "case_count": 48,
+  "completed_count": 48,
+  "confirmed_action_count": 0,
+  "failed_count": 0,
+  "observation_count": 48,
+  "production_write_count": 0,
+  "round_summaries": [
+    {
+      "case_count": 48,
+      "completed_count": 48,
+      "failed_count": 0,
+      "round_id": "round-01",
+      "version": "isolated-af-round-report.v1"
+    }
+  ],
+  "rounds": 1,
+  "telegram_send_count": 0,
+  "version": "isolated-af-aggregate-report.v1"
+}

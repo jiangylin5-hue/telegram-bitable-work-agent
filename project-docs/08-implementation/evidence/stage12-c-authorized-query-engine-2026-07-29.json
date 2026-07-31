@@ -1,0 +1,66 @@
+{
+  "version": "stage12-c-authorized-query-engine-evidence.v1",
+  "date": "2026-07-29",
+  "status": "local_technical_gate_accepted",
+  "branch": "codex/stage09-ai-conversation-sse",
+  "runtime_authority": "stage11_v1_only",
+  "deployment": "not_run",
+  "diagnostic": {
+    "raw_cases": 48,
+    "applicable_cases": 46,
+    "exact_cases": 46,
+    "exact_accuracy": 1.0,
+    "join_gold_exact": "8/8",
+    "aggregate_exact": "11/11",
+    "sort_exact": "2/2",
+    "safety_pass": "48/48",
+    "schema_hash": "9e300e54df593279d289b824d5adebe78962c5faf71474df44010cc7f74e2d73",
+    "scope_hash": "5da9bf953da1919f7a5e98658b1d559b0f7c898221aeec78f2007ec988c52e83"
+  },
+  "execution_boundary": {
+    "provider_calls": 0,
+    "action_expansions": 0,
+    "record_writes_after_fixture_setup": 0,
+    "external_sends": 0
+  },
+  "verification": {
+    "focused_stage12_abc": "288 passed in 12.08s",
+    "stage12_c_postgres": "1 passed in 3.85s",
+    "full_backend_documented_boundary": "1928 passed, 133 skipped in 142.57s",
+    "compileall": "passed",
+    "alembic_heads": ["20260728_0034"],
+    "git_diff_check": "passed",
+    "credential_and_developer_path_scan": "zero_hits",
+    "ruff": "not_installed"
+  },
+  "planner_disclosure": {
+    "objective_exact": "37/37_applicable",
+    "objective_truth_review_required": 11,
+    "predicate_exact": "44/48",
+    "predicate_accuracy": 0.9166666666666666,
+    "predicate_raw_failures": ["join_04", "daily_03", "mixed_02", "mixed_04"],
+    "action_template_exact": "24/24_applicable"
+  },
+  "fixture": {
+    "source_fixture_hash": "eac654ca303bd9438515aceffd87204de8f8f9e64caab1e384ffa4f47dee4252",
+    "risk_level_type": "single_select",
+    "gold_status": "agent_audited_pending_human_signoff"
+  },
+  "infrastructure": {
+    "postgres": "authorized_local_instance",
+    "pgvector_version": "0.8.3",
+    "historical_postgres_only_files_excluded": 4,
+    "environment_gated_skips": 133
+  },
+  "scope_exclusions": [
+    "retrieval_v2",
+    "embedding_profile_selection",
+    "typed_specialists_v2",
+    "provider_v2",
+    "durable_action_expansion",
+    "mini_app_changes",
+    "deployment",
+    "external_send"
+  ],
+  "temporary_cleanup": "postgres transaction rolled back; no fixture records, process, deployment or external effect retained"
+}

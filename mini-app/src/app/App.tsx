@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { isCancelledError, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { ApiError, api, buildBrowserHandoffUrl, type BaseSummary, type BootstrapResponse, type CreateForm, type PlatformTable, type RecordDetail, type TableSchema, type TelegramDeepLinkDestination, type ViewPresentation, type ViewRecords, type ViewSummary, type WorkspaceHome } from './api'
+import { ApiError, api, buildBrowserHandoffUrl, type BaseSummary, type BootstrapResponse, type CreateForm, type PlatformTable, type RecordDetail, type Stage12Action, type Stage12ActionRun, type TableSchema, type TelegramDeepLinkDestination, type ViewPresentation, type ViewRecords, type ViewSummary, type WorkspaceHome } from './api'
 import { AppShell, type AppShellRoute } from './AppShell'
 import { AssistantContextWorkbench } from './AssistantContextWorkbench'
 import { TeamBotWorkbench } from './TeamBotWorkbench'
@@ -905,6 +905,34 @@ function AppContent() {
       else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
       throw error
     }
+  }
+
+  async function invokeStage12Action(
+    request: Stage08CollaborationInvocation,
+    signal: AbortSignal,
+  ): Promise<Stage12ActionRun> {
+    const workspaceId = readyState.home.workspace_id
+    const scope = { userId: readyState.bootstrap.identity.user_id, workspaceId }
+    try {
+      return await api.queryStage12ActionRun(
+        { workspaceId, ...request },
+        crypto.randomUUID(),
+        { signal },
+      )
+    } catch (error) {
+      if (isAbortError(error)) throw error
+      if (error instanceof ApiError && error.status === 401) await denyInvalidSession()
+      else if (error instanceof ApiError && error.status === 403) await denyWorkspace(scope)
+      throw error
+    }
+  }
+
+  async function confirmStage12Action(runId: string, action: Stage12Action, values: Record<string, unknown>): Promise<Stage12Action> {
+    return api.confirmStage12Action(runId, action, values, crypto.randomUUID())
+  }
+
+  async function rejectStage12Action(runId: string, action: Stage12Action): Promise<Stage12Action> {
+    return api.rejectStage12Action(runId, action, null, crypto.randomUUID())
   }
 
   function closeDraftEmployeeHub() {
@@ -3085,6 +3113,9 @@ function AppContent() {
       durableRuntimeEnabled={agentEventRuntimeEnabled}
       onEmployeeChange={(employeeId) => { void loadCollaborationSkillCatalog(employeeId) }}
       onInvokeStream={invokeCollaborationStream}
+      onInvokeAction={invokeStage12Action}
+      onConfirmAction={confirmStage12Action}
+      onRejectAction={rejectStage12Action}
       onOpenDraft={(draftId) => {
         const trigger = collaborationReturnFocus.current ?? document.body
         closeCollaboration()
