@@ -28,8 +28,8 @@ from app.schemas.agent_specialist_results import (
     specialist_payload_sha256,
 )
 from app.schemas.agent_grounded_answer_v2 import (
-    GroundedAnswerPlanV2,
-    GroundedAnswerProviderRequestV2,
+    GroundedAnswerPlanV3,
+    GroundedAnswerProviderRequestV3,
 )
 from app.services.agent_claim_graph import (
     ActionDependencyV1,
@@ -250,8 +250,8 @@ class _GroundedAnswerProvider(Protocol):
     observations: tuple[ProviderAttemptObservationV1, ...]
 
     def __call__(
-        self, request: GroundedAnswerProviderRequestV2
-    ) -> GroundedAnswerPlanV2: ...
+        self, request: GroundedAnswerProviderRequestV3
+    ) -> GroundedAnswerPlanV3: ...
 
 
 class IsolatedAFExecutor:

@@ -98,6 +98,7 @@ def _literal_score(
     external_send_safe: bool = True,
     latency_ms: float = 1000.0,
     final_answer_grounded: bool = True,
+    final_answer_real_provider: bool = True,
 ) -> CaseScoreV2:
     planner_observed = objective_exact is not None
     return CaseScoreV2(
@@ -150,11 +151,23 @@ def _literal_score(
             instruction_action_satisfaction=True,
             chinese_clarity=True,
             refusal_degradation_appropriateness=True,
-            real_provider_origin=True,
+            real_provider_origin=final_answer_real_provider,
             reason_codes=(
-                () if final_answer_grounded else ("citation_grounding_failed",)
+                ()
+                if final_answer_grounded and final_answer_real_provider
+                else tuple(
+                    code
+                    for failed, code in (
+                        (not final_answer_grounded, "citation_grounding_failed"),
+                        (
+                            not final_answer_real_provider,
+                            "real_provider_origin_failed",
+                        ),
+                    )
+                    if failed
+                )
             ),
-            gate_pass=final_answer_grounded,
+            gate_pass=final_answer_grounded and final_answer_real_provider,
         ),
         action=ActionScore(
             observation_status="observed",
@@ -196,7 +209,10 @@ def _literal_score(
         ),
         informational_score=1.0,
         release_gate_pass=(
-            objective_exact is True and external_send_safe and final_answer_grounded
+            objective_exact is True
+            and external_send_safe
+            and final_answer_grounded
+            and final_answer_real_provider
         ),
     )
 
@@ -208,6 +224,7 @@ def _literal_three_round_report(
     safety_failure: bool = False,
     one_latency_outlier: bool = False,
     final_answer_failure: bool = False,
+    real_provider_origin_failure: bool = False,
 ) -> EvaluationReportV2:
     results: list[EvaluationResultV2] = []
     for round_number, exact_count in enumerate(objective_exact_counts, start=1):
@@ -228,6 +245,11 @@ def _literal_three_round_report(
             final_answer_grounded = not (
                 final_answer_failure and round_number == 2 and case_number == 0
             )
+            final_answer_real_provider = not (
+                real_provider_origin_failure
+                and round_number == 2
+                and case_number == 0
+            )
             results.append(
                 EvaluationResultV2(
                     case_id=case_id,
@@ -238,6 +260,7 @@ def _literal_three_round_report(
                         external_send_safe=external_send_safe,
                         latency_ms=latency_ms,
                         final_answer_grounded=final_answer_grounded,
+                        final_answer_real_provider=final_answer_real_provider,
                     ),
                 )
             )
@@ -397,6 +420,20 @@ def test_final_summary_does_not_average_away_one_final_answer_failure() -> None:
     assert summary.release_gate_pass is False
 
 
+def test_final_summary_requires_every_answer_to_come_from_real_provider() -> None:
+    report = _literal_three_round_report(real_provider_origin_failure=True)
+
+    summary = _summarize(report)
+
+    gate = summary.metrics["final_answer_gate_pass"]
+    origin = summary.metrics["final_answer_real_provider_origin"]
+    assert gate.mean == pytest.approx(143 / 144)
+    assert origin.mean == pytest.approx(143 / 144)
+    assert gate.gate_pass is False
+    assert origin.gate_pass is False
+    assert summary.release_gate_pass is False
+
+
 def test_final_summary_fails_closed_when_one_required_observation_is_missing() -> None:
     report = _literal_three_round_report(missing_objective=True)
 
@@ -419,6 +456,8 @@ def test_final_summary_passes_only_when_every_named_gate_passes() -> None:
     assert summary.metrics["objective_exact"].mean == 1.0
     assert summary.metrics["retrieval_candidate_recall_at_20"].mean == 0.96
     assert summary.metrics["p95_total_latency_ms"].worst == 1000.0
+    assert summary.metrics["final_answer_gate_pass"].mean == 1.0
+    assert summary.metrics["final_answer_real_provider_origin"].mean == 1.0
     assert summary.release_gate_pass is True
 
 

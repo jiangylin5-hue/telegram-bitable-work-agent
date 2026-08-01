@@ -543,6 +543,22 @@ def summarize_final_campaign(
             comparison="exact",
             target=1.0,
         ),
+        "final_answer_gate_pass": _metric_summary(
+            round_results,
+            extractor=lambda item: _bool_metric_value(
+                item.score.final_answer.gate_pass
+            ),
+            comparison="exact",
+            target=1.0,
+        ),
+        "final_answer_real_provider_origin": _metric_summary(
+            round_results,
+            extractor=lambda item: _bool_metric_value(
+                item.score.final_answer.real_provider_origin
+            ),
+            comparison="exact",
+            target=1.0,
+        ),
         "action_slot_exact": _metric_summary(
             round_results,
             extractor=lambda item: item.score.action.slot_accuracy,

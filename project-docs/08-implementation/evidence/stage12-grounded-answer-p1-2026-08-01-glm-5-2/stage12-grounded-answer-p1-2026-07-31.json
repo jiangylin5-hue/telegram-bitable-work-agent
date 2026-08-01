@@ -1,0 +1,603 @@
+{
+  "version": "grounded-answer-preflight-report.v1",
+  "model_id": "z-ai/glm-5.2",
+  "supported_parameters": [
+    "frequency_penalty",
+    "include_reasoning",
+    "logit_bias",
+    "logprobs",
+    "max_tokens",
+    "min_p",
+    "parallel_tool_calls",
+    "presence_penalty",
+    "reasoning",
+    "reasoning_effort",
+    "repetition_penalty",
+    "response_format",
+    "seed",
+    "stop",
+    "structured_outputs",
+    "temperature",
+    "tool_choice",
+    "tools",
+    "top_k",
+    "top_logprobs",
+    "top_p"
+  ],
+  "required_count": 12,
+  "http_completed": 12,
+  "schema_valid": 12,
+  "grounding_valid": 12,
+  "answer_source_real_provider": 12,
+  "fallback_count": 0,
+  "raw_output_retained": 0,
+  "failure_counts": {},
+  "results": [
+    {
+      "round_number": 1,
+      "claim_count": 1,
+      "request_hash": "a0f030a238f5d49cf320dc38f79d659f96c80299adcfd505986a292d3c0116a6",
+      "status": "completed",
+      "failure_code": null,
+      "provider_attempt_count": 1,
+      "provider_latency_ms": 4612,
+      "input_tokens": 860,
+      "output_tokens": 102,
+      "diagnostic_hashes": [
+        "d8b4e118d0fc34d08456c7fddcc173dad0a5d89da272cc2b78bcb2f1d0f8b024"
+      ],
+      "response_diagnostics": [
+        {
+          "version": "provider-response-fingerprint.v1",
+          "attempt": 1,
+          "top_level_type": "object",
+          "top_level_keys": [
+            "sections"
+          ],
+          "section_count": 1,
+          "statement_count": 1,
+          "response_bytes": 412,
+          "response_sha256": "b67eb5b1eece9ea140ad39cdef374ba133a49eedd0122413cca5e7aa1f4ebe73",
+          "validation_error_types": [],
+          "validation_paths": [],
+          "repair": false,
+          "content_hash": "d8b4e118d0fc34d08456c7fddcc173dad0a5d89da272cc2b78bcb2f1d0f8b024"
+        }
+      ],
+      "transport_diagnostics": [
+        {
+          "version": "provider-transport-fingerprint.v1",
+          "attempt": 1,
+          "transport_kind": "http_response",
+          "http_status": 200,
+          "response_bytes": 1278,
+          "response_sha256": "43643aade6fe209dae43af0e45a9f5944ed6bee45291fcf944dd2f9cac0fe57a",
+          "provider_name": null,
+          "provider_error_code": null,
+          "provider_error_status": null,
+          "error_category": "none",
+          "content_hash": "4470408183183c316bd1c82c3a067dcc21d5d58e45e2459316e11565c7947de7"
+        }
+      ]
+    },
+    {
+      "round_number": 1,
+      "claim_count": 2,
+      "request_hash": "8d4ea7cdc68db665180370d78b667a95923132a35fadd3de9611dcfe75ae30a4",
+      "status": "completed",
+      "failure_code": null,
+      "provider_attempt_count": 1,
+      "provider_latency_ms": 2892,
+      "input_tokens": 971,
+      "output_tokens": 86,
+      "diagnostic_hashes": [
+        "2964bd0ba8aaff80e51ffd3ceb2f5f7bb0431705eab8f1cf5406c1538dfeb7de"
+      ],
+      "response_diagnostics": [
+        {
+          "version": "provider-response-fingerprint.v1",
+          "attempt": 1,
+          "top_level_type": "object",
+          "top_level_keys": [
+            "sections"
+          ],
+          "section_count": 1,
+          "statement_count": 1,
+          "response_bytes": 348,
+          "response_sha256": "e325060a7457c40f8fcd147a5fad1f4b76d8e0a94e0012baedf6efb2467047c9",
+          "validation_error_types": [],
+          "validation_paths": [],
+          "repair": false,
+          "content_hash": "2964bd0ba8aaff80e51ffd3ceb2f5f7bb0431705eab8f1cf5406c1538dfeb7de"
+        }
+      ],
+      "transport_diagnostics": [
+        {
+          "version": "provider-transport-fingerprint.v1",
+          "attempt": 1,
+          "transport_kind": "http_response",
+          "http_status": 200,
+          "response_bytes": 1210,
+          "response_sha256": "8405877ab4b772cc50c5f16aa607051c4f49c481b604ea7af0089350e9358973",
+          "provider_name": null,
+          "provider_error_code": null,
+          "provider_error_status": null,
+          "error_category": "none",
+          "content_hash": "41176cdee4124fc474104529cf88252d8587d073973ac2b82613920dea728a82"
+        }
+      ]
+    },
+    {
+      "round_number": 1,
+      "claim_count": 4,
+      "request_hash": "922f13090dd275da094aacbd808ecd8ed6c9e42c5444f56b4719c8b7133617da",
+      "status": "completed",
+      "failure_code": null,
+      "provider_attempt_count": 1,
+      "provider_latency_ms": 3148,
+      "input_tokens": 1209,
+      "output_tokens": 284,
+      "diagnostic_hashes": [
+        "35a680559a5d94c062929d340534fbf08151f60dd48fcdfc88157411934d790a"
+      ],
+      "response_diagnostics": [
+        {
+          "version": "provider-response-fingerprint.v1",
+          "attempt": 1,
+          "top_level_type": "object",
+          "top_level_keys": [
+            "sections"
+          ],
+          "section_count": 1,
+          "statement_count": 4,
+          "response_bytes": 1191,
+          "response_sha256": "60803728283d98510d92c4ea495b5ff01ca770fb0bbeb2c616e64d98fce36a18",
+          "validation_error_types": [],
+          "validation_paths": [],
+          "repair": false,
+          "content_hash": "35a680559a5d94c062929d340534fbf08151f60dd48fcdfc88157411934d790a"
+        }
+      ],
+      "transport_diagnostics": [
+        {
+          "version": "provider-transport-fingerprint.v1",
+          "attempt": 1,
+          "transport_kind": "http_response",
+          "http_status": 200,
+          "response_bytes": 2167,
+          "response_sha256": "587667d2ae26c8615c0a6da180cc6341506ab8931af8e88e96bc4773635c9f1b",
+          "provider_name": null,
+          "provider_error_code": null,
+          "provider_error_status": null,
+          "error_category": "none",
+          "content_hash": "1712b551821e7526a79446d7a0468c77ae662870cb6efc350030687389b85e3a"
+        }
+      ]
+    },
+    {
+      "round_number": 1,
+      "claim_count": 7,
+      "request_hash": "a80033fb0ea811ab78bd865bd47d919af2bfbdda714f08f44e87c4bb9ff95fb6",
+      "status": "completed",
+      "failure_code": null,
+      "provider_attempt_count": 1,
+      "provider_latency_ms": 4960,
+      "input_tokens": 1562,
+      "output_tokens": 429,
+      "diagnostic_hashes": [
+        "6812743ae1cfec03533d68e64af49a467f90ea2c85ec3f6583286716881c414d"
+      ],
+      "response_diagnostics": [
+        {
+          "version": "provider-response-fingerprint.v1",
+          "attempt": 1,
+          "top_level_type": "object",
+          "top_level_keys": [
+            "sections"
+          ],
+          "section_count": 1,
+          "statement_count": 7,
+          "response_bytes": 1747,
+          "response_sha256": "92163742a02f16baa54fef7811b3eaff64e31e269f9cabea045c356b7c36303e",
+          "validation_error_types": [],
+          "validation_paths": [],
+          "repair": false,
+          "content_hash": "6812743ae1cfec03533d68e64af49a467f90ea2c85ec3f6583286716881c414d"
+        }
+      ],
+      "transport_diagnostics": [
+        {
+          "version": "provider-transport-fingerprint.v1",
+          "attempt": 1,
+          "transport_kind": "http_response",
+          "http_status": 200,
+          "response_bytes": 2828,
+          "response_sha256": "cf59cbd89947d16edb104fa953d406e11d0a1ecef46acf22fefd9b2899cf8343",
+          "provider_name": null,
+          "provider_error_code": null,
+          "provider_error_status": null,
+          "error_category": "none",
+          "content_hash": "1c003e0af42a25559f36190971e1eb451f29961c303c4fb3454eaf8f9938ef8f"
+        }
+      ]
+    },
+    {
+      "round_number": 2,
+      "claim_count": 1,
+      "request_hash": "2c0ba22560d21f1c88217ed56b927e983f6ef1188a3f4bece4b0e385a1035bc8",
+      "status": "completed",
+      "failure_code": null,
+      "provider_attempt_count": 1,
+      "provider_latency_ms": 2273,
+      "input_tokens": 862,
+      "output_tokens": 100,
+      "diagnostic_hashes": [
+        "8b5c25ac36c187b853e86b16925d8b64f195ea685de813f6af06e173f135228f"
+      ],
+      "response_diagnostics": [
+        {
+          "version": "provider-response-fingerprint.v1",
+          "attempt": 1,
+          "top_level_type": "object",
+          "top_level_keys": [
+            "sections"
+          ],
+          "section_count": 1,
+          "statement_count": 1,
+          "response_bytes": 408,
+          "response_sha256": "56e6e1eb621e49b2586df99ad4cbc9adeff5e01a3501f1ae992c5c3b852110b1",
+          "validation_error_types": [],
+          "validation_paths": [],
+          "repair": false,
+          "content_hash": "8b5c25ac36c187b853e86b16925d8b64f195ea685de813f6af06e173f135228f"
+        }
+      ],
+      "transport_diagnostics": [
+        {
+          "version": "provider-transport-fingerprint.v1",
+          "attempt": 1,
+          "transport_kind": "http_response",
+          "http_status": 200,
+          "response_bytes": 1272,
+          "response_sha256": "d32cd5e7c68103d35a9eb4ac59807f78a2d9644d7cc8efa5f107d59ed137f7bd",
+          "provider_name": null,
+          "provider_error_code": null,
+          "provider_error_status": null,
+          "error_category": "none",
+          "content_hash": "b434cf52c060b7ea554d3d022bbe0a49be4eb334f67f4bf972e565b599f756d8"
+        }
+      ]
+    },
+    {
+      "round_number": 2,
+      "claim_count": 2,
+      "request_hash": "1ef03385808d4d05ddcd2ca82776b384dad5c5fd21351075d8d3329f0ae37048",
+      "status": "completed",
+      "failure_code": null,
+      "provider_attempt_count": 1,
+      "provider_latency_ms": 2736,
+      "input_tokens": 967,
+      "output_tokens": 180,
+      "diagnostic_hashes": [
+        "c91e6b170541d02c02d8d253224c34d77254fc81a1b3c93eda39af471f477ab6"
+      ],
+      "response_diagnostics": [
+        {
+          "version": "provider-response-fingerprint.v1",
+          "attempt": 1,
+          "top_level_type": "object",
+          "top_level_keys": [
+            "sections"
+          ],
+          "section_count": 1,
+          "statement_count": 2,
+          "response_bytes": 789,
+          "response_sha256": "fc0ddcce429d1c54a46f3a0549508273f01eb6dafd0ddae5bfb02d1d101cda87",
+          "validation_error_types": [],
+          "validation_paths": [],
+          "repair": false,
+          "content_hash": "c91e6b170541d02c02d8d253224c34d77254fc81a1b3c93eda39af471f477ab6"
+        }
+      ],
+      "transport_diagnostics": [
+        {
+          "version": "provider-transport-fingerprint.v1",
+          "attempt": 1,
+          "transport_kind": "http_response",
+          "http_status": 200,
+          "response_bytes": 1702,
+          "response_sha256": "b5c085402975facca6eeb6531686409bd7c5052a65397b239b244da6e40f6557",
+          "provider_name": null,
+          "provider_error_code": null,
+          "provider_error_status": null,
+          "error_category": "none",
+          "content_hash": "9bee03e713b72eaceb187f285fd7354e2d75f5c948184a611ac89315cf9ab9c9"
+        }
+      ]
+    },
+    {
+      "round_number": 2,
+      "claim_count": 4,
+      "request_hash": "6d16be07afb42ea79be278d54a2c19073cef47d0e3ffa1e2601e69e566fa2bb4",
+      "status": "completed",
+      "failure_code": null,
+      "provider_attempt_count": 1,
+      "provider_latency_ms": 2815,
+      "input_tokens": 1208,
+      "output_tokens": 278,
+      "diagnostic_hashes": [
+        "39477f9d6bfdc8aac03cdf5d0f6ad3aecf2e4123587b7f7c8af071534d9226ac"
+      ],
+      "response_diagnostics": [
+        {
+          "version": "provider-response-fingerprint.v1",
+          "attempt": 1,
+          "top_level_type": "object",
+          "top_level_keys": [
+            "sections"
+          ],
+          "section_count": 1,
+          "statement_count": 4,
+          "response_bytes": 1167,
+          "response_sha256": "dc8cbb8821391d66fbd88ab9c0c54bb2f50b490608c3e9fb4f9755e4f861eda1",
+          "validation_error_types": [],
+          "validation_paths": [],
+          "repair": false,
+          "content_hash": "39477f9d6bfdc8aac03cdf5d0f6ad3aecf2e4123587b7f7c8af071534d9226ac"
+        }
+      ],
+      "transport_diagnostics": [
+        {
+          "version": "provider-transport-fingerprint.v1",
+          "attempt": 1,
+          "transport_kind": "http_response",
+          "http_status": 200,
+          "response_bytes": 2130,
+          "response_sha256": "a04a0a4c42e569c39a4120b7164e76fa66b86b085a947c542bc17a890910d81d",
+          "provider_name": null,
+          "provider_error_code": null,
+          "provider_error_status": null,
+          "error_category": "none",
+          "content_hash": "5f8595edc8b2961395a663e3c760c573412a8ae72f956040f60f1cd80f27f1a6"
+        }
+      ]
+    },
+    {
+      "round_number": 2,
+      "claim_count": 7,
+      "request_hash": "da129eb8816edf093fb98cae044ee784762a2d808566c3e245eae02a0f6fc4ee",
+      "status": "completed",
+      "failure_code": null,
+      "provider_attempt_count": 1,
+      "provider_latency_ms": 3895,
+      "input_tokens": 1565,
+      "output_tokens": 559,
+      "diagnostic_hashes": [
+        "0a51b2689c15d1471f622d1c7b34b0bd028e8c5f37c27e6f37dd26986ff0b410"
+      ],
+      "response_diagnostics": [
+        {
+          "version": "provider-response-fingerprint.v1",
+          "attempt": 1,
+          "top_level_type": "object",
+          "top_level_keys": [
+            "sections"
+          ],
+          "section_count": 1,
+          "statement_count": 7,
+          "response_bytes": 2474,
+          "response_sha256": "2f3fcec27177a1ef1995a57be052b7aea698e5d94896b72bc77088b16a36d314",
+          "validation_error_types": [],
+          "validation_paths": [],
+          "repair": false,
+          "content_hash": "0a51b2689c15d1471f622d1c7b34b0bd028e8c5f37c27e6f37dd26986ff0b410"
+        }
+      ],
+      "transport_diagnostics": [
+        {
+          "version": "provider-transport-fingerprint.v1",
+          "attempt": 1,
+          "transport_kind": "http_response",
+          "http_status": 200,
+          "response_bytes": 3580,
+          "response_sha256": "d28e127765dd6724ee58c04f6fae85a2a20ce2bf1ba31fa80d2a724ccc709cf3",
+          "provider_name": null,
+          "provider_error_code": null,
+          "provider_error_status": null,
+          "error_category": "none",
+          "content_hash": "85a129c4e3bda1c92d5af2dcc36b7cec87c774710165be9dc5e079677dc246a2"
+        }
+      ]
+    },
+    {
+      "round_number": 3,
+      "claim_count": 1,
+      "request_hash": "41759d2df9c3008973494444abb058c0916b88bfd74174811919e055d1334957",
+      "status": "completed",
+      "failure_code": null,
+      "provider_attempt_count": 1,
+      "provider_latency_ms": 2198,
+      "input_tokens": 859,
+      "output_tokens": 100,
+      "diagnostic_hashes": [
+        "8b5c25ac36c187b853e86b16925d8b64f195ea685de813f6af06e173f135228f"
+      ],
+      "response_diagnostics": [
+        {
+          "version": "provider-response-fingerprint.v1",
+          "attempt": 1,
+          "top_level_type": "object",
+          "top_level_keys": [
+            "sections"
+          ],
+          "section_count": 1,
+          "statement_count": 1,
+          "response_bytes": 408,
+          "response_sha256": "56e6e1eb621e49b2586df99ad4cbc9adeff5e01a3501f1ae992c5c3b852110b1",
+          "validation_error_types": [],
+          "validation_paths": [],
+          "repair": false,
+          "content_hash": "8b5c25ac36c187b853e86b16925d8b64f195ea685de813f6af06e173f135228f"
+        }
+      ],
+      "transport_diagnostics": [
+        {
+          "version": "provider-transport-fingerprint.v1",
+          "attempt": 1,
+          "transport_kind": "http_response",
+          "http_status": 200,
+          "response_bytes": 1272,
+          "response_sha256": "308c5a5d95731af79e2e8b1849d8020808c41d12285bb1aa180b9825dea4c46c",
+          "provider_name": null,
+          "provider_error_code": null,
+          "provider_error_status": null,
+          "error_category": "none",
+          "content_hash": "49f82aaa13d1506d363b73439b5a54308dc3a6af1406424de1c8573668831c67"
+        }
+      ]
+    },
+    {
+      "round_number": 3,
+      "claim_count": 2,
+      "request_hash": "cc29a54b75eed3afb28d162995584d8cc7bf61bff80c723cf2803d9924b540fc",
+      "status": "completed",
+      "failure_code": null,
+      "provider_attempt_count": 1,
+      "provider_latency_ms": 3175,
+      "input_tokens": 971,
+      "output_tokens": 124,
+      "diagnostic_hashes": [
+        "4486dd8ee83e59287eae2486cf8f1ff09ef9f3d983c368ceb0aebb20d4b76f4a"
+      ],
+      "response_diagnostics": [
+        {
+          "version": "provider-response-fingerprint.v1",
+          "attempt": 1,
+          "top_level_type": "object",
+          "top_level_keys": [
+            "sections"
+          ],
+          "section_count": 1,
+          "statement_count": 1,
+          "response_bytes": 507,
+          "response_sha256": "a15b553706fd29ad2e2829e6e34fab36fd270cb5ed9c9d61ab8c9b671504b98a",
+          "validation_error_types": [],
+          "validation_paths": [],
+          "repair": false,
+          "content_hash": "4486dd8ee83e59287eae2486cf8f1ff09ef9f3d983c368ceb0aebb20d4b76f4a"
+        }
+      ],
+      "transport_diagnostics": [
+        {
+          "version": "provider-transport-fingerprint.v1",
+          "attempt": 1,
+          "transport_kind": "http_response",
+          "http_status": 200,
+          "response_bytes": 1404,
+          "response_sha256": "a40a8f677098ae38b9c01eeb3c75ad6075481f6f91d84997b63b159bddcad58f",
+          "provider_name": null,
+          "provider_error_code": null,
+          "provider_error_status": null,
+          "error_category": "none",
+          "content_hash": "a105c4c00c83531c30b5500d9f2369dd3c35b081a6f9518b8a27e34ed5977cea"
+        }
+      ]
+    },
+    {
+      "round_number": 3,
+      "claim_count": 4,
+      "request_hash": "3a7e30976a600f3fe792d69e89b52d68999ba0c66da11456ed34cc2db6ef6219",
+      "status": "completed",
+      "failure_code": null,
+      "provider_attempt_count": 1,
+      "provider_latency_ms": 3165,
+      "input_tokens": 1207,
+      "output_tokens": 316,
+      "diagnostic_hashes": [
+        "a4405ff8c8dcd3d4ca0217be31be6c9813180b8f0ee79c2b7284ca99c6e8d6fb"
+      ],
+      "response_diagnostics": [
+        {
+          "version": "provider-response-fingerprint.v1",
+          "attempt": 1,
+          "top_level_type": "object",
+          "top_level_keys": [
+            "sections"
+          ],
+          "section_count": 1,
+          "statement_count": 4,
+          "response_bytes": 1367,
+          "response_sha256": "b696c76f2aa3e2363c2f6f6eb4041bd10196bf35a162cc12b1eebfdc898eabc0",
+          "validation_error_types": [],
+          "validation_paths": [],
+          "repair": false,
+          "content_hash": "a4405ff8c8dcd3d4ca0217be31be6c9813180b8f0ee79c2b7284ca99c6e8d6fb"
+        }
+      ],
+      "transport_diagnostics": [
+        {
+          "version": "provider-transport-fingerprint.v1",
+          "attempt": 1,
+          "transport_kind": "http_response",
+          "http_status": 200,
+          "response_bytes": 2361,
+          "response_sha256": "3898e0ce01b0d026bbb51184d005b975342171952f07fb328cd8112b36bdda99",
+          "provider_name": null,
+          "provider_error_code": null,
+          "provider_error_status": null,
+          "error_category": "none",
+          "content_hash": "5cbe9e52292af2949c7c05736c1b364aa3194d89d1c2bfb28cf7d0f8332c1579"
+        }
+      ]
+    },
+    {
+      "round_number": 3,
+      "claim_count": 7,
+      "request_hash": "addd13d7783624c583a153217fd43c8f7ba660d4f4d984fa4464de585bfab375",
+      "status": "completed",
+      "failure_code": null,
+      "provider_attempt_count": 1,
+      "provider_latency_ms": 3874,
+      "input_tokens": 1564,
+      "output_tokens": 429,
+      "diagnostic_hashes": [
+        "6812743ae1cfec03533d68e64af49a467f90ea2c85ec3f6583286716881c414d"
+      ],
+      "response_diagnostics": [
+        {
+          "version": "provider-response-fingerprint.v1",
+          "attempt": 1,
+          "top_level_type": "object",
+          "top_level_keys": [
+            "sections"
+          ],
+          "section_count": 1,
+          "statement_count": 7,
+          "response_bytes": 1747,
+          "response_sha256": "92163742a02f16baa54fef7811b3eaff64e31e269f9cabea045c356b7c36303e",
+          "validation_error_types": [],
+          "validation_paths": [],
+          "repair": false,
+          "content_hash": "6812743ae1cfec03533d68e64af49a467f90ea2c85ec3f6583286716881c414d"
+        }
+      ],
+      "transport_diagnostics": [
+        {
+          "version": "provider-transport-fingerprint.v1",
+          "attempt": 1,
+          "transport_kind": "http_response",
+          "http_status": 200,
+          "response_bytes": 2811,
+          "response_sha256": "9c369bcc4ddc017f8faad9cec3a9a1466dd90733f24ab005dece5d5e043d0683",
+          "provider_name": null,
+          "provider_error_code": null,
+          "provider_error_status": null,
+          "error_category": "none",
+          "content_hash": "393bd49f4b3d870d7e0cbc9c204491a41d9f5f170315fa0978d5759ce1c251b0"
+        }
+      ]
+    }
+  ],
+  "gate_pass": true,
+  "content_hash": "08d1573aeec0f89632332ccff9716f313b11622e11619bf02a769fd43f3c3130"
+}

@@ -9,9 +9,8 @@ from app.schemas.agent_specialist_results import (
     specialist_payload_sha256,
 )
 from app.schemas.agent_grounded_answer_v2 import (
-    GroundedAnswerPlanV2,
-    GroundedAnswerSectionV2,
-    GroundedAnswerStatementV2,
+    GroundedAnswerPlanV3,
+    GroundedRenderSlotTextV1,
 )
 from app.services.agent_grounded_answer_provider import (
     GroundedAnswerProviderInvocationError,
@@ -66,29 +65,25 @@ class _ObservedGroundedAnswerProvider:
 
     def __call__(self, request):
         self.call_count += 1
-        statements = tuple(
-            GroundedAnswerStatementV2(
-                statement_kind="fact",
-                text=(
-                    f"{claim.subject_label} 的 {claim.predicate_label}为"
-                    f" {claim.value_text}。"
-                ),
-                claim_handles=(claim.claim_handle,),
-                evidence_handles=claim.evidence_handles,
-                action_handles=(),
+        claims = {item.claim_handle: item for item in request.claims}
+        actions = {item.action_handle: item for item in request.actions}
+        outputs = []
+        for slot in request.render_slots:
+            if slot.statement_kind in {"fact", "analysis", "recommendation"}:
+                text = "；".join(
+                    f"{claims[handle].subject_label} 的 {claims[handle].predicate_label}为 {claims[handle].value_text}"
+                    for handle in slot.claim_handles
+                ) + "。"
+            elif slot.statement_kind == "action_status":
+                text = "；".join(
+                    actions[handle].safe_summary for handle in slot.action_handles
+                )
+            else:
+                text = "当前存在无法完成或降级的部分，未提供未经验证的结论。"
+            outputs.append(
+                GroundedRenderSlotTextV1(slot_handle=slot.slot_handle, text=text)
             )
-            for claim in request.claims
-            if claim.status == "valid"
-        )
-        return GroundedAnswerPlanV2(
-            sections=(
-                GroundedAnswerSectionV2(
-                    section_kind="answer",
-                    heading="模型结论",
-                    statements=statements,
-                ),
-            )
-        )
+        return GroundedAnswerPlanV3(slot_outputs=tuple(outputs))
 
 
 class _SchemaFailingGroundedAnswerProvider:
@@ -202,7 +197,8 @@ def test_real_provider_answer_is_the_scored_runtime_answer() -> None:
 
     assert trace.answer.answer_source == "real_provider"
     assert trace.answer.provider_result_status == "completed"
-    assert "模型结论" in trace.answer.rendered_answer
+    assert "结论" in trace.answer.rendered_answer
+    assert "risk_level" in trace.answer.rendered_answer
     assert provider.call_count == 1
     assert score.final_answer.real_provider_origin is True
 

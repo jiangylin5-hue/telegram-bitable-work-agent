@@ -139,7 +139,7 @@ deadline_exhausted
 
 Only timeout, 429 and recoverable 5xx may retry within the total deadline, with at most two Provider attempts. Schema/semantic invalid may receive one repair attempt containing only the original schema, objective, validation path and prior bounded output. Permission denial, ambiguity and insufficient evidence do not retry. Deterministic fallback must never be counted as a successful Provider invocation.
 
-The Stage11 `google/gemini-2.5-flash` profile is retained as historical baseline evidence. TDR-023 records the user-authorized, measured Stage12 Grounded Composer correction. Gemini rejected the unchanged full schema; Qwen 235B reached only `7/12`; Qwen Next 80B reached only `2/12`. The corrected fixed P1/P2/P3 candidate is `deepseek/deepseek-v3.2`, selected after a corrected-prompt unchanged-schema four-shape `4/4` result with more output headroom and lower worst measured latency than Qwen 235B. Automatic model fallback and per-case switching are forbidden.
+The Stage11 `google/gemini-2.5-flash` profile and the TDR-023 DeepSeek/Qwen campaigns remain historical evidence. TDR-026 records the user-confirmed fixed Stage12 Grounded Composer binding to `z-ai/glm-5.2`, selected by the same 12 Human-Gold representative Cases with `12/12` real Provider, `12/12` final-answer gate and zero fallback. Seed 2.0 Lite reached only `11/12` and is rejected. Automatic model fallback and per-case switching remain forbidden.
 
 ## 7. Fan-in Boundary
 
@@ -190,3 +190,7 @@ The comprehensive audit reopened the earlier local acceptance, and architecture-
 ## 11. 2026-07-31 Grounded Answer Supersession
 
 The bounded ordering Composer is not the final Stage12 Provider contract. The latest real campaign completed only `24/144` real Composer results and used deterministic fallback for `120/144`; 240 attempts were schema-invalid. Grounded Answer Provider V2 is the approved successor: the real model authors complete Chinese statements from sealed authorized artifacts, while the backend validates exact claim/evidence/action grounding. Fallback remains safe but fails real-model acceptance. Implementation must pass P1/P2 before any P3, and P3 requires `144/144` Provider-origin answers with zero fallback.
+
+## 12. 2026-08-01 Sealed RenderSlot Supersession
+
+TDR-027 supersedes only Grounded V2's private free-form section/statement/reference assembly. The active local adapter uses `GroundedAnswerProviderRequestV3` plus an ordered backend-owned `RenderSlotPlan`, and accepts only `GroundedAnswerPlanV3.slot_outputs[{slot_handle,text}]`. All visible prose remains Provider-authored; section kind, statement kind, exact objective/Claim/evidence/finding/Action closure, headings and final receipt are deterministic backend authority. The model remains fixed to `z-ai/glm-5.2` under private profile `composer.zh.grounded.glm-5.2.v3`. Local deterministic evidence is `143 passed`, including 48 × 3 at `144/144` real-origin-shaped and zero fallback; full unit is `2167 passed`. Real P2 remains failed, so P3, native deployment and Telegram are unaccepted.

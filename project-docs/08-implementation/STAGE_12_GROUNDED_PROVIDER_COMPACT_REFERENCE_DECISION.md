@@ -2,12 +2,13 @@
 
 ## Status
 
-- Status: `proposed`
-- Date: 2026-07-31
+- Status: `accepted-local-implementation`
+- Date: 2026-08-01
 - Scope: private Grounded Answer Provider request/response references and real HTTP wall-clock deadline only
 - Public API / database / permission impact: none
 - Deployment / production activation: not authorized by this decision
-- Implementation gate: explicit user confirmation required
+- Implementation gate: user explicitly confirmed `compact refs + hard deadline` on 2026-08-01
+- Current Progress: compact aliases, canonical runtime binding proof, 2400-token ceiling and cancellable async native HTTP deadline are implemented locally; focused suite passes. Adjacent campaign acceptance is blocked by the separately documented typed-finding output-contract gap, so real P1 has not started.
 
 ## 1. Trigger
 

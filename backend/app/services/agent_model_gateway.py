@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
@@ -190,6 +191,7 @@ class ModelGatewayV1:
                     payload=None,
                     failure_code="deadline_exhausted",
                     observations=tuple(observations),
+                    transport_diagnostics=tuple(transport_diagnostics),
                 )
             if not semaphore.acquire(timeout=remaining):
                 return ProviderGatewayResult(
@@ -197,8 +199,19 @@ class ModelGatewayV1:
                     payload=None,
                     failure_code="deadline_exhausted",
                     observations=tuple(observations),
+                    transport_diagnostics=tuple(transport_diagnostics),
                 )
             started = self._now()
+            remaining = (deadline_at - started).total_seconds()
+            if remaining <= 0:
+                semaphore.release()
+                return ProviderGatewayResult(
+                    status="failed",
+                    payload=None,
+                    failure_code="deadline_exhausted",
+                    observations=tuple(observations),
+                    transport_diagnostics=tuple(transport_diagnostics),
+                )
             content = ""
             try:
                 request_messages = [dict(item) for item in messages]
@@ -238,7 +251,8 @@ class ModelGatewayV1:
                     json_body["reasoning"] = {"effort": reasoning_effort}
                 response = self._post(
                     json_body=json_body,
-                    timeout_seconds=min(
+                    timeout_seconds=remaining,
+                    request_timeout_seconds=min(
                         float(profile.request_timeout_seconds), remaining
                     ),
                 )
@@ -315,7 +329,7 @@ class ModelGatewayV1:
                     observations=tuple(observations),
                     transport_diagnostics=tuple(transport_diagnostics),
                 )
-            except httpx.TimeoutException:
+            except (httpx.TimeoutException, TimeoutError):
                 failure_code = "provider_timeout"
                 transport_diagnostics.append(
                     _exception_transport_fingerprint(
@@ -367,7 +381,11 @@ class ModelGatewayV1:
         )
 
     def _post(
-        self, *, json_body: dict[str, object], timeout_seconds: float
+        self,
+        *,
+        json_body: dict[str, object],
+        timeout_seconds: float,
+        request_timeout_seconds: float,
     ) -> httpx.Response:
         kwargs = {
             "headers": {
@@ -375,13 +393,29 @@ class ModelGatewayV1:
                 "Content-Type": "application/json",
             },
             "json": json_body,
-            "timeout": httpx.Timeout(timeout_seconds),
+            "timeout": httpx.Timeout(request_timeout_seconds),
         }
         url = f"{self._base_url}/chat/completions"
         if self._http_client is not None:
             return self._http_client.post(url, **kwargs)
-        with httpx.Client() as client:
-            return client.post(url, **kwargs)
+        return asyncio.run(
+            self._post_native(
+                url=url,
+                kwargs=kwargs,
+                timeout_seconds=timeout_seconds,
+            )
+        )
+
+    @staticmethod
+    async def _post_native(
+        *,
+        url: str,
+        kwargs: dict[str, object],
+        timeout_seconds: float,
+    ) -> httpx.Response:
+        async with asyncio.timeout(max(0.001, timeout_seconds)):
+            async with httpx.AsyncClient() as client:
+                return await client.post(url, **kwargs)
 
     def _observation(
         self,

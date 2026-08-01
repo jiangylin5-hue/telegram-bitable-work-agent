@@ -16,7 +16,13 @@ from app.services.agent_model_gateway import (
     ModelProfileV1,
     model_profile_sha256,
 )
-from tests.unit.test_agent_grounded_answer_validation import _plan, _request
+from tests.unit.test_agent_grounded_answer_validation import (
+    _finding_request,
+    _plan,
+    _render_slot_plan,
+    _render_slot_request,
+    _request,
+)
 
 
 NOW = datetime(2026, 7, 31, 8, 0, tzinfo=UTC)
@@ -83,11 +89,11 @@ def _adapter(contents: list[str]):
 
 
 def test_adapter_requests_strict_fixed_schema_and_model_authored_answer() -> None:
-    adapter, client = _adapter([_plan().model_dump_json()])
+    adapter, client = _adapter([_render_slot_plan().model_dump_json()])
 
-    result = adapter(_request())
+    result = adapter(_render_slot_request())
 
-    assert result == _plan()
+    assert result == _render_slot_plan()
     body = client.requests[0][1]["json"]
     assert body["response_format"]["type"] == "json_schema"
     assert body["response_format"]["json_schema"]["strict"] is True
@@ -102,30 +108,67 @@ def test_adapter_requests_strict_fixed_schema_and_model_authored_answer() -> Non
     messages = body["messages"]
     assert "完整最终中文回答" in messages[0]["content"]
     assert "不能编造" in messages[0]["content"]
-    assert "每个 claim 只出现一次" in messages[0]["content"]
-    assert "最少必要" in messages[0]["content"]
-    assert "可见 text 或 heading 中输出 handle" in messages[0]["content"]
-    assert _request().query in messages[1]["content"]
+    assert "不得重建、修改或补充" in messages[0]["content"]
+    assert "只能填写 slot_handle 和中文 text" in messages[0]["content"]
+    assert "不能输出任何 handle" in messages[0]["content"]
+    assert "action.safe_summary" in messages[0]["content"]
+    assert _render_slot_request().query in messages[1]["content"]
     assert len(adapter.diagnostics) == 1
     assert adapter.diagnostics[0].validation_error_types == ()
 
 
-def test_grounded_composer_profile_freezes_tdr_023_qwen_candidate() -> None:
+def test_adapter_uses_text_only_render_slot_contract() -> None:
+    request = _render_slot_request()
+    plan = _render_slot_plan()
+    adapter, client = _adapter([plan.model_dump_json()])
+
+    result = adapter(request)
+
+    assert result == plan
+    body = client.requests[0][1]["json"]
+    schema = body["response_format"]["json_schema"]["schema"]
+    assert set(schema["properties"]) == {"version", "slot_outputs"}
+    prompt = body["messages"][0]["content"]
+    assert "每个 required slot_handle 按请求顺序恰好返回一次" in prompt
+    assert "只能填写 slot_handle 和中文 text" in prompt
+    assert "section_kind" not in schema["properties"]
+
+
+def test_grounded_composer_profile_freezes_tdr_026_glm_candidate() -> None:
     profile = build_grounded_composer_profile(max_attempts=1)
 
-    assert profile.model_id == "deepseek/deepseek-v3.2"
-    assert profile.profile_id == "composer.zh.grounded.deepseek-v3.2.v2"
+    assert profile.model_id == "z-ai/glm-5.2"
+    assert profile.profile_id == "composer.zh.grounded.glm-5.2.v3"
     assert profile.allowed_roles == ("composer",)
     assert profile.max_attempts == 1
     assert profile.supports_strict_json_schema is True
     assert profile.temperature == 0.1
+    assert profile.max_output_tokens == 2400
+
+
+def test_adapter_sends_backend_owned_slot_closure_without_model_reference_fields() -> None:
+    adapter, client = _adapter([_render_slot_plan().model_dump_json()])
+
+    adapter(_render_slot_request())
+
+    request_payload = json.loads(
+        client.requests[0][1]["json"]["messages"][1]["content"]
+    )
+    assert request_payload["render_slots"][0]["claim_handles"] == ["c001"]
+    assert request_payload["render_slots"][0]["evidence_handles"] == ["e001"]
+    response_schema = client.requests[0][1]["json"]["response_format"][
+        "json_schema"
+    ]["schema"]
+    encoded = json.dumps(response_schema, sort_keys=True)
+    assert "claim_handles" not in encoded
+    assert "evidence_handles" not in encoded
 
 
 def test_schema_failure_records_shape_without_raw_output() -> None:
     adapter, _ = _adapter(['{"wrong":"secret-shape"}', '{"wrong":"secret-shape"}'])
 
     with pytest.raises(GroundedAnswerProviderInvocationError) as captured:
-        adapter(_request())
+        adapter(_render_slot_request())
 
     assert captured.value.code == "provider_schema_invalid"
     assert len(adapter.diagnostics) == 2
@@ -138,11 +181,13 @@ def test_schema_failure_records_shape_without_raw_output() -> None:
 
 
 def test_grounding_failure_is_distinct_and_repaired_once() -> None:
-    invented = _plan(text="Atlas 项目的预算为 9 亿元。").model_dump_json()
+    invented = _render_slot_plan(
+        ("s001", "Atlas 项目的预算为 9 亿元。")
+    ).model_dump_json()
     adapter, client = _adapter([invented, invented])
 
     with pytest.raises(GroundedAnswerProviderInvocationError) as captured:
-        adapter(_request())
+        adapter(_render_slot_request())
 
     assert captured.value.code == "provider_grounding_invalid"
     assert len(client.requests) == 2
@@ -155,11 +200,13 @@ def test_grounding_failure_is_distinct_and_repaired_once() -> None:
 
 
 def test_schema_repair_can_return_a_valid_grounded_plan() -> None:
-    adapter, client = _adapter(['{"wrong":true}', _plan().model_dump_json()])
+    adapter, client = _adapter(
+        ['{"wrong":true}', _render_slot_plan().model_dump_json()]
+    )
 
-    result = adapter(_request())
+    result = adapter(_render_slot_request())
 
-    assert result == _plan()
+    assert result == _render_slot_plan()
     assert len(client.requests) == 2
     assert len(adapter.diagnostics) == 2
     assert adapter.diagnostics[0].validation_error_types

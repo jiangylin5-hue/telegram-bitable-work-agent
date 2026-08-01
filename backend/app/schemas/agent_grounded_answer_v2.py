@@ -25,12 +25,13 @@ from app.schemas.agent_specialist_results import (
 
 NonEmptyStr = Annotated[StrictStr, Field(min_length=1)]
 Sha256Hex = Annotated[StrictStr, Field(pattern=r"^[0-9a-f]{64}$")]
-ClaimHandle = Annotated[StrictStr, Field(pattern=r"^claim:sha256:[0-9a-f]{64}$")]
-EvidenceHandle = Annotated[StrictStr, Field(pattern=r"^evidence:sha256:[0-9a-f]{64}$")]
-ActionHandle = Annotated[StrictStr, Field(pattern=r"^action:sha256:[0-9a-f]{64}$")]
-ObjectiveHandle = Annotated[
-    StrictStr, Field(pattern=r"^objective:sha256:[0-9a-f]{64}$")
-]
+ClaimHandle = Annotated[StrictStr, Field(pattern=r"^c[0-9]{3}$")]
+EvidenceHandle = Annotated[StrictStr, Field(pattern=r"^e[0-9]{3}$")]
+ActionHandle = Annotated[StrictStr, Field(pattern=r"^a[0-9]{3}$")]
+ObjectiveHandle = Annotated[StrictStr, Field(pattern=r"^o[0-9]{3}$")]
+FindingHandle = Annotated[StrictStr, Field(pattern=r"^f[0-9]{3}$")]
+VersionHandle = Annotated[StrictStr, Field(pattern=r"^v[0-9]{3}$")]
+SlotHandle = Annotated[StrictStr, Field(pattern=r"^s[0-9]{3}$")]
 
 AnswerSource: TypeAlias = Literal["real_provider", "deterministic_fallback"]
 ProviderResultStatus: TypeAlias = Literal[
@@ -62,6 +63,7 @@ class GroundedObjectiveCandidateV2(_StrictFrozenModel):
     status: Literal["completed", "proposed", "denied", "degraded", "failed"]
     required: StrictBool
     reason_code: StrictStr | None
+    coverage_role: Literal["user_result", "action_prerequisite"] = "user_result"
 
 
 class GroundedClaimCandidateV2(_StrictFrozenModel):
@@ -84,7 +86,7 @@ class GroundedClaimCandidateV2(_StrictFrozenModel):
     value_text: NonEmptyStr
     qualifiers: tuple[NonEmptyStr, ...] = Field(max_length=16)
     evidence_handles: tuple[EvidenceHandle, ...] = Field(min_length=1, max_length=32)
-    source_versions: tuple[NonEmptyStr, ...] = Field(min_length=1, max_length=32)
+    source_versions: tuple[VersionHandle, ...] = Field(min_length=1, max_length=32)
     status: Literal["valid", "stale", "conflicted"]
 
     @model_validator(mode="after")
@@ -105,7 +107,7 @@ class GroundedClaimCandidateV2(_StrictFrozenModel):
 class GroundedEvidenceCandidateV2(_StrictFrozenModel):
     evidence_handle: EvidenceHandle
     display_label: NonEmptyStr
-    source_version: NonEmptyStr
+    source_version: VersionHandle
 
 
 class GroundedActionCandidateV2(_StrictFrozenModel):
@@ -117,13 +119,12 @@ class GroundedActionCandidateV2(_StrictFrozenModel):
 
 
 class GroundedSpecialistFindingV2(_StrictFrozenModel):
-    finding_handle: Annotated[
-        StrictStr, Field(pattern=r"^finding:sha256:[0-9a-f]{64}$")
-    ]
+    finding_handle: FindingHandle
+    objective_handle: ObjectiveHandle
     finding_kind: Literal["tabular", "risk", "daily"]
     safe_text: NonEmptyStr
-    claim_handles: tuple[ClaimHandle, ...] = Field(min_length=1, max_length=16)
-    evidence_handles: tuple[EvidenceHandle, ...] = Field(min_length=1, max_length=32)
+    claim_handles: tuple[ClaimHandle, ...] = Field(min_length=1, max_length=128)
+    evidence_handles: tuple[EvidenceHandle, ...] = Field(min_length=1, max_length=256)
 
     @model_validator(mode="after")
     def validate_references(self) -> "GroundedSpecialistFindingV2":
@@ -153,6 +154,68 @@ class GroundedPresentationPolicyV2(_StrictFrozenModel):
         return self
 
 
+class GroundedRenderSlotV1(_StrictFrozenModel):
+    """Backend-owned semantic and reference closure for one model text slot."""
+
+    slot_handle: SlotHandle
+    section_kind: GroundedSectionKind
+    statement_kind: GroundedStatementKind
+    objective_handles: tuple[ObjectiveHandle, ...] = Field(min_length=1, max_length=16)
+    claim_handles: tuple[ClaimHandle, ...] = Field(max_length=128)
+    evidence_handles: tuple[EvidenceHandle, ...] = Field(max_length=256)
+    finding_handles: tuple[FindingHandle, ...] = Field(max_length=64)
+    action_handles: tuple[ActionHandle, ...] = Field(max_length=32)
+    context_claim_handles: tuple[ClaimHandle, ...] = Field(default=(), max_length=128)
+    context_evidence_handles: tuple[EvidenceHandle, ...] = Field(
+        default=(), max_length=256
+    )
+    required: StrictBool
+
+    @model_validator(mode="after")
+    def validate_slot_shape(self) -> "GroundedRenderSlotV1":
+        if any(
+            _duplicates(values)
+            for values in (
+                self.objective_handles,
+                self.claim_handles,
+                self.evidence_handles,
+                self.finding_handles,
+                self.action_handles,
+                self.context_claim_handles,
+                self.context_evidence_handles,
+            )
+        ):
+            raise ValueError("grounded_render_slot_reference_duplicate")
+        factual = self.statement_kind in {"fact", "analysis", "recommendation"}
+        if factual and (
+            not self.claim_handles
+            or not self.evidence_handles
+            or self.action_handles
+            or self.context_claim_handles
+            or self.context_evidence_handles
+        ):
+            raise ValueError("grounded_render_slot_fact_closure_invalid")
+        if self.statement_kind == "action_status" and (
+            self.section_kind != "actions"
+            or not self.action_handles
+            or self.claim_handles
+            or self.evidence_handles
+            or self.finding_handles
+        ):
+            raise ValueError("grounded_render_slot_action_closure_invalid")
+        if self.statement_kind == "limitation" and (
+            self.section_kind != "limitations"
+            or self.claim_handles
+            or self.evidence_handles
+            or self.finding_handles
+            or self.action_handles
+            or self.context_claim_handles
+            or self.context_evidence_handles
+        ):
+            raise ValueError("grounded_render_slot_limitation_closure_invalid")
+        return self
+
+
 class GroundedAnswerProviderRequestV2(_StrictFrozenModel):
     version: Literal["grounded-answer-provider-request.v2"]
     language: Literal["zh-CN"]
@@ -169,24 +232,148 @@ class GroundedAnswerProviderRequestV2(_StrictFrozenModel):
     schema_hash: Sha256Hex
     field_policy_version: Literal["stage12-field-policy.v2"]
     field_policy_hash: Sha256Hex
+    runtime_binding_hash: Sha256Hex
     content_hash: Sha256Hex
 
     @model_validator(mode="after")
     def validate_request(self) -> "GroundedAnswerProviderRequestV2":
         identity_groups = (
-            tuple(item.objective_handle for item in self.objectives),
-            tuple(item.claim_handle for item in self.claims),
-            tuple(item.finding_handle for item in self.specialist_findings),
-            tuple(item.action_handle for item in self.actions),
-            tuple(item.evidence_handle for item in self.citations),
+            ("o", tuple(item.objective_handle for item in self.objectives)),
+            ("c", tuple(item.claim_handle for item in self.claims)),
+            ("f", tuple(item.finding_handle for item in self.specialist_findings)),
+            ("a", tuple(item.action_handle for item in self.actions)),
+            ("e", tuple(item.evidence_handle for item in self.citations)),
         )
-        if any(_duplicates(values) for values in identity_groups):
+        if any(_duplicates(values) for _, values in identity_groups):
             raise ValueError("grounded_request_identity_duplicate")
+        if any(
+            values
+            != tuple(f"{prefix}{index:03d}" for index in range(1, len(values) + 1))
+            for prefix, values in identity_groups
+        ):
+            raise ValueError("grounded_request_reference_order")
+        if any(
+            item.source_versions != (f"v{index:03d}",)
+            for index, item in enumerate(self.claims, start=1)
+        ) or any(
+            item.source_version != f"v{len(self.claims) + index:03d}"
+            for index, item in enumerate(self.citations, start=1)
+        ):
+            raise ValueError("grounded_request_version_reference_order")
+        objective_handles = {item.objective_handle for item in self.objectives}
+        if any(
+            item.objective_handle not in objective_handles
+            for item in self.specialist_findings
+        ):
+            raise ValueError("grounded_request_finding_objective_unknown")
+        claim_handles = {item.claim_handle for item in self.claims}
+        evidence_handles = {item.evidence_handle for item in self.citations}
+        if any(
+            not set(item.claim_handles).issubset(claim_handles)
+            or not set(item.evidence_handles).issubset(evidence_handles)
+            for item in self.specialist_findings
+        ):
+            raise ValueError("grounded_request_finding_reference_unknown")
         expected = specialist_payload_sha256(
             self.model_dump(mode="json", exclude={"content_hash"})
         )
         if self.content_hash != expected:
             raise ValueError("grounded_request_hash_mismatch")
+        return self
+
+
+class GroundedAnswerProviderRequestV3(GroundedAnswerProviderRequestV2):
+    """Private V3 request with a backend-sealed ordered render plan."""
+
+    version: Literal["grounded-answer-provider-request.v3"]
+    render_slots: tuple[GroundedRenderSlotV1, ...] = Field(min_length=1, max_length=7)
+
+    @model_validator(mode="after")
+    def validate_render_slots(self) -> "GroundedAnswerProviderRequestV3":
+        handles = tuple(item.slot_handle for item in self.render_slots)
+        if _duplicates(handles):
+            raise ValueError("grounded_render_slot_identity_duplicate")
+        if handles != tuple(f"s{index:03d}" for index in range(1, len(handles) + 1)):
+            raise ValueError("grounded_render_slot_reference_order")
+
+        objective_handles = {item.objective_handle for item in self.objectives}
+        claims = {item.claim_handle: item for item in self.claims}
+        evidence_handles = {item.evidence_handle for item in self.citations}
+        finding_handles = {
+            item.finding_handle: item for item in self.specialist_findings
+        }
+        action_handles = {item.action_handle for item in self.actions}
+        covered_claims: list[str] = []
+        covered_actions: list[str] = []
+        covered_objectives: set[str] = set()
+        for slot in self.render_slots:
+            if not set(slot.objective_handles).issubset(objective_handles):
+                raise ValueError("grounded_render_slot_objective_unknown")
+            if not set(slot.claim_handles).issubset(claims):
+                raise ValueError("grounded_render_slot_claim_unknown")
+            if not set(slot.evidence_handles).issubset(evidence_handles):
+                raise ValueError("grounded_render_slot_evidence_unknown")
+            if not set(slot.finding_handles).issubset(finding_handles):
+                raise ValueError("grounded_render_slot_finding_unknown")
+            if not set(slot.action_handles).issubset(action_handles):
+                raise ValueError("grounded_render_slot_action_unknown")
+            if not set(slot.context_claim_handles).issubset(claims):
+                raise ValueError("grounded_render_slot_context_claim_unknown")
+            if not set(slot.context_evidence_handles).issubset(evidence_handles):
+                raise ValueError("grounded_render_slot_context_evidence_unknown")
+            if slot.context_claim_handles:
+                if slot.statement_kind != "action_status":
+                    raise ValueError("grounded_render_slot_context_kind_invalid")
+                context_claims = tuple(
+                    claims[value] for value in slot.context_claim_handles
+                )
+                if any(
+                    item.status != "valid"
+                    or not set(item.objective_handles).intersection(
+                        slot.objective_handles
+                    )
+                    for item in context_claims
+                ):
+                    raise ValueError("grounded_render_slot_context_binding_invalid")
+                required_context_evidence = {
+                    value
+                    for item in context_claims
+                    for value in item.evidence_handles
+                }
+                if set(slot.context_evidence_handles) != required_context_evidence:
+                    raise ValueError("grounded_render_slot_context_evidence_invalid")
+            elif slot.context_evidence_handles:
+                raise ValueError("grounded_render_slot_context_evidence_invalid")
+            if slot.statement_kind in {"fact", "analysis", "recommendation"}:
+                required_claims = set(slot.claim_handles)
+                required_evidence = {
+                    value
+                    for handle in slot.claim_handles
+                    for value in claims[handle].evidence_handles
+                }
+                for handle in slot.finding_handles:
+                    finding = finding_handles[handle]
+                    if not set(finding.claim_handles).issubset(required_claims):
+                        raise ValueError("grounded_render_slot_finding_claim_mismatch")
+                    required_evidence.update(finding.evidence_handles)
+                if set(slot.evidence_handles) != required_evidence:
+                    raise ValueError("grounded_render_slot_evidence_closure_invalid")
+            covered_claims.extend(slot.claim_handles)
+            covered_actions.extend(slot.action_handles)
+            covered_objectives.update(slot.objective_handles)
+
+        valid_claims = {
+            item.claim_handle for item in self.claims if item.status == "valid"
+        }
+        if len(covered_claims) != len(set(covered_claims)) or set(covered_claims) != valid_claims:
+            raise ValueError("grounded_render_slot_claim_coverage_invalid")
+        if len(covered_actions) != len(set(covered_actions)) or set(covered_actions) != action_handles:
+            raise ValueError("grounded_render_slot_action_coverage_invalid")
+        if any(
+            item.required and item.objective_handle not in covered_objectives
+            for item in self.objectives
+        ):
+            raise ValueError("grounded_render_slot_objective_coverage_invalid")
         return self
 
 
@@ -204,11 +391,16 @@ class GroundedAnswerStatementV2(_StrictFrozenModel):
     ]
     claim_handles: tuple[ClaimHandle, ...] = Field(
         max_length=16,
-        description="Exact canonical claims supporting this statement.",
+        description="Exact request-local claims supporting this statement.",
     )
     evidence_handles: tuple[EvidenceHandle, ...] = Field(
         max_length=32,
         description="Exact evidence closure for the referenced claims.",
+    )
+    finding_handles: tuple[FindingHandle, ...] = Field(
+        default=(),
+        max_length=16,
+        description="Exact typed findings supporting analysis or synthesis.",
     )
     action_handles: tuple[ActionHandle, ...] = Field(
         max_length=16,
@@ -222,14 +414,19 @@ class GroundedAnswerStatementV2(_StrictFrozenModel):
             for values in (
                 self.claim_handles,
                 self.evidence_handles,
+                self.finding_handles,
                 self.action_handles,
             )
         ):
             raise ValueError("grounded_statement_reference_duplicate")
-        if self.statement_kind in {"fact", "analysis", "recommendation"} and (
-            not self.claim_handles or not self.evidence_handles
-        ):
-            raise ValueError("grounded_statement_claim_required")
+        if self.statement_kind in {"fact", "analysis", "recommendation"}:
+            partial_claim_closure = bool(self.claim_handles) != bool(
+                self.evidence_handles
+            )
+            if partial_claim_closure or (
+                not self.claim_handles and not self.finding_handles
+            ):
+                raise ValueError("grounded_statement_claim_required")
         if self.statement_kind == "action_status" and not self.action_handles:
             raise ValueError("grounded_statement_action_required")
         return self
@@ -271,6 +468,32 @@ class GroundedAnswerPlanV2(_StrictFrozenModel):
         if _duplicates(kinds):
             raise ValueError("grounded_answer_section_kind_duplicate")
         return self
+
+
+class GroundedRenderSlotTextV1(_StrictFrozenModel):
+    slot_handle: SlotHandle = Field(
+        description="Exact ordered request-local render slot being filled."
+    )
+    text: Annotated[
+        StrictStr,
+        Field(
+            min_length=1,
+            max_length=1600,
+            description="Chinese user-visible prose authored by the model for this slot.",
+        ),
+    ]
+
+
+class GroundedAnswerPlanV3(_StrictFrozenModel):
+    version: Literal["grounded-answer-plan.v3"] = Field(
+        default="grounded-answer-plan.v3",
+        description="Exact version of the sealed render-slot response contract.",
+    )
+    slot_outputs: tuple[GroundedRenderSlotTextV1, ...] = Field(
+        min_length=1,
+        max_length=7,
+        description="Text-only outputs in the exact request slot order.",
+    )
 
 
 class ProviderResponseFingerprintV1(_StrictFrozenModel):
@@ -386,7 +609,9 @@ __all__ = [
     "EvidenceHandle",
     "GroundedActionCandidateV2",
     "GroundedAnswerPlanV2",
+    "GroundedAnswerPlanV3",
     "GroundedAnswerProviderRequestV2",
+    "GroundedAnswerProviderRequestV3",
     "GroundedAnswerSectionV2",
     "GroundedAnswerStatementV2",
     "GroundedClaimCandidateV2",
@@ -394,12 +619,15 @@ __all__ = [
     "GroundedEvidenceCandidateV2",
     "GroundedObjectiveCandidateV2",
     "GroundedPresentationPolicyV2",
+    "GroundedRenderSlotTextV1",
+    "GroundedRenderSlotV1",
     "GroundedSectionKind",
     "GroundedSpecialistFindingV2",
     "GroundedStatementKind",
     "ObjectiveHandle",
     "ProviderResponseFingerprintV1",
     "ProviderResultStatus",
+    "SlotHandle",
     "canonical_json_type",
     "provider_response_sha256",
 ]

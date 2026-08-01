@@ -5,9 +5,8 @@ import json
 import pytest
 
 from app.schemas.agent_grounded_answer_v2 import (
-    GroundedAnswerPlanV2,
-    GroundedAnswerSectionV2,
-    GroundedAnswerStatementV2,
+    GroundedAnswerPlanV3,
+    GroundedRenderSlotTextV1,
     ProviderResponseFingerprintV1,
 )
 from app.schemas.agent_specialist_results import specialist_payload_sha256
@@ -22,25 +21,18 @@ from scripts.stage12_grounded_answer_preflight import (
 
 
 def _valid_plan(request):
-    return GroundedAnswerPlanV2(
-        sections=(
-            GroundedAnswerSectionV2(
-                section_kind="answer",
-                heading="结论",
-                statements=tuple(
-                    GroundedAnswerStatementV2(
-                        statement_kind="fact",
-                        text=(
-                            f"{claim.subject_label} 的 {claim.predicate_label}为"
-                            f" {claim.value_text}。"
-                        ),
-                        claim_handles=(claim.claim_handle,),
-                        evidence_handles=claim.evidence_handles,
-                        action_handles=(),
-                    )
-                    for claim in request.claims
-                ),
-            ),
+    claims = {item.claim_handle: item for item in request.claims}
+    return GroundedAnswerPlanV3(
+        slot_outputs=tuple(
+            GroundedRenderSlotTextV1(
+                slot_handle=slot.slot_handle,
+                text="；".join(
+                    f"{claims[handle].subject_label} 的 {claims[handle].predicate_label}为 {claims[handle].value_text}"
+                    for handle in slot.claim_handles
+                )
+                + "。",
+            )
+            for slot in request.render_slots
         )
     )
 
@@ -59,7 +51,7 @@ class _ValidProvider:
 
 def _capabilities():
     return {
-        "model_id": "deepseek/deepseek-v3.2",
+        "model_id": "z-ai/glm-5.2",
         "supported_parameters": (
             "reasoning",
             "response_format",
@@ -72,8 +64,35 @@ def test_preflight_freezes_four_shapes_for_three_rounds() -> None:
     requests = build_grounded_answer_preflight_requests()
 
     assert len(requests) == 12
+    assert all(
+        item.version == "grounded-answer-provider-request.v3" for item in requests
+    )
+    assert all(len(item.render_slots) == 1 for item in requests)
     assert tuple(len(item.claims) for item in requests) == (1, 2, 4, 7) * 3
     assert len({item.content_hash for item in requests}) == 12
+
+
+def test_preflight_uses_compact_request_local_references_and_reduces_payload() -> None:
+    request = build_grounded_answer_preflight_requests()[3]
+
+    assert tuple(item.objective_handle for item in request.objectives) == tuple(
+        f"o{index:03d}" for index in range(1, 8)
+    )
+    assert tuple(item.claim_handle for item in request.claims) == tuple(
+        f"c{index:03d}" for index in range(1, 8)
+    )
+    assert tuple(item.evidence_handle for item in request.citations) == tuple(
+        f"e{index:03d}" for index in range(1, 8)
+    )
+    assert tuple(item.source_versions for item in request.claims) == tuple(
+        (f"v{index:03d}",) for index in range(1, 8)
+    )
+    assert tuple(item.source_version for item in request.citations) == tuple(
+        f"v{index:03d}" for index in range(8, 15)
+    )
+    serialized = request.model_dump_json()
+    assert "sha256:" not in serialized
+    assert len(serialized.encode("utf-8")) <= 5_200
 
 
 def test_preflight_aborts_before_call_when_capability_is_missing() -> None:

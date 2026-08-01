@@ -369,3 +369,51 @@
   - `docs/superpowers/specs/2026-07-31-stage12-grounded-answer-provider-v2-design.md`
   - `docs/superpowers/plans/2026-07-31-stage12-grounded-answer-provider-v2.md`
   - `project-docs/08-implementation/STAGE_12_E_TYPED_SPECIALIST_PROVIDER_SOURCE_OF_TRUTH.md`
+
+## TDR-024 Stage12 Grounded Provider Compact References And Hard Deadline
+
+- Status: accepted for local implementation; explicitly confirmed by the user on 2026-08-01
+- Decision: replace only private Provider-visible Grounded Answer handles with deterministic request-local bounded aliases (`oNNN`, `cNNN`, `eNNN`, `aNNN`, `fNNN`, `vNNN`). Canonical objective/claim/evidence/action/version identities remain inside the sealed backend binding and remain the only identities written to render receipts and audit artifacts.
+- Security: exact alias membership, request hash, current scope/schema/field-policy/version proof, citation closure, atom validation, Action status and canonical runtime rebind remain mandatory. Unknown, duplicate, reordered/tampered or stale aliases fail closed. No public identifier or authorization proof is shortened.
+- Output budget: after compact references pass RED/GREEN and size evidence, the fixed DeepSeek Grounded Composer ceiling may increase from `1600` to `2400`; this does not weaken real-origin, grounding, latency or zero-fallback gates.
+- Transport: real Gateway HTTP calls must use a cancellable total wall-clock deadline equal to the remaining UTC deadline. Timeout creates one sanitized failure observation/fingerprint and leaves no background request or retry. Injected unit-test clients remain synchronous.
+- Boundary: private Provider contract and internal Gateway transport only. No public HTTP/SSE API, database schema, permission model, Action authority, Telegram behavior, deployment or production activation change.
+- Reference: `project-docs/08-implementation/STAGE_12_GROUNDED_PROVIDER_COMPACT_REFERENCE_DECISION.md`.
+
+## TDR-025 Stage12 Grounded Provider Typed Finding References And Final Gate
+
+- Status: accepted for local implementation; explicitly confirmed by the user on 2026-08-01
+- Decision: extend only the private Grounded Answer Provider contract so typed `RiskAssessmentSetV1` / `DailyBriefV1` / `StructuredFactSetV1` projections expose deterministic request-local finding references and exact objective binding. Provider output may reference those aliases; the backend expands them into the sealed claim/evidence closure before validation and canonical receipt rendering.
+- Action boundary: a sealed pending/denied/deferred Action status may cover a zero-claim internal `fact_query` prerequisite only in the defined Action flow. It does not authorize execution or permit unrelated factual objectives to pass without evidence.
+- Evaluation: final campaign release becomes non-compensable on per-case `FinalAnswerQualityScoreV2.gate_pass` and `real_provider_origin`. Any fallback or Provider schema/grounding/language failure makes release fail regardless of aggregate means.
+- Boundary: private Provider schema and evaluation release contract only. No public API, database schema, permission model, Action authority, Telegram behavior, deployment or production activation change.
+- Reference: `project-docs/08-implementation/STAGE_12_GROUNDED_PROVIDER_FINDING_REFERENCE_DECISION.md`.
+
+## TDR-026 Stage12 Grounded Composer Fixed GLM 5.2 Binding
+
+- Status: accepted for local binding and P1/P2/P3 evaluation; explicitly confirmed by the user on 2026-08-01
+- Supersedes: only the active Composer candidate binding in TDR-023. TDR-023 and every failed DeepSeek/Qwen/Gemini campaign remain immutable historical evidence.
+- Trigger: after the approved valid-only Claim projection, exact Claim coverage, exact Specialist finding closure and safe Daily projection corrections, the same 12 Human-Gold representative Cases were executed once per candidate through the production Grounded V2 adapter and final-answer scorer.
+- Evidence: `bytedance-seed/seed-2.0-lite` reached `11/12` real Provider and final-answer gates with one `permission_04` grounding fallback. `z-ai/glm-5.2` reached `12/12` real Provider, `12/12` final-answer gate, zero fallback and zero Provider failure; comparison hash `b968f3e0e8d8cacb3a661a46b1005e573fbf13f5eaa61daf88b74a45d5998a58`.
+- Decision:
+  1. Bind the single Stage12 Grounded Composer P1/P2/P3 model to `z-ai/glm-5.2`. TDR-027 later advances only its private RenderSlot profile contract to `composer.zh.grounded.glm-5.2.v3`; the model binding is unchanged.
+  2. Preserve the strict Grounded V2 Schema, `temperature=0.1`, 2,400-token ceiling, `reasoning.effort=none`, at most one bounded repair and 50-second total deadline.
+  3. Do not add automatic multi-model routing, silent failover, per-Case switching or Seed/DeepSeek runtime fallback.
+  4. Re-run production-bound P1 after the binding; the candidate comparison is selection evidence, not post-binding P1 acceptance.
+- Boundary: Composer model/profile identity only. No embedding, Planner/Specialist/Action model, API, database schema, permission, Telegram, deployment or production activation change.
+- Reference: `project-docs/08-implementation/STAGE_12_GROUNDED_COMPOSER_DOMESTIC_CANDIDATE_DECISION.md`.
+
+## TDR-027 Stage12 Grounded Composer Sealed RenderSlot Contract
+
+- Status: accepted for local implementation; explicitly confirmed by the user on 2026-08-01
+- Supersedes: the private free-form section/statement/reference response assembly in Grounded Answer V2. Historical V2 classes and failed evidence remain retained, but the active adapter accepts only V3.
+- Trigger: fixed GLM 5.2 passed post-binding P1 `12/12`, then the exact representative P2 reached only `33/36`. Sanitized diagnostics proved intermittent model reconstruction of nonexistent Action statements and mismatched Fact/Risk reference arrays; evidence and model transport were available.
+- Decision:
+  1. The backend projects an ordered `RenderSlotPlan` from authorized objectives, valid Claims, exact finding closures and pending-only Action status.
+  2. The Provider response is `GroundedAnswerPlanV3` and contains only ordered `slot_handle + text` outputs. Section kind, statement kind, objective/Claim/evidence/finding/Action closures and headings are backend-owned.
+  3. Missing, duplicate, unknown or reordered slots fail closed. `actions=[]` cannot produce an Action slot. Mixed compatible Fact/Risk/Daily closures may share one synthesis slot.
+  4. Every visible answer sentence remains real-model authored. Deterministic fallback remains runtime safety only and cannot satisfy P1/P2/P3.
+  5. Preserve canonical atom, Chinese, permission/version, Action non-execution, exact receipt, deadline and zero-unauthorized-effect gates.
+  6. Advance the private profile ID to `composer.zh.grounded.glm-5.2.v3`; do not change the fixed `z-ai/glm-5.2` model or add model routing/failover.
+- Boundary: private Composer request/response and validation only. No public API, database schema, permission model, Action authority, Telegram behavior, deployment topology or production activation change.
+- Reference: `project-docs/08-implementation/STAGE_12_GROUNDED_PROVIDER_RENDER_SLOT_DECISION.md`.

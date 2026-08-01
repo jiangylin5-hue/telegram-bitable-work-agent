@@ -8,8 +8,8 @@ from typing import Protocol
 from pydantic import ValidationError
 
 from app.schemas.agent_grounded_answer_v2 import (
-    GroundedAnswerPlanV2,
-    GroundedAnswerProviderRequestV2,
+    GroundedAnswerPlanV3,
+    GroundedAnswerProviderRequestV3,
     ProviderResponseFingerprintV1,
     canonical_json_type,
     provider_response_sha256,
@@ -44,8 +44,8 @@ class GroundedAnswerProviderInvocationError(RuntimeError):
         self.code = code
 
 
-GROUNDED_COMPOSER_MODEL_ID = "deepseek/deepseek-v3.2"
-GROUNDED_COMPOSER_PROFILE_ID = "composer.zh.grounded.deepseek-v3.2.v2"
+GROUNDED_COMPOSER_MODEL_ID = "z-ai/glm-5.2"
+GROUNDED_COMPOSER_PROFILE_ID = "composer.zh.grounded.glm-5.2.v3"
 
 
 def build_grounded_composer_profile(*, max_attempts: int = 2) -> ModelProfileV1:
@@ -58,7 +58,7 @@ def build_grounded_composer_profile(*, max_attempts: int = 2) -> ModelProfileV1:
         "supports_strict_json_schema": True,
         "response_language": "zh-Hans",
         "temperature": 0.1,
-        "max_output_tokens": 1600,
+        "max_output_tokens": 2400,
         "request_timeout_seconds": 25,
         "max_attempts": max_attempts,
         "max_concurrency": 2,
@@ -75,16 +75,9 @@ def _json_shape(content: str) -> tuple[str, tuple[str, ...], int, int]:
         return "invalid_json", (), 0, 0
     top_level_type = canonical_json_type(payload)
     keys = tuple(sorted(payload)) if isinstance(payload, dict) else ()
-    sections = payload.get("sections") if isinstance(payload, dict) else None
-    section_count = len(sections) if isinstance(sections, list) else 0
-    statement_count = 0
-    if isinstance(sections, list):
-        for section in sections:
-            statements = (
-                section.get("statements") if isinstance(section, dict) else None
-            )
-            if isinstance(statements, list):
-                statement_count += len(statements)
+    slots = payload.get("slot_outputs") if isinstance(payload, dict) else None
+    section_count = len(slots) if isinstance(slots, list) else 0
+    statement_count = section_count
     return top_level_type, keys, section_count, statement_count
 
 
@@ -145,19 +138,19 @@ class GroundedAnswerProviderAdapterV2:
         self.failure_code: ProviderFailureCode | None = None
 
     def __call__(
-        self, request: GroundedAnswerProviderRequestV2
-    ) -> GroundedAnswerPlanV2:
+        self, request: GroundedAnswerProviderRequestV3
+    ) -> GroundedAnswerPlanV3:
         self.observations = ()
         self.diagnostics = ()
         self.transport_diagnostics = ()
         self.failure_code = None
         diagnostics: list[ProviderResponseFingerprintV1] = []
 
-        def validate(content: str) -> GroundedAnswerPlanV2:
+        def validate(content: str) -> GroundedAnswerPlanV3:
             attempt = len(diagnostics) + 1
             repair = attempt > 1
             try:
-                plan = GroundedAnswerPlanV2.model_validate_json(content)
+                plan = GroundedAnswerPlanV3.model_validate_json(content)
             except ValidationError as exc:
                 error_types, paths = _validation_details(exc)
                 diagnostics.append(
@@ -197,17 +190,18 @@ class GroundedAnswerProviderAdapterV2:
                 {
                     "role": "system",
                     "content": (
-                        "你负责撰写完整最终中文回答，而不是只排序章节。"
-                        "只能使用请求中的 objective、claim、evidence、action 和 finding 句柄。"
-                        "事实、数字、实体、状态和引用必须与所引用 claim 完全一致，不能编造。"
-                        "每条事实、分析或建议必须给出完整 claim/evidence 引用闭包。"
-                        "Action 只能说明待确认、拒绝、延后或冲突，绝不能声称已执行。"
-                        "使用最少必要的 section 和 statement；每个 claim 只出现一次，"
-                        "不要重复事实、解释规则或复述引用。"
-                        "除非用户 Query 明确要求分析或建议，否则只写简短事实结论。"
-                        "不要输出推理过程，直接输出最终 JSON 对象。"
-                        "不要在可见 text 或 heading 中输出 handle；引用只放在对应数组中。"
-                        "仅返回符合 GroundedAnswerPlanV2 JSON Schema 的对象。"
+                        "你负责为后端已经密封的 RenderSlot 撰写完整最终中文回答。"
+                        "后端已经决定 section_kind、statement_kind 以及 objective、claim、"
+                        "evidence、finding、action 的全部引用闭包；你不得重建、修改或补充它们。"
+                        "每个 required slot_handle 按请求顺序恰好返回一次，"
+                        "只能填写 slot_handle 和中文 text。"
+                        "text 只能使用该 slot 密封闭包中的安全事实、数字、实体、状态与 Specialist 结论，"
+                        "不能编造，不能输出任何 handle。"
+                        "若 slot 含 finding，优先忠实表达对应 finding.safe_text；"
+                        "若为 action_status，只能表达 action.safe_summary 中的待确认、拒绝、延后或冲突，"
+                        "绝不能声称已经执行。"
+                        "不要输出标题、引用数组、推理过程或额外字段。"
+                        "仅返回符合 GroundedAnswerPlanV3 JSON Schema 的对象。"
                     ),
                 },
                 {
@@ -220,7 +214,7 @@ class GroundedAnswerProviderAdapterV2:
                     ),
                 },
             ),
-            response_schema=GroundedAnswerPlanV2.model_json_schema(),
+            response_schema=GroundedAnswerPlanV3.model_json_schema(),
             validate=validate,
             deadline_at=self._now() + timedelta(seconds=self._deadline_seconds),
             reasoning_effort="none",
@@ -228,7 +222,7 @@ class GroundedAnswerProviderAdapterV2:
         self.observations = result.observations
         self.transport_diagnostics = result.transport_diagnostics
         if result.status != "completed" or not isinstance(
-            result.payload, GroundedAnswerPlanV2
+            result.payload, GroundedAnswerPlanV3
         ):
             self.failure_code = result.failure_code or "provider_schema_invalid"
             raise GroundedAnswerProviderInvocationError(self.failure_code)

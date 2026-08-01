@@ -22,7 +22,9 @@ Immutable failed attempts are retained under `evidence/stage12-grounded-answer-p
 - DeepSeek V3.2 best attempt: real grounded `11/12`, one token-cap JSON truncation.
 - DeepSeek fixed-seed experiment: regressed to `9/12`; the experiment was rejected and reverted.
 
-Current measured root causes are long private Provider handles/output-token pressure and the absence of a true wall-clock transport deadline. No failed attempt used fallback, selective retry, business data, confirmed Action, write or Telegram send. The next proposed private contract correction requires explicit confirmation before implementation.
+Current measured root causes are long private Provider handles/output-token pressure and the absence of a true wall-clock transport deadline. No failed attempt used fallback, selective retry, business data, confirmed Action, write or Telegram send. The private contract correction was held at its confirmation gate until the user approved it.
+
+The user explicitly confirmed the compact-reference and hard-deadline correction on 2026-08-01. Local implementation is authorized under `STAGE_12_GROUNDED_PROVIDER_COMPACT_REFERENCE_DECISION.md`; this does not authorize P2/P3 bypass, deployment, production activation, business writes or Telegram sends.
 
 ## 2026-07-30 Audit Correction Result
 
@@ -105,3 +107,9 @@ Detailed evidence: `evidence/stage12-e-typed-specialist-provider-2026-07-30.md`.
 ## Grounded Answer V2 Reopened Gate
 
 The `144/144` returned-answer result cannot be cited as real-model acceptance because only `24/144` cases completed the real Composer path and `120/144` used deterministic fallback. The failure taxonomy contains 240 schema-invalid attempts and the total-latency P95 gate also failed. Stage12-E therefore remains `FAIL` until the approved Grounded Answer Provider V2 produces real model-authored answers and passes P1/P2/P3 with zero fallback in P3.
+
+## 2026-08-01 RenderSlot V3 Local Status
+
+The user-approved TDR-027 RenderSlot correction is `implemented-local-deterministic-verified`. The active adapter now accepts only ordered text-only `GroundedAnswerPlanV3` output and the backend owns all section/statement/reference closures. Fresh focused evidence is `143 passed`, including a deterministic 48 × 3 campaign at `144/144` real-origin-shaped answers with zero fallback; full unit is `2167 passed`. This deterministic result is not real Provider acceptance.
+
+Real status correction: V3 P1 passed `12/12`, but exact P2 failed twice at `26/36` and `24/36` real/final answers with zero unauthorized effects/writes/sends. Both failures are retained; fallback remains an acceptance failure. The proposed per-slot isolated Provider topology awaits explicit confirmation, so full campaign, native server and Telegram remain blocked.

@@ -24,12 +24,13 @@ from pydantic import (
 )
 
 from app.schemas.agent_grounded_answer_v2 import (
-    GroundedAnswerPlanV2,
-    GroundedAnswerProviderRequestV2,
+    GroundedAnswerPlanV3,
+    GroundedAnswerProviderRequestV3,
     GroundedClaimCandidateV2,
     GroundedEvidenceCandidateV2,
     GroundedObjectiveCandidateV2,
     GroundedPresentationPolicyV2,
+    GroundedRenderSlotV1,
     ProviderResponseFingerprintV1,
 )
 from app.schemas.agent_specialist_results import specialist_payload_sha256
@@ -121,24 +122,19 @@ class _Provider(Protocol):
     transport_diagnostics: tuple[object, ...]
 
     def __call__(
-        self, request: GroundedAnswerProviderRequestV2
-    ) -> GroundedAnswerPlanV2: ...
+        self, request: GroundedAnswerProviderRequestV3
+    ) -> GroundedAnswerPlanV3: ...
 
 
-def _handle(kind: str, value: object) -> str:
-    return f"{kind}:sha256:{specialist_payload_sha256({'kind': kind, 'value': value})}"
-
-
-def _request(round_number: int, claim_count: int) -> GroundedAnswerProviderRequestV2:
+def _request(round_number: int, claim_count: int) -> GroundedAnswerProviderRequestV3:
     objectives = []
     claims = []
     citations = []
     for index in range(1, claim_count + 1):
-        identity = {"round": round_number, "shape": claim_count, "index": index}
-        objective_handle = _handle("objective", identity)
-        claim_handle = _handle("claim", identity)
-        evidence_handle = _handle("evidence", identity)
-        version_handle = _handle("record-version", identity)
+        objective_handle = f"o{index:03d}"
+        claim_handle = f"c{index:03d}"
+        evidence_handle = f"e{index:03d}"
+        version_handle = f"v{index:03d}"
         objectives.append(
             GroundedObjectiveCandidateV2(
                 objective_handle=objective_handle,
@@ -166,11 +162,11 @@ def _request(round_number: int, claim_count: int) -> GroundedAnswerProviderReque
             GroundedEvidenceCandidateV2(
                 evidence_handle=evidence_handle,
                 display_label=f"证据 {index}",
-                source_version=version_handle,
+                source_version=f"v{claim_count + index:03d}",
             )
         )
     values = {
-        "version": "grounded-answer-provider-request.v2",
+        "version": "grounded-answer-provider-request.v3",
         "language": "zh-CN",
         "query": (
             f"请基于 {claim_count} 条授权事实给出完整中文结论；"
@@ -181,6 +177,23 @@ def _request(round_number: int, claim_count: int) -> GroundedAnswerProviderReque
         "specialist_findings": (),
         "actions": (),
         "citations": tuple(citations),
+        "render_slots": (
+            GroundedRenderSlotV1(
+                slot_handle="s001",
+                section_kind="answer",
+                statement_kind="fact",
+                objective_handles=tuple(
+                    item.objective_handle for item in objectives
+                ),
+                claim_handles=tuple(item.claim_handle for item in claims),
+                evidence_handles=tuple(
+                    item.evidence_handle for item in citations
+                ),
+                finding_handles=(),
+                action_handles=(),
+                required=True,
+            ),
+        ),
         "presentation_policy": GroundedPresentationPolicyV2(
             max_sections=7,
             max_statements_per_section=12,
@@ -207,20 +220,26 @@ def _request(round_number: int, claim_count: int) -> GroundedAnswerProviderReque
         "schema_hash": specialist_payload_sha256({"schema": "stage12-p1"}),
         "field_policy_version": "stage12-field-policy.v2",
         "field_policy_hash": specialist_payload_sha256({"policy": "stage12-p1"}),
+        "runtime_binding_hash": specialist_payload_sha256(
+            {"round": round_number, "shape": claim_count, "binding": "sealed"}
+        ),
     }
     hash_values = {
         **values,
         "objectives": tuple(item.model_dump(mode="json") for item in objectives),
         "claims": tuple(item.model_dump(mode="json") for item in claims),
         "citations": tuple(item.model_dump(mode="json") for item in citations),
+        "render_slots": tuple(
+            item.model_dump(mode="json") for item in values["render_slots"]
+        ),
         "presentation_policy": values["presentation_policy"].model_dump(mode="json"),
     }
     values["content_hash"] = specialist_payload_sha256(hash_values)
-    return GroundedAnswerProviderRequestV2.model_validate(values)
+    return GroundedAnswerProviderRequestV3.model_validate(values)
 
 
 def build_grounded_answer_preflight_requests() -> (
-    tuple[GroundedAnswerProviderRequestV2, ...]
+    tuple[GroundedAnswerProviderRequestV3, ...]
 ):
     return tuple(
         _request(round_number, shape)

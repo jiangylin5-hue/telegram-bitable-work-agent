@@ -1,0 +1,383 @@
+{
+  "version": "grounded-answer-p2-campaign.v1",
+  "created_at_utc": "2026-08-01T06:26:51.472979Z",
+  "model_id": "z-ai/glm-5.2",
+  "profile_id": "composer.zh.grounded.glm-5.2.v3",
+  "case_ids": [
+    "join_01",
+    "join_07",
+    "risk_02",
+    "daily_03",
+    "draft_02",
+    "task_01",
+    "reminder_01",
+    "permission_01",
+    "permission_04",
+    "fault_01",
+    "mixed_02",
+    "mixed_08"
+  ],
+  "case_count": 12,
+  "rounds": 3,
+  "results": [
+    {
+      "round_id": "round-01",
+      "case_id": "join_01",
+      "answer_source": "deterministic_fallback",
+      "provider_result_status": "grounding_failed",
+      "final_answer_gate_pass": false,
+      "release_gate_pass": false,
+      "reason_codes": [
+        "real_provider_origin_failed"
+      ]
+    },
+    {
+      "round_id": "round-01",
+      "case_id": "join_07",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-01",
+      "case_id": "risk_02",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-01",
+      "case_id": "daily_03",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-01",
+      "case_id": "draft_02",
+      "answer_source": "deterministic_fallback",
+      "provider_result_status": "grounding_failed",
+      "final_answer_gate_pass": false,
+      "release_gate_pass": false,
+      "reason_codes": [
+        "real_provider_origin_failed"
+      ]
+    },
+    {
+      "round_id": "round-01",
+      "case_id": "task_01",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-01",
+      "case_id": "reminder_01",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-01",
+      "case_id": "permission_01",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-01",
+      "case_id": "permission_04",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-01",
+      "case_id": "fault_01",
+      "answer_source": "deterministic_fallback",
+      "provider_result_status": "grounding_failed",
+      "final_answer_gate_pass": false,
+      "release_gate_pass": false,
+      "reason_codes": [
+        "real_provider_origin_failed"
+      ]
+    },
+    {
+      "round_id": "round-01",
+      "case_id": "mixed_02",
+      "answer_source": "deterministic_fallback",
+      "provider_result_status": "grounding_failed",
+      "final_answer_gate_pass": false,
+      "release_gate_pass": false,
+      "reason_codes": [
+        "real_provider_origin_failed"
+      ]
+    },
+    {
+      "round_id": "round-01",
+      "case_id": "mixed_08",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-02",
+      "case_id": "join_01",
+      "answer_source": "deterministic_fallback",
+      "provider_result_status": "grounding_failed",
+      "final_answer_gate_pass": false,
+      "release_gate_pass": false,
+      "reason_codes": [
+        "real_provider_origin_failed"
+      ]
+    },
+    {
+      "round_id": "round-02",
+      "case_id": "join_07",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-02",
+      "case_id": "risk_02",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-02",
+      "case_id": "daily_03",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-02",
+      "case_id": "draft_02",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-02",
+      "case_id": "task_01",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-02",
+      "case_id": "reminder_01",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-02",
+      "case_id": "permission_01",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-02",
+      "case_id": "permission_04",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-02",
+      "case_id": "fault_01",
+      "answer_source": "deterministic_fallback",
+      "provider_result_status": "grounding_failed",
+      "final_answer_gate_pass": false,
+      "release_gate_pass": false,
+      "reason_codes": [
+        "real_provider_origin_failed"
+      ]
+    },
+    {
+      "round_id": "round-02",
+      "case_id": "mixed_02",
+      "answer_source": "deterministic_fallback",
+      "provider_result_status": "grounding_failed",
+      "final_answer_gate_pass": false,
+      "release_gate_pass": false,
+      "reason_codes": [
+        "real_provider_origin_failed"
+      ]
+    },
+    {
+      "round_id": "round-02",
+      "case_id": "mixed_08",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-03",
+      "case_id": "join_01",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-03",
+      "case_id": "join_07",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-03",
+      "case_id": "risk_02",
+      "answer_source": "deterministic_fallback",
+      "provider_result_status": "grounding_failed",
+      "final_answer_gate_pass": false,
+      "release_gate_pass": false,
+      "reason_codes": [
+        "real_provider_origin_failed"
+      ]
+    },
+    {
+      "round_id": "round-03",
+      "case_id": "daily_03",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-03",
+      "case_id": "draft_02",
+      "answer_source": "deterministic_fallback",
+      "provider_result_status": "grounding_failed",
+      "final_answer_gate_pass": false,
+      "release_gate_pass": false,
+      "reason_codes": [
+        "real_provider_origin_failed"
+      ]
+    },
+    {
+      "round_id": "round-03",
+      "case_id": "task_01",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-03",
+      "case_id": "reminder_01",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-03",
+      "case_id": "permission_01",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-03",
+      "case_id": "permission_04",
+      "answer_source": "deterministic_fallback",
+      "provider_result_status": "grounding_failed",
+      "final_answer_gate_pass": false,
+      "release_gate_pass": false,
+      "reason_codes": [
+        "real_provider_origin_failed"
+      ]
+    },
+    {
+      "round_id": "round-03",
+      "case_id": "fault_01",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-03",
+      "case_id": "mixed_02",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    },
+    {
+      "round_id": "round-03",
+      "case_id": "mixed_08",
+      "answer_source": "real_provider",
+      "provider_result_status": "completed",
+      "final_answer_gate_pass": true,
+      "release_gate_pass": true,
+      "reason_codes": []
+    }
+  ],
+  "real_provider_count": 26,
+  "final_answer_gate_pass_count": 26,
+  "release_gate_pass_count": 26,
+  "fallback_count": 10,
+  "provider_attempt_count": 46,
+  "provider_mean_latency_ms": 3293,
+  "provider_p95_latency_ms": 4553,
+  "failure_counts": {
+    "provider_grounding_invalid": 20
+  },
+  "unauthorized_effect_count": 0,
+  "production_write_count": 0,
+  "telegram_send_count": 0,
+  "gate_pass": false,
+  "content_hash": "e16ab508806f0d6e52bdb4337ea697930514e70f885571abafcbd8fda6598b99"
+}

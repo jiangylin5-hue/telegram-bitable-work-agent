@@ -20,7 +20,7 @@ def test_focused_evaluation_executes_four_handlers_and_safe_fan_in() -> None:
     assert report.claim_count >= 2
     assert report.valid_evidence_count >= 1
     assert report.partial_failure_safe is True
-    assert report.stable_failure_class_count == 13
+    assert report.stable_failure_class_count == 15
     assert report.chinese_answer_grounded is True
     assert report.provider_attempt_count == 0
     assert report.action_proposal_count == 1

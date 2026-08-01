@@ -8,16 +8,22 @@ from app.schemas.agent_specialist_results import (
     ProviderAttemptObservationV1,
     specialist_payload_sha256,
 )
-from app.services.agent_composer_v2 import (
-    ComposerSectionOrderingPlanV1,
+from app.schemas.agent_grounded_answer_v2 import (
+    GroundedAnswerPlanV3,
+    GroundedRenderSlotTextV1,
 )
-from app.services.agent_composer_provider import ComposerProviderInvocationError
+from app.services.agent_grounded_answer_provider import (
+    GroundedAnswerProviderInvocationError,
+)
 from app.schemas.retrieval_v2 import canonical_retrieval_sha256
 from scripts.stage12_final_provider_campaign import (
+    REPRESENTATIVE_P2_CASE_IDS,
     _round_observation,
+    execute_grounded_p2_campaign,
     execute_final_provider_campaign,
     main,
     validate_human_gold_signoff,
+    write_grounded_p2_campaign,
     write_final_provider_campaign,
 )
 from scripts.stage12_isolated_af_runner import IsolatedAFExecutor
@@ -53,6 +59,33 @@ def _pending_cases():
     )
 
 
+def _representative_cases():
+    by_id = {item.case_id: item for item in _approved_cases()}
+    return tuple(by_id[case_id] for case_id in REPRESENTATIVE_P2_CASE_IDS)
+
+
+def _valid_grounded_plan(request) -> GroundedAnswerPlanV3:
+    claims = {item.claim_handle: item for item in request.claims}
+    actions = {item.action_handle: item for item in request.actions}
+    outputs = []
+    for slot in request.render_slots:
+        if slot.statement_kind in {"fact", "analysis", "recommendation"}:
+            text = "；".join(
+                f"{claims[handle].subject_label} 的{claims[handle].predicate_label}为 {claims[handle].value_text}"
+                for handle in slot.claim_handles
+            ) + "。"
+        elif slot.statement_kind == "action_status":
+            text = "；".join(
+                actions[handle].safe_summary for handle in slot.action_handles
+            )
+        else:
+            text = "当前存在无法完成或降级的部分，未提供未经验证的结论。"
+        outputs.append(
+            GroundedRenderSlotTextV1(slot_handle=slot.slot_handle, text=text)
+        )
+    return GroundedAnswerPlanV3(slot_outputs=tuple(outputs))
+
+
 class _ValidComposerProvider:
     def __init__(self) -> None:
         self.observations: tuple[ProviderAttemptObservationV1, ...] = ()
@@ -63,9 +96,9 @@ class _ValidComposerProvider:
         values = {
             "version": "provider-attempt.v1",
             "role": "composer",
-            "profile_id": "composer.zh.baseline.v1",
+            "profile_id": "composer.zh.grounded.glm-5.2.v3",
             "provider": "openrouter-compatible",
-            "model_id": "google/gemini-2.5-flash",
+            "model_id": "z-ai/glm-5.2",
             "attempt": 1,
             "status": "completed",
             "failure_code": None,
@@ -76,22 +109,7 @@ class _ValidComposerProvider:
         }
         values["observation_hash"] = specialist_payload_sha256(values)
         self.observations = (ProviderAttemptObservationV1.model_validate(values),)
-        handles = tuple(item.section_handle for item in request.candidates)
-        return ComposerSectionOrderingPlanV1(
-            ordered_section_handles=handles,
-            connector_by_handle={
-                item.section_handle: (
-                    "direct"
-                    if index == 0
-                    else next(
-                        code
-                        for code in item.allowed_connector_codes
-                        if code != "direct"
-                    )
-                )
-                for index, item in enumerate(request.candidates)
-            },
-        )
+        return _valid_grounded_plan(request)
 
 
 class _IntermittentInvalidComposerProvider:
@@ -109,9 +127,9 @@ class _IntermittentInvalidComposerProvider:
         values = {
             "version": "provider-attempt.v1",
             "role": "composer",
-            "profile_id": "composer.zh.baseline.v1",
+            "profile_id": "composer.zh.grounded.glm-5.2.v3",
             "provider": "openrouter-compatible",
-            "model_id": "google/gemini-2.5-flash",
+            "model_id": "z-ai/glm-5.2",
             "attempt": 1,
             "status": "failed" if failure_code else "completed",
             "failure_code": failure_code,
@@ -123,23 +141,8 @@ class _IntermittentInvalidComposerProvider:
         values["observation_hash"] = specialist_payload_sha256(values)
         self.observations = (ProviderAttemptObservationV1.model_validate(values),)
         if failure_code is not None:
-            raise ComposerProviderInvocationError(failure_code)
-        handles = tuple(item.section_handle for item in request.candidates)
-        return ComposerSectionOrderingPlanV1(
-            ordered_section_handles=handles,
-            connector_by_handle={
-                item.section_handle: (
-                    "direct"
-                    if index == 0
-                    else next(
-                        code
-                        for code in item.allowed_connector_codes
-                        if code != "direct"
-                    )
-                )
-                for index, item in enumerate(request.candidates)
-            },
-        )
+            raise GroundedAnswerProviderInvocationError(failure_code)
+        return _valid_grounded_plan(request)
 
 
 def _retrieval_report(round_number: int) -> Stage12RetrievalEvaluationReportV1:
@@ -275,12 +278,84 @@ def test_final_campaign_keeps_144_traces_but_fails_provider_availability() -> No
     assert provider.call_count == 144
     assert len(bundle.report.results) == 144
     assert [item.unavailable_count for item in bundle.provider_rounds] == [1, 1, 1]
-    assert all(item.score.final_answer.gate_pass for item in bundle.report.results)
+    failed_answers = tuple(
+        item
+        for item in bundle.report.results
+        if not item.score.final_answer.gate_pass
+    )
+    assert len(failed_answers) == 3
+    assert all(
+        item.score.final_answer.real_provider_origin is False
+        and "real_provider_origin_failed" in item.score.final_answer.reason_codes
+        for item in failed_answers
+    )
     assert bundle.summary.metrics["provider_unavailable_rate"].gate_pass is False
     assert bundle.summary.release_gate_pass is False
     assert all(item.confirmed_action_count == 0 for item in bundle.provider_rounds)
     assert all(item.production_write_count == 0 for item in bundle.provider_rounds)
     assert all(item.telegram_send_count == 0 for item in bundle.provider_rounds)
+
+
+def test_grounded_p2_runs_exact_12_cases_for_three_real_provider_rounds(
+    tmp_path,
+) -> None:
+    provider = _ValidComposerProvider()
+    executor = IsolatedAFExecutor(composer_provider=provider)
+
+    campaign = execute_grounded_p2_campaign(
+        cases=_representative_cases(),
+        executor=executor,
+        observations=executor.observations,
+        now=lambda: datetime(2026, 8, 1, tzinfo=UTC),
+    )
+
+    assert campaign.case_ids == REPRESENTATIVE_P2_CASE_IDS
+    assert campaign.case_count == 12
+    assert campaign.rounds == 3
+    assert len(campaign.results) == 36
+    assert provider.call_count == 36
+    assert campaign.real_provider_count == 36
+    assert campaign.final_answer_gate_pass_count == 36
+    assert campaign.fallback_count == 0
+    assert campaign.unauthorized_effect_count == 0
+    assert campaign.production_write_count == 0
+    assert campaign.telegram_send_count == 0
+    assert campaign.gate_pass is True
+
+    json_path, markdown_path = write_grounded_p2_campaign(
+        campaign,
+        output_dir=tmp_path / "p2",
+    )
+    encoded = json_path.read_text(encoding="utf-8") + markdown_path.read_text(
+        encoding="utf-8"
+    )
+    assert campaign.content_hash in encoded
+    for forbidden in (
+        "rendered_answer",
+        "expected_answer",
+        "gold_truth",
+        "OPENROUTER_API_KEY",
+    ):
+        assert forbidden not in encoded
+
+
+def test_grounded_p2_retains_one_provider_failure_and_fails_gate() -> None:
+    provider = _IntermittentInvalidComposerProvider()
+    executor = IsolatedAFExecutor(composer_provider=provider)
+
+    campaign = execute_grounded_p2_campaign(
+        cases=_representative_cases(),
+        executor=executor,
+        observations=executor.observations,
+        now=lambda: datetime(2026, 8, 1, tzinfo=UTC),
+    )
+
+    assert provider.call_count == 36
+    assert len(campaign.results) == 36
+    assert campaign.real_provider_count == 35
+    assert campaign.final_answer_gate_pass_count == 35
+    assert campaign.fallback_count == 1
+    assert campaign.gate_pass is False
 
 
 def test_human_gold_validator_requires_exactly_48_unique_approved_cases() -> None:

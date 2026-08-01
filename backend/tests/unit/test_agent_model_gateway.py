@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 import json
 from threading import Event, Thread
+from time import monotonic
 
 import httpx
 import pytest
@@ -296,6 +298,84 @@ def test_gateway_does_not_retry_permission_or_exhausted_deadline() -> None:
     )
     assert deadline_result.failure_code == "deadline_exhausted"
     assert untouched.requests == []
+
+
+def test_native_network_path_enforces_total_wall_clock_deadline(monkeypatch) -> None:
+    cancelled = Event()
+    closed = Event()
+    completed = Event()
+
+    class _BlockingAsyncNetworkClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            closed.set()
+
+        async def post(self, *_args, **_kwargs):
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+            completed.set()
+            return _response("{}")
+
+    monkeypatch.setattr(
+        "app.services.agent_model_gateway.httpx.AsyncClient",
+        _BlockingAsyncNetworkClient,
+    )
+    monkeypatch.setattr(
+        "app.services.agent_model_gateway.httpx.Client",
+        lambda: (_ for _ in ()).throw(AssertionError("sync network path used")),
+    )
+    gateway = ModelGatewayV1(
+        api_key="test-key",
+        base_url="https://openrouter.ai/api/v1",
+        profiles={"risk": _profile()},
+        now=lambda: datetime.now(UTC),
+    )
+    started = monotonic()
+
+    result = gateway.invoke(
+        role="risk",
+        messages=({"role": "user", "content": "bounded"},),
+        response_schema={"type": "object"},
+        validate=_validator,
+        deadline_at=datetime.now(UTC) + timedelta(seconds=0.05),
+    )
+
+    assert monotonic() - started < 0.2
+    assert result.status == "failed"
+    assert result.failure_code in {"provider_timeout", "deadline_exhausted"}
+    assert cancelled.is_set()
+    assert closed.is_set()
+    assert not completed.is_set()
+    assert len(result.observations) == 1
+    assert result.observations[0].failure_code == "provider_timeout"
+    assert len(result.transport_diagnostics) == 1
+    assert result.transport_diagnostics[0].transport_kind == "timeout"
+
+
+def test_gateway_rechecks_deadline_after_concurrency_admission() -> None:
+    calls = 0
+
+    def elapsed_while_waiting() -> datetime:
+        nonlocal calls
+        calls += 1
+        return NOW if calls == 1 else NOW + timedelta(seconds=31)
+
+    client = _Client([_response("{}")])
+    result = _gateway(client, now=elapsed_while_waiting).invoke(
+        role="risk",
+        messages=({"role": "user", "content": "bounded"},),
+        response_schema={"type": "object"},
+        validate=_validator,
+        deadline_at=NOW + timedelta(seconds=30),
+    )
+
+    assert result.failure_code == "deadline_exhausted"
+    assert client.requests == []
 
 
 def test_gateway_fails_closed_for_missing_key_or_unbound_role() -> None:

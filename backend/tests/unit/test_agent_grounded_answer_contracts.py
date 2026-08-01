@@ -7,7 +7,9 @@ import pytest
 from pydantic import ValidationError
 
 from app.schemas.agent_grounded_answer_v2 import (
+    GroundedAnswerPlanV3,
     GroundedAnswerPlanV2,
+    GroundedRenderSlotTextV1,
     GroundedAnswerSectionV2,
     GroundedAnswerStatementV2,
     GroundedComposerResultV2,
@@ -20,8 +22,8 @@ def _valid_fact_statement() -> GroundedAnswerStatementV2:
     return GroundedAnswerStatementV2(
         statement_kind="fact",
         text="Atlas 项目有 2 个高优先级且未完成的工作项。",
-        claim_handles=("claim:sha256:" + "a" * 64,),
-        evidence_handles=("evidence:sha256:" + "b" * 64,),
+        claim_handles=("c001",),
+        evidence_handles=("e001",),
         action_handles=(),
     )
 
@@ -46,6 +48,29 @@ def test_provider_response_schema_has_only_closed_fixed_property_objects() -> No
     assert object_nodes
     assert all(node.get("additionalProperties") is False for node in object_nodes)
     assert '"additionalProperties": {' not in json.dumps(schema, sort_keys=True)
+
+
+def test_render_slot_response_schema_exposes_only_ordered_slot_text() -> None:
+    schema = GroundedAnswerPlanV3.model_json_schema()
+    encoded = json.dumps(schema, sort_keys=True)
+
+    assert set(schema["properties"]) == {"version", "slot_outputs"}
+    assert "section_kind" not in encoded
+    assert "statement_kind" not in encoded
+    assert "claim_handles" not in encoded
+    assert "evidence_handles" not in encoded
+    assert "finding_handles" not in encoded
+    assert "action_handles" not in encoded
+    assert GroundedAnswerPlanV3(
+        slot_outputs=(
+            GroundedRenderSlotTextV1(slot_handle="s001", text="授权结论。"),
+        )
+    ).version == "grounded-answer-plan.v3"
+
+
+def test_render_slot_response_cannot_omit_all_required_slots() -> None:
+    with pytest.raises(ValidationError, match="too_short"):
+        GroundedAnswerPlanV3(slot_outputs=())
 
 
 def test_provider_response_properties_have_model_guidance_descriptions() -> None:

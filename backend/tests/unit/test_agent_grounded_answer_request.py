@@ -374,8 +374,19 @@ def test_request_projects_authorized_claims_without_gold_or_private_ids() -> Non
     assert request.claims[0].subject_label == "Atlas 项目"
     assert request.claims[0].predicate_label == "任务状态"
     assert request.claims[0].value_text == "blocked"
-    assert request.claims[0].source_versions[0].startswith("record-version:sha256:")
+    assert request.objectives[0].objective_handle == "o001"
+    assert request.claims[0].claim_handle == "c001"
+    assert request.claims[0].evidence_handles == ("e001",)
+    assert request.claims[0].source_versions == ("v001",)
+    assert request.citations[0].source_version == "v002"
     assert request.citations[0].display_label == "证据 1"
+    assert request.version == "grounded-answer-provider-request.v3"
+    assert len(request.render_slots) == 1
+    assert request.render_slots[0].slot_handle == "s001"
+    assert request.render_slots[0].statement_kind == "fact"
+    assert request.render_slots[0].claim_handles == ("c001",)
+    assert request.render_slots[0].evidence_handles == ("e001",)
+    assert request.render_slots[0].action_handles == ()
     assert request.content_hash == specialist_payload_sha256(
         request.model_dump(mode="json", exclude={"content_hash"})
     )
@@ -390,6 +401,19 @@ def test_request_projects_authorized_claims_without_gold_or_private_ids() -> Non
         "gold_truth",
     ):
         assert forbidden not in encoded
+
+
+def test_request_local_references_are_stable_and_canonical_ids_stay_private() -> None:
+    first = _build()
+    second = _build()
+
+    assert first == second
+    assert first.content_hash == second.content_hash
+    encoded = first.model_dump_json()
+    assert "sha256:" not in encoded
+    assert "claim:status" not in encoded
+    assert str(RECORD_ID) not in encoded
+    assert str(FIELD_ID) not in encoded
 
 
 def test_request_rejects_missing_field_policy_proof() -> None:
@@ -455,25 +479,132 @@ def test_request_rejects_missing_safe_label_and_unknown_evidence() -> None:
         )
 
 
-def test_request_preserves_non_valid_claim_status() -> None:
+def test_request_projects_only_valid_claims_from_mixed_status_graph() -> None:
     query, task_spec, graph, schema, presentation, findings = _authorized_fixture()
     values = graph.model_dump(mode="python")
-    values["claims"][0]["status"] = "stale"
+    values["claims"] = (
+        values["claims"][0],
+        {
+            **values["claims"][0],
+            "claim_id": "claim:conflicted-risk",
+            "predicate": "risk_severity",
+            "value": "high",
+            "evidence_ids": ("ev-conflicted-risk",),
+            "status": "conflicted",
+        },
+    )
     values["content_hash"] = specialist_payload_sha256(
         {key: value for key, value in values.items() if key != "content_hash"}
     )
-    stale_graph = graph.model_validate(values)
+    mixed_graph = graph.model_validate(values)
+    mixed_presentation = presentation.model_copy(
+        update={
+            "predicate_labels": {
+                **presentation.predicate_labels,
+                "risk_severity": "风险等级",
+            }
+        }
+    )
 
     request = build_grounded_answer_request(
         query=query,
         task_spec=task_spec,
-        graph=stale_graph,
+        graph=mixed_graph,
+        authorized_schema=schema,
+        presentation=mixed_presentation,
+        specialist_findings=findings,
+    )
+
+    assert len(request.claims) == 1
+    assert request.claims[0].status == "valid"
+    assert tuple(item.evidence_handle for item in request.citations) == ("e001",)
+    encoded = request.model_dump_json()
+    assert "风险等级" not in encoded
+    assert "high" not in encoded
+    assert "ev-conflicted-risk" not in encoded
+
+
+def test_request_degrades_completed_objective_with_only_conflicted_claims() -> None:
+    query, task_spec, graph, schema, presentation, findings = _authorized_fixture()
+    risk_objective = TaskObjectiveV2(
+        objective_id="obj-risk",
+        kind="risk_analysis",
+        required=True,
+        entity_codes=("Atlas",),
+        query_spec_ref=None,
+        output_contract="risk_result",
+        planning_outcome="planned",
+        denial_reason=None,
+        source_spans=(SourceSpan(start=0, end=5, text="Atlas"),),
+    )
+    task_values = task_spec.model_dump(mode="python")
+    task_values["objectives"] = (*task_spec.objectives, risk_objective)
+    task_values["cost"]["objective_count"] = 2
+    task_spec = TaskSpecV2.model_validate(task_values)
+    graph_values = graph.model_dump(mode="python")
+    graph_values["claims"] = (
+        graph_values["claims"][0],
+        {
+            **graph_values["claims"][0],
+            "claim_id": "claim:risk-high",
+            "predicate": "risk_severity",
+            "value": "high",
+            "evidence_ids": ("ev-risk",),
+            "objective_ids": ("obj-risk",),
+            "status": "conflicted",
+        },
+        {
+            **graph_values["claims"][0],
+            "claim_id": "claim:risk-medium",
+            "predicate": "risk_severity",
+            "value": "medium",
+            "evidence_ids": ("ev-risk",),
+            "objective_ids": ("obj-risk",),
+            "status": "conflicted",
+        },
+    )
+    graph_values["objective_statuses"] = (
+        *graph_values["objective_statuses"],
+        {
+            "objective_id": "obj-risk",
+            "status": "completed",
+            "reason_code": None,
+        },
+    )
+    graph_values["content_hash"] = specialist_payload_sha256(
+        {key: value for key, value in graph_values.items() if key != "content_hash"}
+    )
+    graph = graph.model_validate(graph_values)
+    presentation = presentation.model_copy(
+        update={
+            "objectives": (
+                *presentation.objectives,
+                ComposerObjectiveContextV1(
+                    objective_id="obj-risk",
+                    kind="risk_analysis",
+                    required=True,
+                ),
+            ),
+            "predicate_labels": {
+                **presentation.predicate_labels,
+                "risk_severity": "风险等级",
+            },
+        }
+    )
+
+    request = build_grounded_answer_request(
+        query=query,
+        task_spec=task_spec,
+        graph=graph,
         authorized_schema=schema,
         presentation=presentation,
         specialist_findings=findings,
     )
 
-    assert request.claims[0].status == "stale"
+    projected = next(item for item in request.objectives if item.kind == "risk_analysis")
+    assert projected.status == "degraded"
+    assert projected.reason_code == "conflicted_claim"
+    assert all(item.status == "valid" for item in request.claims)
 
 
 def test_request_projects_only_pending_action_status_without_private_target() -> None:
@@ -500,7 +631,7 @@ def test_request_projects_only_pending_action_status_without_private_target() ->
     ("kind", "expected_kind", "expected_text"),
     (
         ("risk", "risk", "风险评估等级为 high。"),
-        ("daily", "daily", "Atlas 项目今日仍处于 blocked 状态。"),
+        ("daily", "daily", "Atlas 项目的任务状态为blocked。"),
     ),
 )
 def test_request_projects_typed_specialist_findings(
@@ -526,6 +657,170 @@ def test_request_projects_typed_specialist_findings(
     assert projected[0].safe_text == expected_text
     assert projected[0].claim_handles
     assert projected[0].evidence_handles
+    if kind == "daily":
+        assert not any(
+            item.finding_kind == "tabular" for item in request.specialist_findings
+        )
+
+
+def test_request_projects_disjoint_fact_and_risk_finding_closures() -> None:
+    query, task_spec, _, schema, presentation, findings = _specialist_fixture("risk")
+    facts, risks = findings
+    graph = build_claim_graph(
+        claims=(
+            ClaimInputV1(
+                objective_id="obj-facts",
+                subject_ref=f"record:{RECORD_ID}",
+                predicate=f"field:{FIELD_ID}",
+                value="blocked",
+                evidence_ids=("ev-status",),
+                source_version=7,
+            ),
+            ClaimInputV1(
+                objective_id="obj-facts",
+                subject_ref=f"record:{RECORD_ID}",
+                predicate="risk_severity",
+                value="high",
+                evidence_ids=("ev-status",),
+                source_version=7,
+            ),
+        ),
+        outcomes=(ObjectiveOutcomeInputV1("obj-facts", "completed", True),),
+        actions=(),
+        scope_hash=SCOPE_HASH,
+        source_artifacts=(facts, risks),
+    )
+    presentation = presentation.model_copy(
+        update={
+            "predicate_labels": {
+                f"field:{FIELD_ID}": "任务状态",
+                "risk_severity": "风险等级",
+            }
+        }
+    )
+
+    request = build_grounded_answer_request(
+        query=query,
+        task_spec=task_spec,
+        graph=graph,
+        authorized_schema=schema,
+        presentation=presentation,
+        specialist_findings=findings,
+    )
+
+    tabular = next(
+        item for item in request.specialist_findings if item.finding_kind == "tabular"
+    )
+    risk = next(
+        item for item in request.specialist_findings if item.finding_kind == "risk"
+    )
+    assert set(tabular.claim_handles).isdisjoint(risk.claim_handles)
+    assert set(tabular.claim_handles) | set(risk.claim_handles) == {
+        item.claim_handle for item in request.claims
+    }
+    synthesis_slots = [
+        item
+        for item in request.render_slots
+        if item.statement_kind in {"fact", "analysis", "recommendation"}
+    ]
+    assert len(synthesis_slots) == 1
+    assert synthesis_slots[0].finding_handles == (
+        tabular.finding_handle,
+        risk.finding_handle,
+    )
+    assert synthesis_slots[0].claim_handles == tuple(
+        item.claim_handle for item in request.claims
+    )
+    assert synthesis_slots[0].evidence_handles == tuple(
+        item.evidence_handle for item in request.citations
+    )
+
+
+def test_request_without_actions_cannot_expose_an_action_render_slot() -> None:
+    request = _build()
+
+    assert request.actions == ()
+    assert all(item.statement_kind != "action_status" for item in request.render_slots)
+    assert all(item.section_kind != "actions" for item in request.render_slots)
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected_text"),
+    (
+        ("risk", "授权风险评估已完成，未发现需要列出的风险。"),
+        ("daily", "授权日报已完成，当前没有额外可展示条目。"),
+    ),
+)
+def test_request_projects_completed_empty_specialist_result(
+    kind: str, expected_text: str
+) -> None:
+    query, task_spec, graph, schema, presentation, findings = _specialist_fixture(kind)
+    specialist = findings[1]
+    values = specialist.model_dump(mode="python")
+    values["assessments" if kind == "risk" else "statements"] = ()
+    values["content_hash"] = specialist_payload_sha256(
+        {key: value for key, value in values.items() if key != "content_hash"}
+    )
+    specialist = type(specialist).model_validate(values)
+    if kind == "risk":
+        _, _, graph, _, fact_presentation, _ = _authorized_fixture()
+        presentation = presentation.model_copy(
+            update={"predicate_labels": fact_presentation.predicate_labels}
+        )
+
+    request = build_grounded_answer_request(
+        query=query,
+        task_spec=task_spec,
+        graph=graph,
+        authorized_schema=schema,
+        presentation=presentation,
+        specialist_findings=(findings[0], specialist),
+    )
+
+    projected = [
+        item
+        for item in request.specialist_findings
+        if item.finding_kind == kind
+    ]
+    assert len(projected) == 1
+    assert projected[0].safe_text == expected_text
+    assert projected[0].claim_handles
+
+
+def test_request_does_not_expose_daily_internal_aggregate_representation() -> None:
+    query, task_spec, graph, schema, presentation, findings = _specialist_fixture(
+        "daily"
+    )
+    daily = findings[1]
+    values = daily.model_dump(mode="python")
+    values["statements"][0]["text"] = (
+        '聚合 aggregate-unfinished-by-project（分组 '
+        '[[{"id":"51000000-0000-4000-8000-000000000099",'
+        '"label":"PRJ-ATLAS"}]]）：3'
+    )
+    values["content_hash"] = specialist_payload_sha256(
+        {key: value for key, value in values.items() if key != "content_hash"}
+    )
+    daily = DailyBriefV1.model_validate(values)
+
+    request = build_grounded_answer_request(
+        query=query,
+        task_spec=task_spec,
+        graph=graph,
+        authorized_schema=schema,
+        presentation=presentation,
+        specialist_findings=(findings[0], daily),
+    )
+
+    encoded = request.model_dump_json()
+    assert "aggregate-unfinished-by-project" not in encoded
+    assert "51000000-0000-4000-8000-000000000099" not in encoded
+    assert '"label"' not in encoded
+    assert any(
+        item.finding_kind == "daily"
+        and item.safe_text == "Atlas 项目的任务状态为blocked。"
+        for item in request.specialist_findings
+    )
 
 
 def test_request_rejects_specialist_artifact_hash_drift() -> None:

@@ -245,7 +245,7 @@ deadline_exhausted
 | Action | 严格字段和值生成 | 0 | 1,200 | Safety、schema、target accuracy 优先 |
 | Composer | 多结果合并、自然对话 | 0.1 | 2,000 | 不新增事实、中文可读性优先 |
 
-当前 `google/gemini-2.5-flash` 只保留为 r75/Stage11 历史 baseline profile。TDR-023 基于不变完整 Schema 的实测和 Gemini/Qwen 完整 P1 失败证据，将 Stage12 Grounded Composer P1/P2/P3 候选修订为 `deepseek/deepseek-v3.2`。不得自动多模型路由、静默 failover 或按 Case 切换模型；每次完整 campaign 内同一角色必须固定 profile。
+当前 `google/gemini-2.5-flash`、DeepSeek 和 Qwen 只保留为历史 baseline/candidate evidence。TDR-026 基于同一 12 个 Human-Gold representative Cases 的最终回答质量门，将 Stage12 Grounded Composer P1/P2/P3 固定为 `z-ai/glm-5.2`。不得自动多模型路由、静默 failover 或按 Case 切换模型；每次完整 campaign 内同一角色必须固定 profile。
 
 ### 11.6 Prompt 组成与 Token 预算
 
@@ -315,3 +315,7 @@ TaskSpecV2 + authorized structured results + typed Specialist artifacts
 Provider output 不再使用动态 key map；每个 statement 必须声明 `statement_kind`、`text`、`claim_handles[]`、`evidence_handles[]` 和 `action_handles[]`。模型负责完整中文分析与表达；表格事实、Join、Aggregate、权限、版本和 Action authority 仍由结构化引擎和后端控制。
 
 确定性 fallback 继续作为运行时安全路径，但必须标记 `answer_source=deterministic_fallback`，且在 P1/P2/P3 真实模型验收中一律计为失败。实施真源为 `docs/superpowers/specs/2026-07-31-stage12-grounded-answer-provider-v2-design.md` 和 `docs/superpowers/plans/2026-07-31-stage12-grounded-answer-provider-v2.md`。
+
+## 13.7 Grounded RenderSlot V3（2026-08-01 修正）
+
+固定 GLM 5.2 的 post-binding P1 为 `12/12`，但 exact P2 只有 `33/36`。失败并非缺少证据，而是模型间歇性重建不存在的 Action section 或把 disjoint Fact/Risk 语句绑定到错误引用数组。用户已确认 TDR-027：后端生成密封 `RenderSlotPlan`，Provider 只按顺序返回 `slot_handle + text`；section/statement kind 和全部引用闭包由后端控制。`actions=[]` 时 Action slot 在结构上不可表达，missing/duplicate/unknown/reordered slot 一律 fail closed。运行模型仍固定为 `z-ai/glm-5.2`，私有 profile/response contract 升为 V3；公共 API、权限、Action authority 与部署拓扑不变。

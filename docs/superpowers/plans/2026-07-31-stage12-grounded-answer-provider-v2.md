@@ -6,13 +6,13 @@
 
 **Architecture:** Build a private fixed-array `GroundedAnswerProviderRequestV2` from `TaskSpecV2`, the authorized schema, sealed `ClaimGraphV1`, typed Specialist findings and pending-only Action status. The real Provider returns model-authored Chinese statements with exact claim/evidence/action references. A deterministic validator enforces schema, reference closure, citation closure, canonical factual atoms, Action status, objective coverage and permission/version binding before rendering. The runtime keeps safe deterministic fallback but records it as `answer_source=deterministic_fallback`, which fails every real-model acceptance gate.
 
-**Tech Stack:** Python 3.12+, Pydantic v2, FastAPI, LangGraph-first runtime, OpenRouter OpenAI-compatible API, TDR-023 fixed `deepseek/deepseek-v3.2` Grounded Composer candidate, PostgreSQL/pgvector, Redis, pytest, React/Vite/TypeScript, native Nginx/systemd deployment.
+**Tech Stack:** Python 3.12+, Pydantic v2, FastAPI, LangGraph-first runtime, OpenRouter OpenAI-compatible API, TDR-026 fixed `z-ai/glm-5.2` Grounded Composer candidate, PostgreSQL/pgvector, Redis, pytest, React/Vite/TypeScript, native Nginx/systemd deployment.
 
 ## Global Constraints
 
 - Stage11/r76 remains production authority until every local, real-Provider, native-server and Telegram gate passes.
 - No Docker image, Docker Compose command or container migration.
-- TDR-023 authorizes the measured Stage12 Grounded Composer candidate correction to `deepseek/deepseek-v3.2`. Gemini and failed Qwen P1 attempts remain historical comparison evidence; no automatic model fallback or per-case switching is allowed.
+- TDR-026 authorizes the measured Stage12 Grounded Composer binding to `z-ai/glm-5.2`. Gemini, DeepSeek, Qwen and Seed attempts remain historical comparison evidence; no automatic model fallback or per-case switching is allowed.
 - No Provider-authored database fact, join, aggregate, permission, Action target, execution ticket or confirmation.
 - Provider-facing response schemas use fixed properties and arrays; no dynamic-key map.
 - Fallback is allowed for runtime safety but never counts as a real-model acceptance pass.
@@ -352,7 +352,7 @@ git commit -m "feat: score real grounded answers"
 - Retain failed baselines without overwrite under a suffixed immutable attempt directory.
 
 **Interfaces:**
-- Consumes: local protected OpenRouter env, TDR-023 frozen Qwen Composer profile, four synthetic authorized shapes.
+- Consumes: local protected OpenRouter env, TDR-026 frozen GLM 5.2 Composer profile, four synthetic authorized shapes.
 - Produces: exactly 12 real calls and a sanitized immutable P1 report.
 
 - [x] **Step 1: Write RED campaign-shape tests**
@@ -374,7 +374,23 @@ cd backend
 pytest -q tests/unit/test_stage12_grounded_answer_preflight.py tests/unit/test_agent_grounded_answer_provider.py tests/unit/test_agent_grounded_answer_validation.py
 ```
 
-- [ ] **Step 5: Execute one real P1 command**
+- [x] **Step 4a: Implement the confirmed compact-reference correction with RED/GREEN**
+
+Follow `STAGE_12_GROUNDED_PROVIDER_COMPACT_REFERENCE_DECISION.md`: replace only Provider-visible private handles with bounded request-local aliases, preserve canonical runtime binding/receipts, prove tamper/reorder/stale failure, and measure the 7-claim serialized-size reduction.
+
+- [x] **Step 4b: Implement the confirmed hard wall-clock deadline with RED/GREEN**
+
+Use a cancellable total deadline for real HTTP calls while retaining synchronous injected test clients. Prove one timeout observation/fingerprint, no background completion, no retry outside the remaining UTC deadline and no raw-content persistence.
+
+- [x] **Step 4c: Run focused and adjacent regression before real P1**
+
+Run the compact-reference, request, validation, Provider, Gateway, preflight, ClaimGraph and isolated-runner suites. Do not execute another real P1 until all required decision evidence is green.
+
+- [x] **Step 4d: Resolve the confirmed typed-finding objective-coverage gate**
+
+Follow `STAGE_12_GROUNDED_PROVIDER_FINDING_REFERENCE_DECISION.md`. The adjacent 48-case campaign proved that typed Risk/Daily findings currently enter the request but cannot be referenced by Provider output, and that final-answer failures do not yet propagate into the campaign release gate. Do not weaken objective coverage or count fallback as acceptance.
+
+- [x] **Step 5: Execute one real P1 command**
 
 Run with the ignored local env and a previously absent output directory. Do not retry selected failures or add a fourth shape round.
 
@@ -435,12 +451,50 @@ pytest -q tests/unit/test_stage12_final_provider_campaign.py
 
 If any Case falls back or violates final-answer/safety gates, stop before P3 and diagnose that exact case class.
 
+Execution evidence on 2026-08-01: the fixed GLM 5.2 P2 produced `33/36`
+real/final passes and three grounded fallbacks. It is retained as FAIL under
+`stage12-grounded-answer-p2-2026-08-01-glm-5-2`; P3 remains blocked pending
+`STAGE_12_GROUNDED_PROVIDER_RENDER_SLOT_DECISION.md`.
+
 - [ ] **Step 5: Commit P2 evidence**
 
 ```powershell
 git add -- backend/scripts/stage12_final_provider_campaign.py backend/tests/unit/test_stage12_final_provider_campaign.py project-docs/08-implementation/evidence/stage12-grounded-answer-p2-2026-07-31
 git commit -m "test: verify grounded answer preflight"
 ```
+
+### Task 8A: Replace Free-Form References With Approved Render Slots
+
+**Files:**
+- Modify: `backend/app/schemas/agent_grounded_answer_v2.py`
+- Modify: `backend/app/services/agent_grounded_answer_request.py`
+- Modify: `backend/app/services/agent_grounded_answer_validation.py`
+- Modify: `backend/app/services/agent_grounded_answer_provider.py`
+- Modify: focused Grounded Answer unit/campaign tests and active Stage12 evidence documents.
+
+**Interfaces:**
+- Consumes: the user-approved `STAGE_12_GROUNDED_PROVIDER_RENDER_SLOT_DECISION.md` and retained failed P2 evidence.
+- Produces: a private sealed `RenderSlotPlan` whose Provider response contains only exact ordered `slot_handle + text` outputs; the backend owns section kind, statement kind and all reference closures.
+
+- [x] **Step 1: RED — freeze observable slot behavior**
+
+Prove that `actions=[]` creates no Action slot; mixed Fact/Risk results create one sealed synthesis slot; and missing, duplicate, unknown, reordered or tampered slots fail closed.
+
+- [x] **Step 2: GREEN — implement the minimal private contract transition**
+
+Project slots from already-authorized Claim/finding/Action/objective data, accept model-authored Chinese text only, validate text atoms against the sealed slot closure and derive the final receipt exclusively from backend-owned slot metadata.
+
+- [x] **Step 3: Focused deterministic verification**
+
+Run the complete Grounded Answer schema/request/provider/validation/campaign unit surface. Preserve all existing permission, version, Action non-execution, language, deadline and fallback-origin gates.
+
+- [ ] **Step 4: Deterministic 48 × 3 then one exact real P2 rerun**
+
+Require `144/144` deterministic real-origin-shaped results before making one new immutable `12 × 3` real Provider run. Do not overwrite or merge the failed `0702da...` P2 evidence; stop before P3 on any fallback or final-answer failure.
+
+Deterministic evidence on 2026-08-01: the focused V3 surface is `143 passed`, including the exact 48 × 3 test Provider campaign at `144/144` real-origin-shaped results and zero fallback. Full unit regression is `2167 passed` after the Action-context correction.
+
+Real evidence update: V3 P1 passed `12/12`, but two exact V3 P2 campaigns failed at `26/36` and `24/36` real/final answers. P3 remains blocked. Sanitized diagnostics identify cross-slot/invented textual atoms while schema, transport and p95 latency remain healthy. Further implementation is held at the separate `STAGE_12_GROUNDED_PROVIDER_SLOT_ISOLATION_DECISION.md` confirmation gate.
 
 ### Task 9: Full Regression and Native Release Candidate Gate
 
