@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from app.models.agent_event_runtime import AgentArtifact
 from app.models.stage06_hardening import Stage06IdempotencyRecord
 from app.schemas.agent_specialist_results import specialist_payload_sha256
+from app.schemas.agent_stage12_runtime import Stage12ObjectiveDispatchV1
 from app.services.stage06_idempotency import (
     begin_idempotent_operation,
     complete_idempotent_operation,
@@ -66,6 +67,12 @@ class TypedArtifactOwner:
 
 
 PayloadT = TypeVar("PayloadT", bound=BaseModel)
+
+
+def stage12_command_input_artifact_ids(
+    dispatch: Stage12ObjectiveDispatchV1,
+) -> tuple[UUID, ...]:
+    return (dispatch.objective_artifact_id, *dispatch.dependency_artifact_ids)
 
 
 def persist_typed_artifact(
@@ -236,4 +243,5 @@ __all__ = [
     "persist_typed_artifact",
     "read_typed_artifact",
     "read_typed_artifact_owner_ref",
+    "stage12_command_input_artifact_ids",
 ]

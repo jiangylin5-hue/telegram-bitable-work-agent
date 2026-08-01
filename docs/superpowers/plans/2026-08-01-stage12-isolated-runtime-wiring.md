@@ -57,12 +57,12 @@ def stage12_runtime_enabled(
 
 **Steps:**
 
-- [ ] Add RED tests for default-off, off-with-list rejection, isolated-empty rejection, invalid/wildcard UUID rejection, prerequisite rejection, exact member true and non-member false.
-- [ ] From `backend/`, run `python -m pytest -q tests/unit/test_stage05_config.py tests/unit/test_agent_stage12_runtime_activation.py`; verify the new tests fail for missing settings/service.
-- [ ] Implement the minimal settings fields, profile builder and pure selector.
-- [ ] Rerun the focused tests and verify all pass.
-- [ ] From `backend/`, run `python -m pytest -q tests/unit/test_stage05_config.py tests/unit/test_agent_stage12_runtime_activation.py tests/unit/test_stage12_grounded_answer_preflight.py` to prove existing Stage12 preflight compatibility.
-- [ ] Commit: `feat(stage12): add isolated runtime activation contract`.
+- [x] Add RED tests for default-off, off-with-list rejection, isolated-empty rejection, invalid/wildcard UUID rejection, prerequisite rejection, exact member true and non-member false.
+- [x] From `backend/`, run `python -m pytest -q tests/unit/test_stage05_config.py tests/unit/test_agent_stage12_runtime_activation.py`; verify the new tests fail for missing settings/service.
+- [x] Implement the minimal settings fields, profile builder and pure selector.
+- [x] Rerun the focused tests and verify all pass.
+- [x] From `backend/`, run `python -m pytest -q tests/unit/test_stage05_config.py tests/unit/test_agent_stage12_runtime_activation.py tests/unit/test_stage12_grounded_answer_preflight.py` to prove existing Stage12 preflight compatibility.
+- [x] Commit: `feat(stage12): add isolated runtime activation contract` (`9de3cc4`).
 
 ## Task 2: Runtime admission contracts and typed artifact ownership
 
@@ -89,8 +89,8 @@ class Stage12RuntimeAdmissionRequest(BaseModel):
 
 class Stage12ObjectiveDispatchV1(BaseModel):
     objective: ObjectiveSpecialistInputV1
-    objective_artifact_ref: str
-    dependency_artifact_refs: tuple[str, ...]
+    objective_artifact_id: UUID
+    dependency_artifact_ids: tuple[UUID, ...]
     private_input_ref: str
 
 class Stage12RuntimeAdmissionResult(BaseModel):
@@ -99,26 +99,33 @@ class Stage12RuntimeAdmissionResult(BaseModel):
     objective_dispatches: tuple[Stage12ObjectiveDispatchV1, ...]
     data_version_hash: str
 
-def resolve_stage12_isolated_fixture(
+class Stage12IsolatedWorkspaceContext(BaseModel):
+    workspace_id: UUID
+    base_id: UUID
+    table_ids: dict[str, UUID]
+    actor_user_id: str
+    digital_employee_id: UUID
+
+def resolve_stage12_isolated_workspace(
     uow: SqlAlchemyStage06PlatformUnitOfWork,
     *,
     workspace_id: UUID,
     actor_user_id: UUID,
     digital_employee_id: UUID,
-) -> Stage12EvaluationFixture: ...
+) -> Stage12IsolatedWorkspaceContext: ...
 ```
 
 - Add an explicit artifact kind/storage-owner convention for `objective_specialist_input`, `task_spec_v2`, authorized schema, structured query/evidence, ClaimGraph and final grounded result without changing the database schema.
 - A command's durable `payload_ref` remains its encrypted private-input ref. `input_artifact_refs` contains exactly one objective artifact and its declared dependency refs; validate ownership, scope hash and content hash before execution.
-- Fixture resolution must load the already-materialized isolated workspace by stable evaluation markers and permissions, reject zero/multiple/mismatched fixtures, and never create records during request admission.
+- Workspace resolution must load the already-materialized isolated workspace by exact workspace/base/table markers and permissions, reject zero/multiple/mismatched contexts, and never create records during request admission. Production application code must not import the script-only `Stage12EvaluationFixture` or `MultiTableFixture`; evaluation scripts may materialize data, while the runtime reads only the independent `Stage12IsolatedWorkspaceContext`.
 
 **Steps:**
 
-- [ ] Add RED contract tests for objective-owner/dependency separation, content-hash mismatch, duplicate owner, cross-workspace ref and plaintext-query rejection.
-- [ ] Add RED fixture-resolution tests using a fake read-only UOW surface; cover exact fixture, missing fixture, ambiguous fixture and unauthorized actor/employee.
-- [ ] Run both new unit files and capture the expected failures.
-- [ ] Implement strict frozen models, artifact parsing/validation helpers and read-only fixture resolution.
-- [ ] Rerun both unit files plus `backend/tests/unit/test_agent_typed_artifacts.py` and existing Stage12 fixture tests.
+- [x] Add RED contract tests for objective-owner/dependency separation, content-hash mismatch, duplicate owner, cross-workspace ref and plaintext-query rejection.
+- [x] Add RED fixture-resolution tests using a fake read-only UOW surface; cover exact fixture, missing fixture, ambiguous fixture and unauthorized actor/employee.
+- [x] Run both new unit files and capture the expected failures.
+- [x] Implement strict frozen models, artifact parsing/validation helpers and read-only fixture resolution.
+- [x] Rerun both unit files plus `backend/tests/unit/test_agent_typed_artifacts.py` and existing Stage12 fixture tests.
 - [ ] Commit: `feat(stage12): define isolated runtime artifact contracts`.
 
 ## Task 3: SQL-backed bounded LangGraph admission

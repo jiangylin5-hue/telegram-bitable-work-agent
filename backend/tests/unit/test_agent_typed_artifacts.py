@@ -132,6 +132,16 @@ def test_typed_artifact_read_fails_closed_on_scope_or_owner_tamper() -> None:
     )
     metadata = _metadata(owner.storage_ref, payload.content_hash)
 
+    with pytest.raises(ValueError, match="typed_artifact_owner_invalid"):
+        read_typed_artifact(
+            uow,
+            artifact=metadata,
+            workspace_id=uuid4(),
+            current_scope_hash=HASH,
+            expected_kind="composer_result",
+            payload_type=ComposerResultV1,
+        )
+
     with pytest.raises(ValueError, match="typed_artifact_scope_mismatch"):
         read_typed_artifact(
             uow,
