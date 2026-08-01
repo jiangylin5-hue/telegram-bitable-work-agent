@@ -201,7 +201,7 @@ image_deleted_count=0'
 assert_failed_retire_receipt() {
     receipt_file=$1
     failure_name=$2
-    receipt_output=$(< "$receipt_file")
+    receipt_output=$(cat "$receipt_file")
     [ "$receipt_output" = "$failed_receipt" ] || fail "$failure_name"
     case "$receipt_output" in
         *"$fixture_root"*|*fixture-secret-value*|*FAKE_SECRET*|*api-id*|*stage03-net*|*stage03-volume*)
@@ -333,12 +333,12 @@ rm -rf "$fixture_root/archives" || fail reset-archives
 : > "$fixture_log" || fail fixture-log-reset
 run_tool archive > "$fixture_root/archive-partial.receipt" 2>&1 || fail partial-archive-run
 if FAKE_FAIL_VOLUME_RM=1 run_tool retire > "$fixture_root/partial.receipt" 2>&1; then fail partial-retire-accepted; fi
-partial_output=$(< "$fixture_root/partial.receipt")
+partial_output=$(cat "$fixture_root/partial.receipt")
 case "$partial_output" in *'status=partial'*'container_deleted_count=4'*'network_deleted_count=1'*'volume_deleted_count=0'*) : ;; *) fail partial-receipt ;; esac
 case "$partial_output" in *"$fixture_root"*|*fixture-secret-value*|*FAKE_SECRET*|*api-id*|*stage03-net*|*stage03-volume*) fail partial-receipt-leak ;; esac
 for receipt_file in "$fixture_root"/*.receipt; do
     [ -f "$receipt_file" ] || continue
-    receipt_output=$(< "$receipt_file")
+    receipt_output=$(cat "$receipt_file")
     case "$receipt_output" in
         *"$fixture_root"*|*fixture-secret-value*|*FAKE_SECRET*|*api-id*|*stage03-net*|*stage03-volume*)
             fail failure-receipt-leak

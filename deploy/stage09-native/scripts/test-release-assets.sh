@@ -84,6 +84,7 @@ grep -Fq 'failed_retire_receipt' "$retire" || fail retire-failed-receipt
 grep -Fq 'sha256sum' "$retire" || fail retire-manifest
 grep -Fq 'custom_image_bytes_before' "$retire" || fail retire-image-byte-semantics
 grep -Fq 'released_bytes' "$retire" && fail retire-released-bytes
+if grep -Fq '$(<' "$retire_test"; then fail retire-test-non-posix-file-read; fi
 grep -Fq 'target_revision=20260730_0039' "$migration" || fail fixed-stage12-migration
 grep -Fq "offline_database_url='postgresql+psycopg://stage09_p1:offline-placeholder@127.0.0.1:5432/stage09_p1'" "$migration" || fail fixed-offline-database-url
 grep -Fq 'env -u DATABASE_URL "DATABASE_URL=$offline_database_url"' "$migration" || fail explicit-offline-database-url

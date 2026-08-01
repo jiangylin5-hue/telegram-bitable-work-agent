@@ -118,6 +118,7 @@ grep -Fq 'telegram-bitable-stage03-' "$retire" || fail
 grep -Fq 'ready-archive-lifecycle: PASS' "$retire_test" || fail
 grep -Fq 'partial-receipt: PASS' "$retire_test" || fail
 grep -Fq 'retire-assets: PASS' "$retire_test" || fail
+if grep -Fq '$(<' "$retire_test"; then fail; fi
 grep -Fq 'native-public-nginx: fail' "$renderer" || fail
 grep -Fq 'STAGE09_P1_PUBLIC_HOSTNAME' "$renderer" || fail
 grep -Fq 'STAGE09_P1_CERTIFICATE_PATH' "$renderer" || fail

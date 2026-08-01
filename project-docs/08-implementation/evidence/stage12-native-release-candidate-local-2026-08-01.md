@@ -40,6 +40,16 @@ native migrate unit and offline verifier still stopped at Stage10 revision
 the sealed release, and reject `upgrade head`. This closes the risk that new
 Stage12 code could start against an intentionally unmigrated database.
 
+The first assembled r77 server candidate was rejected before activation. Its
+source/runtime/manifest/offline-migration gates passed, but static parity
+rejected the standard venv `lib64 -> lib` compatibility symlink. After the
+candidate-only link was removed, static parity passed and the Ubuntu rollback
+fixture exposed a pre-existing test portability defect: three Bash-only
+`$(< file)` reads ran under declared `/bin/sh` and returned empty receipts on
+Ubuntu dash. The fixture now uses POSIX `$(cat file)` and the release contract
+rejects recurrence. r77 remains rejected; a new immutable candidate must be
+built from the corrected pushed commit.
+
 ## Verification
 
 | Gate | Result |
