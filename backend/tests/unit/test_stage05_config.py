@@ -38,6 +38,8 @@ RUNTIME_ENV_VARS = [
     "TYPED_SPECIALISTS_V2_WORKSPACE_ALLOWLIST",
     "DURABLE_ACTION_V1_MODE",
     "DURABLE_ACTION_V1_WORKSPACE_ALLOWLIST",
+    "STAGE12_RUNTIME_MODE",
+    "STAGE12_RUNTIME_WORKSPACE_ALLOWLIST",
     "PROVIDER_MODE",
 ]
 
@@ -396,3 +398,24 @@ def test_stage12_durable_action_defaults_off_and_requires_isolated_allowlist(
         "10000000-0000-0000-0000-000000000001",
     )
     validate_runtime_settings(get_settings())
+
+
+def test_stage12_isolated_runtime_settings_default_off_and_read_exact_allowlist(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _clear_runtime_env(monkeypatch)
+
+    defaults = get_settings()
+
+    assert defaults.stage12_runtime_mode == "off"
+    assert defaults.stage12_runtime_workspace_allowlist == ""
+    validate_runtime_settings(defaults)
+
+    workspace_id = "10000000-0000-4000-8000-000000000001"
+    monkeypatch.setenv("STAGE12_RUNTIME_MODE", "isolated")
+    monkeypatch.setenv("STAGE12_RUNTIME_WORKSPACE_ALLOWLIST", workspace_id)
+
+    configured = get_settings()
+
+    assert configured.stage12_runtime_mode == "isolated"
+    assert configured.stage12_runtime_workspace_allowlist == workspace_id

@@ -14,6 +14,7 @@ REQUIRED_PRODUCTION_LIKE_ENV_VARS = (
 )
 STAGE12_RETRIEVAL_ACTIVE_PROFILE = "stage12.openrouter-bge-m3-v1"
 STAGE12_PROVIDER_V2_BASELINE_PROFILE = "stage12.openrouter-gemini-2.5-flash-v1"
+STAGE12_GROUNDED_PROVIDER_PROFILE = "composer.zh.grounded.glm-5.2.v4"
 
 
 @dataclass(frozen=True)
@@ -64,6 +65,8 @@ class Settings:
     typed_specialists_v2_workspace_allowlist: tuple[str, ...] = ()
     durable_action_v1_mode: Literal["off", "isolated", "active"] = "off"
     durable_action_v1_workspace_allowlist: tuple[str, ...] = ()
+    stage12_runtime_mode: Literal["off", "isolated"] = "off"
+    stage12_runtime_workspace_allowlist: str = ""
 
 
 def get_settings() -> Settings:
@@ -177,11 +180,24 @@ def get_settings() -> Settings:
         durable_action_v1_workspace_allowlist=_env_csv_tuple(
             "DURABLE_ACTION_V1_WORKSPACE_ALLOWLIST"
         ),
+        stage12_runtime_mode=os.getenv(
+            "STAGE12_RUNTIME_MODE",
+            Settings.stage12_runtime_mode,
+        ),
+        stage12_runtime_workspace_allowlist=os.getenv(
+            "STAGE12_RUNTIME_WORKSPACE_ALLOWLIST",
+            Settings.stage12_runtime_workspace_allowlist,
+        ),
     )
 
 
 def validate_runtime_settings(settings: Settings | None = None) -> Settings:
     settings = settings or get_settings()
+    from app.services.agent_stage12_runtime_activation import (
+        build_stage12_runtime_profile,
+    )
+
+    build_stage12_runtime_profile(settings)
     if settings.durable_action_v1_mode not in {"off", "isolated", "active"}:
         raise RuntimeError(
             "Invalid DURABLE_ACTION_V1_MODE: expected off, isolated or active"
