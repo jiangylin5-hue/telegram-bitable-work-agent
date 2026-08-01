@@ -5,7 +5,7 @@
 ## Status
 
 - Document status: approved staged delivery and acceptance contract
-- Current Stage: the complete Stage12 A–F local source is checkpointed at `e30eef1`; Human Gold is `48/48`, but release remains `FAIL`. The post-correction real `48 × 3` campaign produced only `24/144` completed real Composer results, `120/144` fallback answers and `240` schema-invalid attempts. Grounded Answer Provider V2 is approved and planned; implementation/P1/P2/P3/server/Telegram evidence is pending.
+- Current Stage: Human Gold remains `48/48` and the approved isolated-runtime wiring is implemented locally through the existing public Agent Run POST/SSE contract, including SQL admission, encrypted typed Specialist execution, Grounded Provider fan-in, safe replay and a sanitized deployed campaign harness. The harness has focused campaign/evaluation evidence of `94 passed` plus a read-only local PostgreSQL observer smoke; Planner plus real local PostgreSQL mixed/action evidence is `77 passed`. No deployed P2/P3, native Redis, server activation, rollback or Telegram proof has run. Release therefore remains `FAIL`, and historical component/in-memory P1/P2 evidence is not deployed-path acceptance.
 - Current completion audit: `../../08-implementation/STAGE_12_INTEGRATED_SPECIALIST_OBSERVABILITY_COMPLETION_AUDIT.md`
 - Stage12-B acceptance: `project-docs/08-implementation/STAGE_12_B_TASKSPEC_PLANNER_ACCEPTANCE.md`
 - Stage12-C code-level plan: `docs/superpowers/plans/2026-07-29-stage12-c-authorized-query-engine.md`
@@ -14,6 +14,14 @@
 - Approval: 用户于 2026-07-29 确认 Quality Architecture V2；于 2026-07-31 确认 Grounded Answer Provider V2、Git push、原生服务器候选部署、真实服务器后端和受限 Telegram 测试。Stage12 全生产 workspace 激活仍需最终独立确认
 - Stage12-A code-level plan: `docs/superpowers/plans/2026-07-29-stage12-a-evaluation-v2.md`
 - Execution rule: 严格逐阶段 TDD 和逐条证据验收；发现需要偏离本文的更优方案时暂停并与用户讨论
+
+### 2026-08-01 deployed public-path acceptance clarification
+
+- `backend/scripts/stage12_deployed_provider_campaign.py` is the only P2/P3 campaign entry for release acceptance. It submits the approved Human Gold Query through the existing public Agent Run POST, consumes the existing SSE stream, and replays through `Last-Event-ID`; it does not import `IsolatedAFExecutor` or invoke an in-memory UOW.
+- The user-visible answer is checked in process for required/forbidden Gold results, citation presence, Chinese clarity, permission refusal/partial disclosure and pending/denied/blocked Action wording. Raw Query, answer, citation IDs, UUIDs, Prompt, Provider response and tokens are not retained.
+- PostgreSQL is read only for acceptance observation: Provider call count is read from the persisted Grounded result before and after SSE replay; the workspace record-state hash and Telegram send, notification request and confirmed/executed Action counts are compared before/after. Any delta fails the campaign.
+- P2 is exactly the approved 12 Case set × 3. P3 is exactly all 48 human-approved Cases × 3, requires a hash-valid passing deployed P2 report, and remains a single server execution after P2. A deterministic fallback fails both gates even when its answer text appears correct.
+- Current status is `implemented-local`, not deployed or accepted. P2/P3 output directories must not pre-exist; evidence is immutable and sanitized once written.
 
 ## 16. 实施分阶段方案
 

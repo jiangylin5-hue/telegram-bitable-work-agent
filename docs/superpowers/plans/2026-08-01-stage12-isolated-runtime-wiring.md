@@ -349,11 +349,11 @@ def run_deployed_provider_campaign(config: DeployedCampaignConfig) -> DeployedCa
 
 **Steps:**
 
-- [ ] Add RED unit tests for public HTTP/SSE-only behavior, preflight-before-call, sanitized schema, replay, gate failure and exact P2/P3 dimensions.
-- [ ] Run the unit file and record RED.
-- [ ] Implement the campaign runner and safe report writer.
-- [ ] Rerun the unit file plus existing Stage12 campaign/report/evaluation contract tests.
-- [ ] Update both authoritative Stage12 acceptance documents to distinguish historical component P2 from the required deployed public-path P2/P3.
+- [x] Add RED unit tests for public HTTP/SSE-only behavior, preflight-before-call, sanitized schema, replay, gate failure and exact P2/P3 dimensions.
+- [x] Run the unit file and record RED (`ModuleNotFoundError: scripts.stage12_deployed_provider_campaign`).
+- [x] Implement the campaign runner and safe report writer.
+- [x] Rerun the unit file plus existing Stage12 campaign/report/evaluation contract tests (`94 passed` on 2026-08-01); the read-only campaign SQL observer also passed a local PostgreSQL smoke.
+- [x] Update both authoritative Stage12 acceptance documents to distinguish historical component P2 from the required deployed public-path P2/P3.
 - [ ] Commit: `test(stage12): add deployed provider campaign`.
 
 ## Task 8: Local integration, full regression and release audit
