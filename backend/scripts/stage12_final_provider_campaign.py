@@ -623,13 +623,17 @@ def write_final_provider_campaign(
     return json_path, markdown_path
 
 
+def _require_grounded_p2_output_absent(output_dir: Path) -> None:
+    if output_dir.exists():
+        raise FileExistsError("grounded_p2_output_exists")
+
+
 def write_grounded_p2_campaign(
     campaign: GroundedP2CampaignV1,
     *,
     output_dir: Path,
 ) -> tuple[Path, Path]:
-    if output_dir.exists():
-        raise FileExistsError("grounded_p2_output_exists")
+    _require_grounded_p2_output_absent(output_dir)
     output_dir.mkdir(parents=True)
     json_path = output_dir / "stage12-grounded-answer-p2.json"
     markdown_path = output_dir / "stage12-grounded-answer-p2.md"
@@ -689,6 +693,8 @@ def main(argv: list[str] | None = None) -> int:
     validate_human_gold_signoff(cases)
     if not args.env_file.is_file():
         raise RuntimeError("final_campaign_env_file_missing")
+    if args.representative_p2:
+        _require_grounded_p2_output_absent(args.output_dir)
     load_env_file(args.env_file)
     composer_profile = build_grounded_composer_profile(max_attempts=2)
     clock = lambda: datetime.now(UTC)

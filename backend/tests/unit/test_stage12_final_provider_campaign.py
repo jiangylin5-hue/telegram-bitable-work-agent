@@ -436,3 +436,31 @@ def test_final_cli_checks_environment_after_human_gold_without_network(
         )
 
     assert calls == []
+
+
+def test_grounded_p2_cli_rejects_existing_output_before_provider_calls(
+    tmp_path, monkeypatch
+) -> None:
+    env_file = tmp_path / "runtime.env"
+    env_file.write_text("", encoding="utf-8")
+    output_dir = tmp_path / "existing-output"
+    output_dir.mkdir()
+
+    def fail_if_provider_campaign_starts(**_kwargs):
+        raise AssertionError("provider campaign must not start")
+
+    monkeypatch.setattr(
+        "scripts.stage12_final_provider_campaign.execute_grounded_p2_campaign",
+        fail_if_provider_campaign_starts,
+    )
+
+    with pytest.raises(FileExistsError, match="grounded_p2_output_exists"):
+        main(
+            [
+                "--env-file",
+                str(env_file),
+                "--output-dir",
+                str(output_dir),
+                "--representative-p2",
+            ]
+        )
