@@ -8,6 +8,7 @@ import pytest
 from app.models.agent_event_runtime import AgentArtifact
 from app.schemas.agent_specialist_results import (
     ComposerResultV1,
+    ControlledActionProposalV1,
     specialist_payload_sha256,
 )
 from app.schemas.agent_task_spec_v2 import ActionSlotV1, ActionTargetSelector
@@ -287,3 +288,38 @@ def test_typed_owner_seals_versionless_action_slot_with_explicit_owner_version()
         )
         == slot
     )
+
+
+def test_typed_owner_uses_content_hash_when_payload_contains_integrity_reference() -> (
+    None
+):
+    uow = InMemoryStage06PlatformUnitOfWork()
+    values = {
+        "version": "controlled-action-proposal.v1",
+        "objective_id": "obj-action",
+        "slot_id": "slot-1",
+        "status": "denied",
+        "action_kind": "record.update",
+        "target_record_ids": (),
+        "assignments": (),
+        "evidence_ids": (),
+        "candidate_set_hash": "b" * 64,
+        "confirmation_policy": "required",
+        "execution_status": "not_executed",
+        "denial_reason": "field_not_allowed",
+        "scope_hash": HASH,
+        "provider_call_count": 0,
+    }
+    values["content_hash"] = specialist_payload_sha256(values)
+    proposal = ControlledActionProposalV1.model_validate(values)
+
+    owner = persist_typed_artifact(
+        uow,
+        workspace_id=WORKSPACE_ID,
+        run_id=RUN_ID,
+        artifact_kind="controlled_action_proposal",
+        payload=proposal,
+        scope_hash=HASH,
+    )
+
+    assert owner.content_hash == proposal.content_hash

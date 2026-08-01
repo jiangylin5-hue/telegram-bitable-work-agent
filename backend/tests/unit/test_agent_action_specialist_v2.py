@@ -229,3 +229,53 @@ def test_action_handler_denies_unwritable_assignment_before_validation() -> None
     assert result.payload.denial_reason == "field_not_allowed"
     assert result.payload.target_record_ids == ()
     assert result.payload.assignments == ()
+
+
+def test_action_handler_proposes_authorized_task_create_without_fake_record() -> None:
+    refs = tuple(uuid4() for _ in range(4))
+    slot = _slot().model_copy(
+        update={
+            "action_kind": "task.create",
+            "target": _slot().target.model_copy(
+                update={
+                    "record_codes": (),
+                    "table_id": TABLE_ID,
+                }
+            ),
+        }
+    )
+    candidate_values = {
+        "version": "authorized-candidate-set.v1",
+        "objective_id": "obj-action",
+        "slot_id": "slot-01",
+        "candidates": (),
+        "scope_hash": HASH,
+        "complete": True,
+    }
+    candidate_values["candidate_set_hash"] = specialist_payload_sha256(candidate_values)
+    candidates = AuthorizedCandidateSetV1.model_validate(candidate_values)
+    evidence_values = _evidence().model_dump(mode="python", exclude={"bundle_hash"})
+    evidence_values["nodes"] = ()
+    evidence_values["bundle_hash"] = canonical_retrieval_sha256(evidence_values)
+    evidence = EvidenceBundleV2.model_validate(evidence_values)
+    proof_values = _proof().model_dump(mode="python", exclude={"content_hash"})
+    proof_values["record_versions"] = ()
+    proof_values["content_hash"] = specialist_payload_sha256(proof_values)
+    proof = CurrentVersionProofV1.model_validate(proof_values)
+    artifacts = dict(zip(refs, (slot, candidates, evidence, proof), strict=True))
+    context = SpecialistExecutionContextV2(
+        artifact_reader=artifacts.__getitem__,
+        model_gateway=_Bomb(),
+        tool_gateway=_Bomb(),
+        clock=lambda: datetime(2026, 7, 30, tzinfo=UTC),
+        metrics=lambda _name, _value: None,
+    )
+
+    result = ActionSpecialistV2().execute(_command(refs), context)
+
+    assert result.payload.status == "proposed"
+    assert result.payload.action_kind == "task.create"
+    assert result.payload.target_record_ids == ()
+    assert result.payload.assignments == ()
+    assert result.payload.execution_status == "not_executed"
+    assert result.metrics == {"targets": 0, "provider_calls": 0, "writes": 0}

@@ -38,6 +38,7 @@ from app.schemas.agent_specialist_results import (
 from app.schemas.agent_task_spec_v2 import ActionSlotV1, AuthorizedSchemaSnapshot
 from app.schemas.authorized_query_plan import StructuredQueryArtifactV1
 from app.schemas.retrieval_v2 import EvidenceBundleV2
+from app.schemas.retrieval_v2 import canonical_retrieval_sha256
 from app.schemas.agent_stage12_runtime import Stage12ObjectiveDispatchV1
 from app.workers.agent_tabular_runtime import (
     AgentTabularStreamWorker,
@@ -205,7 +206,9 @@ def load_stage12_objective_dispatch(
     ):
         raise OrchestratorError("agent_private_input_scope_mismatch")
 
-    referenced = tuple(runtime.get_artifact(ref) for ref in envelope.input_artifact_refs)
+    referenced = tuple(
+        runtime.get_artifact(ref) for ref in envelope.input_artifact_refs
+    )
     if any(
         item is None
         or item.run_id != run.id
@@ -215,13 +218,13 @@ def load_stage12_objective_dispatch(
         for item in referenced
     ):
         raise OrchestratorError("typed_specialist_artifact_invalid")
-    owners = tuple(item for item in referenced if item.kind == "objective_specialist_input")
+    owners = tuple(
+        item for item in referenced if item.kind == "objective_specialist_input"
+    )
     if len(owners) != 1:
         raise OrchestratorError("typed_specialist_objective_owner_invalid")
     owner = owners[0]
-    dependencies = tuple(
-        item.id for item in referenced if item.id != owner.id
-    )
+    dependencies = tuple(item.id for item in referenced if item.id != owner.id)
     objective = read_typed_artifact(
         artifact_uow,
         artifact=owner,
@@ -464,8 +467,7 @@ def process_stage12_typed_specialist_command(
         objective_run = objectives.get_objective_by_command(run.id, command.id)
         if (
             objective_run is None
-            or objective_run.objective_key
-            != loaded.dispatch.objective.objective_id
+            or objective_run.objective_key != loaded.dispatch.objective.objective_id
             or objective_run.status not in {"queued", "running"}
         ):
             raise OrchestratorError("stage12_objective_command_mismatch")
@@ -770,8 +772,7 @@ def _advance_stage12_objective_dag(
         )
         required_failed = any(
             edge.required
-            and objective_runs[edge.from_objective_id].status
-            in {"failed", "degraded"}
+            and objective_runs[edge.from_objective_id].status in {"failed", "degraded"}
             for edge in edges
         )
         if required_failed:
@@ -794,6 +795,16 @@ def _advance_stage12_objective_dag(
             objective_key=candidate.objective_key,
             capability=capability,
         )
+        if capability == "platform.action.propose":
+            dependency_artifact_ids = _materialize_stage12_action_dependencies(
+                runtime,
+                artifact_uow,
+                run=run,
+                task_spec=task_spec,
+                objective_id=candidate.objective_key,
+                dependency_artifact_ids=dependency_artifact_ids,
+                now=now,
+            )
         objective_values = {
             "version": "objective-specialist-input.v1",
             "objective_id": specification.objective_id,
@@ -915,7 +926,9 @@ def _stage12_dependency_artifacts(
     if capability == "platform.risk.analyse":
         policies = [
             item
-            for item in runtime.list_artifacts(next(iter(objective_runs.values())).run_id)
+            for item in runtime.list_artifacts(
+                next(iter(objective_runs.values())).run_id
+            )
             if item.kind == "authorized_risk_policy"
         ]
         if len(policies) != 1:
@@ -925,6 +938,244 @@ def _stage12_dependency_artifacts(
     if not identities:
         raise OrchestratorError("stage12_dependency_artifact_missing")
     return identities
+
+
+def _materialize_stage12_action_dependencies(
+    runtime: object,
+    artifact_uow: TypedArtifactUnitOfWork,
+    *,
+    run: object,
+    task_spec: object,
+    objective_id: str,
+    dependency_artifact_ids: tuple[UUID, ...],
+    now: datetime,
+) -> tuple[UUID, ...]:
+    slots = tuple(
+        item for item in task_spec.action_slots if item.objective_id == objective_id
+    )
+    if len(slots) != 1:
+        raise OrchestratorError("stage12_action_slot_cardinality_invalid")
+    slot = slots[0]
+    facts: list[StructuredFactSetV1] = []
+    for artifact_id in dependency_artifact_ids:
+        metadata = runtime.get_artifact(artifact_id)
+        if metadata is None or metadata.kind != "structured_fact_set":
+            continue
+        facts.append(
+            read_typed_artifact(
+                artifact_uow,
+                artifact=metadata,
+                workspace_id=run.workspace_id,
+                current_scope_hash=run.scope_hash,
+                expected_kind="structured_fact_set",
+                payload_type=StructuredFactSetV1,
+            )
+        )
+    if not facts:
+        raise OrchestratorError("stage12_action_fact_dependency_missing")
+    table = next(
+        (
+            item
+            for item in _stage12_schema_for_run(
+                runtime,
+                artifact_uow,
+                run=run,
+                now=now,
+            ).tables
+            if item.table_id == slot.target.table_id
+        ),
+        None,
+    )
+    if table is None:
+        raise OrchestratorError("stage12_action_target_table_invalid")
+    assignment_field_ids = tuple(
+        item.field_id for item in slot.assignments if item.field_id is not None
+    )
+    writable_ids = {item.field_id for item in table.fields if item.writable}
+    authorized_assignments = len(assignment_field_ids) == len(slot.assignments) and set(
+        assignment_field_ids
+    ).issubset(writable_ids)
+    create_action = slot.action_kind in {"record.create", "task.create"}
+    fact_records = tuple(
+        record
+        for facts_item in facts
+        for record in facts_item.records
+        if record.table_id == table.table_id
+    )
+    versions = {
+        (item.table_id, item.record_id): item.record_version
+        for facts_item in facts
+        for item in facts_item.source_versions
+    }
+    selected_records = () if create_action else fact_records
+    complete = (
+        slot.planning_outcome == "planned"
+        and authorized_assignments
+        and all(item.complete and not item.truncated for item in facts)
+        and (create_action or bool(selected_records))
+        and len(selected_records) <= 24
+    )
+    candidate_values = {
+        "version": "authorized-candidate-set.v1",
+        "objective_id": objective_id,
+        "slot_id": slot.slot_id,
+        "candidates": tuple(
+            {
+                "table_id": record.table_id,
+                "record_id": record.record_id,
+                "record_version": versions[(record.table_id, record.record_id)],
+                "writable_field_ids": tuple(sorted(assignment_field_ids, key=str)),
+            }
+            for record in selected_records
+            if (record.table_id, record.record_id) in versions
+        ),
+        "scope_hash": run.scope_hash,
+        "complete": complete,
+    }
+    candidate_values["candidate_set_hash"] = specialist_payload_sha256(candidate_values)
+    candidates = AuthorizedCandidateSetV1.model_validate(candidate_values)
+    evidence_values = {
+        "version": "evidence-bundle.v2",
+        "objective_id": objective_id,
+        "query_result_ref": None,
+        "nodes": tuple(
+            {
+                "evidence_id": f"action-record-{record.record_id}",
+                "kind": "record",
+                "source_id": f"record:{record.record_id}",
+                "source_version": versions[(record.table_id, record.record_id)],
+                "table_id": record.table_id,
+                "record_id": record.record_id,
+                "fields": tuple(
+                    {
+                        "field_id": value.field_id,
+                        "field_key": next(
+                            field.key
+                            for field in table.fields
+                            if field.field_id == value.field_id
+                        ),
+                        "value": value.value,
+                    }
+                    for value in record.values
+                    if any(field.field_id == value.field_id for field in table.fields)
+                ),
+                "content_hash": specialist_payload_sha256(
+                    {
+                        "table_id": str(record.table_id),
+                        "record_id": str(record.record_id),
+                        "record_version": versions[(record.table_id, record.record_id)],
+                        "values": tuple(
+                            value.model_dump(mode="json") for value in record.values
+                        ),
+                    }
+                ),
+            }
+            for record in selected_records[:24]
+            if (record.table_id, record.record_id) in versions
+        ),
+        "relations": (),
+        "aggregates": (),
+        "scope_hash": run.scope_hash,
+        "complete": complete,
+        "truncated": not complete,
+    }
+    evidence_values["bundle_hash"] = canonical_retrieval_sha256(evidence_values)
+    evidence = EvidenceBundleV2.model_validate(evidence_values)
+    current_versions = []
+    for candidate in candidates.candidates:
+        record = artifact_uow.get_record(candidate.record_id)
+        if record is None or record.table_id != candidate.table_id:
+            raise OrchestratorError("stage12_action_current_version_missing")
+        current_versions.append(
+            {
+                "table_id": record.table_id,
+                "record_id": record.id,
+                "record_version": record.version,
+            }
+        )
+    proof_values = {
+        "version": "current-version-proof.v1",
+        "record_versions": tuple(current_versions),
+        "scope_hash": run.scope_hash,
+    }
+    proof_values["content_hash"] = specialist_payload_sha256(proof_values)
+    proof = CurrentVersionProofV1.model_validate(proof_values)
+    generated = (
+        ("action_slot", slot),
+        ("authorized_candidate_set", candidates),
+        ("evidence_bundle", evidence),
+        ("current_version_proof", proof),
+    )
+    generated_ids = tuple(
+        _persist_stage12_runtime_dependency(
+            runtime,
+            artifact_uow,
+            run=run,
+            kind=kind,
+            payload=payload,
+            now=now,
+        )
+        for kind, payload in generated
+    )
+    return (*dependency_artifact_ids, *generated_ids)
+
+
+def _stage12_schema_for_run(
+    runtime: object,
+    artifact_uow: TypedArtifactUnitOfWork,
+    *,
+    run: object,
+    now: datetime,
+) -> AuthorizedSchemaSnapshot:
+    artifacts = tuple(
+        item
+        for item in runtime.list_artifacts(run.id)
+        if item.kind == "authorized_schema_snapshot"
+        and item.validation_status == "validated"
+        and (item.expires_at is None or item.expires_at > now)
+    )
+    if len(artifacts) != 1:
+        raise OrchestratorError("stage12_authorized_schema_artifact_invalid")
+    return read_typed_artifact(
+        artifact_uow,
+        artifact=artifacts[0],
+        workspace_id=run.workspace_id,
+        current_scope_hash=run.scope_hash,
+        expected_kind="authorized_schema_snapshot",
+        payload_type=AuthorizedSchemaSnapshot,
+    )
+
+
+def _persist_stage12_runtime_dependency(
+    runtime: object,
+    artifact_uow: TypedArtifactUnitOfWork,
+    *,
+    run: object,
+    kind: str,
+    payload: BaseModel,
+    now: datetime,
+) -> UUID:
+    owner = persist_typed_artifact(
+        artifact_uow,
+        workspace_id=run.workspace_id,
+        run_id=run.id,
+        artifact_kind=kind,
+        payload=payload,
+        scope_hash=run.scope_hash,
+    )
+    metadata = AgentArtifact(
+        id=uuid4(),
+        run_id=run.id,
+        kind=kind,
+        storage_ref=owner.storage_ref,
+        content_hash=owner.content_hash,
+        visibility_scope_hash=run.scope_hash,
+        validation_status="validated",
+        expires_at=run.deadline_at,
+    )
+    runtime.add_artifact(metadata)
+    runtime.flush()
+    return metadata.id
 
 
 def _stage12_objective_from_envelope(
@@ -938,7 +1189,9 @@ def _stage12_objective_from_envelope(
     now: datetime,
     allow_expired: bool = False,
 ) -> ObjectiveSpecialistInputV1:
-    referenced = tuple(runtime.get_artifact(ref) for ref in envelope.input_artifact_refs)
+    referenced = tuple(
+        runtime.get_artifact(ref) for ref in envelope.input_artifact_refs
+    )
     owners = tuple(
         item
         for item in referenced
@@ -947,11 +1200,7 @@ def _stage12_objective_from_envelope(
         and item.kind == "objective_specialist_input"
         and item.visibility_scope_hash == authorization_hash
         and item.validation_status == "validated"
-        and (
-            allow_expired
-            or item.expires_at is None
-            or item.expires_at > now
-        )
+        and (allow_expired or item.expires_at is None or item.expires_at > now)
     )
     if len(owners) != 1:
         raise OrchestratorError("typed_specialist_objective_owner_invalid")
@@ -1107,6 +1356,8 @@ def _fan_in_typed_results(
         optional_ids = {str(item.id) for item in commands} - required_ids
     stage12_run = runtime.get_run(run_id)
     runtime_session = getattr(runtime, "session", None)
+    objective_rows = ()
+    stage12_task_spec = None
     if (
         stage12_run is not None
         and stage12_run.workflow_version == "stage12.quality-v2.runtime.v1"
@@ -1125,6 +1376,19 @@ def _fan_in_typed_results(
             for item in objective_rows
             if item.command_id is not None and not item.required
         }
+        task_spec_refs = {
+            objective.task_spec_ref for objective in objective_by_command.values()
+        }
+        if len(task_spec_refs) != 1:
+            raise ValueError("stage12_grounded_task_spec_mismatch")
+        stage12_task_spec = read_typed_artifact_owner_ref(
+            artifact_uow,
+            storage_ref=next(iter(task_spec_refs)),
+            workspace_id=workspace_id,
+            current_scope_hash=scope_hash,
+            expected_kind="task_spec_v2",
+            payload_type=DurableTaskSpecV2,
+        ).task_spec
 
     output_facts = tuple(
         item
@@ -1250,6 +1514,45 @@ def _fan_in_typed_results(
                 reason,
             )
         )
+    command_objective_ids = {
+        objective.objective_id for objective in objective_by_command.values()
+    }
+    for objective_row in objective_rows:
+        if objective_row.objective_key in command_objective_ids:
+            continue
+        if objective_row.status not in {"denied", "failed", "degraded"}:
+            raise ValueError("typed_fan_in_objective_not_terminal")
+        outcomes.append(
+            ObjectiveOutcomeInputV1(
+                objective_row.objective_key,
+                "denied" if objective_row.status == "denied" else "failed",
+                objective_row.required,
+                objective_row.error_code,
+            )
+        )
+    represented_action_slots = {item.slot_id for item in actions}
+    if stage12_task_spec is not None:
+        objective_rows_by_key = {item.objective_key: item for item in objective_rows}
+        for slot in stage12_task_spec.action_slots:
+            if slot.slot_id in represented_action_slots:
+                continue
+            objective_row = objective_rows_by_key.get(slot.objective_id)
+            if slot.planning_outcome == "planned" and (
+                objective_row is None or objective_row.status != "denied"
+            ):
+                raise ValueError("typed_fan_in_action_result_missing")
+            actions.append(
+                ActionDependencyV1(
+                    slot_id=slot.slot_id,
+                    proposal_status="denied",
+                    required_claim_refs=(),
+                    reason_code=(
+                        slot.denial_reason
+                        or (None if objective_row is None else objective_row.error_code)
+                        or "action_denied"
+                    ),
+                )
+            )
 
     graph = build_claim_graph(
         claims=tuple(claims),
@@ -1287,20 +1590,9 @@ def _fan_in_typed_results(
             or (stage12_settings is None and stage12_provider is None)
         ):
             raise ValueError("stage12_grounded_fan_in_context_missing")
-        task_spec_refs = {
-            objective.task_spec_ref for objective in objective_by_command.values()
-        }
-        if len(task_spec_refs) != 1:
+        if stage12_task_spec is None:
             raise ValueError("stage12_grounded_task_spec_mismatch")
-        task_owner = read_typed_artifact_owner_ref(
-            artifact_uow,
-            storage_ref=next(iter(task_spec_refs)),
-            workspace_id=workspace_id,
-            current_scope_hash=scope_hash,
-            expected_kind="task_spec_v2",
-            payload_type=DurableTaskSpecV2,
-        )
-        task_spec = task_owner.task_spec
+        task_spec = stage12_task_spec
         if (
             stage12_schema.scope_hash != scope_hash
             or stage12_schema.schema_hash != task_spec.authorized_schema_hash

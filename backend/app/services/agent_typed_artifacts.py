@@ -218,7 +218,11 @@ def read_typed_artifact_owner_ref(
 
 
 def _declared_payload_hash(payload: dict[str, object]) -> str:
-    matches = [key for key in _HASH_FIELDS if key in payload]
+    matches = (
+        ["content_hash"]
+        if "content_hash" in payload
+        else [key for key in _HASH_FIELDS if key in payload]
+    )
     if len(matches) > 1:
         raise ValueError("typed_artifact_payload_hash_invalid")
     if not matches:
@@ -229,7 +233,11 @@ def _declared_payload_hash(payload: dict[str, object]) -> str:
 
 
 def _computed_payload_hash(payload: dict[str, object]) -> str:
-    hash_field = next((key for key in _HASH_FIELDS if key in payload), None)
+    hash_field = (
+        "content_hash"
+        if "content_hash" in payload
+        else next((key for key in _HASH_FIELDS if key in payload), None)
+    )
     if hash_field is None:
         return specialist_payload_sha256(payload)
     return specialist_payload_sha256(

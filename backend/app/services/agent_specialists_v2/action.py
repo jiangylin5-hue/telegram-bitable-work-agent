@@ -60,6 +60,7 @@ class ActionSpecialistV2:
         }
         denial_reason = None
         status = "proposed"
+        create_action = slot.action_kind in {"record.create", "task.create"}
         candidate_fields = {
             item.record_id: set(item.writable_field_ids)
             for item in candidates.candidates
@@ -72,7 +73,9 @@ class ActionSpecialistV2:
         if slot.planning_outcome == "denied":
             status = "denied"
             denial_reason = slot.denial_reason or "action_denied"
-        elif not candidates.complete or not candidates.candidates:
+        elif not candidates.complete or (
+            not create_action and not candidates.candidates
+        ):
             status = "deferred"
             denial_reason = "candidate_set_incomplete"
         elif any(
@@ -96,7 +99,7 @@ class ActionSpecialistV2:
             else ()
         )
         assignments = ()
-        if status == "proposed":
+        if status == "proposed" and not create_action:
             assignments = tuple(
                 {
                     "record_id": candidate.record_id,

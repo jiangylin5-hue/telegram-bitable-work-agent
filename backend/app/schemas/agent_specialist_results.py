@@ -351,7 +351,12 @@ class ControlledActionProposalV1(_StrictFrozenModel):
         if len(set(assignment_keys)) != len(assignment_keys):
             raise ValueError("specialist_action_assignment_duplicate")
         if self.status == "proposed":
-            if not self.target_record_ids or self.denial_reason is not None:
+            create_action = self.action_kind in {"record.create", "task.create"}
+            if (
+                self.denial_reason is not None
+                or (create_action and self.target_record_ids)
+                or (not create_action and not self.target_record_ids)
+            ):
                 raise ValueError("specialist_action_proposal_invalid")
         elif self.target_record_ids or self.assignments or self.evidence_ids:
             raise ValueError("specialist_action_denial_payload_invalid")
