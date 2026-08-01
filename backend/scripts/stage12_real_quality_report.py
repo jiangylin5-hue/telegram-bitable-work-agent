@@ -345,7 +345,7 @@ def _latency_metric_summary(
         **distribution.model_dump(),
         comparison="at_most",
         target=8000.0,
-        gate_pass=(observed_count == expected_count and distribution.mean <= 8000.0),
+        gate_pass=(observed_count == expected_count and distribution.worst <= 8000.0),
     )
 
 
@@ -415,6 +415,12 @@ def summarize_final_campaign(
         raise ValueError("evaluation_provider_observation_invalid")
     provider_unavailable_rates = tuple(
         missing / total for missing, total in zip(unavailable, required, strict=True)
+    )
+    fallback_counts = tuple(
+        float(
+            sum(item.trace.answer.answer_source != "real_provider" for item in results)
+        )
+        for results in round_results
     )
     confirmed = _validated_round_tuple(
         confirmed_action_count_by_round,
@@ -604,7 +610,44 @@ def summarize_final_campaign(
         "provider_unavailable_rate": _external_metric_summary(
             provider_unavailable_rates,
             comparison="at_most",
-            target=0.02,
+            target=0.0,
+        ),
+        "provider_transport_failure_rate": _metric_summary(
+            round_results,
+            extractor=lambda item: float(
+                item.trace.answer.provider_result_status == "transport_failed"
+            ),
+            comparison="at_most",
+            target=0.0,
+        ),
+        "provider_schema_failure_rate": _metric_summary(
+            round_results,
+            extractor=lambda item: float(
+                item.trace.answer.provider_result_status == "schema_failed"
+            ),
+            comparison="at_most",
+            target=0.0,
+        ),
+        "provider_grounding_failure_rate": _metric_summary(
+            round_results,
+            extractor=lambda item: float(
+                item.trace.answer.provider_result_status == "grounding_failed"
+            ),
+            comparison="at_most",
+            target=0.0,
+        ),
+        "provider_language_failure_rate": _metric_summary(
+            round_results,
+            extractor=lambda item: float(
+                item.trace.answer.provider_result_status == "language_failed"
+            ),
+            comparison="at_most",
+            target=0.0,
+        ),
+        "fallback_count": _external_metric_summary(
+            fallback_counts,
+            comparison="exact",
+            target=0.0,
         ),
         "p95_total_latency_ms": _latency_metric_summary(round_results),
         "confirmed_action_count": _external_metric_summary(

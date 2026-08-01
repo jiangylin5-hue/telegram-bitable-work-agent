@@ -38,7 +38,13 @@ def _case(case_id: str):
     return next(case for case in build_stage12_truth_cases() if case.case_id == case_id)
 
 
-def _unobserved_trace(case_id: str, round_id: str) -> RuntimeTraceV2:
+def _unobserved_trace(
+    case_id: str,
+    round_id: str,
+    *,
+    answer_source: str = "deterministic_fallback",
+    provider_result_status: str = "transport_failed",
+) -> RuntimeTraceV2:
     return RuntimeTraceV2(
         version="runtime-trace.v2",
         case_id=case_id,
@@ -72,8 +78,8 @@ def _unobserved_trace(case_id: str, round_id: str) -> RuntimeTraceV2:
             observation_status="not_observed",
             rendered_answer="",
             claims=(),
-            answer_source="deterministic_fallback",
-            provider_result_status="transport_failed",
+            answer_source=answer_source,
+            provider_result_status=provider_result_status,
         ),
         actions=(),
         safety=RuntimeSafetyTrace(
@@ -225,6 +231,8 @@ def _literal_three_round_report(
     one_latency_outlier: bool = False,
     final_answer_failure: bool = False,
     real_provider_origin_failure: bool = False,
+    provider_failure_status: str | None = None,
+    one_slow_round: bool = False,
 ) -> EvaluationReportV2:
     results: list[EvaluationResultV2] = []
     for round_number, exact_count in enumerate(objective_exact_counts, start=1):
@@ -239,7 +247,8 @@ def _literal_three_round_report(
             )
             latency_ms = (
                 9000.0
-                if one_latency_outlier and round_number == 1 and case_number == 47
+                if (one_latency_outlier and round_number == 1 and case_number == 47)
+                or (one_slow_round and round_number == 2)
                 else 1000.0
             )
             final_answer_grounded = not (
@@ -249,12 +258,29 @@ def _literal_three_round_report(
                 real_provider_origin_failure
                 and round_number == 2
                 and case_number == 0
+                or provider_failure_status is not None
+                and round_number == 2
+                and case_number == 0
+            )
+            result_status = (
+                provider_failure_status or "transport_failed"
+                if not final_answer_real_provider
+                else "completed"
             )
             results.append(
                 EvaluationResultV2(
                     case_id=case_id,
                     round_id=round_id,
-                    trace=_unobserved_trace(case_id, round_id),
+                    trace=_unobserved_trace(
+                        case_id,
+                        round_id,
+                        answer_source=(
+                            "real_provider"
+                            if final_answer_real_provider
+                            else "deterministic_fallback"
+                        ),
+                        provider_result_status=result_status,
+                    ),
                     score=_literal_score(
                         objective_exact=objective_exact,
                         external_send_safe=external_send_safe,
@@ -458,6 +484,11 @@ def test_final_summary_passes_only_when_every_named_gate_passes() -> None:
     assert summary.metrics["p95_total_latency_ms"].worst == 1000.0
     assert summary.metrics["final_answer_gate_pass"].mean == 1.0
     assert summary.metrics["final_answer_real_provider_origin"].mean == 1.0
+    assert summary.metrics["fallback_count"].mean == 0.0
+    assert summary.metrics["provider_transport_failure_rate"].mean == 0.0
+    assert summary.metrics["provider_schema_failure_rate"].mean == 0.0
+    assert summary.metrics["provider_grounding_failure_rate"].mean == 0.0
+    assert summary.metrics["provider_language_failure_rate"].mean == 0.0
     assert summary.release_gate_pass is True
 
 
@@ -472,3 +503,34 @@ def test_final_summary_uses_round_p95_instead_of_mean_latency() -> None:
         1000.0,
     )
     assert summary.metrics["p95_total_latency_ms"].gate_pass is True
+
+
+def test_final_summary_fails_when_one_round_p95_exceeds_8000_ms() -> None:
+    summary = _summarize(_literal_three_round_report(one_slow_round=True))
+
+    latency = summary.metrics["p95_total_latency_ms"]
+    assert latency.round_values == (1000.0, 9000.0, 1000.0)
+    assert latency.worst == 9000.0
+    assert latency.gate_pass is False
+    assert summary.release_gate_pass is False
+
+
+@pytest.mark.parametrize(
+    ("status", "metric_name"),
+    (
+        ("transport_failed", "provider_transport_failure_rate"),
+        ("schema_failed", "provider_schema_failure_rate"),
+        ("grounding_failed", "provider_grounding_failure_rate"),
+        ("language_failed", "provider_language_failure_rate"),
+    ),
+)
+def test_final_summary_reports_each_provider_failure_rate_separately(
+    status: str, metric_name: str
+) -> None:
+    summary = _summarize(_literal_three_round_report(provider_failure_status=status))
+
+    assert summary.metrics[metric_name].mean == pytest.approx(1 / 144)
+    assert summary.metrics[metric_name].gate_pass is False
+    assert summary.metrics["fallback_count"].round_values == (0.0, 1.0, 0.0)
+    assert summary.metrics["fallback_count"].gate_pass is False
+    assert summary.release_gate_pass is False

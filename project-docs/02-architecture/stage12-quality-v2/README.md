@@ -3,12 +3,12 @@
 ## Status
 
 - Document status: active approved architecture index
-- Stage status: complete A–F local source is checkpointed at `e30eef1`, but release remains `FAIL`. The post-correction campaign had only `24/144` completed real Composer results and `120/144` deterministic fallbacks. Grounded Answer Provider V2 is approved/planned; implementation and P1/P2/P3/native-server/Telegram gates remain pending. Production remains Stage11/r76.
+- Stage status: complete A–F local source is checkpointed and TDR-028 Grounded per-slot Provider isolation has passed real P1 `12/12`, exact P2 `36/36`, zero fallback/effects/writes/sends and p95 `4385 ms`. The local native release-candidate gate passed backend `2519 passed, 40 skipped`, explicit native PostgreSQL/pgvector `17 + 3 + 17 passed`, Mini App `413 passed`, production build and repository-native assets. Native Ubuntu deployment/Redis validation, exactly one P3 `48 x 3`, bounded Telegram validation and final production activation remain pending. Production remains Stage11/r76.
 - Scope: 评测可信度、Planner、结构化多表查询、Embedding/Chunk、Specialist、Provider/Model、Durable Action、API/SSE、实施与验收
 - Baseline commit: `09b9d5f`
 - Active production release: `stage09-p1-20260729-r76-stage11-terminal-fan-in`
 - Evidence baseline: `../../08-implementation/evidence/stage11-r75-real-48case-report-2026-07-28.json`
-- Current Stage12 evidence: `../../08-implementation/evidence/stage12-final-provider-campaign-v2-2026-07-31/AUDIT.md`, bundle `6b15446524a5a084d744dfc82564a73354d1477260c8e2e705375e9c392f1aa8`
+- Current Stage12 evidence: `../../08-implementation/evidence/stage12-native-release-candidate-local-2026-08-01.md`; accepted P2 bundle `54de9da4eb0e7ae7eb65d62bbb85807d5382af05a2b795a29628dc10eecc86cc`
 
 ## 1. 为什么拆分
 

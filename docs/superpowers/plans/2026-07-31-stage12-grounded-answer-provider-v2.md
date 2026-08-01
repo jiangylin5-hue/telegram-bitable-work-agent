@@ -538,23 +538,23 @@ deployment move to Task 9; they are not implied by Task 8B completion.
 - Consumes: P2-passing revision, disposable PostgreSQL/pgvector and real Redis fixtures.
 - Produces: full local regression evidence and a committed native release candidate; it does not claim final P3 acceptance.
 
-- [ ] **Step 1: Add future P3 report gates in RED/GREEN**
+- [x] **Step 1: Add future P3 report gates in RED/GREEN**
 
 Require any later P3 bundle to contain `144/144 answer_source=real_provider`, `fallback_count=0`, separate transport/schema/grounding/language rates, unchanged final-answer/safety metrics and total P95 `<= 8000 ms`.
 
-- [ ] **Step 2: Run focused and full backend verification**
+- [x] **Step 2: Run focused and full backend verification**
 
 Run Stage12 focused tests, full backend pytest with at least a 10-minute budget, disposable PostgreSQL/pgvector, real Redis recovery/ack-once, Alembic current/head, compileall, Black and `git diff --check`. Classify every skip.
 
-- [ ] **Step 3: Run Mini App and production build**
+- [x] **Step 3: Run Mini App and production build**
 
 Run the full Mini App suite, TypeScript/build and relevant Action/SSE UI tests. Do not infer visual acceptance from unit tests.
 
-- [ ] **Step 4: Run native release asset preflight locally**
+- [x] **Step 4: Run native release asset preflight locally**
 
 Verify sealed-source layout, shell LF/CRLF, runtime-presence assets, migration head, static parity inputs and rollback assets without connecting to the server.
 
-- [ ] **Step 5: Update candidate evidence and commit**
+- [x] **Step 5: Update candidate evidence and commit**
 
 Record changed files, verification, skipped tests, remaining risks and temporary cleanup. Explicitly state that P3/server/Telegram remain pending. Commit only if P1/P2 bundles validate and secret/raw-output scans pass.
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-- **Current Progress Update (2026-08-01):** Human Gold remains `48/48`. User-approved TDR-028 per-slot Grounded Provider isolation is `implemented-local-p2-passed`: final unit `2176 passed`, real P1 `12/12`, and accepted exact P2 `36/36` real Provider/final-answer with fallback `0`, effects/writes/sends `0/0/0`, p95 `4385 ms` and hash `54de9da4eb0e7ae7eb65d62bbb85807d5382af05a2b795a29628dc10eecc86cc`. Failed intermediate `31/36` and `35/36` evidence is retained. P3, native release-candidate verification, activation and Telegram remain open; Stage11 is still production authority.
+- **Current Progress Update (2026-08-01):** Human Gold remains `48/48`. User-approved TDR-028 per-slot Grounded Provider isolation is `implemented-local-p2-passed`: real P1 `12/12`, accepted exact P2 `36/36`, fallback `0`, effects/writes/sends `0/0/0`, p95 `4385 ms` and hash `54de9da4eb0e7ae7eb65d62bbb85807d5382af05a2b795a29628dc10eecc86cc`. The local native release-candidate gate now also passes backend `2519 passed, 40 classified skips`, explicit native PostgreSQL/pgvector `17 + 3 + 17 passed`, Mini App `413 passed`, production build and eight repository-native asset suites. Ubuntu native Redis/live asset validation, P3, deployment activation and Telegram remain open; Stage11 is still production authority.
 
 - **Document status:** active implementation index
 - **Current Stage:** Stage12 comprehensive audit reopened A/B/E/F and cross-stage acceptance; the nine-package correction is approved for local implementation; C/D retain component evidence

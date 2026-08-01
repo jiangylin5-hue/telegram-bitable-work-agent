@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 import pytest
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, func, inspect, select, text
 from sqlalchemy.engine import Engine, make_url
@@ -110,9 +111,11 @@ def test_online_alembic_upgrade_creates_stage02_fact_tables(
         "telegram_customer_bindings",
     }.issubset(set(inspector.get_table_names()))
 
+    config = _alembic_config(str(online_db.engine.url))
+    expected_head = ScriptDirectory.from_config(config).get_current_head()
     with online_db.engine.connect() as connection:
         assert connection.scalar(text("select version_num from alembic_version")) == (
-            "20260728_0034"
+            expected_head
         )
 
 
@@ -225,8 +228,7 @@ def test_online_audit_view_reads_real_audit_events(
         ("system", "telegram.binding.resolved"),
     }
     assert all(
-        record["fields"]["entity_type"] == "message"
-        and record["fields"]["created_at"]
+        record["fields"]["entity_type"] == "message" and record["fields"]["created_at"]
         for record in matching_records
     )
 
@@ -443,9 +445,7 @@ def test_online_agent_confirmation_denial_persists_audit_without_business_writes
         assert _count(session, ServiceRecord) == 0
         assert _count(session, ExecutionTicket) == 0
         audit_event = session.scalar(
-            select(OpsAuditEvent).where(
-                OpsAuditEvent.event_type == "permission_denied"
-            )
+            select(OpsAuditEvent).where(OpsAuditEvent.event_type == "permission_denied")
         )
         assert audit_event is not None
         assert audit_event.trace_id == f"draft:{draft_id}"
@@ -681,9 +681,7 @@ def test_online_customer_report_api_denies_unscoped_sales_and_persists_audit(
     with online_db.session_factory() as session:
         assert _count(session, CustomerDailyReport) == 0
         audit_event = session.scalar(
-            select(OpsAuditEvent).where(
-                OpsAuditEvent.event_type == "permission_denied"
-            )
+            select(OpsAuditEvent).where(OpsAuditEvent.event_type == "permission_denied")
         )
         assert audit_event is not None
         assert audit_event.trace_id == (
@@ -757,9 +755,7 @@ def test_online_company_report_api_denies_sales_and_persists_audit(
     with online_db.session_factory() as session:
         assert _count(session, CompanyDailyReport) == 0
         audit_event = session.scalar(
-            select(OpsAuditEvent).where(
-                OpsAuditEvent.event_type == "permission_denied"
-            )
+            select(OpsAuditEvent).where(OpsAuditEvent.event_type == "permission_denied")
         )
         assert audit_event is not None
         assert audit_event.trace_id == f"report:company:{report_date.isoformat()}"
@@ -775,8 +771,7 @@ def test_online_company_report_api_denies_sales_and_persists_audit(
     matching_audit_records = [
         record
         for record in audit_view_response.json()["records"]
-        if record["fields"]["trace_id"]
-        == f"report:company:{report_date.isoformat()}"
+        if record["fields"]["trace_id"] == f"report:company:{report_date.isoformat()}"
     ]
     assert matching_audit_records == [
         {
@@ -860,7 +855,10 @@ def test_online_inventory_services_persist_assignment_and_view_status(
     assert matching_records[0]["fields"]["assigned_customer_id"] == str(customer_id)
 
     with online_db.session_factory() as session:
-        assert session.get(AccountInventory, account_id).assigned_customer_id == customer_id
+        assert (
+            session.get(AccountInventory, account_id).assigned_customer_id
+            == customer_id
+        )
         assert _count(session, AccountStatusEvent) == 2
         assert _count(session, OpsAuditEvent) == 2
 
@@ -924,9 +922,7 @@ def test_online_recharge_service_persists_execution_readback_and_view_status(
         assert session.get(ExecutionTicket, ticket_id).status == "used"
         assert _count(session, CollectionRecord) == 1
         outbox_events = list(
-            session.scalars(
-                select(OutboxEvent).order_by(OutboxEvent.event_type)
-            )
+            session.scalars(select(OutboxEvent).order_by(OutboxEvent.event_type))
         )
         assert [event.event_type for event in outbox_events] == [
             "customer.reply",
