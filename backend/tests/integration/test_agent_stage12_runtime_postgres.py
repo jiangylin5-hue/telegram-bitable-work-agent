@@ -104,6 +104,11 @@ class _OfflineFallbackProvider:
             ("platform.tabular.analyse", "platform.action.propose"),
             ("completed", "completed"),
         ),
+        (
+            "把 MT-017 同时改为 done 和 blocked，并创建明天之前的评审任务；先识别冲突，不要生成错误更新。",
+            ("platform.tabular.analyse", "platform.action.propose"),
+            ("completed", "denied", "denied", "completed"),
+        ),
     ],
 )
 def test_sql_admission_persists_authorized_zero_dependency_dispatch_atomically(
@@ -151,6 +156,7 @@ def test_sql_admission_persists_authorized_zero_dependency_dispatch_atomically(
                     "query",
                     "summarize",
                     "draft_create",
+                    "draft_update",
                     "task_create",
                     "notification.request",
                 ],

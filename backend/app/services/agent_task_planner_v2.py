@@ -118,12 +118,18 @@ def plan_task_v2(
     )
     entities = _entity_occurrences(lexical, binding, request.authorized_entities)
     candidates = _action_candidates(request, lexical, entities)
+    action_spans = _action_value_spans(request, lexical, candidates)
+    if unresolved_ambiguity:
+        unresolved_ambiguity = any(
+            not _span_overlaps_any(item.source_span, action_spans)
+            for item in binding.ambiguous_candidates
+        )
     query_intent = _query_intent(
         request,
         lexical,
         binding,
         entities,
-        action_spans=_action_value_spans(request, lexical, candidates),
+        action_spans=action_spans,
     )
     split_aggregate_and_risk_codes = (
         re.search(
@@ -193,7 +199,7 @@ def plan_task_v2(
     risk_analysis_requested = _requires_independent_risk_analysis(
         request.query,
         lexical,
-        action_spans=_action_value_spans(request, lexical, candidates),
+        action_spans=action_spans,
     )
     restricted_objective: TaskObjectiveV2 | None = None
 

@@ -424,6 +424,43 @@ def test_conflicted_update_is_denied_but_independent_task_continues() -> None:
     assert spec.conflict_groups[0].assignments[0].values == ("done", "blocked")
 
 
+def test_action_value_ambiguity_does_not_block_exact_entity_fact_query() -> None:
+    snapshot = _snapshot()
+    tables = tuple(
+        table.model_copy(
+            update={
+                "fields": tuple(
+                    (
+                        field.model_copy(update={"writable": False})
+                        if table.table_id == WORK_ITEMS_ID and field.key == "status"
+                        else field
+                    )
+                    for field in table.fields
+                )
+            }
+        )
+        for table in snapshot.tables
+    )
+    values = snapshot.model_dump(mode="python", exclude={"schema_hash"})
+    values["tables"] = tables
+    partial_snapshot = AuthorizedSchemaSnapshot(
+        **values,
+        schema_hash=authorized_schema_sha256(**values),
+    )
+
+    spec = plan_task_v2(
+        _request(
+            "把 MT-017 同时改为 done 和 blocked，并创建明天之前的评审任务",
+            snapshot=partial_snapshot,
+        )
+    ).task_spec
+
+    fact = next(item for item in spec.objectives if item.kind == "fact_query")
+    assert fact.planning_outcome == "planned"
+    assert fact.denial_reason is None
+    assert spec.query_intents[0].predicates == ()
+
+
 def test_restricted_request_denies_only_its_objective() -> None:
     spec = _plan("汇总可见项目，同时读取客户密钥；合法部分继续")
     by_kind = {item.kind: item for item in spec.objectives}
