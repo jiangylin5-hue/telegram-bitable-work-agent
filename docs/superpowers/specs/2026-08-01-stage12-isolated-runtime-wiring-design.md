@@ -2,12 +2,12 @@
 
 ## Status
 
-- Document status: `written-pending-user-review`
+- Document status: `approved-for-implementation`
 - Scope: isolated Stage12 FastAPI, LangGraph, PostgreSQL/pgvector, Redis typed-specialist, Grounded Provider and SSE wiring
 - Production-wide activation: excluded
 - Public endpoint expansion: none
 - Database migration: not expected; existing revisions `20260729_0035` through `20260730_0039` remain authoritative
-- Approved direction: the user approved the recommended isolated-runtime approach on 2026-08-01; implementation still waits for review of this written specification
+- Approved direction: the user approved the recommended isolated-runtime approach and this written specification on 2026-08-01
 
 ## 1. Problem Statement
 
