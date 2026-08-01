@@ -38,6 +38,11 @@ grep -Fq 'realpath "$release_root"' "$layout" || fail canonical-release-root
 grep -Fq 'backend/alembic/versions/20260720_0032_stage08_knowledge_indexing.py' "$layout" || fail required-migration
 grep -Fq 'backend/alembic/versions/20260723_0033_mini_app_browser_handoffs.py' "$layout" || fail required-browser-handoff-migration
 grep -Fq 'backend/alembic/versions/20260728_0034_agent_event_runtime.py' "$layout" || fail required-agent-event-runtime-migration
+grep -Fq 'backend/alembic/versions/20260729_0035_stage12_retrieval_v2.py' "$layout" || fail required-stage12-retrieval-migration
+grep -Fq 'backend/alembic/versions/20260730_0036_stage12_durable_actions.py' "$layout" || fail required-stage12-action-migration
+grep -Fq 'backend/alembic/versions/20260730_0037_stage12_same_table_relations.py' "$layout" || fail required-stage12-relation-record-migration
+grep -Fq 'backend/alembic/versions/20260730_0038_stage12_relation_edge_identity.py' "$layout" || fail required-stage12-relation-authority-migration
+grep -Fq 'backend/alembic/versions/20260730_0039_stage12_retrieval_scope_registration.py' "$layout" || fail required-stage12-scope-migration
 grep -Fq 'mini-app/dist/browser-handoff.html' "$layout" || fail required-browser-handoff
 grep -Fq 'handoff_asset="$release_root/mini-app/dist/browser-handoff.html"' "$layout" || fail browser-handoff-asset-binding
 grep -Fq "grep -Eq 'tgWebAppData|ticket=' \"\$handoff_asset\"" "$layout" || fail browser-handoff-credential-scan
@@ -79,7 +84,7 @@ grep -Fq 'failed_retire_receipt' "$retire" || fail retire-failed-receipt
 grep -Fq 'sha256sum' "$retire" || fail retire-manifest
 grep -Fq 'custom_image_bytes_before' "$retire" || fail retire-image-byte-semantics
 grep -Fq 'released_bytes' "$retire" && fail retire-released-bytes
-grep -Fq 'target_revision=20260728_0034' "$migration" || fail fixed-agent-event-runtime-migration
+grep -Fq 'target_revision=20260730_0039' "$migration" || fail fixed-stage12-migration
 grep -Fq "offline_database_url='postgresql+psycopg://stage09_p1:offline-placeholder@127.0.0.1:5432/stage09_p1'" "$migration" || fail fixed-offline-database-url
 grep -Fq 'env -u DATABASE_URL "DATABASE_URL=$offline_database_url"' "$migration" || fail explicit-offline-database-url
 if grep -Eq 'runtime\.env|source[[:space:]]|ads_agent' "$migration"; then fail migration-secret-or-history; fi
@@ -143,6 +148,11 @@ for required_fixture_path in \
     backend/alembic/versions/20260720_0032_stage08_knowledge_indexing.py \
     backend/alembic/versions/20260723_0033_mini_app_browser_handoffs.py \
     backend/alembic/versions/20260728_0034_agent_event_runtime.py \
+    backend/alembic/versions/20260729_0035_stage12_retrieval_v2.py \
+    backend/alembic/versions/20260730_0036_stage12_durable_actions.py \
+    backend/alembic/versions/20260730_0037_stage12_same_table_relations.py \
+    backend/alembic/versions/20260730_0038_stage12_relation_edge_identity.py \
+    backend/alembic/versions/20260730_0039_stage12_retrieval_scope_registration.py \
     deploy/stage09-native/runtime/runtime.env.example \
     deploy/stage09-native/nginx/stage09-p1.conf.template \
     deploy/stage09-native/nginx/stage09-p1-public-http.conf.template \
@@ -273,11 +283,11 @@ fake_marker="$fixture_root/fake-alembic.marker"
     printf '%s\n' 'marker=${FAKE_ALEMBIC_MARKER:?}'
     printf '%s\n' 'if [ "$#" -eq 3 ] && [ "$1" = '\''-m'\'' ] && [ "$2" = '\''alembic'\'' ] && [ "$3" = '\''heads'\'' ]; then'
     printf '%s\n' '    printf '\''%s\n'\'' '\''heads-fixed-stage09-offline-url'\'' >> "$marker"'
-    printf '%s\n' '    printf '\''%s\n'\'' '\''20260728_0034 (head)'\'''
-    printf '%s\n' 'elif [ "$#" -eq 5 ] && [ "$1" = '\''-m'\'' ] && [ "$2" = '\''alembic'\'' ] && [ "$3" = '\''upgrade'\'' ] && [ "$4" = '\''20260728_0034'\'' ] && [ "$5" = '\''--sql'\'' ]; then'
+    printf '%s\n' '    printf '\''%s\n'\'' '\''20260730_0039 (head)'\'''
+    printf '%s\n' 'elif [ "$#" -eq 5 ] && [ "$1" = '\''-m'\'' ] && [ "$2" = '\''alembic'\'' ] && [ "$3" = '\''upgrade'\'' ] && [ "$4" = '\''20260730_0039'\'' ] && [ "$5" = '\''--sql'\'' ]; then'
     printf '%s\n' '    printf '\''%s\n'\'' '\''upgrade-fixed-stage09-offline-url'\'' >> "$marker"'
     printf '%s\n' '    printf '\''%s\n'\'' '\''-- Stage09 fixed offline migration SQL'\'''
-    printf '%s\n' '    printf '\''%s\n'\'' '\''-- 20260728_0034'\'''
+    printf '%s\n' '    printf '\''%s\n'\'' '\''-- 20260730_0039'\'''
     printf '%s\n' 'else'
     printf '%s\n' '    exit 93'
     printf '%s\n' 'fi'
@@ -306,7 +316,7 @@ migration_output=$(FAKE_ALEMBIC_MARKER="$fake_marker" DATABASE_URL='fixture-secr
 artifact-id: $artifact_id
 migration-verified: true" ] || fail migration-output
 case "$migration_output" in *fixture-secret-value*|*ads_agent*) fail migration-output-leak ;; esac
-[ -f "$migration_sql" ] && grep -Fq '20260728_0034' "$migration_sql" || fail migration-sql
+[ -f "$migration_sql" ] && grep -Fq '20260730_0039' "$migration_sql" || fail migration-sql
 [ "$(cat "$fake_marker")" = 'heads-fixed-stage09-offline-url
 upgrade-fixed-stage09-offline-url' ] || fail migration-fixed-url-or-command
 

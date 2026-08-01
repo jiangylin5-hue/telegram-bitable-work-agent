@@ -13,6 +13,12 @@
 - `backend/scripts/stage12_real_quality_report.py`
 - `backend/tests/unit/test_stage12_real_quality_report.py`
 - `backend/tests/integration/test_online_postgres_smoke.py`
+- `deploy/stage09-native/systemd/stage09-p1-migrate.service`
+- `deploy/stage09-native/scripts/verify-fixed-migration-offline.sh`
+- `deploy/stage09-native/scripts/verify-native-data-assets.sh`
+- `deploy/stage09-native/scripts/verify-release-layout.sh`
+- `deploy/stage09-native/scripts/verify-release-assets.sh`
+- native asset contract tests
 - active Stage12 progress and acceptance documents
 
 ## What Changed
@@ -26,6 +32,13 @@ three round P95 values.
 The legacy Stage02 online PostgreSQL smoke no longer hard-codes the old
 `20260728_0034` revision. It compares the migrated database with the current
 repository Alembic head, which is `20260730_0039` for this candidate.
+
+The first native-server preflight exposed a separate release-asset drift: the
+native migrate unit and offline verifier still stopped at Stage10 revision
+`20260728_0034`. RED/GREEN shell tests now require fixed revision
+`20260730_0039`, require every Stage12 migration file `0035` through `0039` in
+the sealed release, and reject `upgrade head`. This closes the risk that new
+Stage12 code could start against an intentionally unmigrated database.
 
 ## Verification
 

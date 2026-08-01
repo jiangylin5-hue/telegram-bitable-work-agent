@@ -34,6 +34,11 @@ for required in \
     backend/alembic/versions/20260720_0032_stage08_knowledge_indexing.py \
     backend/alembic/versions/20260723_0033_mini_app_browser_handoffs.py \
     backend/alembic/versions/20260728_0034_agent_event_runtime.py \
+    backend/alembic/versions/20260729_0035_stage12_retrieval_v2.py \
+    backend/alembic/versions/20260730_0036_stage12_durable_actions.py \
+    backend/alembic/versions/20260730_0037_stage12_same_table_relations.py \
+    backend/alembic/versions/20260730_0038_stage12_relation_edge_identity.py \
+    backend/alembic/versions/20260730_0039_stage12_retrieval_scope_registration.py \
     mini-app/dist/browser-handoff.html \
     deploy/stage09-native/runtime/runtime.env.example \
     deploy/stage09-native/nginx/stage09-p1.conf.template \
