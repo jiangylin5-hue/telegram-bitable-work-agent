@@ -65,6 +65,55 @@ test('parses ordered safe events after a reconnect cursor', async () => {
   expect(events[1]).toMatchObject({ event: 'result', safeView: { answer: '建议继续跟进。' } })
 })
 
+test('parses paired Stage12 provider provenance and preserves legacy shape', async () => {
+  const stage12SafeView = {
+    ...safeView,
+    answer_source: 'real_provider',
+    provider_result_status: 'completed',
+  }
+  const [stage12] = await parseAgentRunEventStream(stream([{
+    run_id: runId,
+    event_id: eventId(1),
+    sequence: 1,
+    event: 'result',
+    artifact_ref: '33333333-3333-4333-8333-333333333333',
+    safe_view: stage12SafeView,
+  }]), { runId, afterSequence: 0 })
+
+  expect(stage12).toMatchObject({
+    event: 'result',
+    safeView: { answerSource: 'real_provider', providerResultStatus: 'completed' },
+  })
+  expect((await parseAgentRunEventStream(stream([{
+    run_id: runId,
+    event_id: eventId(1),
+    sequence: 1,
+    event: 'result',
+    artifact_ref: '33333333-3333-4333-8333-333333333333',
+    safe_view: safeView,
+  }]), { runId, afterSequence: 0 }))[0]).toMatchObject({
+    safeView: { answerSource: undefined, providerResultStatus: undefined },
+  })
+})
+
+test('rejects unpaired or contradictory Stage12 provider provenance', async () => {
+  for (const invalid of [
+    { ...safeView, answer_source: 'real_provider' },
+    { ...safeView, provider_result_status: 'schema_failed' },
+    { ...safeView, answer_source: 'real_provider', provider_result_status: 'schema_failed' },
+    { ...safeView, answer_source: 'deterministic_fallback', provider_result_status: 'completed' },
+  ]) {
+    await expect(parseAgentRunEventStream(stream([{
+      run_id: runId,
+      event_id: eventId(1),
+      sequence: 1,
+      event: 'result',
+      artifact_ref: '33333333-3333-4333-8333-333333333333',
+      safe_view: invalid,
+    }]), { runId, afterSequence: 0 })).rejects.toThrow('Invalid agent run stream')
+  }
+})
+
 test('parses and retains a validated artifact-ready event', async () => {
   const artifactRef = '33333333-3333-4333-8333-333333333333'
   const events = await parseAgentRunEventStream(stream([{

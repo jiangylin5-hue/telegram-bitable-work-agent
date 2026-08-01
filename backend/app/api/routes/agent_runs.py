@@ -33,6 +33,7 @@ from app.schemas.agent_event_runtime import (
     AgentRunCreateRequest,
     AgentRunCreateResponse,
 )
+from app.schemas.agent_grounded_answer_v2 import GroundedComposerResultV2
 from app.schemas.agent_task_spec_v2 import PlannerRequestV2
 from app.schemas.agent_stage12_runtime import Stage12RuntimeAdmissionRequest
 from app.schemas.stage08_collaboration import AssistantQueryRequest
@@ -94,7 +95,11 @@ from app.services.agent_stage12_runtime_activation import (
 from app.services.agent_stage12_runtime_admission import admit_stage12_runtime_run
 from app.services.audit import record_audit_event
 from app.services.stage06_idempotency import fail_idempotent_operation
-from app.services.agent_sse_projection import project_safe_run_events
+from app.services.agent_sse_projection import (
+    project_grounded_safe_view,
+    project_safe_run_events,
+)
+from app.services.agent_typed_artifacts import read_typed_artifact
 from app.services.stage06_authorization import (
     Stage06AuthorizationError,
     authorize_workspace_action,
@@ -1167,7 +1172,10 @@ def _refresh_read_session(uow: AgentEventRuntimeUnitOfWork) -> None:
 
 
 def _require_agent_event_scope(platform_uow, *, run, actor) -> None:
-    if run.workflow_version == "stage12.quality-v2.action.v1":
+    if run.workflow_version in {
+        "stage12.quality-v2.action.v1",
+        "stage12.quality-v2.runtime.v1",
+    }:
         build_authorized_schema_snapshot(
             platform_uow,
             workspace_id=run.workspace_id,
@@ -1187,7 +1195,10 @@ def _require_agent_event_scope(platform_uow, *, run, actor) -> None:
 
 
 def _current_run_authorization_hash(platform_uow, *, run, actor) -> str:
-    if run.workflow_version == "stage12.quality-v2.action.v1":
+    if run.workflow_version in {
+        "stage12.quality-v2.action.v1",
+        "stage12.quality-v2.runtime.v1",
+    }:
         snapshot = build_authorized_schema_snapshot(
             platform_uow,
             workspace_id=run.workspace_id,
@@ -1195,10 +1206,12 @@ def _current_run_authorization_hash(platform_uow, *, run, actor) -> str:
             actor=actor,
             require_field_policy_v2=True,
         )
-        return build_stage12_action_scope_hash(
-            schema_scope_hash=snapshot.scope_hash,
-            target_record_id=run.target_record_id,
-        )
+        if run.workflow_version == "stage12.quality-v2.action.v1":
+            return build_stage12_action_scope_hash(
+                schema_scope_hash=snapshot.scope_hash,
+                target_record_id=run.target_record_id,
+            )
+        return snapshot.scope_hash
     return build_authorization_hash(
         workspace_id=run.workspace_id,
         employee_id=run.root_employee_id,
@@ -1237,6 +1250,22 @@ def _resolve_safe_view(
     artifact = runtime_uow.get_artifact(artifact_ref)
     if artifact is None or artifact.validation_status != "validated":
         raise RuntimeNotFound("agent_result_artifact_missing")
+    if artifact.kind == "grounded_composer_result":
+        run = runtime_uow.get_run(artifact.run_id)
+        if run is None or artifact.visibility_scope_hash != run.scope_hash:
+            raise RuntimeNotFound("agent_result_projection_missing")
+        try:
+            result = read_typed_artifact(
+                platform_uow,
+                artifact=artifact,
+                workspace_id=run.workspace_id,
+                current_scope_hash=run.scope_hash,
+                expected_kind="grounded_composer_result",
+                payload_type=GroundedComposerResultV2,
+            )
+            return project_grounded_safe_view(result)
+        except ValueError as exc:
+            raise AgentRunProjectionError("agent_run_projection_failure") from exc
     prefix = "stage08-idempotency:"
     if not artifact.storage_ref.startswith(prefix):
         raise RuntimeNotFound("agent_result_storage_ref_invalid")

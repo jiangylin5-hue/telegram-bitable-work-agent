@@ -24,6 +24,8 @@ export type Stage08AssistantSkillCatalog = {
   skills: Stage08AssistantSkill[]
 }
 export type Stage08AssistantStatus = 'completed' | 'draft_pending' | 'degraded' | 'denied' | 'failed' | 'cancelled' | 'timed_out'
+export type Stage12AnswerSource = 'real_provider' | 'deterministic_fallback'
+export type Stage12ProviderResultStatus = 'completed' | 'transport_failed' | 'schema_failed' | 'grounding_failed' | 'language_failed'
 export type Stage08CitationLabel = 'business_data' | 'confirmed_memory' | 'group_context' | 'retrieved_material' | 'analysis_from_current_material' | 'general_advice'
 export type Stage08DegradationCode = 'context_unavailable' | 'retrieval_unavailable' | 'compression_unavailable' | 'analysis_unavailable' | 'no_evidence' | 'policy_denied' | 'cancelled' | 'timed_out' | 'internal_failure'
 export type Stage08AssistantStreamPhase = 'authorizing' | 'planning_context' | 'analysing' | 'creating_draft' | 'completed'
@@ -46,6 +48,8 @@ export type Stage08AssistantSafeView = {
   degradationCodes: Stage08DegradationCode[]
   draftId: string | null
   skill?: Stage08SkillSummary | null
+  answerSource?: Stage12AnswerSource
+  providerResultStatus?: Stage12ProviderResultStatus
 }
 
 export type Stage08AssistantStreamEvent =

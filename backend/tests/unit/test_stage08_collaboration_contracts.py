@@ -421,6 +421,8 @@ def test_safe_view_is_terminal_strict_frozen_and_reconstructed() -> None:
     )
     rebuilt = validate_assistant_query_safe_view(view)
     assert rebuilt == view
+    assert "answer_source" not in view.model_dump(mode="json")
+    assert "provider_result_status" not in view.model_dump(mode="json")
     with pytest.raises(ValidationError):
         view.answer = "changed"  # type: ignore[misc]
     with pytest.raises(ValidationError):
@@ -447,6 +449,41 @@ def test_safe_view_is_terminal_strict_frozen_and_reconstructed() -> None:
     forged_view.__dict__["private_material"] = object()
     with pytest.raises(ValueError, match="assistant_safe_view_shape_invalid"):
         validate_assistant_query_safe_view(forged_view)
+
+
+def test_stage12_safe_view_requires_a_valid_provider_status_pair() -> None:
+    view = AssistantQuerySafeView(
+        status="completed",
+        answer="当前可见证据支持该结论。",
+        citations=(),
+        degradation_codes=(),
+        draft_id=None,
+        answer_source="real_provider",
+        provider_result_status="completed",
+    )
+
+    assert view.model_dump(mode="json")["answer_source"] == "real_provider"
+    for invalid in (
+        {"answer_source": "real_provider"},
+        {"provider_result_status": "transport_failed"},
+        {
+            "answer_source": "real_provider",
+            "provider_result_status": "schema_failed",
+        },
+        {
+            "answer_source": "deterministic_fallback",
+            "provider_result_status": "completed",
+        },
+    ):
+        with pytest.raises(ValidationError):
+            AssistantQuerySafeView(
+                status="completed",
+                answer="安全结果",
+                citations=(),
+                degradation_codes=(),
+                draft_id=None,
+                **invalid,
+            )
 
 
 def test_terminal_state_cannot_transition_back_to_nonterminal() -> None:

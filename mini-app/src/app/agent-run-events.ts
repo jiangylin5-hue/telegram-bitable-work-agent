@@ -3,6 +3,8 @@ import type {
   Stage08AssistantStatus,
   Stage08CitationLabel,
   Stage08DegradationCode,
+  Stage12AnswerSource,
+  Stage12ProviderResultStatus,
 } from './stage08-collaboration-types'
 
 
@@ -43,6 +45,8 @@ const degradationCodes = new Set<Stage08DegradationCode>(['context_unavailable',
 const objectiveStatuses = new Set(['queued', 'running', 'completed', 'degraded', 'denied'])
 const actionStatuses = new Set(['proposed', 'pending_confirmation', 'confirmed', 'executed', 'conflicted', 'denied'])
 const actionKinds = new Set(['record.create', 'record.update', 'task.create', 'reminder.request'])
+const answerSources = new Set<Stage12AnswerSource>(['real_provider', 'deterministic_fallback'])
+const providerResultStatuses = new Set<Stage12ProviderResultStatus>(['completed', 'transport_failed', 'schema_failed', 'grounding_failed', 'language_failed'])
 
 function invalidStream(): Error {
   return new Error('Invalid agent run stream')
@@ -72,7 +76,9 @@ function uuid(value: unknown): string {
 
 function safeView(value: unknown): Stage08AssistantSafeView {
   const item = record(value)
-  if (!hasExactKeys(item, ['status', 'answer', 'citations', 'degradation_codes', 'draft_id', 'skill'])) throw invalidStream()
+  const legacyKeys = ['status', 'answer', 'citations', 'degradation_codes', 'draft_id', 'skill']
+  const stage12Keys = [...legacyKeys, 'answer_source', 'provider_result_status']
+  if (!hasExactKeys(item, legacyKeys) && !hasExactKeys(item, stage12Keys)) throw invalidStream()
   if (typeof item.status !== 'string' || !assistantStatuses.has(item.status as Stage08AssistantStatus)) throw invalidStream()
   if (item.answer !== null && (typeof item.answer !== 'string' || item.answer.length > 2000 || privateIdentifierPattern.test(item.answer))) throw invalidStream()
   if (!Array.isArray(item.citations) || !Array.isArray(item.degradation_codes)) throw invalidStream()
@@ -88,6 +94,15 @@ function safeView(value: unknown): Stage08AssistantSafeView {
   if (new Set(citations.map((citation) => citation.ordinal)).size !== citations.length || new Set(safeDegradationCodes).size !== safeDegradationCodes.length) throw invalidStream()
   if (item.draft_id !== null && typeof item.draft_id !== 'string') throw invalidStream()
   if ((item.status === 'draft_pending') !== Boolean(item.draft_id)) throw invalidStream()
+  let answerSource: Stage12AnswerSource | undefined
+  let providerResultStatus: Stage12ProviderResultStatus | undefined
+  if ('answer_source' in item || 'provider_result_status' in item) {
+    if (typeof item.answer_source !== 'string' || !answerSources.has(item.answer_source as Stage12AnswerSource)) throw invalidStream()
+    if (typeof item.provider_result_status !== 'string' || !providerResultStatuses.has(item.provider_result_status as Stage12ProviderResultStatus)) throw invalidStream()
+    answerSource = item.answer_source as Stage12AnswerSource
+    providerResultStatus = item.provider_result_status as Stage12ProviderResultStatus
+    if ((answerSource === 'real_provider') !== (providerResultStatus === 'completed')) throw invalidStream()
+  }
   let skill: Stage08AssistantSafeView['skill'] = null
   if (item.skill !== null) {
     const value = record(item.skill)
@@ -106,6 +121,8 @@ function safeView(value: unknown): Stage08AssistantSafeView {
     degradationCodes: safeDegradationCodes,
     draftId: item.draft_id as string | null,
     skill,
+    answerSource,
+    providerResultStatus,
   }
 }
 

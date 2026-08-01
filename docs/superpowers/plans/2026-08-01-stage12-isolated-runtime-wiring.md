@@ -310,12 +310,12 @@ class AssistantQuerySafeView(BaseModel):
 
 **Steps:**
 
-- [ ] Add RED backend tests for paired fields, invalid pairings, Stage08 omission, Stage12 real/fallback projection, result-before-done order, disconnect/reconnect replay and zero extra Provider calls.
-- [ ] Add RED frontend type/parser tests for both legacy and Stage12 result payloads.
-- [ ] Run focused backend/frontend tests and record RED.
-- [ ] Implement the minimal contract and projection changes.
-- [ ] Rerun focused backend/frontend tests to GREEN.
-- [ ] Run the complete Agent Run/SSE backend suite and Mini App unit suite.
+- [x] Add RED backend tests for paired fields, invalid pairings, Stage08 omission, Stage12 real/fallback projection, result-before-done order, disconnect/reconnect replay and zero extra Provider calls.
+- [x] Add RED frontend type/parser tests for both legacy and Stage12 result payloads.
+- [x] Run focused backend/frontend tests and record RED.
+- [x] Implement the minimal contract and projection changes.
+- [x] Rerun focused backend/frontend tests to GREEN.
+- [x] Run the complete Agent Run/SSE backend suite and Mini App unit suite (`70 passed` backend; `415 passed` Mini App in bounded groups; production build `1853 modules transformed` on 2026-08-01).
 - [ ] Commit: `feat(stage12): project grounded answers through safe sse`.
 
 ## Task 7: Deployed public-path campaign and sanitized evidence

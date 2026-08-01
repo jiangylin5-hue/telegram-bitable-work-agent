@@ -21,6 +21,16 @@ from app.runtime.stage08_context_contracts import ContextIntent
 
 AssistantRequestedAction: TypeAlias = Literal["read_only", "draft_update"]
 AssistantSkillSelectionMode: TypeAlias = Literal["explicit", "auto"]
+AssistantAnswerSource: TypeAlias = Literal[
+    "real_provider", "deterministic_fallback"
+]
+AssistantProviderResultStatus: TypeAlias = Literal[
+    "completed",
+    "transport_failed",
+    "schema_failed",
+    "grounding_failed",
+    "language_failed",
+]
 AnalysisAction: TypeAlias = Literal[
     "read_only",
     "draft_update",
@@ -392,6 +402,14 @@ class AssistantQuerySafeView(BaseModel):
     degradation_codes: tuple[CollaborationDegradationCode, ...] = Field(max_length=12)
     draft_id: UUID | None = None
     skill: AssistantSkillSafeSummary | None = None
+    answer_source: AssistantAnswerSource | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
+    provider_result_status: AssistantProviderResultStatus | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
 
     @model_validator(mode="after")
     def validate_safe_view(self) -> "AssistantQuerySafeView":
@@ -402,12 +420,22 @@ class AssistantQuerySafeView(BaseModel):
             raise ValueError("assistant_safe_citations_invalid")
         if len(set(self.degradation_codes)) != len(self.degradation_codes):
             raise ValueError("assistant_safe_degradation_codes_invalid")
+        if (self.answer_source is None) != (self.provider_result_status is None):
+            raise ValueError("assistant_safe_provider_provenance_invalid")
+        if self.answer_source == "real_provider" and (
+            self.provider_result_status != "completed"
+        ):
+            raise ValueError("assistant_safe_provider_provenance_invalid")
+        if self.answer_source == "deterministic_fallback" and (
+            self.provider_result_status == "completed"
+        ):
+            raise ValueError("assistant_safe_provider_provenance_invalid")
         if self.status == "draft_pending":
             if self.draft_id is None:
                 raise ValueError("assistant_safe_draft_reference_required")
         elif self.draft_id is not None:
             raise ValueError("assistant_safe_draft_reference_forbidden")
-        if self.status == "degraded" and (
+        if self.status == "degraded" and self.answer_source is None and (
             self.answer is not None
             or self.citations
             or self.degradation_codes != ("analysis_unavailable",)

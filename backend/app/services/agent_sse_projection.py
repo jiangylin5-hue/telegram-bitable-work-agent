@@ -5,6 +5,8 @@ from uuid import UUID
 
 from app.models.agent_event_runtime import AgentEvent
 from app.runtime.stage08_collaboration_contracts import AssistantQuerySafeView
+from app.runtime.stage08_collaboration_contracts import AssistantQuerySafeCitation
+from app.schemas.agent_grounded_answer_v2 import GroundedComposerResultV2
 from app.schemas.agent_event_runtime import (
     SafeRunActionEvent,
     SafeRunDoneEvent,
@@ -68,6 +70,32 @@ def project_safe_run_events(
     ]
 
 
+def project_grounded_safe_view(
+    result: GroundedComposerResultV2,
+) -> AssistantQuerySafeView:
+    degradation_codes = ()
+    if result.answer_source == "deterministic_fallback":
+        degradation_codes = ("analysis_unavailable",)
+    elif result.status == "denied":
+        degradation_codes = ("policy_denied",)
+    return AssistantQuerySafeView(
+        status=result.status,
+        answer=result.answer,
+        citations=tuple(
+            AssistantQuerySafeCitation(ordinal=index, label="business_data")
+            for index, _evidence_id in enumerate(
+                result.evidence_ids[:12],
+                start=1,
+            )
+        ),
+        degradation_codes=degradation_codes,
+        draft_id=None,
+        skill=None,
+        answer_source=result.answer_source,
+        provider_result_status=result.provider_result_status,
+    )
+
+
 def _project_event(
     event: AgentEvent,
     *,
@@ -117,11 +145,18 @@ def _project_event(
             status=status,
             message=event.safe_summary or f"Action {status}",
         )
-    if event.event_type == "agent.completed" and event.artifact_ref is not None:
+    if event.event_type in {"agent.completed", "result.available"} and (
+        event.artifact_ref is not None
+    ):
         artifact = uow.get_artifact(event.artifact_ref)
         if artifact is None:
             raise RuntimeNotFound("agent_result_artifact_missing")
-        if artifact.kind != "assistant_safe_view":
+        expected_kind = (
+            "grounded_composer_result"
+            if event.event_type == "result.available"
+            else "assistant_safe_view"
+        )
+        if artifact.kind != expected_kind:
             return None
         if resolve_safe_view is None:
             raise RuntimeNotFound("agent_safe_result_resolver_missing")
@@ -165,4 +200,4 @@ def _phase_message(phase: str) -> str:
     }[phase]
 
 
-__all__ = ["project_safe_run_events"]
+__all__ = ["project_grounded_safe_view", "project_safe_run_events"]
