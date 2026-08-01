@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 from datetime import UTC, datetime, timedelta
+import json
 import os
 from uuid import UUID, uuid4
 
@@ -14,10 +15,16 @@ from app.models.base import Base
 from app.models.agent_event_runtime import AgentArtifact, AgentOutboxEvent
 from app.models.audit import OpsAuditEvent
 from app.schemas.agent_stage12_runtime import Stage12RuntimeAdmissionRequest
+from app.schemas.agent_grounded_answer_v2 import GroundedComposerResultV2
+from app.schemas.agent_event_runtime import AgentCommandEnvelope
 from app.services.agent_event_runtime import SqlAlchemyAgentEventRuntimeUnitOfWork
 from app.services.agent_field_policy_v2 import build_stage12_field_policy_v2
 from app.services.agent_orchestrator import build_authorization_hash
 from app.services.agent_stage12_runtime_admission import admit_stage12_runtime_run
+from app.services.agent_typed_artifacts import read_typed_artifact
+from app.services.agent_specialists_v2.tabular import TabularSpecialistV2
+from app.services.agent_specialists_v2.risk import RiskSpecialistV2
+from app.services.agent_specialists_v2.daily import DailySpecialistV2
 from app.services.permissions import Actor
 from app.services.stage06_digital_employees import create_digital_employee
 from app.services.stage06_platform import (
@@ -27,19 +34,55 @@ from app.services.stage06_platform import (
 from app.services.stage12_action_runtime import SqlAlchemyStage12ActionRuntimeRepository
 from scripts.stage06_local_postgres_migration_smoke import classify_local_postgres_url
 from scripts.stage12_evaluation_fixture import materialize_stage12_evaluation_fixture
+from app.workers.agent_specialist_runtime import (
+    process_stage12_typed_specialist_command,
+)
 
 
 DATABASE_URL_ENV = "STAGE06_LOCAL_DATABASE_URL"
 pytestmark = pytest.mark.postgres
 
 
+class _OfflineFallbackProvider:
+    slot_observations = ()
+
+    def __init__(self) -> None:
+        self.calls = 0
+        self.requests = []
+
+    def __call__(self, request):
+        self.calls += 1
+        self.requests.append(request)
+        error = RuntimeError("offline_test_provider")
+        error.code = "provider_schema_invalid"
+        raise error
+
+
 @pytest.mark.skipif(
     not os.getenv(DATABASE_URL_ENV),
     reason=f"{DATABASE_URL_ENV} is required for Stage12 SQL admission evidence",
 )
-def test_sql_admission_persists_authorized_zero_dependency_dispatch_atomically() -> (
-    None
-):
+@pytest.mark.parametrize(
+    ("query", "expected_capabilities"),
+    [
+        (
+            "哪些项目同时有两个以上未完成事项？说明潜在交付风险。",
+            ("platform.tabular.analyse", "platform.risk.analyse"),
+        ),
+        (
+            "生成暂停项目专项日报，说明事实、风险和下一步建议，不要声称已执行。",
+            (
+                "platform.tabular.analyse",
+                "platform.risk.analyse",
+                "platform.daily.summarise",
+            ),
+        ),
+    ],
+)
+def test_sql_admission_persists_authorized_zero_dependency_dispatch_atomically(
+    query: str,
+    expected_capabilities: tuple[str, ...],
+) -> None:
     database_url = os.environ[DATABASE_URL_ENV]
     classify_local_postgres_url(database_url)
     engine = create_engine(database_url, future=True, pool_pre_ping=True)
@@ -108,7 +151,7 @@ def test_sql_admission_persists_authorized_zero_dependency_dispatch_atomically()
                 workspace_id=fixture.core.workspace_id,
                 digital_employee_id=employee.id,
                 intent="business_fact",
-                query="列出状态为 blocked 的工作项",
+                query=query,
                 target_record_id=None,
                 idempotency_key="stage12-sql-admission-1",
                 skill_id="platform-tabular-analysis",
@@ -182,7 +225,15 @@ def test_sql_admission_persists_authorized_zero_dependency_dispatch_atomically()
                 "structured_query_artifact",
                 "objective_specialist_input",
             }
-            assert len(objectives.list_objectives(run.id)) >= 1
+            objective_runs = objectives.list_objectives(run.id)
+            expected_kinds = {
+                "platform.tabular.analyse": "fact_query",
+                "platform.risk.analyse": "risk_analysis",
+                "platform.daily.summarise": "daily_summary",
+            }
+            assert {item.kind for item in objective_runs} >= {
+                expected_kinds[item] for item in expected_capabilities
+            }
             outbox = tuple(
                 session.scalars(
                     select(AgentOutboxEvent).where(
@@ -207,6 +258,146 @@ def test_sql_admission_persists_authorized_zero_dependency_dispatch_atomically()
                 ]
             )
             assert request.query not in retained_text
+            assert sum(
+                len(platform.list_records(table_id))
+                for table_id in fixture.table_ids.values()
+            ) == record_count_before
+            envelope = AgentCommandEnvelope.model_validate_json(
+                json.dumps(
+                    runtime.get_outbox_event_by_event_id(commands[0].id).payload_json
+                )
+            )
+            provider = _OfflineFallbackProvider()
+            process_stage12_typed_specialist_command(
+                session,
+                envelope,
+                handler=TabularSpecialistV2(),
+                settings=settings,
+                worker_id="stage12-postgres-tabular",
+                now=now + timedelta(seconds=1),
+                stage12_provider=provider,
+            )
+            commands_after_tabular = runtime.list_commands(run.id)
+            assert tuple(
+                item.target_capability for item in commands_after_tabular
+            ) == expected_capabilities[: len(commands_after_tabular)]
+            assert len(commands_after_tabular) >= 2
+            assert runtime.get_run(run.id).status in {"queued", "running"}
+            event_count = len(runtime.list_events(run.id))
+            process_stage12_typed_specialist_command(
+                session,
+                envelope,
+                handler=TabularSpecialistV2(),
+                settings=settings,
+                worker_id="stage12-postgres-tabular",
+                now=now + timedelta(seconds=120),
+                stage12_provider=provider,
+            )
+            assert len(runtime.list_events(run.id)) == event_count
+            assert len(runtime.list_commands(run.id)) == len(commands_after_tabular)
+            handlers = {
+                "platform.risk.analyse": RiskSpecialistV2(),
+                "platform.daily.summarise": DailySpecialistV2(),
+            }
+            processed_command_ids = {commands[0].id}
+            next_second = 3
+            while len(processed_command_ids) < len(expected_capabilities):
+                available = runtime.list_commands(run.id)
+                downstream = next(
+                    item for item in available if item.id not in processed_command_ids
+                )
+                downstream_envelope = AgentCommandEnvelope.model_validate_json(
+                    json.dumps(
+                        runtime.get_outbox_event_by_event_id(
+                            downstream.id
+                        ).payload_json
+                    )
+                )
+                process_stage12_typed_specialist_command(
+                    session,
+                    downstream_envelope,
+                    handler=handlers[downstream.target_capability],
+                    settings=settings,
+                    worker_id=f"stage12-postgres-{downstream.target_capability}",
+                    now=now + timedelta(seconds=next_second),
+                    stage12_provider=provider,
+                )
+                processed_command_ids.add(downstream.id)
+                next_second += 1
+            assert tuple(
+                item.target_capability for item in runtime.list_commands(run.id)
+            ) == expected_capabilities
+            session.expire_all()
+            terminal_run = runtime.get_run(run.id)
+            terminal_private_input = runtime.get_private_input(private_input_id)
+            terminal_objective = objectives.get_objective_by_command(
+                run.id,
+                commands[0].id,
+            )
+            assert terminal_run is not None and terminal_run.status == "completed"
+            final_artifact = runtime.get_artifact(terminal_run.safe_result_ref)
+            assert final_artifact is not None
+            assert final_artifact.kind == "grounded_composer_result"
+            terminal_events = runtime.list_events(run.id)
+            result_event = next(
+                item for item in terminal_events if item.event_type == "result.available"
+            )
+            completed_event = next(
+                item for item in terminal_events if item.event_type == "run.completed"
+            )
+            assert result_event.sequence < completed_event.sequence
+            assert result_event.artifact_ref == final_artifact.id
+            grounded = read_typed_artifact(
+                platform,
+                artifact=final_artifact,
+                workspace_id=run.workspace_id,
+                current_scope_hash=run.scope_hash,
+                expected_kind="grounded_composer_result",
+                payload_type=GroundedComposerResultV2,
+            )
+            assert provider.calls == 1, grounded.degradation_codes
+            assert provider.requests
+            assert all(
+                "record:" not in claim.subject_label
+                for claim in provider.requests[0].claims
+            )
+            final_command = runtime.list_commands(run.id)[-1]
+            final_envelope = AgentCommandEnvelope.model_validate_json(
+                json.dumps(
+                    runtime.get_outbox_event_by_event_id(
+                        final_command.id
+                    ).payload_json
+                )
+            )
+            process_stage12_typed_specialist_command(
+                session,
+                final_envelope,
+                handler={
+                    "platform.risk.analyse": RiskSpecialistV2(),
+                    "platform.daily.summarise": DailySpecialistV2(),
+                }[final_command.target_capability],
+                settings=settings,
+                worker_id="stage12-postgres-terminal-replay",
+                now=now + timedelta(seconds=150),
+                stage12_provider=provider,
+            )
+            assert provider.calls == 1
+            assert terminal_private_input is not None
+            assert terminal_private_input.consumed_at is not None
+            assert terminal_objective is not None
+            assert terminal_objective.status == "completed"
+            assert terminal_objective.result_artifact_id is not None
+            assert all(
+                item.status == "completed"
+                for item in objectives.list_objectives(run.id)
+            )
+            assert all(
+                runtime.get_private_input(
+                    UUID(item.payload_ref.removeprefix("agent-private-input:"))
+                ).consumed_at
+                is not None
+                for item in runtime.list_commands(run.id)
+            )
             assert sum(
                 len(platform.list_records(table_id))
                 for table_id in fixture.table_ids.values()

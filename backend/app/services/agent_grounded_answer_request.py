@@ -582,10 +582,14 @@ def build_grounded_answer_request(
                 required=True,
             )
         )
+    covered_objective_handles = {
+        handle for slot in render_slots for handle in slot.objective_handles
+    }
     limited_objectives = tuple(
         item.objective_handle
         for item in objectives
         if item.status in {"denied", "degraded", "failed"}
+        or (item.required and item.objective_handle not in covered_objective_handles)
     )
     if limited_objectives:
         render_slots.append(

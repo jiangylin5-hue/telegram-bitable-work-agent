@@ -88,6 +88,8 @@ class AgentEventRuntimeUnitOfWork(Protocol):
 
     def get_artifact(self, artifact_id: UUID) -> AgentArtifact | None: ...
 
+    def list_artifacts(self, run_id: UUID) -> list[AgentArtifact]: ...
+
     def list_events(
         self, run_id: UUID, *, after_sequence: int = 0
     ) -> list[AgentEvent]: ...
@@ -202,6 +204,9 @@ class InMemoryAgentEventRuntimeUnitOfWork:
 
     def get_artifact(self, artifact_id: UUID) -> AgentArtifact | None:
         return next((item for item in self.artifacts if item.id == artifact_id), None)
+
+    def list_artifacts(self, run_id: UUID) -> list[AgentArtifact]:
+        return [item for item in self.artifacts if item.run_id == run_id]
 
     def list_events(self, run_id: UUID, *, after_sequence: int = 0) -> list[AgentEvent]:
         return sorted(
@@ -419,6 +424,22 @@ class SqlAlchemyAgentEventRuntimeUnitOfWork:
         if pending is not None:
             return pending
         return self.session.get(AgentArtifact, artifact_id)
+
+    def list_artifacts(self, run_id: UUID) -> list[AgentArtifact]:
+        persisted = list(
+            self.session.scalars(
+                select(AgentArtifact).where(AgentArtifact.run_id == run_id)
+            )
+        )
+        persisted_ids = {item.id for item in persisted}
+        pending = [
+            item
+            for item in self.session.new
+            if isinstance(item, AgentArtifact)
+            and item.run_id == run_id
+            and item.id not in persisted_ids
+        ]
+        return [*persisted, *pending]
 
     def list_events(self, run_id: UUID, *, after_sequence: int = 0) -> list[AgentEvent]:
         persisted = list(

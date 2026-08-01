@@ -187,6 +187,9 @@ def admit_stage12_runtime_run(
 
 **Files:**
 
+- Modify: `backend/app/services/agent_stage12_runtime_admission.py`
+- Create: `backend/app/services/agent_stage12_risk_policy.py`
+- Modify: `backend/app/services/agent_event_runtime.py`
 - Modify: `backend/app/workers/agent_specialist_runtime.py`
 - Modify: `backend/app/services/agent_orchestrator.py`
 - Modify: `backend/app/services/agent_private_inputs.py`
@@ -223,11 +226,11 @@ def process_stage12_typed_specialist_command(
 
 - [ ] Add RED tests for valid encrypted dispatch, wrong command/run/workspace/employee/scope, missing/duplicate objective owner, expired deadline, duplicate delivery, crash-before-commit recovery, zero-dependency-only initial publication and exact-once downstream DAG unlock.
 - [ ] Add a RED real Redis/PostgreSQL integration test that publishes a typed command through the existing outbox/stream, consumes it with the capability worker, and proves PostgreSQL terminal state plus one consumed private input.
-- [ ] Run focused unit tests and record RED.
-- [ ] Implement the isolated selector, private-input load/validation and terminal consumption ordering.
-- [ ] Run focused unit tests to GREEN.
+- [x] Run focused unit tests and record RED.
+- [x] Implement the isolated selector, private-input load/validation and terminal consumption ordering.
+- [x] Run focused unit tests to GREEN.
 - [ ] Run real PostgreSQL/Redis integration; verify exactly-once persisted outcome even if delivery is repeated.
-- [ ] Rerun existing orchestrator, private-input, publisher and all typed Specialist tests.
+- [x] Rerun existing orchestrator, private-input, publisher and all typed Specialist tests (`109 passed` together with Grounded contract coverage on 2026-08-01).
 - [ ] Commit: `feat(stage12): execute encrypted typed redis commands`.
 
 ## Task 5: Grounded Provider fan-in and visible fallback
@@ -271,9 +274,9 @@ def build_stage12_safe_fallback(
 **Steps:**
 
 - [ ] Add RED unit tests for real Provider success, transport/schema/grounding/language/oversize failures, required Specialist failure, optional degradation, raw-output non-persistence, fixed model and exactly-once fan-in.
-- [ ] Run focused tests and record RED.
-- [ ] Implement the isolated fan-in service and minimal worker/orchestrator branch.
-- [ ] Run focused tests to GREEN, including all existing Grounded Provider contract/validation tests.
+- [x] Run focused tests and record RED.
+- [x] Implement the isolated fan-in service and minimal worker/orchestrator branch.
+- [x] Run focused tests to GREEN, including all existing Grounded Provider contract/validation tests (`109 passed` combined focused suite on 2026-08-01).
 - [ ] Run one bounded integration smoke using the real configured Provider and disposable PostgreSQL/Redis; assert `answer_source=real_provider`, `provider_result_status=completed`, one retained Provider receipt and no raw Prompt/response.
 - [ ] Commit: `feat(stage12): ground typed fan in with real provider`.
 

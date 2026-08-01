@@ -52,6 +52,7 @@ EventType = Literal[
     "agent.completed",
     "agent.degraded",
     "agent.failed",
+    "result.available",
     "run.waiting_approval",
     "run.cancelled",
     "run.timed_out",

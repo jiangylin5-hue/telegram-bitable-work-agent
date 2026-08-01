@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from functools import partial
 import json
 import os
 from time import sleep
 from typing import Callable, Mapping
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -20,7 +20,9 @@ from app.core.config import (
 from app.core.database import get_session_factory
 from app.queues.redis_streams import RedisStreams, RedisStreamsClient
 from app.schemas.agent_event_runtime import AgentCommandEnvelope
-from app.models.agent_event_runtime import AgentArtifact
+from app.schemas.agent_event_runtime import AgentPrivateInputPayload
+from app.services.stage06_identity import Stage06RequestIdentity
+from app.models.agent_event_runtime import AgentArtifact, AgentPrivateInput
 from app.schemas.agent_specialist_results import (
     AuthorizedCandidateSetV1,
     ClaimGraphV1,
@@ -31,10 +33,12 @@ from app.schemas.agent_specialist_results import (
     ObjectiveSpecialistInputV1,
     RiskAssessmentSetV1,
     StructuredFactSetV1,
+    specialist_payload_sha256,
 )
-from app.schemas.agent_task_spec_v2 import ActionSlotV1
+from app.schemas.agent_task_spec_v2 import ActionSlotV1, AuthorizedSchemaSnapshot
 from app.schemas.authorized_query_plan import StructuredQueryArtifactV1
 from app.schemas.retrieval_v2 import EvidenceBundleV2
+from app.schemas.agent_stage12_runtime import Stage12ObjectiveDispatchV1
 from app.workers.agent_tabular_runtime import (
     AgentTabularStreamWorker,
     AgentTabularWorkerResult,
@@ -51,8 +55,19 @@ from app.services.agent_composer_v2 import compose_claim_graph
 from app.services.agent_orchestrator import (
     OrchestratorError,
     SpecialistSafeResult,
+    dispatch_unlocked_specialist_command,
     execute_read_only_specialist,
     fail_specialist_command,
+)
+from app.services.agent_private_inputs import (
+    PrivateInputError,
+    open_agent_private_input,
+    seal_agent_private_input,
+)
+from app.services.agent_schema_binding import build_authorized_schema_snapshot
+from app.services.agent_stage12_runtime_activation import (
+    build_stage12_runtime_profile,
+    stage12_runtime_enabled,
 )
 from app.services.agent_risk_policy import AuthorizedRiskPolicyV1
 from app.services.agent_specialist_registry_v2 import (
@@ -68,8 +83,16 @@ from app.services.agent_typed_artifacts import (
     read_typed_artifact_owner_ref,
 )
 from app.services.agent_specialist_shadow_v2 import typed_specialists_shadow_enabled
+from app.services.agent_stage12_grounded_fan_in import (
+    GroundedProvider,
+    build_stage12_grounded_provider,
+    build_stage12_presentation,
+    compose_stage12_grounded_result,
+)
 from app.services.stage06_platform import SqlAlchemyStage06PlatformUnitOfWork
+from app.services.stage06_authorization import authorize_workspace_action
 from app.services.stage12_action_runtime import SqlAlchemyStage12ActionRuntimeRepository
+from app.schemas.stage12_action_runtime import DurableTaskSpecV2
 from app.workers.stage12_action_runtime import process_stage12_action_command
 
 
@@ -107,6 +130,126 @@ class AgentSpecialistPoolResult:
 
 
 @dataclass(frozen=True, slots=True)
+class LoadedStage12ObjectiveDispatch:
+    dispatch: Stage12ObjectiveDispatchV1
+    private_input: object
+    sealed_input: object
+
+
+def load_stage12_objective_dispatch(
+    runtime: object,
+    artifact_uow: TypedArtifactUnitOfWork,
+    *,
+    run: object,
+    command: object,
+    envelope: AgentCommandEnvelope,
+    settings: Settings,
+    now: datetime,
+) -> LoadedStage12ObjectiveDispatch:
+    """Load one isolated command only from its durable owner and sealed input."""
+
+    persisted = runtime.get_outbox_event_by_event_id(command.id)
+    if persisted is None:
+        raise OrchestratorError("agent_command_outbox_missing")
+    try:
+        durable_envelope = AgentCommandEnvelope.model_validate_json(
+            json.dumps(persisted.payload_json)
+        )
+    except Exception as exc:
+        raise OrchestratorError("agent_command_envelope_invalid") from exc
+    authorization_hash = envelope.scope_proof_ref.removeprefix("scope:sha256:")
+    if (
+        durable_envelope != envelope
+        or command.run_id != run.id
+        or run.id != envelope.run_id
+        or run.workflow_version != "stage12.quality-v2.runtime.v1"
+        or run.scope_hash != authorization_hash
+        or command.target_capability != envelope.target_capability
+        or command.command_type != envelope.command_type
+        or command.idempotency_key_hash != envelope.idempotency_key_hash
+        or command.deadline_at != envelope.deadline_at
+        or now >= command.deadline_at
+    ):
+        raise OrchestratorError("agent_command_envelope_mismatch")
+    prefix = "agent-private-input:"
+    if command.payload_ref is None or not command.payload_ref.startswith(prefix):
+        raise OrchestratorError("agent_private_input_ref_invalid")
+    try:
+        private_input_id = UUID(command.payload_ref.removeprefix(prefix))
+    except ValueError as exc:
+        raise OrchestratorError("agent_private_input_ref_invalid") from exc
+    sealed_input = runtime.get_private_input(private_input_id, for_update=True)
+    if (
+        sealed_input is None
+        or sealed_input.run_id != run.id
+        or sealed_input.command_id != command.id
+        or sealed_input.consumed_at is not None
+        or settings.agent_runtime_input_key is None
+    ):
+        raise OrchestratorError("agent_private_input_unavailable")
+    try:
+        private_input = open_agent_private_input(
+            sealed_input,
+            key_b64=settings.agent_runtime_input_key,
+            run_id=run.id,
+            command_id=command.id,
+            scope_hash=authorization_hash,
+            now=now,
+        )
+    except PrivateInputError as exc:
+        raise OrchestratorError(str(exc)) from exc
+    if (
+        private_input.workspace_id != run.workspace_id
+        or private_input.employee_id != run.root_employee_id
+        or private_input.target_record_id != run.target_record_id
+    ):
+        raise OrchestratorError("agent_private_input_scope_mismatch")
+
+    referenced = tuple(runtime.get_artifact(ref) for ref in envelope.input_artifact_refs)
+    if any(
+        item is None
+        or item.run_id != run.id
+        or item.visibility_scope_hash != authorization_hash
+        or item.validation_status != "validated"
+        or (item.expires_at is not None and item.expires_at <= now)
+        for item in referenced
+    ):
+        raise OrchestratorError("typed_specialist_artifact_invalid")
+    owners = tuple(item for item in referenced if item.kind == "objective_specialist_input")
+    if len(owners) != 1:
+        raise OrchestratorError("typed_specialist_objective_owner_invalid")
+    owner = owners[0]
+    dependencies = tuple(
+        item.id for item in referenced if item.id != owner.id
+    )
+    objective = read_typed_artifact(
+        artifact_uow,
+        artifact=owner,
+        workspace_id=run.workspace_id,
+        current_scope_hash=authorization_hash,
+        expected_kind="objective_specialist_input",
+        payload_type=ObjectiveSpecialistInputV1,
+    )
+    if (
+        objective.capability_id != envelope.target_capability
+        or objective.scope_hash != authorization_hash
+        or objective.input_artifact_refs != dependencies
+    ):
+        raise OrchestratorError("typed_specialist_input_mismatch")
+    dispatch = Stage12ObjectiveDispatchV1(
+        objective=objective,
+        objective_artifact_id=owner.id,
+        dependency_artifact_ids=dependencies,
+        private_input_ref=command.payload_ref,
+    )
+    return LoadedStage12ObjectiveDispatch(
+        dispatch=dispatch,
+        private_input=private_input,
+        sealed_input=sealed_input,
+    )
+
+
+@dataclass(frozen=True, slots=True)
 class TypedSpecialistCommandProcessor:
     typed_handler: SpecialistHandler
     session_factory: Callable[[], Session]
@@ -115,12 +258,34 @@ class TypedSpecialistCommandProcessor:
 
     def __call__(self, envelope: AgentCommandEnvelope) -> None:
         with self.session_factory() as session:
-            command = SqlAlchemyAgentEventRuntimeUnitOfWork(session).get_command(
+            runtime = SqlAlchemyAgentEventRuntimeUnitOfWork(session)
+            command = runtime.get_command(
                 envelope.command_id,
                 for_update=True,
             )
             if command is None:
                 raise RuntimeError("agent_command_not_found")
+            run = runtime.get_run(envelope.run_id)
+            if (
+                run is not None
+                and run.workflow_version == "stage12.quality-v2.runtime.v1"
+                and command.payload_ref
+                and command.payload_ref.startswith("agent-private-input:")
+            ):
+                profile = build_stage12_runtime_profile(self.settings)
+                if not stage12_runtime_enabled(
+                    profile,
+                    workspace_id=run.workspace_id,
+                ):
+                    raise RuntimeError("stage12_isolated_runtime_disabled")
+                process_stage12_typed_specialist_command(
+                    session,
+                    envelope,
+                    handler=self.typed_handler,
+                    settings=self.settings,
+                    worker_id=self.worker_id,
+                )
+                return
             if command.payload_ref and command.payload_ref.startswith(
                 "stage08-idempotency:"
             ):
@@ -216,7 +381,196 @@ def process_typed_specialist_command(
                 run_id=failure_run.id,
                 workspace_id=failure_run.workspace_id,
                 scope_hash=failure_run.scope_hash,
+                now=now,
             ),
+        )
+        session.commit()
+
+
+def process_stage12_typed_specialist_command(
+    session: Session,
+    envelope: AgentCommandEnvelope,
+    *,
+    handler: SpecialistHandler,
+    settings: Settings,
+    worker_id: str,
+    now: datetime | None = None,
+    stage12_provider: GroundedProvider | None = None,
+) -> None:
+    now = now or datetime.now(UTC)
+    private_input: AgentPrivateInputPayload | None = None
+    snapshot: AuthorizedSchemaSnapshot | None = None
+    runtime = SqlAlchemyAgentEventRuntimeUnitOfWork(session)
+    platform = SqlAlchemyStage06PlatformUnitOfWork(session)
+    objectives = SqlAlchemyStage12ActionRuntimeRepository(session)
+    run = runtime.get_run(envelope.run_id, for_update=True)
+    command = runtime.get_command(envelope.command_id, for_update=True)
+    if run is None or command is None:
+        raise OrchestratorError("agent_command_not_found")
+    if handler.capability_id != envelope.target_capability:
+        raise OrchestratorError("agent_command_envelope_mismatch")
+    authorization_hash = envelope.scope_proof_ref.removeprefix("scope:sha256:")
+    if command.status == "completed":
+        objective = _stage12_objective_from_envelope(
+            runtime,
+            platform,
+            run=run,
+            command=command,
+            envelope=envelope,
+            authorization_hash=authorization_hash,
+            now=now,
+            allow_expired=True,
+        )
+        execute_typed_specialist_command(
+            runtime,
+            platform,
+            envelope,
+            handler=handler,
+            worker_id=worker_id,
+            now=now,
+            objective_override=objective,
+        )
+        session.commit()
+        return
+    try:
+        loaded = load_stage12_objective_dispatch(
+            runtime,
+            platform,
+            run=run,
+            command=command,
+            envelope=envelope,
+            settings=settings,
+            now=now,
+        )
+        private_input = loaded.private_input
+        actor = authorize_workspace_action(
+            platform,
+            Stage06RequestIdentity(
+                user_id=private_input.actor_user_id,
+                source="verified_adapter",
+            ),
+            run.workspace_id,
+            "digital_employee.invoke",
+        )
+        snapshot = build_authorized_schema_snapshot(
+            platform,
+            workspace_id=run.workspace_id,
+            employee_id=run.root_employee_id,
+            actor=actor,
+            require_field_policy_v2=True,
+        )
+        if snapshot.scope_hash != run.scope_hash:
+            raise OrchestratorError("agent_command_scope_drift")
+        objective_run = objectives.get_objective_by_command(run.id, command.id)
+        if (
+            objective_run is None
+            or objective_run.objective_key
+            != loaded.dispatch.objective.objective_id
+            or objective_run.status not in {"queued", "running"}
+        ):
+            raise OrchestratorError("stage12_objective_command_mismatch")
+        objective_run.status = "running"
+        execution = execute_typed_specialist_command(
+            runtime,
+            platform,
+            envelope,
+            handler=handler,
+            worker_id=worker_id,
+            now=now,
+            objective_override=loaded.dispatch.objective,
+            stage12_query=private_input.query,
+            stage12_schema=snapshot,
+            stage12_settings=settings,
+            stage12_provider=stage12_provider,
+            after_command_completed=partial(
+                _advance_stage12_objective_dag,
+                runtime,
+                platform,
+                objectives,
+                run=run,
+                command=command,
+                current_objective=objective_run,
+                objective_input=loaded.dispatch.objective,
+                private_input=private_input,
+                settings=settings,
+                worker_id=worker_id,
+                now=now,
+            ),
+        )
+        if objective_run.result_artifact_id != execution.artifact.id:
+            raise OrchestratorError("stage12_objective_result_mismatch")
+        loaded.sealed_input.consumed_at = now
+        session.commit()
+    except Exception:
+        session.rollback()
+        failure_runtime = SqlAlchemyAgentEventRuntimeUnitOfWork(session)
+        failure_objectives = SqlAlchemyStage12ActionRuntimeRepository(session)
+        failure_run = failure_runtime.get_run(envelope.run_id, for_update=True)
+        failure_command = failure_runtime.get_command(
+            envelope.command_id,
+            for_update=True,
+        )
+        if failure_run is None or failure_command is None:
+            raise
+        if failure_command.payload_ref and failure_command.payload_ref.startswith(
+            "agent-private-input:"
+        ):
+            try:
+                input_id = UUID(
+                    failure_command.payload_ref.removeprefix("agent-private-input:")
+                )
+            except ValueError:
+                input_id = None
+            sealed = (
+                None
+                if input_id is None
+                else failure_runtime.get_private_input(input_id, for_update=True)
+            )
+            if sealed is not None:
+                sealed.consumed_at = now
+        objective_run = failure_objectives.get_objective_by_command(
+            failure_run.id,
+            failure_command.id,
+        )
+        if objective_run is not None:
+            objective_run.status = "failed"
+            objective_run.error_code = "specialist_failed"
+        objective_rows = failure_objectives.list_objectives(failure_run.id)
+        required_command_ids = frozenset(
+            item.command_id
+            for item in objective_rows
+            if item.command_id is not None and item.required
+        )
+        optional_command_ids = frozenset(
+            item.command_id
+            for item in objective_rows
+            if item.command_id is not None and not item.required
+        )
+        fail_specialist_command(
+            failure_runtime,
+            command_id=failure_command.id,
+            authorization_hash=failure_run.scope_hash,
+            worker_id=worker_id,
+            now=now,
+            fan_in=(
+                None
+                if private_input is None or snapshot is None
+                else partial(
+                    _fan_in_typed_results,
+                    failure_runtime,
+                    SqlAlchemyStage06PlatformUnitOfWork(session),
+                    run_id=failure_run.id,
+                    workspace_id=failure_run.workspace_id,
+                    scope_hash=failure_run.scope_hash,
+                    now=now,
+                    stage12_query=private_input.query,
+                    stage12_schema=snapshot,
+                    stage12_settings=settings,
+                    stage12_provider=stage12_provider,
+                )
+            ),
+            required_command_ids=required_command_ids,
+            optional_command_ids=optional_command_ids,
         )
         session.commit()
 
@@ -229,7 +583,13 @@ def execute_typed_specialist_command(
     handler: SpecialistHandler,
     worker_id: str,
     now: datetime,
-) -> None:
+    objective_override: ObjectiveSpecialistInputV1 | None = None,
+    after_command_completed: Callable[[AgentArtifact], None] | None = None,
+    stage12_query: str | None = None,
+    stage12_schema: AuthorizedSchemaSnapshot | None = None,
+    stage12_settings: Settings | None = None,
+    stage12_provider: GroundedProvider | None = None,
+):
     command = runtime.get_command(envelope.command_id, for_update=True)
     if command is None or command.run_id != envelope.run_id:
         raise OrchestratorError("agent_command_not_found")
@@ -257,7 +617,7 @@ def execute_typed_specialist_command(
         or command.payload_ref is None
     ):
         raise OrchestratorError("agent_command_envelope_mismatch")
-    objective = read_typed_artifact_owner_ref(
+    objective = objective_override or read_typed_artifact_owner_ref(
         artifact_uow,
         storage_ref=command.payload_ref,
         workspace_id=run.workspace_id,
@@ -265,10 +625,15 @@ def execute_typed_specialist_command(
         expected_kind="objective_specialist_input",
         payload_type=ObjectiveSpecialistInputV1,
     )
+    expected_envelope_refs = (
+        objective.input_artifact_refs
+        if objective_override is None
+        else envelope.input_artifact_refs[1:]
+    )
     if (
         objective.capability_id != envelope.target_capability
         or objective.scope_hash != authorization_hash
-        or objective.input_artifact_refs != envelope.input_artifact_refs
+        or objective.input_artifact_refs != expected_envelope_refs
     ):
         raise OrchestratorError("typed_specialist_input_mismatch")
 
@@ -339,8 +704,13 @@ def execute_typed_specialist_command(
         run_id=run.id,
         workspace_id=run.workspace_id,
         scope_hash=authorization_hash,
+        now=now,
+        stage12_query=stage12_query,
+        stage12_schema=stage12_schema,
+        stage12_settings=stage12_settings,
+        stage12_provider=stage12_provider,
     )
-    execute_read_only_specialist(
+    return execute_read_only_specialist(
         runtime,
         command_id=command.id,
         authorization_hash=authorization_hash,
@@ -348,7 +718,299 @@ def execute_typed_specialist_command(
         now=now,
         execute=execute,
         fan_in=fan_in,
+        after_command_completed=after_command_completed,
     )
+
+
+def _advance_stage12_objective_dag(
+    runtime: object,
+    artifact_uow: TypedArtifactUnitOfWork,
+    objectives: SqlAlchemyStage12ActionRuntimeRepository,
+    result_artifact: AgentArtifact,
+    *,
+    run: object,
+    command: object,
+    current_objective: object,
+    objective_input: ObjectiveSpecialistInputV1,
+    private_input: object,
+    settings: Settings,
+    worker_id: str,
+    now: datetime,
+) -> None:
+    current_objective.status = "completed"
+    current_objective.result_artifact_id = result_artifact.id
+    task_owner = read_typed_artifact_owner_ref(
+        artifact_uow,
+        storage_ref=objective_input.task_spec_ref,
+        workspace_id=run.workspace_id,
+        current_scope_hash=run.scope_hash,
+        expected_kind="task_spec_v2",
+        payload_type=DurableTaskSpecV2,
+    )
+    task_spec = task_owner.task_spec
+    objective_specs = {item.objective_id: item for item in task_spec.objectives}
+    objective_runs = {
+        item.objective_key: item for item in objectives.list_objectives(run.id)
+    }
+    for candidate in objective_runs.values():
+        if candidate.command_id is not None or candidate.status != "queued":
+            continue
+        dependency_runs = tuple(
+            objective_runs[key] for key in candidate.dependency_keys
+        )
+        if not dependency_runs or any(
+            item.status not in {"completed", "proposed", "denied", "failed", "degraded"}
+            for item in dependency_runs
+        ):
+            continue
+        edges = tuple(
+            edge
+            for edge in task_spec.dependency_edges
+            if edge.to_objective_id == candidate.objective_key
+        )
+        required_failed = any(
+            edge.required
+            and objective_runs[edge.from_objective_id].status
+            in {"failed", "degraded"}
+            for edge in edges
+        )
+        if required_failed:
+            candidate.status = "failed"
+            candidate.error_code = "required_dependency_failed"
+            continue
+        specification = objective_specs[candidate.objective_key]
+        capability = {
+            "risk_analysis": "platform.risk.analyse",
+            "daily_summary": "platform.daily.summarise",
+            "record_change": "platform.action.propose",
+            "task_creation": "platform.action.propose",
+            "reminder_request": "platform.action.propose",
+        }.get(candidate.kind)
+        if capability is None:
+            raise OrchestratorError("stage12_downstream_capability_invalid")
+        dependency_artifact_ids = _stage12_dependency_artifacts(
+            runtime,
+            objective_runs=objective_runs,
+            objective_key=candidate.objective_key,
+            capability=capability,
+        )
+        objective_values = {
+            "version": "objective-specialist-input.v1",
+            "objective_id": specification.objective_id,
+            "capability_id": capability,
+            "task_spec_ref": objective_input.task_spec_ref,
+            "input_artifact_refs": dependency_artifact_ids,
+            "scope_hash": objective_input.scope_hash,
+            "schema_hash": objective_input.schema_hash,
+            "data_version_hash": objective_input.data_version_hash,
+        }
+        downstream_input = ObjectiveSpecialistInputV1(
+            **objective_values,
+            content_hash=specialist_payload_sha256(objective_values),
+        )
+        owner = persist_typed_artifact(
+            artifact_uow,
+            workspace_id=run.workspace_id,
+            run_id=run.id,
+            artifact_kind="objective_specialist_input",
+            payload=downstream_input,
+            scope_hash=run.scope_hash,
+        )
+        objective_metadata = AgentArtifact(
+            id=uuid4(),
+            run_id=run.id,
+            kind="objective_specialist_input",
+            storage_ref=owner.storage_ref,
+            content_hash=owner.content_hash,
+            visibility_scope_hash=run.scope_hash,
+            validation_status="validated",
+            expires_at=run.deadline_at,
+        )
+        runtime.add_artifact(objective_metadata)
+        runtime.flush()
+        private_id = uuid4()
+        command_id = uuid4()
+        private_ref = f"agent-private-input:{private_id}"
+        downstream_command = dispatch_unlocked_specialist_command(
+            runtime,
+            run_id=run.id,
+            parent_command_id=command.id,
+            target_capability=capability,
+            payload_ref=private_ref,
+            input_artifact_refs=(objective_metadata.id, *dependency_artifact_ids),
+            authorization_hash=run.scope_hash,
+            worker_id=worker_id,
+            now=now,
+            command_id=command_id,
+        )
+        if settings.agent_runtime_input_key is None:
+            raise OrchestratorError("agent_private_input_key_unavailable")
+        sealed = seal_agent_private_input(
+            private_input,
+            key_b64=settings.agent_runtime_input_key,
+            key_version=settings.agent_runtime_input_key_version,
+            run_id=run.id,
+            command_id=downstream_command.id,
+            scope_hash=run.scope_hash,
+            expires_at=min(
+                run.deadline_at,
+                now + timedelta(seconds=settings.agent_runtime_input_ttl_seconds),
+            ),
+        )
+        runtime.add_private_input(
+            AgentPrivateInput(
+                id=private_id,
+                run_id=run.id,
+                command_id=downstream_command.id,
+                ciphertext=sealed.ciphertext,
+                nonce=sealed.nonce,
+                key_version=sealed.key_version,
+                aad_hash=sealed.aad_hash,
+                scope_hash=sealed.scope_hash,
+                expires_at=sealed.expires_at,
+                consumed_at=None,
+            )
+        )
+        candidate.command_id = downstream_command.id
+
+
+def _stage12_dependency_artifacts(
+    runtime: object,
+    *,
+    objective_runs: Mapping[str, object],
+    objective_key: str,
+    capability: str,
+) -> tuple[UUID, ...]:
+    visited: set[str] = set()
+    artifacts: list[AgentArtifact] = []
+
+    def collect(key: str) -> None:
+        if key in visited:
+            return
+        visited.add(key)
+        value = objective_runs[key]
+        for dependency_key in value.dependency_keys:
+            collect(dependency_key)
+        if value.result_artifact_id is not None:
+            metadata = runtime.get_artifact(value.result_artifact_id)
+            if metadata is None:
+                raise OrchestratorError("stage12_dependency_artifact_missing")
+            artifacts.append(metadata)
+
+    for dependency_key in objective_runs[objective_key].dependency_keys:
+        collect(dependency_key)
+    allowed_kinds = {
+        "platform.risk.analyse": {"structured_fact_set"},
+        "platform.daily.summarise": {
+            "structured_fact_set",
+            "risk_assessment_set",
+        },
+        "platform.action.propose": {
+            "structured_fact_set",
+            "risk_assessment_set",
+            "daily_brief",
+        },
+    }[capability]
+    selected = [item for item in artifacts if item.kind in allowed_kinds]
+    if capability == "platform.risk.analyse":
+        policies = [
+            item
+            for item in runtime.list_artifacts(next(iter(objective_runs.values())).run_id)
+            if item.kind == "authorized_risk_policy"
+        ]
+        if len(policies) != 1:
+            raise OrchestratorError("stage12_risk_policy_missing")
+        selected.extend(policies)
+    identities = tuple(dict.fromkeys(item.id for item in selected))
+    if not identities:
+        raise OrchestratorError("stage12_dependency_artifact_missing")
+    return identities
+
+
+def _stage12_objective_from_envelope(
+    runtime: object,
+    artifact_uow: TypedArtifactUnitOfWork,
+    *,
+    run: object,
+    command: object,
+    envelope: AgentCommandEnvelope,
+    authorization_hash: str,
+    now: datetime,
+    allow_expired: bool = False,
+) -> ObjectiveSpecialistInputV1:
+    referenced = tuple(runtime.get_artifact(ref) for ref in envelope.input_artifact_refs)
+    owners = tuple(
+        item
+        for item in referenced
+        if item is not None
+        and item.run_id == run.id
+        and item.kind == "objective_specialist_input"
+        and item.visibility_scope_hash == authorization_hash
+        and item.validation_status == "validated"
+        and (
+            allow_expired
+            or item.expires_at is None
+            or item.expires_at > now
+        )
+    )
+    if len(owners) != 1:
+        raise OrchestratorError("typed_specialist_objective_owner_invalid")
+    return read_typed_artifact(
+        artifact_uow,
+        artifact=owners[0],
+        workspace_id=run.workspace_id,
+        current_scope_hash=authorization_hash,
+        expected_kind="objective_specialist_input",
+        payload_type=ObjectiveSpecialistInputV1,
+    )
+
+
+def _durable_envelope_for_command(
+    runtime: object,
+    command: object,
+) -> AgentCommandEnvelope:
+    persisted = runtime.get_outbox_event_by_event_id(command.id)
+    if persisted is None:
+        raise ValueError("agent_command_outbox_missing")
+    try:
+        return AgentCommandEnvelope.model_validate_json(
+            json.dumps(persisted.payload_json)
+        )
+    except Exception as exc:
+        raise ValueError("agent_command_envelope_invalid") from exc
+
+
+def _authorized_record_labels(
+    artifact_uow: TypedArtifactUnitOfWork,
+    *,
+    schema: AuthorizedSchemaSnapshot,
+    fact_sets: tuple[StructuredFactSetV1, ...],
+) -> dict[UUID, str]:
+    get_record = getattr(artifact_uow, "get_record", None)
+    if not callable(get_record):
+        return {}
+    tables = {table.table_id: table for table in schema.tables}
+    labels: dict[UUID, str] = {}
+    for fact_set in fact_sets:
+        for fact_record in fact_set.records:
+            table = tables.get(fact_record.table_id)
+            record = get_record(fact_record.record_id)
+            if (
+                table is None
+                or record is None
+                or record.table_id != fact_record.table_id
+            ):
+                continue
+            fields = {field.field_id: field for field in table.fields}
+            for field_id in (table.label_field_id, table.identity_field_id):
+                field = fields.get(field_id)
+                if field is None:
+                    continue
+                value = record.values.get(field.key)
+                if isinstance(value, (str, int, float)) and str(value).strip():
+                    labels[fact_record.record_id] = str(value).strip()[:120]
+                    break
+    return labels
 
 
 def _fan_in_typed_results(
@@ -358,20 +1020,41 @@ def _fan_in_typed_results(
     run_id,
     workspace_id,
     scope_hash: str,
+    now: datetime | None = None,
+    stage12_query: str | None = None,
+    stage12_schema: AuthorizedSchemaSnapshot | None = None,
+    stage12_settings: Settings | None = None,
+    stage12_provider: GroundedProvider | None = None,
 ) -> SpecialistSafeResult:
+    effective_now = now or datetime.now(UTC)
     commands = runtime.list_commands(run_id, for_update=True)
     objective_by_command: dict[object, ObjectiveSpecialistInputV1] = {}
     for command in commands:
         if command.payload_ref is None:
             raise ValueError("typed_specialist_input_ref_missing")
-        objective_by_command[command.id] = read_typed_artifact_owner_ref(
-            artifact_uow,
-            storage_ref=command.payload_ref,
-            workspace_id=workspace_id,
-            current_scope_hash=scope_hash,
-            expected_kind="objective_specialist_input",
-            payload_type=ObjectiveSpecialistInputV1,
-        )
+        if command.payload_ref.startswith("agent-private-input:"):
+            durable = _durable_envelope_for_command(runtime, command)
+            run = runtime.get_run(run_id)
+            if run is None:
+                raise ValueError("typed_specialist_run_missing")
+            objective_by_command[command.id] = _stage12_objective_from_envelope(
+                runtime,
+                artifact_uow,
+                run=run,
+                command=command,
+                envelope=durable,
+                authorization_hash=scope_hash,
+                now=effective_now,
+            )
+        else:
+            objective_by_command[command.id] = read_typed_artifact_owner_ref(
+                artifact_uow,
+                storage_ref=command.payload_ref,
+                workspace_id=workspace_id,
+                current_scope_hash=scope_hash,
+                expected_kind="objective_specialist_input",
+                payload_type=ObjectiveSpecialistInputV1,
+            )
 
     output_by_command: dict[object, BaseModel] = {}
     for event in runtime.list_events(run_id):
@@ -422,6 +1105,26 @@ def _fan_in_typed_results(
             in {"platform.tabular.analyse", "platform.action.propose"}
         }
         optional_ids = {str(item.id) for item in commands} - required_ids
+    stage12_run = runtime.get_run(run_id)
+    runtime_session = getattr(runtime, "session", None)
+    if (
+        stage12_run is not None
+        and stage12_run.workflow_version == "stage12.quality-v2.runtime.v1"
+        and runtime_session is not None
+    ):
+        objective_rows = SqlAlchemyStage12ActionRuntimeRepository(
+            runtime_session
+        ).list_objectives(run_id)
+        required_ids = {
+            str(item.command_id)
+            for item in objective_rows
+            if item.command_id is not None and item.required
+        }
+        optional_ids = {
+            str(item.command_id)
+            for item in objective_rows
+            if item.command_id is not None and not item.required
+        }
 
     output_facts = tuple(
         item
@@ -432,6 +1135,9 @@ def _fan_in_typed_results(
         item
         for item in output_by_command.values()
         if isinstance(item, RiskAssessmentSetV1)
+    )
+    output_dailies = tuple(
+        item for item in output_by_command.values() if isinstance(item, DailyBriefV1)
     )
     facts = tuple(
         {
@@ -445,6 +1151,13 @@ def _fan_in_typed_results(
             item.content_hash: item
             for item in (*upstream_payloads, *output_risks)
             if isinstance(item, RiskAssessmentSetV1)
+        }.values()
+    )
+    dailies = tuple(
+        {
+            item.content_hash: item
+            for item in (*upstream_payloads, *output_dailies)
+            if isinstance(item, DailyBriefV1)
         }.values()
     )
     claims: list[ClaimInputV1] = []
@@ -565,12 +1278,70 @@ def _fan_in_typed_results(
             expires_at=None,
         )
     )
-    composer = compose_claim_graph(graph)
+    if stage12_run is not None and stage12_run.workflow_version == (
+        "stage12.quality-v2.runtime.v1"
+    ):
+        if (
+            stage12_query is None
+            or stage12_schema is None
+            or (stage12_settings is None and stage12_provider is None)
+        ):
+            raise ValueError("stage12_grounded_fan_in_context_missing")
+        task_spec_refs = {
+            objective.task_spec_ref for objective in objective_by_command.values()
+        }
+        if len(task_spec_refs) != 1:
+            raise ValueError("stage12_grounded_task_spec_mismatch")
+        task_owner = read_typed_artifact_owner_ref(
+            artifact_uow,
+            storage_ref=next(iter(task_spec_refs)),
+            workspace_id=workspace_id,
+            current_scope_hash=scope_hash,
+            expected_kind="task_spec_v2",
+            payload_type=DurableTaskSpecV2,
+        )
+        task_spec = task_owner.task_spec
+        if (
+            stage12_schema.scope_hash != scope_hash
+            or stage12_schema.schema_hash != task_spec.authorized_schema_hash
+        ):
+            raise ValueError("stage12_grounded_schema_mismatch")
+        findings = (*facts, *risks, *dailies)
+        presentation = build_stage12_presentation(
+            query=stage12_query,
+            task_spec=task_spec,
+            claim_graph=graph,
+            authorized_schema=stage12_schema,
+            specialist_findings=findings,
+            record_labels=_authorized_record_labels(
+                artifact_uow,
+                schema=stage12_schema,
+                fact_sets=facts,
+            ),
+        )
+        provider = stage12_provider
+        if provider is None:
+            if stage12_settings is None:
+                raise ValueError("stage12_grounded_provider_settings_missing")
+            provider = build_stage12_grounded_provider(stage12_settings)
+        composer = compose_stage12_grounded_result(
+            query=stage12_query,
+            task_spec=task_spec,
+            claim_graph=graph,
+            authorized_schema=stage12_schema,
+            presentation=presentation,
+            specialist_findings=findings,
+            provider=provider,
+        )
+        composer_kind = "grounded_composer_result"
+    else:
+        composer = compose_claim_graph(graph)
+        composer_kind = "composer_result"
     composer_owner = persist_typed_artifact(
         artifact_uow,
         workspace_id=workspace_id,
         run_id=run_id,
-        artifact_kind="composer_result",
+        artifact_kind=composer_kind,
         payload=composer,
         scope_hash=scope_hash,
     )
@@ -579,7 +1350,7 @@ def _fan_in_typed_results(
         content_hash=composer_owner.content_hash,
         safe_summary=composer.answer[:240],
         metrics={"claims": len(graph.claims)},
-        artifact_kind="composer_result",
+        artifact_kind=composer_kind,
     )
 
 

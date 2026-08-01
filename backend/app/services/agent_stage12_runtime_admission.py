@@ -47,6 +47,9 @@ from app.services.agent_schema_binding import (
 from app.services.agent_stage12_fixture_resolution import (
     resolve_stage12_isolated_workspace,
 )
+from app.services.agent_stage12_risk_policy import (
+    build_stage12_isolated_risk_policy,
+)
 from app.services.agent_task_planner_v2 import plan_task_v2
 from app.services.agent_typed_artifacts import (
     persist_typed_artifact,
@@ -378,6 +381,19 @@ def _build_dependencies(context: _AdmissionContext) -> Stage12AdmissionDependenc
             scope_hash=snapshot.scope_hash,
             expires_at=expires_at,
         )
+        if any(
+            objective.kind == "risk_analysis"
+            and objective.planning_outcome == "planned"
+            for objective in task_artifact.task_spec.objectives
+        ):
+            _persist_metadata(
+                context,
+                run_id=run.id,
+                kind="authorized_risk_policy",
+                payload=build_stage12_isolated_risk_policy(snapshot),
+                scope_hash=snapshot.scope_hash,
+                expires_at=expires_at,
+            )
         query_metadata_by_id: dict[str, AgentArtifact] = {}
         for artifact in query_artifacts:
             metadata, _owner_ref = _persist_metadata(
