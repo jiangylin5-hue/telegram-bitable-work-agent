@@ -18,6 +18,7 @@ The nine correction packages, Human Gold `48/48`, ISO-01, bounded deterministic-
 - Current release result: `FAIL`. Composer unavailable is `36/48`, `47/48`, `37/48`, Provider-unavailable mean/worst `0.833333/0.979167`; total-latency P95 mean/worst `11636.716667/13775.8 ms`.
 - Evidence: `evidence/stage12-final-provider-campaign-v2-2026-07-31/AUDIT.md`, bundle hash `6b15446524a5a084d744dfc82564a73354d1477260c8e2e705375e9c392f1aa8`.
 - Production remains Stage11/r76. No Stage12 deployment, production migration, activation, confirmed Action, business write or Telegram send occurred.
+- 2026-08-01 superseding Provider update: user-approved TDR-028 per-slot isolation passed bounded real P1 `12/12` and exact P2 `36/36` with zero fallback/effects/writes/sends and p95 `4385 ms` (hash `54de9da4eb0e7ae7eb65d62bbb85807d5382af05a2b795a29628dc10eecc86cc`). This closes the focused P1/P2 blocker described above, but integrated P3, native deployment and Telegram gates remain open; the overall production decision remains `FAIL` until those gates pass.
 
 The historical requirement ledger remains useful for why the correction exists; its old `OPEN`/`FAIL` implementation statements must not be read as current. The remaining blocker is focused real Provider schema compatibility and latency, not deterministic final-answer correctness.
 

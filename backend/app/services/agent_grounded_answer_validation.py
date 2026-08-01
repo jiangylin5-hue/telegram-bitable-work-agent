@@ -10,6 +10,8 @@ from app.schemas.agent_grounded_answer_v2 import (
     GroundedAnswerProviderRequestV2,
     GroundedAnswerProviderRequestV3,
     GroundedComposerResultV2,
+    GroundedRenderSlotTextV1,
+    GroundedRenderSlotV1,
 )
 from app.schemas.agent_specialist_results import (
     ClaimGraphV1,
@@ -165,9 +167,7 @@ def _validate_and_collect(
     claims = {item.claim_handle: item for item in request.claims}
     citations = {item.evidence_handle: item for item in request.citations}
     actions = {item.action_handle: item for item in request.actions}
-    findings = {
-        item.finding_handle: item for item in request.specialist_findings
-    }
+    findings = {item.finding_handle: item for item in request.specialist_findings}
     objectives = {item.objective_handle: item for item in request.objectives}
     covered_claims: list[str] = []
     covered_evidence: list[str] = []
@@ -205,9 +205,7 @@ def _validate_and_collect(
             referenced_findings, expanded_claim_handles, expanded_evidence_handles = (
                 _expanded_statement_references(request, statement)
             )
-            referenced_claims = tuple(
-                claims[value] for value in expanded_claim_handles
-            )
+            referenced_claims = tuple(claims[value] for value in expanded_claim_handles)
             if statement.statement_kind in {"fact", "analysis", "recommendation"}:
                 direct_claims = tuple(
                     claims[value] for value in statement.claim_handles
@@ -321,6 +319,64 @@ def validate_grounded_answer_plan(
     _validate_and_collect(request, plan)
 
 
+def validate_grounded_answer_slot(
+    request: GroundedAnswerProviderRequestV3,
+    slot: GroundedRenderSlotV1,
+    output: GroundedRenderSlotTextV1,
+) -> None:
+    """Validate one provider-authored text against one sealed slot closure."""
+
+    if output.slot_handle != slot.slot_handle:
+        _reject("grounded_render_slot_missing_or_unknown")
+    text = output.text
+    if _CHINESE_RE.search(text) is None:
+        _reject("grounded_answer_text_chinese_missing", language=True)
+    if _INTERNAL_HANDLE_RE.search(text):
+        _reject("grounded_answer_internal_handle_exposed", language=True)
+    claims = {item.claim_handle: item for item in request.claims}
+    findings = {item.finding_handle: item for item in request.specialist_findings}
+    actions = {item.action_handle: item for item in request.actions}
+    referenced_claims = tuple(claims[value] for value in slot.claim_handles)
+    referenced_findings = tuple(findings[value] for value in slot.finding_handles)
+    if slot.statement_kind in {"fact", "analysis", "recommendation"}:
+        allowed_text = _allowed_atom_text(
+            request,
+            referenced_claims,
+            referenced_findings,
+            slot.evidence_handles,
+        )
+        _validate_atoms(text, allowed_text, request)
+        if _EXECUTED_ACTION_RE.search(text):
+            _reject("grounded_answer_action_execution_invented")
+    elif slot.statement_kind == "action_status":
+        if _EXECUTED_ACTION_RE.search(text):
+            _reject("grounded_answer_action_execution_invented")
+        if any(
+            any(marker not in text for marker in _ACTION_STATUS_MARKERS[action.status])
+            for action in (actions[value] for value in slot.action_handles)
+        ):
+            _reject("grounded_answer_action_status_missing")
+        _validate_atoms(
+            text,
+            "\n".join(
+                (
+                    *(actions[value].safe_summary for value in slot.action_handles),
+                    _allowed_atom_text(
+                        request,
+                        tuple(claims[value] for value in slot.context_claim_handles),
+                        (),
+                        slot.context_evidence_handles,
+                    ),
+                )
+            ),
+            request,
+        )
+    else:
+        _validate_atoms(text, "", request)
+        if _EXECUTED_ACTION_RE.search(text):
+            _reject("grounded_answer_action_execution_invented")
+
+
 def _validate_and_collect_slots(
     request: GroundedAnswerProviderRequestV3,
     plan: GroundedAnswerPlanV3,
@@ -334,63 +390,12 @@ def _validate_and_collect_slots(
             _reject("grounded_render_slot_missing_or_unknown")
         _reject("grounded_render_slot_reordered")
 
-    claims = {item.claim_handle: item for item in request.claims}
-    findings = {
-        item.finding_handle: item for item in request.specialist_findings
-    }
-    actions = {item.action_handle: item for item in request.actions}
     covered_objectives: list[str] = []
     covered_claims: list[str] = []
     covered_evidence: list[str] = []
     covered_actions: list[str] = []
     for slot, output in zip(request.render_slots, plan.slot_outputs, strict=True):
-        text = output.text
-        if _CHINESE_RE.search(text) is None or _INTERNAL_HANDLE_RE.search(text):
-            _reject("grounded_answer_text_language_invalid", language=True)
-        referenced_claims = tuple(claims[value] for value in slot.claim_handles)
-        referenced_findings = tuple(
-            findings[value] for value in slot.finding_handles
-        )
-        if slot.statement_kind in {"fact", "analysis", "recommendation"}:
-            allowed_text = _allowed_atom_text(
-                request,
-                referenced_claims,
-                referenced_findings,
-                slot.evidence_handles,
-            )
-            _validate_atoms(text, allowed_text, request)
-            if _EXECUTED_ACTION_RE.search(text):
-                _reject("grounded_answer_action_execution_invented")
-        elif slot.statement_kind == "action_status":
-            if _EXECUTED_ACTION_RE.search(text):
-                _reject("grounded_answer_action_execution_invented")
-            if any(
-                any(marker not in text for marker in _ACTION_STATUS_MARKERS[action.status])
-                for action in (actions[value] for value in slot.action_handles)
-            ):
-                _reject("grounded_answer_action_status_missing")
-            _validate_atoms(
-                text,
-                "\n".join(
-                    (
-                        *(actions[value].safe_summary for value in slot.action_handles),
-                        _allowed_atom_text(
-                            request,
-                            tuple(
-                                claims[value]
-                                for value in slot.context_claim_handles
-                            ),
-                            (),
-                            slot.context_evidence_handles,
-                        ),
-                    )
-                ),
-                request,
-            )
-        else:
-            _validate_atoms(text, "", request)
-            if _EXECUTED_ACTION_RE.search(text):
-                _reject("grounded_answer_action_execution_invented")
+        validate_grounded_answer_slot(request, slot, output)
         covered_objectives.extend(slot.objective_handles)
         covered_claims.extend(slot.claim_handles)
         covered_evidence.extend(slot.evidence_handles)
@@ -415,9 +420,7 @@ def _validate_runtime_binding(
     objective_refs = compact_reference_map(
         "o", (item.objective_id for item in graph.objective_statuses)
     )
-    valid_graph_claims = tuple(
-        item for item in graph.claims if item.status == "valid"
-    )
+    valid_graph_claims = tuple(item for item in graph.claims if item.status == "valid")
     claim_refs = compact_reference_map(
         "c", (item.claim_id for item in valid_graph_claims)
     )
@@ -444,12 +447,9 @@ def _validate_runtime_binding(
     ):
         _reject("grounded_answer_runtime_reference_mismatch")
 
-    request_objectives = {
-        item.objective_handle: item for item in request.objectives
-    }
+    request_objectives = {item.objective_handle: item for item in request.objectives}
     finding_objective_ids = {
-        objective_map[item.objective_handle]
-        for item in request.specialist_findings
+        objective_map[item.objective_handle] for item in request.specialist_findings
     }
     for handle, objective_id in objective_map.items():
         expected_status, expected_reason = project_grounded_objective_status(
@@ -482,13 +482,10 @@ def _validate_runtime_binding(
             or candidate.value_text != value_text
             or candidate.objective_handles
             != tuple(
-                objective_refs[value]
-                for value in sorted(graph_claim.objective_ids)
+                objective_refs[value] for value in sorted(graph_claim.objective_ids)
             )
             or candidate.evidence_handles
-            != tuple(
-                evidence_refs[value] for value in sorted(graph_claim.evidence_ids)
-            )
+            != tuple(evidence_refs[value] for value in sorted(graph_claim.evidence_ids))
             or candidate.status != graph_claim.status
             or candidate.source_versions != (claim_version_refs[claim_id],)
         ):
@@ -565,9 +562,11 @@ def render_grounded_answer(
         for slot, output in zip(request.render_slots, plan.slot_outputs, strict=True):
             suffix = ""
             if slot.evidence_handles:
-                suffix = "【证据：" + "、".join(
-                    citations[value] for value in slot.evidence_handles
-                ) + "】"
+                suffix = (
+                    "【证据："
+                    + "、".join(citations[value] for value in slot.evidence_handles)
+                    + "】"
+                )
             rendered_sections.append(
                 f"{headings[slot.section_kind]}\n{output.text}{suffix}"
             )
@@ -583,9 +582,7 @@ def render_grounded_answer(
                 if evidence_handles:
                     suffix = (
                         "【证据："
-                        + "、".join(
-                            citations[value] for value in evidence_handles
-                        )
+                        + "、".join(citations[value] for value in evidence_handles)
                         + "】"
                     )
                 statements.append(statement.text + suffix)
@@ -663,4 +660,5 @@ __all__ = [
     "ProviderValidationError",
     "render_grounded_answer",
     "validate_grounded_answer_plan",
+    "validate_grounded_answer_slot",
 ]

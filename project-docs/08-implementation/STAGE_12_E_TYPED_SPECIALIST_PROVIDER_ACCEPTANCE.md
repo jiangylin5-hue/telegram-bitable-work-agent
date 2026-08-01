@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: Task 6 and bounded Composer corrections `implemented-local`; integrated Stage12 release remains `FAIL`
+- Status: Task 6 and Grounded per-slot P2 `implemented-local-p2-passed`; integrated Stage12 release remains `FAIL` until P3/native gates
 - Date: 2026-07-31
 - Scope: typed Specialist contracts and handlers, durable typed artifact ownership, sealed command inputs, Provider V2, ClaimGraph, grounded Composer and default-off shadow
 - Runtime authority: Stage11 V1 remains the only user-answer and dispatch authority
@@ -113,3 +113,26 @@ The `144/144` returned-answer result cannot be cited as real-model acceptance be
 The user-approved TDR-027 RenderSlot correction is `implemented-local-deterministic-verified`. The active adapter now accepts only ordered text-only `GroundedAnswerPlanV3` output and the backend owns all section/statement/reference closures. Fresh focused evidence is `143 passed`, including a deterministic 48 × 3 campaign at `144/144` real-origin-shaped answers with zero fallback; full unit is `2167 passed`. This deterministic result is not real Provider acceptance.
 
 Real status correction: V3 P1 passed `12/12`, but exact P2 failed twice at `26/36` and `24/36` real/final answers with zero unauthorized effects/writes/sends. Both failures are retained; fallback remains an acceptance failure. The proposed per-slot isolated Provider topology awaits explicit confirmation, so full campaign, native server and Telegram remain blocked.
+
+## 2026-08-01 Per-Slot P1/P2 Acceptance Update
+
+The user approved TDR-028 and the per-slot topology is now implemented. The
+Provider receives one slot and only that slot's closure; maximum slots are
+three, concurrency is two, all calls share the 50-second answer deadline, and
+any slot failure rejects the complete Provider result. Partial Provider text is
+never mixed with fallback. Final-code verification is focused `140 passed`,
+all unit `2176 passed`, compileall and diff check.
+
+Fresh real P1 passed `12/12` HTTP/schema/grounding/real Provider with fallback
+`0` (hash `af9b1c69a817611bdae1103b89e4ac89b98bdd86d9304c7d91fb1f190e6fa989`).
+The accepted exact P2 passed `36/36` real Provider/final-answer, fallback `0`,
+mean/p95 `3086/4385 ms`, zero unauthorized effects, zero production writes and
+zero Telegram sends (hash
+`54de9da4eb0e7ae7eb65d62bbb85807d5382af05a2b795a29628dc10eecc86cc`).
+Failed intermediate `31/36` and `35/36` results are retained. They led to
+slot-kind-specific instructions without weakening language, canonical atom or
+Action non-execution validation.
+
+This closes the bounded P1/P2 gate only. P3 `144/144`, native server release
+candidate verification, runtime activation and real Telegram testing remain
+open; Stage11 remains production authority.

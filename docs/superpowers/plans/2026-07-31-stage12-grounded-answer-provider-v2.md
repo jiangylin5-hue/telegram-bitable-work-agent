@@ -496,6 +496,37 @@ Deterministic evidence on 2026-08-01: the focused V3 surface is `143 passed`, in
 
 Real evidence update: V3 P1 passed `12/12`, but two exact V3 P2 campaigns failed at `26/36` and `24/36` real/final answers. P3 remains blocked. Sanitized diagnostics identify cross-slot/invented textual atoms while schema, transport and p95 latency remain healthy. Further implementation is held at the separate `STAGE_12_GROUNDED_PROVIDER_SLOT_ISOLATION_DECISION.md` confirmation gate.
 
+### Task 8B: Isolate Provider Input Per RenderSlot
+
+**Interfaces:**
+- Consumes: user-approved TDR-028 and the immutable failed `e16ab5...` / `cda25a...` P2 evidence.
+- Produces: one isolated text-only Provider invocation per required slot, atomically reassembled into `GroundedAnswerPlanV3` only after every slot validates.
+
+- [x] **Step 1: RED — prove payload isolation and all-or-nothing behavior**
+
+Assert each outbound user payload contains one slot and only that slot's sealed context; raw Query, unrelated objectives/claims/actions and other slot handles are absent. Assert missing/failed slot fails the complete plan and cannot mix partial Provider prose with fallback.
+
+- [x] **Step 2: RED/GREEN — shared deadline, concurrency and attempt accounting**
+
+Assert at most three required slots, concurrency `2`, one shared 50-second deadline, at most two attempts per slot and deterministic output ordering regardless of completion order.
+
+- [x] **Step 3: Focused and full deterministic verification**
+
+Run the complete Grounded Answer/provider/campaign surface, compile and full unit regression. Preserve `144/144` deterministic real-origin-shaped campaign, exact receipt, permission/version/Action non-execution and zero-effect gates.
+
+- [x] **Step 4: One new real P1 and exact P2**
+
+Write only to new immutable evidence directories. Require P1 `12/12`; then require P2 `36/36`, zero fallback and all final-answer/safety gates. Stop before P3 on any failure.
+
+Completion evidence: focused `140 passed`, final full unit `2176 passed`,
+compileall and diff check pass. P1 is `12/12` with zero fallback (hash
+`af9b1c69a817611bdae1103b89e4ac89b98bdd86d9304c7d91fb1f190e6fa989`).
+The accepted exact P2 is `36/36` real/final, zero fallback, zero
+effects/writes/sends and p95 `4385 ms` (hash
+`54de9da4eb0e7ae7eb65d62bbb85807d5382af05a2b795a29628dc10eecc86cc`).
+Intermediate immutable `31/36` and `35/36` runs remain retained. P3 and native
+deployment move to Task 9; they are not implied by Task 8B completion.
+
 ### Task 9: Full Regression and Native Release Candidate Gate
 
 **Files:**

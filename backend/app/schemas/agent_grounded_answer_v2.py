@@ -19,6 +19,7 @@ from pydantic import (
 from app.schemas.agent_specialist_results import (
     ActionStatusV1,
     FinalAnswerRenderReceiptV1,
+    ProviderFailureCode,
     specialist_payload_sha256,
 )
 
@@ -336,9 +337,7 @@ class GroundedAnswerProviderRequestV3(GroundedAnswerProviderRequestV2):
                 ):
                     raise ValueError("grounded_render_slot_context_binding_invalid")
                 required_context_evidence = {
-                    value
-                    for item in context_claims
-                    for value in item.evidence_handles
+                    value for item in context_claims for value in item.evidence_handles
                 }
                 if set(slot.context_evidence_handles) != required_context_evidence:
                     raise ValueError("grounded_render_slot_context_evidence_invalid")
@@ -365,15 +364,68 @@ class GroundedAnswerProviderRequestV3(GroundedAnswerProviderRequestV2):
         valid_claims = {
             item.claim_handle for item in self.claims if item.status == "valid"
         }
-        if len(covered_claims) != len(set(covered_claims)) or set(covered_claims) != valid_claims:
+        if (
+            len(covered_claims) != len(set(covered_claims))
+            or set(covered_claims) != valid_claims
+        ):
             raise ValueError("grounded_render_slot_claim_coverage_invalid")
-        if len(covered_actions) != len(set(covered_actions)) or set(covered_actions) != action_handles:
+        if (
+            len(covered_actions) != len(set(covered_actions))
+            or set(covered_actions) != action_handles
+        ):
             raise ValueError("grounded_render_slot_action_coverage_invalid")
         if any(
             item.required and item.objective_handle not in covered_objectives
             for item in self.objectives
         ):
             raise ValueError("grounded_render_slot_objective_coverage_invalid")
+        return self
+
+
+class GroundedRenderSlotProviderRequestV1(_StrictFrozenModel):
+    """Minimal provider payload for exactly one backend-sealed render slot."""
+
+    version: Literal["grounded-render-slot-provider-request.v1"]
+    language: Literal["zh-CN"]
+    slot: GroundedRenderSlotV1
+    objectives: tuple[GroundedObjectiveCandidateV2, ...] = Field(max_length=16)
+    claims: tuple[GroundedClaimCandidateV2, ...] = Field(max_length=128)
+    specialist_findings: tuple[GroundedSpecialistFindingV2, ...] = Field(max_length=64)
+    actions: tuple[GroundedActionCandidateV2, ...] = Field(max_length=32)
+    citations: tuple[GroundedEvidenceCandidateV2, ...] = Field(max_length=256)
+    content_hash: Sha256Hex
+
+    @model_validator(mode="after")
+    def validate_isolated_closure(self) -> "GroundedRenderSlotProviderRequestV1":
+        expected_claims = tuple(
+            dict.fromkeys((*self.slot.claim_handles, *self.slot.context_claim_handles))
+        )
+        expected_evidence = tuple(
+            dict.fromkeys(
+                (*self.slot.evidence_handles, *self.slot.context_evidence_handles)
+            )
+        )
+        actual = (
+            tuple(item.objective_handle for item in self.objectives),
+            tuple(item.claim_handle for item in self.claims),
+            tuple(item.finding_handle for item in self.specialist_findings),
+            tuple(item.action_handle for item in self.actions),
+            tuple(item.evidence_handle for item in self.citations),
+        )
+        expected = (
+            self.slot.objective_handles,
+            expected_claims,
+            self.slot.finding_handles,
+            self.slot.action_handles,
+            expected_evidence,
+        )
+        if actual != expected:
+            raise ValueError("grounded_render_slot_provider_closure_mismatch")
+        computed = specialist_payload_sha256(
+            self.model_dump(mode="json", exclude={"content_hash"})
+        )
+        if self.content_hash != computed:
+            raise ValueError("grounded_render_slot_provider_hash_mismatch")
         return self
 
 
@@ -498,6 +550,7 @@ class GroundedAnswerPlanV3(_StrictFrozenModel):
 
 class ProviderResponseFingerprintV1(_StrictFrozenModel):
     version: Literal["provider-response-fingerprint.v1"]
+    slot_handle: SlotHandle | None = None
     attempt: StrictInt = Field(ge=1, le=2)
     top_level_type: Literal[
         "object", "array", "string", "number", "boolean", "null", "invalid_json"
@@ -524,10 +577,31 @@ class ProviderResponseFingerprintV1(_StrictFrozenModel):
         ):
             raise ValueError("provider_response_fingerprint_duplicate")
         expected = specialist_payload_sha256(
-            self.model_dump(mode="json", exclude={"content_hash"})
+            self.model_dump(mode="json", exclude={"content_hash"}, exclude_none=True)
         )
         if self.content_hash != expected:
             raise ValueError("provider_response_fingerprint_hash_mismatch")
+        return self
+
+
+class GroundedSlotProviderObservationV1(_StrictFrozenModel):
+    version: Literal["grounded-slot-provider-observation.v1"]
+    slot_handle: SlotHandle
+    status: Literal["completed", "failed"]
+    attempt_count: StrictInt = Field(ge=0, le=2)
+    latency_ms: StrictInt = Field(ge=0)
+    failure_code: ProviderFailureCode | None
+    content_hash: Sha256Hex
+
+    @model_validator(mode="after")
+    def validate_observation(self) -> "GroundedSlotProviderObservationV1":
+        if (self.status == "completed") != (self.failure_code is None):
+            raise ValueError("grounded_slot_provider_status_invalid")
+        expected = specialist_payload_sha256(
+            self.model_dump(mode="json", exclude={"content_hash"})
+        )
+        if self.content_hash != expected:
+            raise ValueError("grounded_slot_provider_hash_mismatch")
         return self
 
 
@@ -542,7 +616,7 @@ class GroundedComposerResultV2(_StrictFrozenModel):
     action_statuses: tuple[ActionStatusV1, ...]
     degradation_codes: tuple[NonEmptyStr, ...]
     render_receipt: FinalAnswerRenderReceiptV1
-    provider_call_count: StrictInt = Field(ge=0, le=2)
+    provider_call_count: StrictInt = Field(ge=0, le=6)
     scope_hash: Sha256Hex
     content_hash: Sha256Hex
 
@@ -620,9 +694,11 @@ __all__ = [
     "GroundedObjectiveCandidateV2",
     "GroundedPresentationPolicyV2",
     "GroundedRenderSlotTextV1",
+    "GroundedRenderSlotProviderRequestV1",
     "GroundedRenderSlotV1",
     "GroundedSectionKind",
     "GroundedSpecialistFindingV2",
+    "GroundedSlotProviderObservationV1",
     "GroundedStatementKind",
     "ObjectiveHandle",
     "ProviderResponseFingerprintV1",

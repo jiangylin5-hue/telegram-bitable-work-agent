@@ -73,7 +73,7 @@ REPRESENTATIVE_P2_CASE_IDS = (
     "mixed_08",
 )
 _GROUNDED_MODEL_ID = "z-ai/glm-5.2"
-_GROUNDED_PROFILE_ID = "composer.zh.grounded.glm-5.2.v3"
+_GROUNDED_PROFILE_ID = "composer.zh.grounded.glm-5.2.v4"
 _EXPECTED_RETRIEVAL_PROFILE_NAME = get_stage12_benchmark_profile(
     "openrouter-bge-m3"
 ).profile_name
@@ -187,13 +187,11 @@ class GroundedP2CampaignV1(_StrictFrozenModel):
     version: Literal["grounded-answer-p2-campaign.v1"]
     created_at_utc: datetime
     model_id: Literal["z-ai/glm-5.2"]
-    profile_id: Literal["composer.zh.grounded.glm-5.2.v3"]
+    profile_id: Literal["composer.zh.grounded.glm-5.2.v4"]
     case_ids: tuple[NonEmptyStr, ...] = Field(min_length=12, max_length=12)
     case_count: Literal[12]
     rounds: Literal[3]
-    results: tuple[GroundedP2CaseResultV1, ...] = Field(
-        min_length=36, max_length=36
-    )
+    results: tuple[GroundedP2CaseResultV1, ...] = Field(min_length=36, max_length=36)
     real_provider_count: StrictInt = Field(ge=0, le=36)
     final_answer_gate_pass_count: StrictInt = Field(ge=0, le=36)
     release_gate_pass_count: StrictInt = Field(ge=0, le=36)
@@ -221,9 +219,10 @@ class GroundedP2CampaignV1(_StrictFrozenModel):
             for round_number in range(1, 4)
             for case_id in REPRESENTATIVE_P2_CASE_IDS
         )
-        if tuple(
-            (item.round_id, item.case_id) for item in self.results
-        ) != expected_results:
+        if (
+            tuple((item.round_id, item.case_id) for item in self.results)
+            != expected_results
+        ):
             raise ValueError("grounded_p2_result_identity_invalid")
         expected_gate = (
             self.real_provider_count == 36
@@ -446,9 +445,8 @@ def execute_grounded_p2_campaign(
     observations: Mapping[str, IsolatedAFRunObservationV1],
     now: Callable[[], datetime] = lambda: datetime.now(UTC),
 ) -> GroundedP2CampaignV1:
-    if (
-        tuple(item.case_id for item in cases) != REPRESENTATIVE_P2_CASE_IDS
-        or any(item.gold_audit.status != "human_approved" for item in cases)
+    if tuple(item.case_id for item in cases) != REPRESENTATIVE_P2_CASE_IDS or any(
+        item.gold_audit.status != "human_approved" for item in cases
     ):
         raise ValueError("grounded_p2_case_identity_invalid")
 
@@ -494,8 +492,7 @@ def execute_grounded_p2_campaign(
         attempt for observation in observed for attempt in observation.provider_attempts
     )
     if any(
-        item.model_id != _GROUNDED_MODEL_ID
-        or item.profile_id != _GROUNDED_PROFILE_ID
+        item.model_id != _GROUNDED_MODEL_ID or item.profile_id != _GROUNDED_PROFILE_ID
         for item in attempts
     ):
         raise RuntimeError("grounded_p2_provider_identity_invalid")
@@ -548,9 +545,7 @@ def execute_grounded_p2_campaign(
         "unauthorized_effect_count": sum(
             item.trace.safety.unauthorized_effect_count for item in report.results
         ),
-        "production_write_count": sum(
-            item.production_write_count for item in observed
-        ),
+        "production_write_count": sum(item.production_write_count for item in observed),
         "telegram_send_count": sum(item.telegram_send_count for item in observed),
     }
     values["gate_pass"] = (

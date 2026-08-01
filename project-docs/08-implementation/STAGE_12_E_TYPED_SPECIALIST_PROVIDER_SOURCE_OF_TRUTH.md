@@ -193,4 +193,23 @@ The bounded ordering Composer is not the final Stage12 Provider contract. The la
 
 ## 12. 2026-08-01 Sealed RenderSlot Supersession
 
-TDR-027 supersedes only Grounded V2's private free-form section/statement/reference assembly. The active local adapter uses `GroundedAnswerProviderRequestV3` plus an ordered backend-owned `RenderSlotPlan`, and accepts only `GroundedAnswerPlanV3.slot_outputs[{slot_handle,text}]`. All visible prose remains Provider-authored; section kind, statement kind, exact objective/Claim/evidence/finding/Action closure, headings and final receipt are deterministic backend authority. The model remains fixed to `z-ai/glm-5.2` under private profile `composer.zh.grounded.glm-5.2.v3`. Local deterministic evidence is `143 passed`, including 48 × 3 at `144/144` real-origin-shaped and zero fallback; full unit is `2167 passed`. Real P2 remains failed, so P3, native deployment and Telegram are unaccepted.
+TDR-027 supersedes only Grounded V2's private free-form section/statement/reference assembly. The active local adapter uses `GroundedAnswerProviderRequestV3` plus an ordered backend-owned `RenderSlotPlan`, and accepts only `GroundedAnswerPlanV3.slot_outputs[{slot_handle,text}]`. All visible prose remains Provider-authored; section kind, statement kind, exact objective/Claim/evidence/finding/Action closure, headings and final receipt are deterministic backend authority. The model remains fixed to `z-ai/glm-5.2` under private profile `composer.zh.grounded.glm-5.2.v3`. Local deterministic evidence is `143 passed`, including 48 × 3 at `144/144` real-origin-shaped and zero fallback; full unit is `2167 passed`. This paragraph is retained as the pre-TDR-028 state.
+
+## 13. 2026-08-01 Per-Slot Isolation Acceptance
+
+User-approved TDR-028 is `implemented-local-p2-passed`. The active private
+profile is now `composer.zh.grounded.glm-5.2.v4`: every required RenderSlot is
+invoked separately with only its exact sealed closure, calls use concurrency
+`2` and one shared 50-second whole-answer deadline, and the backend assembles a
+plan only when all required slots validate. Raw Query and unrelated slot
+context are absent. Per-slot status/attempt/latency/error observations are
+sanitized and retain no prompt, output or business atoms.
+
+Final-code evidence is focused `140 passed`, full unit `2176 passed`, compileall
+and diff check. New real P1 passed `12/12` with zero fallback. The accepted
+exact P2 passed `36/36` real Provider and final-answer gates, fallback `0`,
+mean/p95 `3086/4385 ms` and effects/writes/sends `0/0/0`; hash
+`54de9da4eb0e7ae7eb65d62bbb85807d5382af05a2b795a29628dc10eecc86cc`.
+Intermediate `31/36` and `35/36` P2 evidence remains immutable. No validation
+or safety gate was relaxed. P3, native deployment, runtime activation and
+Telegram remain unaccepted.

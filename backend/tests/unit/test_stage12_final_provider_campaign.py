@@ -70,10 +70,13 @@ def _valid_grounded_plan(request) -> GroundedAnswerPlanV3:
     outputs = []
     for slot in request.render_slots:
         if slot.statement_kind in {"fact", "analysis", "recommendation"}:
-            text = "；".join(
-                f"{claims[handle].subject_label} 的{claims[handle].predicate_label}为 {claims[handle].value_text}"
-                for handle in slot.claim_handles
-            ) + "。"
+            text = (
+                "；".join(
+                    f"{claims[handle].subject_label} 的{claims[handle].predicate_label}为 {claims[handle].value_text}"
+                    for handle in slot.claim_handles
+                )
+                + "。"
+            )
         elif slot.statement_kind == "action_status":
             text = "；".join(
                 actions[handle].safe_summary for handle in slot.action_handles
@@ -96,7 +99,7 @@ class _ValidComposerProvider:
         values = {
             "version": "provider-attempt.v1",
             "role": "composer",
-            "profile_id": "composer.zh.grounded.glm-5.2.v3",
+            "profile_id": "composer.zh.grounded.glm-5.2.v4",
             "provider": "openrouter-compatible",
             "model_id": "z-ai/glm-5.2",
             "attempt": 1,
@@ -127,7 +130,7 @@ class _IntermittentInvalidComposerProvider:
         values = {
             "version": "provider-attempt.v1",
             "role": "composer",
-            "profile_id": "composer.zh.grounded.glm-5.2.v3",
+            "profile_id": "composer.zh.grounded.glm-5.2.v4",
             "provider": "openrouter-compatible",
             "model_id": "z-ai/glm-5.2",
             "attempt": 1,
@@ -279,9 +282,7 @@ def test_final_campaign_keeps_144_traces_but_fails_provider_availability() -> No
     assert len(bundle.report.results) == 144
     assert [item.unavailable_count for item in bundle.provider_rounds] == [1, 1, 1]
     failed_answers = tuple(
-        item
-        for item in bundle.report.results
-        if not item.score.final_answer.gate_pass
+        item for item in bundle.report.results if not item.score.final_answer.gate_pass
     )
     assert len(failed_answers) == 3
     assert all(

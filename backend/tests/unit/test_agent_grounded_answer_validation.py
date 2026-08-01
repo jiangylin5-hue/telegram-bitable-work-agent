@@ -366,9 +366,7 @@ def _render_slot_request() -> GroundedAnswerProviderRequestV3:
             required=True,
         ),
     )
-    hash_values = {
-        key: value for key, value in values.items() if key != "content_hash"
-    }
+    hash_values = {key: value for key, value in values.items() if key != "content_hash"}
     hash_values["render_slots"] = tuple(
         item.model_dump(mode="json") for item in values["render_slots"]
     )
@@ -491,6 +489,26 @@ def test_render_slot_text_cannot_tamper_with_the_sealed_claim_closure() -> None:
     assert captured.value.detail == "grounded_answer_invented_number_atom"
 
 
+@pytest.mark.parametrize(
+    ("text", "detail"),
+    (
+        ("blocked.", "grounded_answer_text_chinese_missing"),
+        ("结论来自 c001。", "grounded_answer_internal_handle_exposed"),
+    ),
+)
+def test_render_slot_language_failure_has_sanitized_specific_detail(
+    text: str, detail: str
+) -> None:
+    with pytest.raises(ProviderValidationError) as captured:
+        validate_grounded_answer_plan(
+            _render_slot_request(),
+            _render_slot_plan(("s001", text)),
+        )
+
+    assert captured.value.code == "provider_language_invalid"
+    assert captured.value.detail == detail
+
+
 def test_render_slot_receipt_comes_from_backend_owned_slot_closure() -> None:
     request = _render_slot_request()
     plan = _render_slot_plan(("s001", "Atlas 项目的任务状态仍为 blocked。"))
@@ -506,6 +524,18 @@ def test_render_slot_receipt_comes_from_backend_owned_slot_closure() -> None:
     assert result.claim_ids == (CLAIM_ID,)
     assert result.evidence_ids == (EVIDENCE_ID,)
     assert result.render_receipt.covered_claim_ids == (CLAIM_ID,)
+
+
+def test_render_slot_result_accepts_three_slots_with_one_repair_each() -> None:
+    result = render_grounded_answer(
+        _render_slot_request(),
+        _render_slot_plan(),
+        graph=_graph(),
+        presentation=_presentation(),
+        provider_call_count=6,
+    )
+
+    assert result.provider_call_count == 6
 
 
 def test_valid_grounded_plan_passes() -> None:
@@ -677,7 +707,9 @@ def test_claim_cannot_be_covered_by_multiple_statements() -> None:
                 heading="结论",
                 statements=(
                     _plan().sections[0].statements[0],
-                    _plan(text="Atlas 项目的任务状态仍为 blocked。").sections[0].statements[0],
+                    _plan(text="Atlas 项目的任务状态仍为 blocked。")
+                    .sections[0]
+                    .statements[0],
                 ),
             ),
         )

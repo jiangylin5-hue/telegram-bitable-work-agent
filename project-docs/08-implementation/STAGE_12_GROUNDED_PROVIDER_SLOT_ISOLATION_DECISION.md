@@ -2,10 +2,11 @@
 
 ## Status
 
-- Status: `proposed-awaiting-user-confirmation`
+- Status: `implemented-local-p2-passed`
 - Date: 2026-08-01
 - Scope: private Grounded Composer invocation topology and deadline/cost budget only
-- Implementation status: not started
+- User confirmation: confirmed inline on 2026-08-01
+- Implementation status: TDD implementation and bounded P1/P2 acceptance completed
 - Production status: not deployed or activated
 
 ## Trigger And Evidence
@@ -103,3 +104,41 @@ Rules:
 ```text
 确认 Stage12 Grounded Slot Isolation contract
 ```
+
+## Implementation And Acceptance Result
+
+The approved topology is implemented under private profile
+`composer.zh.grounded.glm-5.2.v4` with the fixed `z-ai/glm-5.2` model:
+
+- one strict Provider request per required slot;
+- only the selected slot and its exact sealed closure are serialized;
+- raw Query, unrelated slots and unrelated candidates are absent;
+- maximum three slots, concurrency `2`, one shared 50-second deadline and at
+  most two attempts per slot;
+- deterministic output ordering and all-or-nothing assembly;
+- per-slot sanitized status, attempt count, latency and failure class;
+- no partial Provider prose is mixed with fallback.
+
+Fresh final-code verification is `140 passed` on the focused Grounded surface,
+`2176 passed` for all backend unit tests, plus `compileall` and
+`git diff --check`. Real evidence:
+
+```text
+P1:
+12/12 HTTP, schema, grounding and real Provider; fallback 0
+hash af9b1c69a817611bdae1103b89e4ac89b98bdd86d9304c7d91fb1f190e6fa989
+
+P2 final accepted run:
+36/36 real Provider and final-answer gate; fallback 0
+mean/p95 3086/4385 ms; effects/writes/sends 0/0/0
+hash 54de9da4eb0e7ae7eb65d62bbb85807d5382af05a2b795a29628dc10eecc86cc
+```
+
+Two immutable intermediate P2 results remain retained at `31/36` and `35/36`.
+They identified a limitation-slot machine-field echo and an unsupported
+business-action execution statement. The fixes specialized slot writing
+constraints while preserving strict language, atom and Action non-execution
+validation; no safety gate was relaxed.
+
+P3, native deployment, runtime activation and Telegram remain outside this
+decision's completed acceptance and are not yet accepted.

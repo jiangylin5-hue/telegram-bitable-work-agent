@@ -2,7 +2,7 @@
 
 ## Status
 
-- **Current Progress Update (2026-07-31):** Human Gold is `48/48`. The bounded deterministic-section correction and its new independent real `48 × 3` campaign are complete, but release remains `FAIL`. All returned-answer and Case gates are `48/48` per round; Retrieval passes; `mixed_02`/`mixed_08` no longer collapse; confirmed/write/send are zero. Composer unavailable is `36/48`, `47/48`, `37/48`, and total-latency P95 worst is `13775.8 ms`. Current bundle hash `6b15446524a5a084d744dfc82564a73354d1477260c8e2e705375e9c392f1aa8`; old bundle `1642b7ff5124f710477033b6d29c76a2328f0b57d976971723f2d9f515cb13e6` remains historical. Stage12 remains local and inactive pending a separately approved Provider-schema compatibility or acceptance-contract decision.
+- **Current Progress Update (2026-08-01):** Human Gold remains `48/48`. User-approved TDR-028 per-slot Grounded Provider isolation is `implemented-local-p2-passed`: final unit `2176 passed`, real P1 `12/12`, and accepted exact P2 `36/36` real Provider/final-answer with fallback `0`, effects/writes/sends `0/0/0`, p95 `4385 ms` and hash `54de9da4eb0e7ae7eb65d62bbb85807d5382af05a2b795a29628dc10eecc86cc`. Failed intermediate `31/36` and `35/36` evidence is retained. P3, native release-candidate verification, activation and Telegram remain open; Stage11 is still production authority.
 
 - **Document status:** active implementation index
 - **Current Stage:** Stage12 comprehensive audit reopened A/B/E/F and cross-stage acceptance; the nine-package correction is approved for local implementation; C/D retain component evidence

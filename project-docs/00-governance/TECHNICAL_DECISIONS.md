@@ -417,3 +417,19 @@
   6. Advance the private profile ID to `composer.zh.grounded.glm-5.2.v3`; do not change the fixed `z-ai/glm-5.2` model or add model routing/failover.
 - Boundary: private Composer request/response and validation only. No public API, database schema, permission model, Action authority, Telegram behavior, deployment topology or production activation change.
 - Reference: `project-docs/08-implementation/STAGE_12_GROUNDED_PROVIDER_RENDER_SLOT_DECISION.md`.
+
+## TDR-028 Stage12 Grounded Composer Per-Slot Input Isolation
+
+- Status: accepted for local implementation and P1/P2 evaluation; explicitly confirmed by the user on 2026-08-01
+- Supersedes: only TDR-027's single multi-slot Provider invocation. The sealed RenderSlot V3 contract, fixed GLM 5.2 model and all grounding gates remain active.
+- Trigger: V3 P1 passed `12/12`, but two exact V3 P2 campaigns reached only `26/36` and `24/36`. Sanitized diagnostics showed correct slot counts with intermittent `invented_ascii/number` and `unreferenced_subject` text atoms because one Provider request exposed every slot's authorized context.
+- Decision:
+  1. Invoke each required slot with only that slot's sealed claims/findings/actions/context; do not send the raw Query, unrelated objectives or other slots.
+  2. The current builder remains capped at three required slots. Calls use bounded concurrency `2` and share one 50-second whole-answer deadline.
+  3. Each slot permits one initial attempt and one bounded repair inside that shared deadline. A final result is `real_provider` only when every required slot completes and validates.
+  4. Partial Provider prose is never combined with fallback. Any slot failure fails the whole Provider plan visibly; deterministic fallback remains an acceptance failure.
+  5. Retain per-slot sanitized attempts/latency/error classes without raw prompt/output or business atoms.
+  6. Advance the private invocation profile to `composer.zh.grounded.glm-5.2.v4`; the fixed `z-ai/glm-5.2` model and no-routing rule remain unchanged.
+- Boundary: private invocation topology, attempt accounting and cost/latency profile only. No public API, database schema, permission model, Action authority, Telegram behavior, deployment topology or production activation change.
+- Reference: `project-docs/08-implementation/STAGE_12_GROUNDED_PROVIDER_SLOT_ISOLATION_DECISION.md`.
+- Acceptance evidence: P1 `12/12` real with zero fallback, followed by an exact P2 `36/36` real/final pass with zero fallback and zero unauthorized effects/writes/sends; accepted P2 hash `54de9da4eb0e7ae7eb65d62bbb85807d5382af05a2b795a29628dc10eecc86cc`. P3 and deployment remain separate gates.
