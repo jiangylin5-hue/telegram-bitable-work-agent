@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import (
@@ -50,7 +50,11 @@ class Stage12RuntimeAdmissionRequest(_StrictFrozenModel):
     actor_user_id: NonEmptyStr = Field(max_length=128)
     workspace_id: UUID
     digital_employee_id: UUID
+    intent: Literal["business_fact", "memory_lookup", "mixed", "general_advice"]
     query: NonEmptyStr = Field(max_length=600)
+    target_record_id: UUID | None
+    idempotency_key: NonEmptyStr = Field(max_length=128)
+    skill_id: NonEmptyStr | None = Field(default=None, max_length=120)
     authorization_hash: Sha256
     deadline_at: datetime
 
@@ -65,8 +69,19 @@ class Stage12RuntimeAdmissionRequest(_StrictFrozenModel):
         if (
             self.actor_user_id != self.actor_user_id.strip()
             or self.query != self.query.strip()
+            or self.idempotency_key != self.idempotency_key.strip()
             or "\x00" in self.actor_user_id
             or "\x00" in self.query
+            or "\x00" in self.idempotency_key
+            or (
+                self.skill_id is not None
+                and (
+                    self.skill_id != self.skill_id.strip()
+                    or "\x00" in self.skill_id
+                    or "\r" in self.skill_id
+                    or "\n" in self.skill_id
+                )
+            )
         ):
             raise ValueError("stage12_admission_text_invalid")
         return self

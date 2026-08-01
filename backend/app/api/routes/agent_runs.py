@@ -34,6 +34,7 @@ from app.schemas.agent_event_runtime import (
     AgentRunCreateResponse,
 )
 from app.schemas.agent_task_spec_v2 import PlannerRequestV2
+from app.schemas.agent_stage12_runtime import Stage12RuntimeAdmissionRequest
 from app.schemas.stage08_collaboration import AssistantQueryRequest
 from app.services.agent_event_runtime import (
     AgentEventRuntimeUnitOfWork,
@@ -86,6 +87,11 @@ from app.services.retrieval_v2_runtime import (
     load_authorized_retrieval_v2,
 )
 from app.services.agent_private_inputs import seal_agent_private_input
+from app.services.agent_stage12_runtime_activation import (
+    build_stage12_runtime_profile,
+    stage12_runtime_enabled,
+)
+from app.services.agent_stage12_runtime_admission import admit_stage12_runtime_run
 from app.services.audit import record_audit_event
 from app.services.stage06_idempotency import fail_idempotent_operation
 from app.services.agent_sse_projection import project_safe_run_events
@@ -371,6 +377,59 @@ def create_agent_run_endpoint(
     ),
 ) -> AgentRunCreateResponse:
     settings = _require_enabled(request.workspace_id)
+    stage12_profile = build_stage12_runtime_profile(settings)
+    if stage12_runtime_enabled(stage12_profile, workspace_id=request.workspace_id):
+        try:
+            actor = authorize_workspace_action(
+                platform_uow,
+                identity,
+                request.workspace_id,
+                "digital_employee.invoke",
+            )
+            now = datetime.now(UTC)
+            admission = admit_stage12_runtime_run(
+                platform_uow,
+                runtime_uow,
+                action_repository,
+                request=Stage12RuntimeAdmissionRequest(
+                    run_id=uuid4(),
+                    actor_user_id=actor.actor_id,
+                    workspace_id=request.workspace_id,
+                    digital_employee_id=request.employee_id,
+                    intent=_stage08_intent(request.intent),
+                    query=request.query,
+                    target_record_id=request.target_record_id,
+                    idempotency_key=request.idempotency_key,
+                    skill_id=request.skill_id,
+                    authorization_hash=build_authorization_hash(
+                        workspace_id=request.workspace_id,
+                        employee_id=request.employee_id,
+                        target_record_id=request.target_record_id,
+                        actor_user_id=actor.actor_id,
+                    ),
+                    deadline_at=now + timedelta(seconds=90),
+                ),
+                settings=settings,
+                actor=actor,
+            )
+            _commit(runtime_uow)
+            return AgentRunCreateResponse(
+                run_id=admission.run_id,
+                status=admission.status,
+                replayed=admission.replayed,
+            )
+        except (Stage06AuthorizationError, PlatformValidationError, ValueError) as exc:
+            _rollback(runtime_uow)
+            raise _http_error(exc) from exc
+        except Exception as exc:
+            _rollback(runtime_uow)
+            raise HTTPException(
+                status_code=500,
+                detail=error_detail(
+                    "agent_run_internal_failure",
+                    "agent_run_internal_failure",
+                ),
+            ) from exc
     if request.requested_action != "read_only" and durable_action_v1_enabled(
         settings,
         request.workspace_id,

@@ -47,7 +47,11 @@ def test_admission_request_requires_utc_deadline_and_never_serializes_raw_query_
         actor_user_id="owner-1",
         workspace_id=WORKSPACE_ID,
         digital_employee_id=EMPLOYEE_ID,
+        intent="business_fact",
         query="列出阻塞事项",
+        target_record_id=None,
+        idempotency_key="stage12-contract-1",
+        skill_id="platform-tabular-analysis",
         authorization_hash=HASH,
         deadline_at=datetime(2026, 8, 1, 12, tzinfo=UTC),
     )

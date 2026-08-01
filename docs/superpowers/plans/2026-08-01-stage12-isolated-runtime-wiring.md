@@ -83,7 +83,11 @@ class Stage12RuntimeAdmissionRequest(BaseModel):
     actor_user_id: UUID
     workspace_id: UUID
     digital_employee_id: UUID
+    intent: Literal["business_fact", "memory_lookup", "mixed", "general_advice"]
     query: str
+    target_record_id: UUID | None
+    idempotency_key: str
+    skill_id: str | None
     authorization_hash: str
     deadline_at: datetime
 
@@ -126,7 +130,7 @@ def resolve_stage12_isolated_workspace(
 - [x] Run both new unit files and capture the expected failures.
 - [x] Implement strict frozen models, artifact parsing/validation helpers and read-only fixture resolution.
 - [x] Rerun both unit files plus `backend/tests/unit/test_agent_typed_artifacts.py` and existing Stage12 fixture tests.
-- [ ] Commit: `feat(stage12): define isolated runtime artifact contracts`.
+- [x] Commit: `feat(stage12): define isolated runtime artifact contracts` (`e10c0e8`).
 
 ## Task 3: SQL-backed bounded LangGraph admission
 
@@ -143,7 +147,7 @@ def resolve_stage12_isolated_workspace(
 ```python
 class Stage12AdmissionState(TypedDict):
     request: Stage12RuntimeAdmissionRequest
-    fixture: Stage12EvaluationFixture | None
+    context: Stage12IsolatedWorkspaceContext | None
     schema_snapshot: AuthorizedSchemaSnapshotV1 | None
     task_spec: TaskSpecV2 | None
     query_artifacts: tuple[AgentTypedArtifactEnvelope, ...]
@@ -165,17 +169,18 @@ def admit_stage12_runtime_run(
 - Reuse existing `build_authorized_schema_snapshot`, `build_authorized_entity_candidates`, `plan_task_v2`, `compile_authorized_query_plan`, `execute_authorized_query` and authorized retrieval services. Move only fixture-independent helpers out of scripts when required; application code must not import `backend/scripts/*`.
 - Route selection happens after existing identity/scope validation and before legacy Stage11/Stage08 command construction. Non-allowlisted requests do not invoke the new graph. Allowlisted failures return the existing safe error form and never fall through to legacy answer authority.
 - Persist run, task/schema/query/objective artifacts, one encrypted private input per command, commands, outbox events and audit in one SQL transaction. Record counts in the isolated business tables must remain unchanged.
+- Persist every planned objective in the existing `AgentObjectiveRun` DAG. Admission creates `ObjectiveSpecialistInputV1` only for dispatch-ready zero-dependency objectives and dispatches only those objectives; downstream typed inputs are materialized from the exact upstream result artifact IDs when the durable orchestrator unlocks them. It must not publish Risk/Daily commands before their upstream result artifacts exist.
 
 **Steps:**
 
 - [ ] Add RED unit tests proving node order, exact dependency injection, no script import, structured-only retrieval N/A and semantic retrieval invocation.
-- [ ] Add RED route tests for non-allowlisted legacy parity, allowlisted admission, fail-closed invalid admission and idempotent replay.
-- [ ] Add a PostgreSQL integration test that snapshots business-record counts, admits a real isolated run, reads persisted typed artifacts/commands/private inputs/outbox/audit, verifies ciphertext has no Query substring, then verifies unchanged business-record counts.
-- [ ] Run the focused unit tests first and record RED.
-- [ ] Implement the graph/service and the smallest route branch.
-- [ ] Run focused unit tests to GREEN.
-- [ ] Run the PostgreSQL test against a disposable real PostgreSQL/pgvector database; do not mark it passed if the environment is absent.
-- [ ] From `backend/`, run `python -m pytest -q tests/api/test_agent_run_events_api.py tests/unit/test_stage10_distributed_acceptance.py tests/unit/test_stage11_complex_coordination_eval.py tests/unit/test_stage12_stage11_trace_adapter.py` to prove legacy route, authorization and coordination compatibility.
+- [x] Add RED route tests for non-allowlisted legacy parity, allowlisted admission, fail-closed invalid admission and idempotent replay.
+- [x] Add a PostgreSQL integration test that snapshots business-record counts, admits a real isolated run, reads persisted typed artifacts/commands/private inputs/outbox/audit, verifies ciphertext has no Query substring, then verifies unchanged business-record counts.
+- [x] Run the focused unit tests first and record RED.
+- [x] Implement the graph/service and the smallest route branch.
+- [x] Run focused unit tests to GREEN.
+- [x] Run the PostgreSQL test against a disposable real PostgreSQL/pgvector database; do not mark it passed if the environment is absent (`1 passed`).
+- [x] From `backend/`, run `python -m pytest -q tests/api/test_agent_run_events_api.py tests/unit/test_stage10_distributed_acceptance.py tests/unit/test_stage11_complex_coordination_eval.py tests/unit/test_stage12_stage11_trace_adapter.py` to prove legacy route, authorization and coordination compatibility (combined focused run: `49 passed`).
 - [ ] Commit: `feat(stage12): wire sql backed langgraph admission`.
 
 ## Task 4: Encrypted typed Redis command execution
@@ -212,10 +217,11 @@ def process_stage12_typed_specialist_command(
 - Validate Redis envelope identity against the SQL command before decryption. Validate private-input AAD, workspace/employee/scope, objective owner/dependencies, deadline, lease and capability before handler execution.
 - Mark the private input consumed only after a terminal command commit. Duplicate delivery returns the persisted artifact and does not rerun the handler. Crash/reclaim follows the existing pending/claim path.
 - Preserve the legacy `stage08-idempotency:` path and all existing worker behavior.
+- After an objective completes, the durable orchestrator records its result artifact on `AgentObjectiveRun`, resolves newly satisfied dependency keys, creates each downstream objective's encrypted private input, and dispatches that command exactly once. A failed required dependency fails its descendants without publishing them; an optional dependency failure is recorded and may unlock a degraded downstream objective only when its contract permits the missing input.
 
 **Steps:**
 
-- [ ] Add RED tests for valid encrypted dispatch, wrong command/run/workspace/employee/scope, missing/duplicate objective owner, expired deadline, duplicate delivery and crash-before-commit recovery.
+- [ ] Add RED tests for valid encrypted dispatch, wrong command/run/workspace/employee/scope, missing/duplicate objective owner, expired deadline, duplicate delivery, crash-before-commit recovery, zero-dependency-only initial publication and exact-once downstream DAG unlock.
 - [ ] Add a RED real Redis/PostgreSQL integration test that publishes a typed command through the existing outbox/stream, consumes it with the capability worker, and proves PostgreSQL terminal state plus one consumed private input.
 - [ ] Run focused unit tests and record RED.
 - [ ] Implement the isolated selector, private-input load/validation and terminal consumption ordering.

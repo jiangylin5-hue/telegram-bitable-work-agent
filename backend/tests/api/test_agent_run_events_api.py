@@ -208,6 +208,190 @@ def test_routes_are_hidden_when_feature_flag_is_disabled() -> None:
     assert response.status_code == 404
 
 
+def test_allowlisted_stage12_runtime_uses_isolated_admission_and_never_legacy(
+    monkeypatch,
+) -> None:
+    fixture = _fixture()
+    runtime = InMemoryAgentEventRuntimeUnitOfWork()
+    settings = replace(Settings(), agent_event_runtime_enabled=True)
+    calls: list[object] = []
+    monkeypatch.setattr(agent_run_routes, "get_settings", lambda: settings)
+    monkeypatch.setattr(
+        agent_run_routes,
+        "build_stage12_runtime_profile",
+        lambda value: object(),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "stage12_runtime_enabled",
+        lambda profile, *, workspace_id: workspace_id == fixture.workspace.id,
+        raising=False,
+    )
+
+    def admit(*args, **kwargs):
+        calls.append((args, kwargs))
+        return SimpleNamespace(
+            run_id=fixture.workspace.id,
+            status="queued",
+            replayed=False,
+        )
+
+    monkeypatch.setattr(
+        agent_run_routes,
+        "admit_stage12_runtime_run",
+        admit,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "complete_assistant_query",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("legacy Stage08 must not execute")
+        ),
+    )
+
+    with _client(fixture, runtime) as client:
+        response = client.post("/api/stage10/agent-runs", json=_payload(fixture))
+
+    assert response.status_code == 202, response.text
+    assert response.json() == {
+        "run_id": str(fixture.workspace.id),
+        "status": "queued",
+        "replayed": False,
+    }
+    assert len(calls) == 1
+    assert runtime.runs == []
+
+
+def test_non_allowlisted_workspace_preserves_legacy_stage10_path(monkeypatch) -> None:
+    fixture = _fixture()
+    runtime = InMemoryAgentEventRuntimeUnitOfWork()
+    monkeypatch.setattr(
+        agent_run_routes,
+        "get_settings",
+        lambda: replace(Settings(), agent_event_runtime_enabled=True),
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "build_stage12_runtime_profile",
+        lambda value: object(),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "stage12_runtime_enabled",
+        lambda profile, *, workspace_id: False,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "admit_stage12_runtime_run",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("Stage12 admission must stay isolated")
+        ),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "complete_assistant_query",
+        lambda prepared, uow: _complete(prepared, "legacy result"),
+    )
+
+    with _client(fixture, runtime) as client:
+        response = client.post("/api/stage10/agent-runs", json=_payload(fixture))
+
+    assert response.status_code == 202, response.text
+    assert response.json()["status"] == "completed"
+    assert runtime.runs[0].workflow_version == "stage10-agent-event-runtime.v1"
+
+
+def test_allowlisted_stage12_admission_failure_is_fail_closed(monkeypatch) -> None:
+    fixture = _fixture()
+    runtime = InMemoryAgentEventRuntimeUnitOfWork()
+    monkeypatch.setattr(
+        agent_run_routes,
+        "get_settings",
+        lambda: replace(Settings(), agent_event_runtime_enabled=True),
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "build_stage12_runtime_profile",
+        lambda value: object(),
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "stage12_runtime_enabled",
+        lambda profile, *, workspace_id: True,
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "admit_stage12_runtime_run",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            ValueError("stage12_structured_query_required")
+        ),
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "complete_assistant_query",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("allowlisted failure must not fall through to legacy")
+        ),
+    )
+
+    with _client(fixture, runtime) as client:
+        response = client.post("/api/stage10/agent-runs", json=_payload(fixture))
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "agent_run_request_invalid"
+    assert runtime.runs == []
+
+
+def test_allowlisted_stage12_admission_replay_is_returned_without_legacy(
+    monkeypatch,
+) -> None:
+    fixture = _fixture()
+    runtime = InMemoryAgentEventRuntimeUnitOfWork()
+    monkeypatch.setattr(
+        agent_run_routes,
+        "get_settings",
+        lambda: replace(Settings(), agent_event_runtime_enabled=True),
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "build_stage12_runtime_profile",
+        lambda value: object(),
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "stage12_runtime_enabled",
+        lambda profile, *, workspace_id: True,
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "admit_stage12_runtime_run",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            run_id=fixture.workspace.id,
+            status="queued",
+            replayed=True,
+        ),
+    )
+    monkeypatch.setattr(
+        agent_run_routes,
+        "complete_assistant_query",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("replay must not invoke legacy")
+        ),
+    )
+
+    with _client(fixture, runtime) as client:
+        response = client.post("/api/stage10/agent-runs", json=_payload(fixture))
+
+    assert response.status_code == 202
+    assert response.json()["replayed"] is True
+    assert runtime.runs == []
+
+
 def test_redis_worker_mode_enqueues_ciphertext_without_embedded_execution(
     monkeypatch,
 ) -> None:
