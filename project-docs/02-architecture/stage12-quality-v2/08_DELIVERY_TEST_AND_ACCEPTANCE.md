@@ -6,6 +6,7 @@
 
 - Document status: approved staged delivery and acceptance contract
 - Current Stage: Human Gold remains `48/48` and the approved isolated-runtime wiring is implemented locally through the existing public Agent Run POST/SSE contract, including SQL admission, encrypted typed Specialist execution, Grounded Provider fan-in, safe replay and a sanitized deployed campaign harness. The harness has focused campaign/evaluation evidence of `94 passed` plus a read-only local PostgreSQL observer smoke; Planner plus real local PostgreSQL mixed/action evidence is `77 passed`. No deployed P2/P3, native Redis, server activation, rollback or Telegram proof has run. Release therefore remains `FAIL`, and historical component/in-memory P1/P2 evidence is not deployed-path acceptance.
+- Current local release audit: full backend `2595 passed, 40 classified skips`; explicit real local PostgreSQL/pgvector `30 passed`; Mini App `79 files / 415 passed`; production build PASS with `1853 modules transformed`; Alembic current/head `20260730_0039`; eight repository-native release asset suites PASS. The remaining local environment gap is the three real Redis tests; live `psql`/Redis/systemd/`nginx -t` branches also remain server-only gates.
 - Current completion audit: `../../08-implementation/STAGE_12_INTEGRATED_SPECIALIST_OBSERVABILITY_COMPLETION_AUDIT.md`
 - Stage12-B acceptance: `project-docs/08-implementation/STAGE_12_B_TASKSPEC_PLANNER_ACCEPTANCE.md`
 - Stage12-C code-level plan: `docs/superpowers/plans/2026-07-29-stage12-c-authorized-query-engine.md`

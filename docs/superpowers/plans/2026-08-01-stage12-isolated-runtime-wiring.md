@@ -354,7 +354,7 @@ def run_deployed_provider_campaign(config: DeployedCampaignConfig) -> DeployedCa
 - [x] Implement the campaign runner and safe report writer.
 - [x] Rerun the unit file plus existing Stage12 campaign/report/evaluation contract tests (`94 passed` on 2026-08-01); the read-only campaign SQL observer also passed a local PostgreSQL smoke.
 - [x] Update both authoritative Stage12 acceptance documents to distinguish historical component P2 from the required deployed public-path P2/P3.
-- [ ] Commit: `test(stage12): add deployed provider campaign`.
+- [x] Commit: `test(stage12): add deployed provider campaign` (`5d87e00`).
 
 ## Task 8: Local integration, full regression and release audit
 
@@ -365,15 +365,15 @@ def run_deployed_provider_campaign(config: DeployedCampaignConfig) -> DeployedCa
 
 **Steps:**
 
-- [ ] Run all Stage12 unit tests and require zero unexpected failures.
-- [ ] Run real disposable PostgreSQL/pgvector integration, including schema head, vector extension, SQL admission and no-business-write assertions.
+- [x] Run all Stage12 unit tests and require zero unexpected failures (included in fresh full backend `2595 passed`).
+- [x] Run real disposable PostgreSQL/pgvector integration, including schema head, vector extension, SQL admission and no-business-write assertions (`30 passed`; Alembic current/head `20260730_0039`).
 - [ ] Run real Redis integration for publisher, consumer group, reclaim, duplicate delivery and fan-in.
-- [ ] Run the full backend suite. Report every skip by test name and reason; do not count skips as pass.
-- [ ] Run the full Mini App test suite and production build.
-- [ ] Run native release layout/assets/import/manifest/offline-migration/rollback-fixture/no-symlink gates.
-- [ ] Search retained artifacts for raw Query, answer, secret, internal UUID and gold-key leakage.
-- [ ] Verify `git diff --check`, inspect `git status --short`, audit all changed files against this plan and remove or document temporary artifacts.
-- [ ] Update docs with changed files, verification, skipped tests, remaining risks and cleanup.
+- [x] Run the full backend suite. Report every skip by test name and reason; do not count skips as pass (`2595 passed, 40 skipped`: Redis 3, Stage02 online PostgreSQL 17, Stage08 PostgreSQL 3, Stage08 pgvector 17).
+- [x] Run the full Mini App test suite and production build (`79 files / 415 passed`; build PASS, `1853 modules transformed`).
+- [x] Run native release layout/assets/import/manifest/offline-migration/rollback-fixture/no-symlink gates (eight repository-safe suites PASS; live branches remain server gates).
+- [x] Search retained artifacts for raw Query, answer, secret, internal UUID and gold-key leakage (new campaign source/report contract scan PASS; no retained campaign output exists locally).
+- [x] Verify `git diff --check`, inspect `git status --short`, audit all changed files against this plan and remove or document temporary artifacts (clean before this documentation update; two pre-existing inaccessible untracked pytest temp directories remain documented).
+- [x] Update docs with changed files, verification, skipped tests, remaining risks and cleanup.
 - [ ] Commit: `docs(stage12): record isolated runtime local acceptance`.
 
 ## Task 9: Native deployment, deployed P2, single P3 and Telegram proof
