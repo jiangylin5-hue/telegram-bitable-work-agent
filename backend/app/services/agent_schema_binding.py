@@ -586,7 +586,14 @@ def _bind_enums(
                 tuple(selected),
                 bound_tables,
             )
-            if len(nearest) == 1:
+            semantic = (
+                _semantic_enum_fields(lexical, span, nearest)
+                if len({item.table_id for item in nearest}) == 1
+                else nearest
+            )
+            if len(semantic) == 1:
+                selected = list(semantic)
+            elif len(nearest) == 1:
                 selected = list(nearest)
         if len(selected) == 1:
             field = selected[0]
@@ -649,6 +656,26 @@ def _nearest_mentioned_table_fields(
         return fields
     nearest_table_id = next(iter(nearest_table_ids))
     return tuple(item for item in fields if item.table_id == nearest_table_id)
+
+
+def _semantic_enum_fields(
+    lexical: LexicalQuery,
+    enum_span: SourceSpan,
+    fields: tuple[AuthorizedFieldSpec, ...],
+) -> tuple[AuthorizedFieldSpec, ...]:
+    suffix = lexical.canonical.original_text[
+        enum_span.end : min(len(lexical.canonical.original_text), enum_span.end + 8)
+    ]
+    if re.match(r"^\s*(?:的\s*)?风险", suffix) is None:
+        return fields
+    risk_fields = tuple(
+        item
+        for item in fields
+        if item.key == "risk_level"
+        or "风险" in item.name
+        or any("风险" in alias for alias in item.aliases)
+    )
+    return risk_fields or fields
 
 
 def _bind_entities(

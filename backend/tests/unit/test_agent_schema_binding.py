@@ -386,6 +386,15 @@ def test_nearest_table_mention_disambiguates_repeated_enum_value() -> None:
         options={"choices": ["high", "medium", "low"]},
         actor=owner,
     )
+    work_item_risk = create_field(
+        uow,
+        work_items.id,
+        name="风险级别",
+        key="risk_level",
+        field_type="single_select",
+        options={"choices": ["high", "medium", "low"]},
+        actor=owner,
+    )
     create_field(
         uow,
         risks.id,
@@ -414,6 +423,17 @@ def test_nearest_table_mention_disambiguates_repeated_enum_value() -> None:
         (risks.id, "high"),
     }
     assert result.ambiguous_candidates == ()
+
+    work_item_result = bind_lexical_query(
+        _lexical("找出有 high 风险但工作项状态不是 blocked 的事项"),
+        snapshot,
+    )
+
+    assert any(
+        item.field_id == work_item_risk.id and item.value == "high"
+        for item in work_item_result.bound_enum_values
+    )
+    assert work_item_result.ambiguous_candidates == ()
 
 
 def test_hidden_or_out_of_scope_names_never_become_candidates() -> None:
