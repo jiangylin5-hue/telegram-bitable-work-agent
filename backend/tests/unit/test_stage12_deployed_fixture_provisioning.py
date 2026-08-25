@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.models.stage06_platform import PlatformRecord, Workspace
 from app.services.agent_field_policy_v2 import parse_stage12_field_policy_v2
 from app.services.agent_stage12_fixture_resolution import (
     resolve_stage12_isolated_workspace,
@@ -17,6 +18,25 @@ from scripts.stage12_deployed_fixture_provisioning import (
     Stage12DeployedFixtureProvisioningResult,
     provision_stage12_deployed_fixture,
 )
+
+
+class _NoAutoflushInMemoryUnitOfWork(InMemoryStage06PlatformUnitOfWork):
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.pending_workspaces: list[Workspace] = []
+        self.pending_records: list[PlatformRecord] = []
+
+    def add_workspace(self, workspace: Workspace) -> None:
+        self.pending_workspaces.append(workspace)
+
+    def add_record(self, record: PlatformRecord) -> None:
+        self.pending_records.append(record)
+
+    def flush(self) -> None:
+        self.workspaces.extend(self.pending_workspaces)
+        self.pending_workspaces.clear()
+        self.records.extend(self.pending_records)
+        self.pending_records.clear()
 
 
 def test_provisioning_creates_one_resolvable_scoped_evaluation_workspace() -> None:
@@ -64,6 +84,18 @@ def test_provisioning_creates_one_resolvable_scoped_evaluation_workspace() -> No
         digital_employee_id=result.digital_employee_id,
     )
     assert context.table_ids == result.table_ids
+
+
+def test_provisioning_flushes_dependency_layers_for_no_autoflush_sessions() -> None:
+    uow = _NoAutoflushInMemoryUnitOfWork()
+
+    result = provision_stage12_deployed_fixture(
+        uow,
+        actor_user_id="stage12-deployed-eval-owner",
+    )
+
+    assert len(uow.workspaces) == 1
+    assert result.workspace_id == uow.workspaces[0].id
 
 
 class _FakeSession:

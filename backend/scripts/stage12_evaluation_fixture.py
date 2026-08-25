@@ -83,6 +83,7 @@ def materialize_stage12_evaluation_fixture(
         owner_user_id=actor.actor_id,
         actor=actor,
     )
+    uow.flush()
     base = create_base(
         uow,
         workspace.id,
@@ -242,6 +243,7 @@ def materialize_stage12_evaluation_fixture(
             ("fjord", "OWNER-FJORD"),
         )
     }
+    uow.flush()
     owner_by_project = {
         row["project_code"]: owner_record_ids[f"OWNER-{row['project_name'].upper()}"]
         for row in _PROJECT_ROWS
@@ -258,6 +260,7 @@ def materialize_stage12_evaluation_fixture(
         ).id
         for row in _PROJECT_ROWS
     }
+    uow.flush()
     work_item_project_record_ids = {
         row["ticket_code"]: project_record_ids[row["project_code"]]
         for row in _WORK_ITEM_ROWS
@@ -275,6 +278,7 @@ def materialize_stage12_evaluation_fixture(
         ).id
         for row in _WORK_ITEM_ROWS
     }
+    uow.flush()
     risk_work_item_record_ids = {
         row["risk_code"]: work_item_record_ids[row["ticket_code"]] for row in _RISK_ROWS
     }
@@ -290,6 +294,7 @@ def materialize_stage12_evaluation_fixture(
         ).id
         for row in _RISK_ROWS
     }
+    uow.flush()
 
     for key, field_type, target, default, choices in (
         ("title", "text", None, None, ()),
@@ -324,6 +329,7 @@ def materialize_stage12_evaluation_fixture(
         values={"date": "2026-07-28", "completed": 5, "blocked": 4, "overdue": 3},
         actor=actor,
     )
+    uow.flush()
 
     _add_field(
         uow, interactions.id, key="interaction_code", field_type="text", actor=actor
@@ -342,6 +348,7 @@ def materialize_stage12_evaluation_fixture(
         values={"interaction_code": "INT-001", "sentiment": "negative"},
         actor=actor,
     )
+    uow.flush()
 
     core = MultiTableFixture(
         uow=uow,
