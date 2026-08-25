@@ -2,16 +2,16 @@
 
 ## Status
 
-- Status: active; activation partial because private-repository branch protection is unavailable on the current GitHub plan
+- Status: active and implemented
 - Scope: GitHub default branch, feature branches, historical stage branches, pull requests and repository-facing technical documentation
 - Previous default branch: `stage-02-backend`
 - Current default branch: `main`
-- Visibility: `private`; owner-approved transition to `public` pending external activation
-- Protection: unavailable; GitHub returned HTTP `403` requiring GitHub Pro or a public repository, so `main.protected=false`
+- Visibility: `public`
+- Protection: active; force-push disabled, deletion disabled and no required status checks until real CI exists
 - Historical branches: retained
-- Superseded pull request: #1 remains open because the protection gate did not pass
+- Superseded pull request: #1 closed; source branch retained
 - Current integrated source: Stage12 present, default-off and not finally accepted
-- Current Progress: 2026-08-25 root `README.md`, repository description and 12 technical topics were published; the default branch changed from `stage-02-backend` to `main` at activation source commit `b6cdc23628f40e5b37c9933a9a1c69568b4aeeff`. Classic branch protection was rejected by GitHub plan enforcement, so no protection success is claimed and PR #1 was deliberately retained. The evidence-record commit is verified on both `main` and `codex/stage09-ai-conversation-sse` after this document is committed.
+- Current Progress: 2026-08-25 root `README.md`, repository description and 12 technical topics were published; the default branch changed from `stage-02-backend` to `main`. After a full remote-history credential-pattern audit, the owner-approved visibility transition changed the repository from `private` to `public` at source commit `6c62bf00bb583fdff0cfdad32ce280c9ac8ceb70`. GitHub then accepted and returned the target protection policy. Draft PR #1 was closed as superseded without deleting its source branch. The final evidence-record commit is verified on both `main` and `codex/stage09-ai-conversation-sse` after this document is committed.
 
 ## 1. Purpose
 
@@ -67,7 +67,7 @@ The target `main` policy is deliberately minimal until real GitHub Actions check
 
 Adding required checks, review counts, CODEOWNERS or release automation is a separate governance change and must reflect workflows that actually exist.
 
-As of 2026-08-25 this target policy is not enforced by GitHub: the classic branch-protection endpoint returned HTTP `403` for the private repository under the current account plan. The repository was not made public and no paid-plan change was attempted. Until the owner upgrades the plan or separately approves another supported protection mechanism, collaborators must follow the no-force-push/no-deletion rule operationally and treat the missing server-side enforcement as an open governance risk.
+The first protection attempt returned HTTP `403` because the repository was private under the current account plan. After the owner-approved public transition, GitHub accepted the same minimal policy and direct readback returned `main.protected=true`, `allow_force_pushes.enabled=false`, `allow_deletions.enabled=false` and `required_status_checks=null`.
 
 The owner subsequently approved public visibility on 2026-08-25. Before activation, all fetched remote-branch histories were scanned for tracked secret filenames, private-key blocks, GitHub/OpenAI/Telegram/AWS token signatures and credentialed PostgreSQL/Redis URIs. No real external credential or private-key material was identified: token-pattern hits were documentation regexes or `task-*` filenames, while credentialed URIs were loopback, fixture or explicit example values. No non-example `.env`, PEM, P12, PFX, keystore or private-key file was found in tracked history. This is a bounded pattern audit, not a guarantee against every possible undiscovered sensitive business detail.
 
