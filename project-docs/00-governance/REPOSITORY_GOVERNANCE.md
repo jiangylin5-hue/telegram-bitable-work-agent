@@ -2,12 +2,15 @@
 
 ## Status
 
-- Status: approved; activation pending
+- Status: active; activation partial because private-repository branch protection is unavailable on the current GitHub plan
 - Scope: GitHub default branch, feature branches, historical stage branches, pull requests and repository-facing technical documentation
-- Current default branch before activation: `stage-02-backend`
-- Target default branch: `main`
+- Previous default branch: `stage-02-backend`
+- Current default branch: `main`
+- Protection: unavailable; GitHub returned HTTP `403` requiring GitHub Pro or a public repository, so `main.protected=false`
+- Historical branches: retained
+- Superseded pull request: #1 remains open because the protection gate did not pass
 - Current integrated source: Stage12 present, default-off and not finally accepted
-- Current Progress: 2026-08-25 repository-governance design and implementation plan are approved. Root README authoring, `main` promotion, protection and obsolete PR closure are pending direct verification.
+- Current Progress: 2026-08-25 root `README.md`, repository description and 12 technical topics were published; the default branch changed from `stage-02-backend` to `main` at activation source commit `b6cdc23628f40e5b37c9933a9a1c69568b4aeeff`. Classic branch protection was rejected by GitHub plan enforcement, so no protection success is claimed and PR #1 was deliberately retained. The evidence-record commit is verified on both `main` and `codex/stage09-ai-conversation-sse` after this document is committed.
 
 ## 1. Purpose
 
@@ -62,6 +65,8 @@ The target `main` policy is deliberately minimal until real GitHub Actions check
 - no automatic deletion of historical branches.
 
 Adding required checks, review counts, CODEOWNERS or release automation is a separate governance change and must reflect workflows that actually exist.
+
+As of 2026-08-25 this target policy is not enforced by GitHub: the classic branch-protection endpoint returned HTTP `403` for the private repository under the current account plan. The repository was not made public and no paid-plan change was attempted. Until the owner upgrades the plan or separately approves another supported protection mechanism, collaborators must follow the no-force-push/no-deletion rule operationally and treat the missing server-side enforcement as an open governance risk.
 
 ## 5. Source And Runtime Status
 
