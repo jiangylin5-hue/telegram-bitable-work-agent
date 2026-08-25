@@ -13,6 +13,7 @@ from scripts.stage12_deployed_provider_campaign import (
     DeployedRunObservation,
     REPRESENTATIVE_P2_CASE_IDS,
     _default_client_factory,
+    _parse_grounded_result_payload,
     _validate_campaign,
     evaluate_public_answer_quality,
     run_deployed_provider_campaign,
@@ -181,6 +182,30 @@ def test_default_public_client_prefers_server_issued_browser_session(
         assert "X-Stage06-User-Id" not in client.headers
     finally:
         client.close()
+
+
+def test_deployed_observer_parses_jsonb_through_json_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: list[str] = []
+    sentinel = SimpleNamespace(provider_call_count=1)
+
+    def parse_json(value: str):
+        captured.append(value)
+        return sentinel
+
+    monkeypatch.setattr(
+        "scripts.stage12_deployed_provider_campaign."
+        "GroundedComposerResultV2.model_validate_json",
+        parse_json,
+    )
+
+    result = _parse_grounded_result_payload(
+        {"claim_ids": ["claim-1"], "render_receipt": {"section_kinds": []}}
+    )
+
+    assert result is sentinel
+    assert json.loads(captured[0])["claim_ids"] == ["claim-1"]
 
 
 def test_p2_uses_only_health_post_sse_and_replay_and_writes_sanitized_report(

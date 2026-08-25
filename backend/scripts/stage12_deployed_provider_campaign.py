@@ -260,7 +260,7 @@ class SqlDeployedCampaignObserver:
             )
             if not isinstance(payload, dict):
                 raise RuntimeError("stage12_deployed_artifact_payload_missing")
-            result = GroundedComposerResultV2.model_validate(payload)
+            result = _parse_grounded_result_payload(payload)
             if (
                 result.content_hash != artifact.content_hash
                 or artifact.visibility_scope_hash != run.scope_hash
@@ -766,6 +766,17 @@ def _hash_json(value: object) -> str:
             default=str,
         ).encode("utf-8")
     ).hexdigest()
+
+
+def _parse_grounded_result_payload(
+    payload: dict[str, object],
+) -> GroundedComposerResultV2:
+    # PostgreSQL JSONB returns JSON arrays as Python lists.  The durable
+    # contract is strict, so parse through its JSON boundary rather than
+    # treating the decoded storage representation as an in-process model.
+    return GroundedComposerResultV2.model_validate_json(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    )
 
 
 def _percentile95(values: tuple[int, ...]) -> int:
