@@ -51,7 +51,13 @@ done
 for entrypoint in uvicorn alembic; do
     candidate="$venv_root/bin/$entrypoint"
     [ -f "$candidate" ] && [ ! -L "$candidate" ] && [ -x "$candidate" ] || fail
-    [ "$(sed -n '1p' "$candidate")" = "#!$venv_python" ] || fail
+    entrypoint_python=$(sed -n '1p' "$candidate") || fail
+    entrypoint_python=${entrypoint_python#\#!}
+    case "$entrypoint_python" in
+        "$venv_root/bin/python"|"$venv_root/bin/python3"|"$venv_root/bin/python3.12") ;;
+        *) fail ;;
+    esac
+    [ -f "$entrypoint_python" ] && [ ! -L "$entrypoint_python" ] && [ -x "$entrypoint_python" ] || fail
 done
 [ "$(cat "$static_marker")" = "$artifact_id" ] || fail
 

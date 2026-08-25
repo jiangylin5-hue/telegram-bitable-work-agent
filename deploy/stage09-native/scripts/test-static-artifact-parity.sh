@@ -32,8 +32,9 @@ mkdir -p "$source_root/mini-app/dist" "$venv_root/bin" "$static_root/assets" || 
 printf '%s\n' '<!doctype html><title>handoff</title>' > "$source_root/mini-app/dist/browser-handoff.html" || fail source-handoff
 printf '%s\n' '#!/bin/sh' 'exit 0' > "$venv_root/bin/python" || fail venv-python
 chmod 700 "$venv_root/bin/python" || fail venv-python-mode
-printf '%s\n' "#!$venv_root/bin/python" 'exit 0' > "$venv_root/bin/uvicorn" || fail venv-uvicorn
-printf '%s\n' "#!$venv_root/bin/python" 'exit 0' > "$venv_root/bin/alembic" || fail venv-alembic
+cp "$venv_root/bin/python" "$venv_root/bin/python3" || fail venv-python3
+printf '%s\n' "#!$venv_root/bin/python3" 'exit 0' > "$venv_root/bin/uvicorn" || fail venv-uvicorn
+printf '%s\n' "#!$venv_root/bin/python3" 'exit 0' > "$venv_root/bin/alembic" || fail venv-alembic
 chmod 700 "$venv_root/bin/uvicorn" "$venv_root/bin/alembic" || fail venv-entrypoint-mode
 printf '%s\n' '<!doctype html><link href="/assets/app.css"><script type="module" src="/assets/app.js"></script>' > "$static_root/index.html" || fail static-index
 printf '%s\n' '<!doctype html><title>handoff</title>' > "$static_root/browser-handoff.html" || fail static-handoff
@@ -61,7 +62,7 @@ printf '%s\n' '#!/opt/stage09-p1/venv/stage09-p1-old/bin/python' 'exit 0' > "$ve
 stale_shebang_output=$(sh "$fixture_verifier" "$artifact_id" 2>&1) && fail stale-venv-shebang-accepted
 [ "$stale_shebang_output" = 'static-parity: fail
 artifact-id: unavailable' ] || fail stale-venv-shebang-output
-printf '%s\n' "#!$venv_root/bin/python" 'exit 0' > "$venv_root/bin/uvicorn" || fail venv-uvicorn-restore
+printf '%s\n' "#!$venv_root/bin/python3" 'exit 0' > "$venv_root/bin/uvicorn" || fail venv-uvicorn-restore
 
 printf '%s\n' 'stage09-p1-wrong' > "$static_root/.stage09-static-artifact-id" || fail wrong-id-write
 wrong_id_output=$(sh "$fixture_verifier" "$artifact_id" 2>&1) && fail mismatched-id-accepted
