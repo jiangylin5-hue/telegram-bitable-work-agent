@@ -6,6 +6,7 @@
 - Scope: GitHub default branch, feature branches, historical stage branches, pull requests and repository-facing technical documentation
 - Previous default branch: `stage-02-backend`
 - Current default branch: `main`
+- Visibility: `private`; owner-approved transition to `public` pending external activation
 - Protection: unavailable; GitHub returned HTTP `403` requiring GitHub Pro or a public repository, so `main.protected=false`
 - Historical branches: retained
 - Superseded pull request: #1 remains open because the protection gate did not pass
@@ -67,6 +68,8 @@ The target `main` policy is deliberately minimal until real GitHub Actions check
 Adding required checks, review counts, CODEOWNERS or release automation is a separate governance change and must reflect workflows that actually exist.
 
 As of 2026-08-25 this target policy is not enforced by GitHub: the classic branch-protection endpoint returned HTTP `403` for the private repository under the current account plan. The repository was not made public and no paid-plan change was attempted. Until the owner upgrades the plan or separately approves another supported protection mechanism, collaborators must follow the no-force-push/no-deletion rule operationally and treat the missing server-side enforcement as an open governance risk.
+
+The owner subsequently approved public visibility on 2026-08-25. Before activation, all fetched remote-branch histories were scanned for tracked secret filenames, private-key blocks, GitHub/OpenAI/Telegram/AWS token signatures and credentialed PostgreSQL/Redis URIs. No real external credential or private-key material was identified: token-pattern hits were documentation regexes or `task-*` filenames, while credentialed URIs were loopback, fixture or explicit example values. No non-example `.env`, PEM, P12, PFX, keystore or private-key file was found in tracked history. This is a bounded pattern audit, not a guarantee against every possible undiscovered sensitive business detail.
 
 ## 5. Source And Runtime Status
 

@@ -11,7 +11,11 @@
 
 ## 1. Objective
 
-Make the private GitHub repository understandable to an engineer opening it without prior project context. The repository landing page must show the latest Stage12 source, while clearly separating source freshness from production acceptance.
+Make the GitHub repository understandable to an engineer opening it without prior project context. The repository landing page must show the latest Stage12 source, while clearly separating source freshness from production acceptance.
+
+### 2026-08-25 visibility amendment
+
+The owner explicitly approved changing repository visibility from `private` to `public` after the initial `main` promotion exposed that classic branch protection was unavailable on the current private-repository plan. Public transition is permitted only after a tracked-history credential audit finds no real Provider, Telegram, GitHub, cloud or private-key material. Public visibility does not change Stage12 runtime authority, deployment authorization or production acceptance.
 
 The resulting repository must answer, from its root page:
 
