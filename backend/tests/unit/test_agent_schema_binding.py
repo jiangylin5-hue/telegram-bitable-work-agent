@@ -365,6 +365,57 @@ def test_authorized_entity_table_disambiguates_field_and_enum_binding() -> None:
     assert result.ambiguous_candidates == ()
 
 
+def test_nearest_table_mention_disambiguates_repeated_enum_value() -> None:
+    uow, owner, _viewer, workspace, base, projects, work_items, employee = _fixture()
+    risks = create_table(uow, base.id, name="Risks", key="risks", actor=owner)
+    create_field(
+        uow,
+        projects.id,
+        name="风险级别",
+        key="risk_level",
+        field_type="single_select",
+        options={"choices": ["high", "medium", "low"]},
+        actor=owner,
+    )
+    create_field(
+        uow,
+        work_items.id,
+        name="优先级",
+        key="priority",
+        field_type="single_select",
+        options={"choices": ["high", "medium", "low"]},
+        actor=owner,
+    )
+    create_field(
+        uow,
+        risks.id,
+        name="等级",
+        key="level",
+        field_type="single_select",
+        options={"choices": ["high", "medium", "low"]},
+        actor=owner,
+    )
+    employee.accessible_tables = [str(projects.id), str(work_items.id), str(risks.id)]
+    snapshot = build_authorized_schema_snapshot(
+        uow,
+        workspace_id=workspace.id,
+        employee_id=employee.id,
+        actor=owner,
+    )
+
+    result = bind_lexical_query(
+        _lexical("哪些 active 的项目同时有 blocked 的工作项和 high 的风险？"),
+        snapshot,
+    )
+
+    assert {(item.table_id, item.value) for item in result.bound_enum_values} == {
+        (projects.id, "active"),
+        (work_items.id, "blocked"),
+        (risks.id, "high"),
+    }
+    assert result.ambiguous_candidates == ()
+
+
 def test_hidden_or_out_of_scope_names_never_become_candidates() -> None:
     uow, _owner, viewer, workspace, _base, _projects, _work_items, employee = _fixture()
     snapshot = build_authorized_schema_snapshot(

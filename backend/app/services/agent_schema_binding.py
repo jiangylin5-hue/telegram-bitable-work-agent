@@ -34,7 +34,7 @@ from app.services.stage06_platform import (
 _TABLE_ALIASES: dict[str, tuple[str, ...]] = {
     "projects": ("项目", "项目表"),
     "work_items": ("工作项", "事项", "工作项表"),
-    "risks": ("风险记录", "风险表"),
+    "risks": ("风险", "风险记录", "风险表"),
     "tasks": ("任务", "任务表"),
     "owners": ("负责人", "负责人表"),
     "daily_metrics": ("日报指标", "日报指标表"),
@@ -408,6 +408,7 @@ def bind_lexical_query(
         lexical,
         snapshot.tables,
         context_table_ids=context_table_ids,
+        bound_tables=bound_tables,
     )
     unresolved_fields = _unresolved_field_phrases(
         lexical,
@@ -549,6 +550,7 @@ def _bind_enums(
     tables: tuple[AuthorizedTableSpec, ...],
     *,
     context_table_ids: set[UUID],
+    bound_tables: tuple[BoundTableMention, ...],
 ) -> tuple[tuple[BoundEnumValue, ...], tuple[AmbiguousBinding, ...]]:
     candidates: dict[tuple[int, int, str], list[AuthorizedFieldSpec]] = {}
     for table in tables:
@@ -563,8 +565,16 @@ def _bind_enums(
         narrowed = [
             item for item in unique.values() if item.table_id in context_table_ids
         ]
-        selected = narrowed if len(narrowed) == 1 else list(unique.values())
         span = _span(lexical, start, end)
+        selected = narrowed if len(narrowed) == 1 else list(unique.values())
+        if len(selected) > 1:
+            nearest = _nearest_mentioned_table_fields(
+                span,
+                tuple(selected),
+                bound_tables,
+            )
+            if len(nearest) == 1:
+                selected = list(nearest)
         if len(selected) == 1:
             field = selected[0]
             bound.append(
@@ -593,6 +603,39 @@ def _bind_enums(
         ),
         tuple(sorted(ambiguous, key=lambda item: item.source_span.start)),
     )
+
+
+def _nearest_mentioned_table_fields(
+    enum_span: SourceSpan,
+    fields: tuple[AuthorizedFieldSpec, ...],
+    bound_tables: tuple[BoundTableMention, ...],
+) -> tuple[AuthorizedFieldSpec, ...]:
+    score_by_table: dict[UUID, tuple[int, int]] = {}
+    candidate_table_ids = {item.table_id for item in fields}
+    for mention in bound_tables:
+        if mention.table_id not in candidate_table_ids:
+            continue
+        if mention.source_span.start >= enum_span.end:
+            score = (mention.source_span.start - enum_span.end, 0)
+        elif enum_span.start >= mention.source_span.end:
+            score = (enum_span.start - mention.source_span.end, 1)
+        else:
+            score = (0, 0)
+        previous = score_by_table.get(mention.table_id)
+        if previous is None or score < previous:
+            score_by_table[mention.table_id] = score
+    if not score_by_table:
+        return fields
+    nearest_score = min(score_by_table.values())
+    nearest_table_ids = {
+        table_id
+        for table_id, score in score_by_table.items()
+        if score == nearest_score
+    }
+    if len(nearest_table_ids) != 1:
+        return fields
+    nearest_table_id = next(iter(nearest_table_ids))
+    return tuple(item for item in fields if item.table_id == nearest_table_id)
 
 
 def _bind_entities(
