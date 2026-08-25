@@ -11,7 +11,7 @@ fail() {
 
 [ -r "$runtime_file" ] || fail "runtime-file-unreadable"
 
-if grep -Eqi 'stage03|stage07|docker|compose|volume|container|non[-_ ]?dry[-_ ]?run' "$runtime_file"; then
+if grep -Eqi 'stage03|stage07|docker|(^|[^[:alnum:]_])compose([^[:alnum:]_]|$)|volume|container|non[-_ ]?dry[-_ ]?run' "$runtime_file"; then
     fail "historical-or-container-marker"
 fi
 

@@ -93,6 +93,14 @@ assert_pass 'canonical-postgres-loopback-and-redis-socket' "$tmpdir/loopback.env
 write_fixture "$tmpdir/unix.env" "$unix_db" "$socket_redis"
 assert_pass 'canonical-unix-sockets' "$tmpdir/unix.env"
 
+write_fixture "$tmpdir/composer-profile.env" "$loopback_db" "$socket_redis" \
+    'STAGE12_PROVIDER_V2_PROFILE=composer.zh.grounded.glm-5.2.v4'
+assert_pass 'stage12-composer-profile' "$tmpdir/composer-profile.env"
+
+write_fixture "$tmpdir/compose-marker.env" "$loopback_db" "$socket_redis" \
+    'DEPLOYMENT_NOTE=compose'
+assert_rejected_without_value_leak 'compose-marker' "$tmpdir/compose-marker.env"
+
 write_fixture "$tmpdir/query-host.env" "${loopback_db}?host=198.51.100.42" "$socket_redis"
 assert_rejected_without_value_leak 'query-host-override' "$tmpdir/query-host.env"
 
