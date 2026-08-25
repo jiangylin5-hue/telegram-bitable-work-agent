@@ -711,6 +711,16 @@ def _write_report(
 def _default_client_factory(
     config: DeployedCampaignConfig,
 ) -> AbstractContextManager[httpx.Client]:
+    browser_session_token = os.getenv(
+        "STAGE12_DEPLOYED_BROWSER_SESSION_TOKEN"
+    )
+    if browser_session_token:
+        return httpx.Client(
+            base_url=config.base_url.rstrip("/"),
+            cookies={"mini_app_browser_session": browser_session_token},
+            headers={"Accept": "application/json"},
+            timeout=180.0,
+        )
     user_id = os.getenv("STAGE12_DEPLOYED_USER_ID")
     if not user_id:
         raise RuntimeError("stage12_deployed_user_id_missing")

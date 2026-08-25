@@ -163,6 +163,26 @@ def test_default_public_client_uses_existing_stage06_identity_header(
         client.close()
 
 
+def test_default_public_client_prefers_server_issued_browser_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("STAGE12_DEPLOYED_USER_ID", "stage12-eval-owner")
+    monkeypatch.setenv(
+        "STAGE12_DEPLOYED_BROWSER_SESSION_TOKEN",
+        "server-issued-stage12-session",
+    )
+
+    client = _default_client_factory(_config(tmp_path / "browser-auth"))
+    try:
+        assert (
+            client.cookies.get("mini_app_browser_session")
+            == "server-issued-stage12-session"
+        )
+        assert "X-Stage06-User-Id" not in client.headers
+    finally:
+        client.close()
+
+
 def test_p2_uses_only_health_post_sse_and_replay_and_writes_sanitized_report(
     tmp_path: Path,
 ) -> None:
