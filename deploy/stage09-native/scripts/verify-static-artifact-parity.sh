@@ -48,6 +48,11 @@ for required in "$source_handoff" "$static_index" "$static_handoff" "$static_mar
     [ -f "$required" ] && [ ! -L "$required" ] || fail
 done
 [ -x "$venv_python" ] || fail
+for entrypoint in uvicorn alembic; do
+    candidate="$venv_root/bin/$entrypoint"
+    [ -f "$candidate" ] && [ ! -L "$candidate" ] && [ -x "$candidate" ] || fail
+    [ "$(sed -n '1p' "$candidate")" = "#!$venv_python" ] || fail
+done
 [ "$(cat "$static_marker")" = "$artifact_id" ] || fail
 
 fixture_dir=$(mktemp -d "${TMPDIR:-/tmp}/stage09-static-parity.XXXXXX") || fail
