@@ -34,7 +34,7 @@ from app.services.stage06_platform import (
 _TABLE_ALIASES: dict[str, tuple[str, ...]] = {
     "projects": ("项目", "项目表"),
     "work_items": ("工作项", "事项", "工作项表"),
-    "risks": ("风险", "风险记录", "风险表"),
+    "risks": ("风险记录", "风险表"),
     "tasks": ("任务", "任务表"),
     "owners": ("负责人", "负责人表"),
     "daily_metrics": ("日报指标", "日报指标表"),
@@ -450,6 +450,9 @@ def _bind_tables(
         for term in dict.fromkeys((table.key, table.name, *table.aliases)):
             for start, end in _term_matches(lexical, term):
                 candidates.setdefault((start, end, term.casefold()), []).append(table)
+        if table.key == "risks":
+            for start, end in _coordinated_risk_table_matches(lexical):
+                candidates.setdefault((start, end, "风险"), []).append(table)
     bound: list[BoundTableMention] = []
     ambiguous: list[AmbiguousBinding] = []
     for (start, end, _term), raw_candidates in candidates.items():
@@ -482,6 +485,16 @@ def _bind_tables(
         tuple(sorted(bound, key=lambda item: (item.source_span.start, item.table_key))),
         tuple(sorted(ambiguous, key=lambda item: item.source_span.start)),
     )
+
+
+def _coordinated_risk_table_matches(
+    lexical: LexicalQuery,
+) -> tuple[tuple[int, int], ...]:
+    pattern = re.compile(
+        r"(?:和|及|以及)\s*(?:high|medium|low)\s*(?:的\s*)?(风险)",
+        re.IGNORECASE,
+    )
+    return tuple(match.span(1) for match in pattern.finditer(lexical.canonical.normalized_text))
 
 
 def _bind_fields(
