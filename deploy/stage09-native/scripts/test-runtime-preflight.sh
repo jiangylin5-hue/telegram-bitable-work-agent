@@ -4,6 +4,7 @@ set -eu
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 validator="$script_dir/validate-runtime-presence.sh"
+isolation_guard="$script_dir/verify-native-isolation.sh"
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT HUP INT TERM
 
@@ -83,6 +84,33 @@ assert_rejected_without_value_leak() {
     printf '%s\n' "$assertion_name: PASS"
 }
 
+assert_isolation_pass() {
+    assertion_name=$1
+    fixture_path=$2
+    if sh "$isolation_guard" "$fixture_path" >/dev/null 2>&1; then
+        printf '%s\n' "$assertion_name: PASS"
+        return 0
+    fi
+    printf '%s\n' "$assertion_name: FAIL" >&2
+    exit 1
+}
+
+assert_isolation_rejected() {
+    assertion_name=$1
+    fixture_path=$2
+    status=0
+    output=$(sh "$isolation_guard" "$fixture_path" 2>&1) || status=$?
+    [ "$status" -ne 0 ] || {
+        printf '%s\n' "$assertion_name: FAIL" >&2
+        exit 1
+    }
+    [ "$output" = 'native-isolation: fail' ] || {
+        printf '%s\n' "$assertion_name: FAIL" >&2
+        exit 1
+    }
+    printf '%s\n' "$assertion_name: PASS"
+}
+
 loopback_db='postgresql+psycopg://stage09_p1:fixture-postgres-password@127.0.0.1:5432/stage09_p1'
 socket_redis='unix:///run/stage09-p1/redis.sock?db=0'
 unix_db='postgresql+psycopg://stage09_p1:fixture-postgres-password@/stage09_p1?host=/var/run/postgresql'
@@ -96,10 +124,12 @@ assert_pass 'canonical-unix-sockets' "$tmpdir/unix.env"
 write_fixture "$tmpdir/composer-profile.env" "$loopback_db" "$socket_redis" \
     'STAGE12_PROVIDER_V2_PROFILE=composer.zh.grounded.glm-5.2.v4'
 assert_pass 'stage12-composer-profile' "$tmpdir/composer-profile.env"
+assert_isolation_pass 'stage12-composer-isolation' "$tmpdir/composer-profile.env"
 
 write_fixture "$tmpdir/compose-marker.env" "$loopback_db" "$socket_redis" \
     'DEPLOYMENT_NOTE=compose'
 assert_rejected_without_value_leak 'compose-marker' "$tmpdir/compose-marker.env"
+assert_isolation_rejected 'compose-marker-isolation' "$tmpdir/compose-marker.env"
 
 write_fixture "$tmpdir/query-host.env" "${loopback_db}?host=198.51.100.42" "$socket_redis"
 assert_rejected_without_value_leak 'query-host-override' "$tmpdir/query-host.env"

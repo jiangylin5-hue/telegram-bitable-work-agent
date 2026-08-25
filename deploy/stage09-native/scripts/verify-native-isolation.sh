@@ -14,7 +14,7 @@ if ! sh "$script_dir/validate-runtime-presence.sh" "$runtime_file" >/dev/null 2>
     exit 1
 fi
 
-if grep -Eqi 'stage03|stage07|docker|compose|volume|container|non[-_ ]?dry[-_ ]?run' "$runtime_file"; then
+if grep -Eqi 'stage03|stage07|docker|(^|[^[:alnum:]_])compose([^[:alnum:]_]|$)|volume|container|non[-_ ]?dry[-_ ]?run' "$runtime_file"; then
     printf '%s\n' "native-isolation: fail" >&2
     exit 1
 fi
