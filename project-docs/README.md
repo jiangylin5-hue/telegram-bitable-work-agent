@@ -3,9 +3,9 @@
 ## Status
 
 - **Document status:** active project document index
-- **Current Stage:** Stage09 Codex-style AI conversation SSE
+- **Current Stage:** Stage12 Quality Architecture V2; native deployed-path acceptance pending
 - **Active branch:** `codex/stage09-ai-conversation-sse`
-- **Current Progress:** Stage06 是已接受后端基线；Stage07 完成 Mini App/表格工作台基础；Stage08 完成权限过滤的上下文、memory、retrieval 和 LangGraph-first collaboration runtime；Stage09 r39 已部署。当前只在隔离分支实现已批准的 Codex 式 AI 对话工作台和受控 SSE，尚未部署，也未执行真实业务写入。
+- **Current Progress:** Stage06 是已接受后端基线；Stage07 完成 Mini App/表格工作台基础；Stage08/09 建立权限过滤的上下文、retrieval、LangGraph collaboration runtime、Codex 式工作台和原生部署能力；Stage12 A–F 最新源码与 default-off isolated runtime 已实现并推送。Stage12 尚未完成部署后公共路径 P2、唯一 P3、Telegram 与回滚验收，当前生产回答权威仍是 Stage11。
 
 ## 1. 当前阅读顺序
 
@@ -13,12 +13,12 @@
 
 1. [项目协作规则](../AGENTS.md)
 2. [Implementation Source Of Truth](00-governance/IMPLEMENTATION_SOURCE_OF_TRUTH.md)
-3. [当前 Handoff](00-governance/HANDOFF_2026-07-26_CODEX_STYLE_AI_CONVERSATION.md)
-4. [阶段/工作树/文档生命周期治理](00-governance/PROJECT_STRUCTURE_AND_DOCUMENT_LIFECYCLE.md)
-5. [Codex 式 AI 对话设计](08-implementation/STAGE_09_CODEX_STYLE_AI_CONVERSATION_DESIGN.md)
-6. [Codex 式 AI 对话实施计划](08-implementation/STAGE_09_CODEX_STYLE_AI_CONVERSATION_IMPLEMENTATION_PLAN.md)
-7. [详细 TDD 执行计划](../docs/superpowers/plans/2026-07-26-stage09-codex-ai-conversation-sse.md)
-8. [Stage09 r40 回归与线上就绪证据](08-implementation/evidence/stage09-r40-regression-and-live-readiness-2026-07-26.md)
+3. [Repository Governance](00-governance/REPOSITORY_GOVERNANCE.md)
+4. [Stage12 Quality Architecture V2](02-architecture/stage12-quality-v2/README.md)
+5. [Stage12 全量技术架构审计](08-implementation/STAGE_12_COMPREHENSIVE_ARCHITECTURE_AUDIT.md)
+6. [Stage12 当前部署验收计划](../docs/superpowers/plans/2026-08-01-stage12-isolated-runtime-wiring.md)
+7. [当前 Handoff](00-governance/HANDOFF_2026-07-26_CODEX_STYLE_AI_CONVERSATION.md)
+8. [阶段/工作树/文档生命周期治理](00-governance/PROJECT_STRUCTURE_AND_DOCUMENT_LIFECYCLE.md)
 
 除非当前任务修改历史模块，不要从 Stage02 开始顺序阅读全部文档。
 
@@ -33,8 +33,9 @@
 | Database | [PostgreSQL Database Design](05-data/POSTGRES_DATABASE_DESIGN.md) |
 | Queue/worker | [Redis Queue And Worker Design](06-queue/REDIS_QUEUE_AND_WORKER_DESIGN.md) |
 | Document lifecycle | [Project Structure And Document Lifecycle](00-governance/PROJECT_STRUCTURE_AND_DOCUMENT_LIFECYCLE.md) |
+| Repository and branch lifecycle | [Repository Governance](00-governance/REPOSITORY_GOVERNANCE.md) |
 
-## 3. 当前 Stage09 文件
+## 3. 当前 Stage09/Stage12 文件
 
 | Purpose | Document |
 | --- | --- |
@@ -43,6 +44,9 @@
 | Stage implementation plan | [Stage09 Codex 式 AI 对话实施计划](08-implementation/STAGE_09_CODEX_STYLE_AI_CONVERSATION_IMPLEMENTATION_PLAN.md) |
 | Existing UI remediation history | [Stage09 UI 功能完整性修复计划](08-implementation/STAGE_09_UI_FUNCTIONAL_REMEDIATION_PLAN.md) |
 | Current live-readiness evidence | [Stage09 r40](08-implementation/evidence/stage09-r40-regression-and-live-readiness-2026-07-26.md) |
+| Stage12 architecture entry | [Stage12 Quality Architecture V2](02-architecture/stage12-quality-v2/README.md) |
+| Stage12 comprehensive audit | [Stage12 全量技术架构审计](08-implementation/STAGE_12_COMPREHENSIVE_ARCHITECTURE_AUDIT.md) |
+| Stage12 deployed-path plan | [Stage12 Isolated Runtime Wiring](../docs/superpowers/plans/2026-08-01-stage12-isolated-runtime-wiring.md) |
 
 ## 4. 历史 Stage 入口
 
@@ -58,6 +62,7 @@
 | Stage07 | historical Mini App/workspace delivery | `08-implementation/STAGE_07_SOURCE_OF_TRUTH.md` |
 | Stage08 | implemented runtime; product evidence still bounded | `08-implementation/STAGE_08_SOURCE_OF_TRUTH.md` |
 | Stage09 | active | 当前文件第 3 节 |
+| Stage12 | implemented-local; deployed acceptance pending | 当前文件第 3 节 |
 
 详细历史索引见 [Stage Implementation Docs](08-implementation/README.md)。
 
