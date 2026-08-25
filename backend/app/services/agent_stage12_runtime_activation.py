@@ -131,8 +131,18 @@ def _validate_postgresql_url(value: str) -> None:
 
 
 def _validate_redis_url(value: str) -> None:
-    if urlparse(value).scheme not in {"redis", "rediss"}:
-        raise RuntimeError("Invalid REDIS_URL: Stage12 isolated runtime requires Redis")
+    parsed = urlparse(value)
+    if parsed.scheme in {"redis", "rediss"}:
+        return
+    if (
+        parsed.scheme == "unix"
+        and value.startswith("unix:///")
+        and parsed.path.startswith("/")
+        and not parsed.netloc
+        and not parsed.fragment
+    ):
+        return
+    raise RuntimeError("Invalid REDIS_URL: Stage12 isolated runtime requires Redis")
 
 
 __all__ = [

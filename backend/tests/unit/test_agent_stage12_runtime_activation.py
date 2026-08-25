@@ -87,6 +87,16 @@ def test_isolated_profile_normalizes_duplicates_and_matches_only_exact_uuid() ->
     assert not stage12_runtime_enabled(profile, workspace_id=OTHER_WORKSPACE_ID)
 
 
+def test_isolated_profile_accepts_native_redis_unix_socket() -> None:
+    settings = _valid_isolated_settings(
+        redis_url="unix:///run/stage09-p1/redis.sock?db=0",
+    )
+
+    profile = build_stage12_runtime_profile(settings)
+
+    assert profile.workspace_allowlist == frozenset({WORKSPACE_ID})
+
+
 @pytest.mark.parametrize(
     ("overrides", "error"),
     [
@@ -99,6 +109,7 @@ def test_isolated_profile_normalizes_duplicates_and_matches_only_exact_uuid() ->
         ({"agent_runtime_input_key": None}, "AGENT_RUNTIME_INPUT_KEY"),
         ({"database_url": "sqlite:///test.db"}, "DATABASE_URL"),
         ({"redis_url": "memory://redis"}, "REDIS_URL"),
+        ({"redis_url": "unix://relative/redis.sock"}, "REDIS_URL"),
         ({"retrieval_v2_active_profile": None}, "RETRIEVAL_V2_ACTIVE_PROFILE"),
         (
             {"stage12_provider_v2_profile": "stage12.openrouter-gemini-2.5-flash-v1"},
