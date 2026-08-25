@@ -101,4 +101,3 @@ Default-branch changes, protection settings, PR closure and repository metadata 
 - do not force a branch pointer;
 - report the exact partial state;
 - roll the default branch back only to the previously recorded pointer when necessary.
-
