@@ -538,6 +538,78 @@ def test_render_slot_result_accepts_three_slots_with_one_repair_each() -> None:
     assert result.provider_call_count == 6
 
 
+def test_render_projects_reminder_not_sent_state_from_backend_contract() -> None:
+    from app.services.agent_grounded_answer_request import build_grounded_answer_request
+    from tests.unit.test_agent_grounded_answer_request import _action_fixture
+
+    query, task_spec, graph, schema, presentation, findings = _action_fixture()
+    request = build_grounded_answer_request(
+        query=query,
+        task_spec=task_spec,
+        graph=graph,
+        authorized_schema=schema,
+        presentation=presentation,
+        specialist_findings=findings,
+    )
+    values = request.model_dump(mode="python")
+    values["actions"][0]["action_kind"] = "reminder.request"
+    values["content_hash"] = specialist_payload_sha256(
+        {key: value for key, value in values.items() if key != "content_hash"}
+    )
+    reminder_request = GroundedAnswerProviderRequestV3.model_validate(values)
+
+    result = render_grounded_answer(
+        reminder_request,
+        _render_slot_plan(
+            ("s001", "Atlas 项目的任务状态为 blocked。"),
+            ("s002", "已生成待确认提议，尚未执行。"),
+        ),
+        graph=graph,
+        presentation=presentation,
+    )
+
+    assert "不会发送" in result.answer
+
+
+def test_render_projects_hidden_field_disclosure_from_denial_reason() -> None:
+    graph_values = _graph().model_dump(mode="python")
+    graph_values["claims"] = ()
+    graph_values["objective_statuses"][0]["status"] = "denied"
+    graph_values["objective_statuses"][0][
+        "reason_code"
+    ] = "field_not_in_authorized_schema"
+    graph_values["content_hash"] = specialist_payload_sha256(
+        {key: value for key, value in graph_values.items() if key != "content_hash"}
+    )
+    graph = ClaimGraphV1.model_validate(graph_values)
+    request_values = _request().model_dump(mode="python")
+    request_values["objectives"][0]["status"] = "denied"
+    request_values["objectives"][0]["reason_code"] = "field_not_in_authorized_schema"
+    request_values["claims"] = ()
+    request_values["citations"] = ()
+    request_values["runtime_binding_hash"] = graph.content_hash
+    request_values["content_hash"] = specialist_payload_sha256(
+        {key: value for key, value in request_values.items() if key != "content_hash"}
+    )
+    request = GroundedAnswerProviderRequestV2.model_validate(request_values)
+    plan = _plan(
+        text="当前内容无法提供。",
+        claim_handles=(),
+        evidence_handles=(),
+        statement_kind="limitation",
+        section_kind="limitations",
+    )
+
+    result = render_grounded_answer(
+        request,
+        plan,
+        graph=graph,
+        presentation=_presentation(),
+    )
+
+    assert "隐藏字段" in result.answer
+
+
 def test_valid_grounded_plan_passes() -> None:
     validate_grounded_answer_plan(_request(), _plan())
 

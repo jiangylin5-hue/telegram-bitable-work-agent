@@ -51,6 +51,7 @@ from app.services.agent_claim_graph import (
     ClaimInputV1,
     ObjectiveOutcomeInputV1,
     build_claim_graph,
+    claim_inputs_from_fact_set,
 )
 from app.services.agent_composer_v2 import compose_claim_graph
 from app.services.agent_orchestrator import (
@@ -1426,35 +1427,7 @@ def _fan_in_typed_results(
     )
     claims: list[ClaimInputV1] = []
     for fact_set in output_facts:
-        versions = {
-            (item.table_id, item.record_id): item.record_version
-            for item in fact_set.source_versions
-        }
-        aggregate_version = max(versions.values(), default=1)
-        for record in fact_set.records:
-            version = versions[(record.table_id, record.record_id)]
-            for field in record.values:
-                claims.append(
-                    ClaimInputV1(
-                        objective_id=fact_set.objective_id,
-                        subject_ref=f"record:{record.record_id}",
-                        predicate=f"field:{field.field_id}",
-                        value=field.value,
-                        evidence_ids=fact_set.evidence_refs,
-                        source_version=version,
-                    )
-                )
-        for aggregate in fact_set.aggregates:
-            claims.append(
-                ClaimInputV1(
-                    objective_id=fact_set.objective_id,
-                    subject_ref=f"aggregate:{aggregate.aggregate_id}",
-                    predicate="value",
-                    value=aggregate.value,
-                    evidence_ids=fact_set.evidence_refs,
-                    source_version=aggregate_version,
-                )
-            )
+        claims.extend(claim_inputs_from_fact_set(fact_set))
     fact_version_by_hash = {
         item.content_hash: max(
             (version.record_version for version in item.source_versions),

@@ -731,6 +731,15 @@ def test_exact_entity_code_ownership_precedes_related_table_root_selection() -> 
     ]
 
 
+def test_entity_project_relation_is_explicitly_projected() -> None:
+    spec = _plan("查询 MT-017 的项目和风险。")
+    intent = spec.query_intents[0]
+
+    assert UUID("10000000-0000-4000-8000-000000000101") in (
+        intent.execution_spec.projection_field_ids
+    )
+
+
 def test_three_status_phrase_emits_only_the_complete_in_predicate() -> None:
     spec = _plan("列出进行中、计划中和已完成事项")
 

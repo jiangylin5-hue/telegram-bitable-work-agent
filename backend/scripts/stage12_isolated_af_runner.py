@@ -36,6 +36,7 @@ from app.services.agent_claim_graph import (
     ClaimInputV1,
     ObjectiveOutcomeInputV1,
     build_claim_graph,
+    claim_inputs_from_fact_set,
 )
 from app.services.agent_composer_v2 import (
     ComposerObjectiveContextV1,
@@ -1470,42 +1471,7 @@ def _claim_inputs(
 ) -> tuple[ClaimInputV1, ...]:
     values = []
     for facts in fact_sets:
-        versions = {
-            (item.table_id, item.record_id): item.record_version
-            for item in facts.source_versions
-        }
-        aggregate_version = max(versions.values(), default=1)
-        for record in facts.records:
-            for field in record.values:
-                values.append(
-                    ClaimInputV1(
-                        objective_id=facts.objective_id,
-                        subject_ref=f"record:{record.record_id}",
-                        predicate=f"field:{field.field_id}",
-                        value=field.value,
-                        evidence_ids=facts.evidence_refs,
-                        source_version=versions[(record.table_id, record.record_id)],
-                    )
-                )
-        for aggregate in facts.aggregates:
-            values.append(
-                ClaimInputV1(
-                    objective_id=facts.objective_id,
-                    subject_ref=f"aggregate:{aggregate.aggregate_id}",
-                    predicate=(
-                        "group:"
-                        + json.dumps(
-                            aggregate.group_key,
-                            ensure_ascii=False,
-                            sort_keys=True,
-                            separators=(",", ":"),
-                        )
-                    ),
-                    value=aggregate.value,
-                    evidence_ids=facts.evidence_refs,
-                    source_version=aggregate_version,
-                )
-            )
+        values.extend(claim_inputs_from_fact_set(facts))
     facts_by_hash = {item.content_hash: item for item in fact_sets}
     for risks in risk_sets:
         facts = facts_by_hash.get(risks.fact_set_hash)

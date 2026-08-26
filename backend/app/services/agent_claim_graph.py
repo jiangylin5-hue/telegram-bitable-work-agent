@@ -43,6 +43,44 @@ class ActionDependencyV1:
     reason_code: str | None = None
 
 
+def claim_inputs_from_fact_set(
+    facts: StructuredFactSetV1,
+) -> tuple[ClaimInputV1, ...]:
+    """Project one sealed fact set into canonical, conflict-safe claim inputs."""
+
+    versions = {
+        (item.table_id, item.record_id): item.record_version
+        for item in facts.source_versions
+    }
+    aggregate_version = max(versions.values(), default=1)
+    values: list[ClaimInputV1] = []
+    for record in facts.records:
+        version = versions[(record.table_id, record.record_id)]
+        for field in record.values:
+            values.append(
+                ClaimInputV1(
+                    objective_id=facts.objective_id,
+                    subject_ref=f"record:{record.record_id}",
+                    predicate=f"field:{field.field_id}",
+                    value=field.value,
+                    evidence_ids=facts.evidence_refs,
+                    source_version=version,
+                )
+            )
+    for aggregate in facts.aggregates:
+        values.append(
+            ClaimInputV1(
+                objective_id=facts.objective_id,
+                subject_ref=f"aggregate:{aggregate.aggregate_id}",
+                predicate="group:" + _canonical(aggregate.group_key),
+                value=aggregate.value,
+                evidence_ids=facts.evidence_refs,
+                source_version=aggregate_version,
+            )
+        )
+    return tuple(values)
+
+
 def _canonical(value: JsonValue) -> str:
     return json.dumps(
         value,
@@ -281,4 +319,5 @@ __all__ = [
     "ClaimInputV1",
     "ObjectiveOutcomeInputV1",
     "build_claim_graph",
+    "claim_inputs_from_fact_set",
 ]

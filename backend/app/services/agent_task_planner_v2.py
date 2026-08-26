@@ -917,7 +917,7 @@ def _query_execution_intent(
     ):
         explicit_projection_fields.append(ticket_code)
     if project_code is not None and re.search(
-        r"所属项目|返回项目|项目简报|项目专项日报|交付项目日报",
+        r"所属项目|返回项目|项目简报|项目专项日报|交付项目日报|的项目(?:和|及|、|$)",
         text,
     ):
         explicit_projection_fields.append(project_code)

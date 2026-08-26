@@ -44,6 +44,10 @@ _ACTION_STATUS_MARKERS = {
     "deferred": ("延后", "未执行"),
     "conflicted": ("冲突", "未执行"),
 }
+_HIDDEN_FIELD_REASON_CODES = {
+    "field_not_in_authorized_schema",
+    "field_permission_denied",
+}
 
 
 class ProviderValidationError(ValueError):
@@ -62,6 +66,30 @@ def _reject(detail: str, *, language: bool = False) -> None:
 
 def _ordered_unique(values: list[str]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(values))
+
+
+def _backend_safe_suffix(
+    request: GroundedAnswerProviderRequestV2 | GroundedAnswerProviderRequestV3,
+    *,
+    objective_handles: tuple[str, ...],
+    action_handles: tuple[str, ...],
+) -> str:
+    objectives = {item.objective_handle: item for item in request.objectives}
+    actions = {item.action_handle: item for item in request.actions}
+    messages: list[str] = []
+    if any(
+        objectives[handle].reason_code in _HIDDEN_FIELD_REASON_CODES
+        for handle in objective_handles
+        if handle in objectives
+    ):
+        messages.append("隐藏字段未提供。")
+    if any(
+        actions[handle].action_kind == "reminder.request"
+        for handle in action_handles
+        if handle in actions
+    ):
+        messages.append("提醒不会发送，待确认且未执行。")
+    return "" if not messages else "【" + "".join(messages) + "】"
 
 
 def _claim_value_projection(value: object) -> tuple[str, str]:
@@ -567,6 +595,11 @@ def render_grounded_answer(
                     + "、".join(citations[value] for value in slot.evidence_handles)
                     + "】"
                 )
+            suffix += _backend_safe_suffix(
+                request,
+                objective_handles=slot.objective_handles,
+                action_handles=slot.action_handles,
+            )
             rendered_sections.append(
                 f"{headings[slot.section_kind]}\n{output.text}{suffix}"
             )
@@ -585,6 +618,19 @@ def render_grounded_answer(
                         + "、".join(citations[value] for value in evidence_handles)
                         + "】"
                     )
+                objective_handles = tuple(
+                    item.objective_handle
+                    for item in request.objectives
+                    if (
+                        statement.statement_kind == "limitation"
+                        and item.status in {"denied", "degraded", "failed"}
+                    )
+                )
+                suffix += _backend_safe_suffix(
+                    request,
+                    objective_handles=objective_handles,
+                    action_handles=statement.action_handles,
+                )
                 statements.append(statement.text + suffix)
             rendered_sections.append(f"{section.heading}\n" + "\n".join(statements))
         section_kinds = tuple(item.section_kind for item in plan.sections)

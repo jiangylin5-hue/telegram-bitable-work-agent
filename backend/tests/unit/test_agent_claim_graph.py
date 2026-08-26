@@ -11,6 +11,7 @@ from app.services.agent_claim_graph import (
     ClaimInputV1,
     ObjectiveOutcomeInputV1,
     build_claim_graph,
+    claim_inputs_from_fact_set,
 )
 
 
@@ -66,6 +67,61 @@ def _claim(
         evidence_ids=(evidence,),
         source_version=version,
     )
+
+
+def _grouped_facts() -> StructuredFactSetV1:
+    payload = {
+        "version": "structured-fact-set.v1",
+        "objective_id": "daily",
+        "records": (),
+        "groups": (),
+        "aggregates": (
+            {
+                "aggregate_id": "unfinished-count",
+                "group_key": ["PRJ-ATLAS"],
+                "value": 2,
+            },
+            {
+                "aggregate_id": "unfinished-count",
+                "group_key": ["PRJ-BEACON"],
+                "value": 3,
+            },
+        ),
+        "relation_paths": (),
+        "source_versions": (
+            {
+                "table_id": TABLE_ID,
+                "record_id": RECORD_ID,
+                "record_version": 4,
+            },
+        ),
+        "evidence_refs": ("ev-daily",),
+        "scope_hash": SCOPE,
+        "schema_hash": "b" * 64,
+        "complete": True,
+        "truncated": False,
+    }
+    payload["content_hash"] = specialist_payload_sha256(payload)
+    return StructuredFactSetV1.model_validate(payload)
+
+
+def test_grouped_aggregates_keep_distinct_claim_predicates() -> None:
+    facts = _grouped_facts()
+
+    graph = build_claim_graph(
+        claims=claim_inputs_from_fact_set(facts),
+        outcomes=(ObjectiveOutcomeInputV1("daily", "completed", True),),
+        actions=(),
+        scope_hash=SCOPE,
+        source_artifacts=(facts,),
+    )
+
+    assert len(graph.claims) == 2
+    assert {item.status for item in graph.claims} == {"valid"}
+    assert {item.predicate for item in graph.claims} == {
+        'group:["PRJ-ATLAS"]',
+        'group:["PRJ-BEACON"]',
+    }
 
 
 def test_claim_graph_merges_duplicates_and_marks_older_version_stale() -> None:

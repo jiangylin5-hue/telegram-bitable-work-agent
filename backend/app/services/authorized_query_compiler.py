@@ -95,6 +95,16 @@ def compile_authorized_query_plan(
     aggregates = _compile_aggregates(execution)
     sorts = _compile_sorts(execution)
     projection_field_ids = () if execution is None else execution.projection_field_ids
+    if (
+        not projection_field_ids
+        and not aggregates
+        and _intent_has_user_result_objective(task_spec, intent)
+    ):
+        projection_field_ids = _default_projection_field_ids(
+            root_table_id=intent.root_table_id,
+            predicate=predicate,
+            snapshot=snapshot,
+        )
     group_by_field_ids = tuple(
         dict.fromkeys(
             field_id
@@ -174,6 +184,66 @@ def compile_authorized_query_plan(
             raise
         raise AuthorizedQueryCompileError(_stable_validation_code(exc)) from exc
     return plan
+
+
+def _intent_has_user_result_objective(
+    task_spec: TaskSpecV2,
+    intent: QueryIntentSpec,
+) -> bool:
+    query_ref = f"query-intent:{intent.query_intent_id}"
+    objectives = tuple(
+        item
+        for item in task_spec.objectives
+        if item.query_spec_ref == query_ref and item.planning_outcome == "planned"
+    )
+    fact_objectives = tuple(item for item in objectives if item.kind == "fact_query")
+    if not fact_objectives:
+        return False
+    action_span_sets = {
+        tuple((span.start, span.end, span.text) for span in item.source_spans)
+        for item in task_spec.objectives
+        if item.kind in {"record_change", "task_creation", "reminder_request"}
+    }
+    return any(
+        tuple((span.start, span.end, span.text) for span in item.source_spans)
+        not in action_span_sets
+        for item in fact_objectives
+    )
+
+
+def _default_projection_field_ids(
+    *,
+    root_table_id: UUID,
+    predicate: QueryPredicateNode | None,
+    snapshot: AuthorizedSchemaSnapshot,
+) -> tuple[UUID, ...]:
+    root_table = next(
+        (table for table in snapshot.tables if table.table_id == root_table_id),
+        None,
+    )
+    if root_table is None:
+        raise AuthorizedQueryCompileError("authorized_query_root_table_not_authorized")
+    predicate_field_ids = (
+        ()
+        if predicate is None
+        else tuple(
+            leaf.field_id
+            for leaf in _predicate_leaves(predicate)
+            if leaf.table_id == root_table_id
+        )
+    )
+    return tuple(
+        dict.fromkeys(
+            (
+                *(
+                    ()
+                    if root_table.identity_field_id is None
+                    else (root_table.identity_field_id,)
+                ),
+                *predicate_field_ids,
+            )
+        )
+    )
 
 
 def _compile_global_predicate(

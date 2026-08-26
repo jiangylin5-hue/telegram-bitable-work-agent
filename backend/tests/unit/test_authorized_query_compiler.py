@@ -77,6 +77,7 @@ def _snapshot() -> AuthorizedSchemaSnapshot:
             name="项目",
             aliases=(),
             fields=(_field(PROJECTS_ID, PROJECT_NAME_ID, "name", "text"),),
+            identity_field_id=PROJECT_NAME_ID,
         ),
         AuthorizedTableSpec(
             table_id=WORK_ITEMS_ID,
@@ -113,6 +114,7 @@ def _snapshot() -> AuthorizedSchemaSnapshot:
                     "linked_record",
                 ),
             ),
+            identity_field_id=WORK_TITLE_ID,
         ),
         AuthorizedTableSpec(
             table_id=RISKS_ID,
@@ -135,6 +137,7 @@ def _snapshot() -> AuthorizedSchemaSnapshot:
                     "linked_record",
                 ),
             ),
+            identity_field_id=RISK_LEVEL_ID,
         ),
     )
     values = {
@@ -368,6 +371,23 @@ def test_compiler_preserves_explicit_projection_and_recursive_predicate() -> Non
     assert plan.predicate.kind == "group"
     assert plan.predicate.operator == "or"
     assert plan.traversals == ()
+
+
+def test_compiler_defaults_empty_projection_to_root_identity_and_predicate_fields() -> (
+    None
+):
+    predicate = _predicate()
+    intent = _query_intent(
+        predicates=(predicate,),
+        execution_spec=_execution(
+            projection_field_ids=(),
+            predicate_expression=QueryPredicateLeafIntentV1(predicate=predicate),
+        ),
+    )
+
+    plan = _compile(intent)
+
+    assert plan.projection_field_ids == (WORK_TITLE_ID, WORK_STATUS_ID)
 
 
 def test_compiler_uses_unique_reverse_path_for_related_aggregate() -> None:
